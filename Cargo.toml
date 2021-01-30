@@ -1,0 +1,23 @@
+[package]
+name = "storm"
+version = "0.1.0"
+authors = ["Dany Laporte <dany_laporte@hotmail.com>"]
+edition = "2018"
+publish = false
+
+[dependencies]
+async-trait = "0.1"
+async-cell-lock = { git = "https://github.com/danylaporte/async-cell-lock.git", branch = "main" }
+storm_derive = { path = "./storm_derive", optional = true }
+vec-map = { git = "https://github.com/danylaporte/vec-map.git", branch = "main" }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"]}
+
+[features]
+derive = ["storm_derive"]
+
+[workspace]
+members = [
+    "storm_derive"
+]
