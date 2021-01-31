@@ -18,6 +18,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let vis = &input.vis;
     let name = &input.ident;
     let name_log = Ident::new(&format!("{}Log", &name), name.span());
+    let name_tables = Ident::new(&format!("{}Tables", &name), name.span());
     let name_transaction = Ident::new(&format!("{}Transaction", &name), name.span());
     let fields = input.fields()?;
 
@@ -30,11 +31,12 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             Error::new(input.span(), format!("Missing a `{}` field.", OPTS)).to_compile_error()
         })?;
 
+    let mut apply_members = Vec::new();
     let mut ctx_members = Vec::new();
     let mut log_members = Vec::new();
-    let mut trx_members = Vec::new();
+    let mut new_members = Vec::new();
     let mut trait_members = Vec::new();
-    let mut apply_members = Vec::new();
+    let mut trx_members = Vec::new();
 
     for field in fields {
         let name = field.ident()?;
@@ -45,6 +47,10 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
         let pascal_name = Ident::new(&name.to_string().to_pascal_case(), name.span());
         let ty = field.ty();
+
+        new_members.push(quote! {
+            #name: Default::default(),
+        });
 
         log_members.push(quote! {
             #name: storm::TableLog<<<<#ty as storm::TableContainer<#opts_ty>>::Table as storm::Table>::Entity as storm::Entity>::Row>,
@@ -81,28 +87,39 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
     let ctx_members = quote!(#(#ctx_members)*);
     let log_members = quote!(#(#log_members)*);
+    let new_members = quote!(#(#new_members)*);
     let trx_members = quote!(#(#trx_members)*);
     let apply_members = quote!(#(#apply_members)*);
     let trait_members = quote!(#(#trait_members)*);
 
     Ok(quote! {
         impl #name {
+            pub fn new(opts: #opts_ty) -> Self {
+                Self {
+                    #new_members
+                    opts,
+                }
+            }
+
             pub fn apply_log(&mut self, log: #name_log) {
                 #apply_members
             }
 
             pub fn transaction(&self) -> #name_transaction {
-                #name_transaction::new(self)
+                #name_transaction {
+                    ctx: self,
+                    log: Default::default(),
+                }
             }
         }
 
         #[async_trait::async_trait]
-        #vis trait Tables<'a> {
+        #vis trait #name_tables<'a> {
             #trait_members
         }
 
         #[async_trait::async_trait]
-        impl<'a> Tables<'a> for #name {
+        impl<'a> #name_tables<'a> for #name {
             #ctx_members
         }
 
@@ -117,13 +134,6 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         }
 
         impl<'a> #name_transaction<'a> {
-            pub fn new(ctx: &'a #name) -> Self {
-                Self {
-                    ctx,
-                    log: Default::default(),
-                }
-            }
-
             #[must_use]
             pub async fn commit(self) -> storm::Result<#name_log> {
                 // TODO! Add commit to the transaction.
@@ -133,7 +143,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         }
 
         #[async_trait::async_trait]
-        impl<'a> Tables<'a> for #name_transaction<'a> {
+        impl<'a> #name_tables<'a> for #name_transaction<'a> {
             #trx_members
         }
     })

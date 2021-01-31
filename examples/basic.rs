@@ -6,15 +6,15 @@ use vec_map::VecMap;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let c: Ctx = todo!();
-    let users = c.users().await?;
+    let c: Ctx = Ctx::new(ConnPool);
+    let _users = c.users().await?;
 
     let t = c.transaction();
-    let users = t.users().await?;
+    let _users = t.users().await?;
 
     let log = t.commit().await?;
 
-    let mut c: Ctx = todo!();
+    let mut c: Ctx = Ctx::new(ConnPool);
 
     c.apply_log(log);
 
@@ -30,7 +30,7 @@ struct Ctx {
 }
 
 pub struct User {
-    name: String,
+    pub name: String,
 }
 
 impl Entity for User {
@@ -61,7 +61,7 @@ impl TryFrom<UserDb> for User {
 
 #[async_trait]
 impl Load<ConnPool> for UserDb {
-    async fn load(opts: &ConnPool) -> Result<Vec<Self>> {
+    async fn load(_opts: &ConnPool) -> Result<Vec<Self>> {
         Ok(Vec::new())
     }
 }
