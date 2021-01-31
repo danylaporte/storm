@@ -1,13 +1,19 @@
 use async_cell_lock::AsyncOnceCell;
 use async_trait::async_trait;
 use std::convert::TryFrom;
-use storm::{Ctx, Entity, Error, Load, Result, Row};
+use storm::{Ctx, Entity, Error, Result, Row, RowLoad};
 use vec_map::VecMap;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let c: Ctx = Ctx::new(ConnPool);
-    let _users = c.users().await?;
+    let users = c.users().await?;
+
+    if let Some(_) = users.get(&100) {
+        println!("user found.");
+    }
+
+    println!("{}", users.contains_key(&2));
 
     let t = c.transaction();
     let _users = t.users().await?;
@@ -60,8 +66,8 @@ impl TryFrom<UserDb> for User {
 }
 
 #[async_trait]
-impl Load<ConnPool> for UserDb {
-    async fn load(_opts: &ConnPool) -> Result<Vec<Self>> {
+impl RowLoad<ConnPool> for UserDb {
+    async fn row_load(_opts: &ConnPool) -> Result<Vec<Self>> {
         Ok(Vec::new())
     }
 }

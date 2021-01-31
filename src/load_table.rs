@@ -1,4 +1,4 @@
-use crate::{Entity, Error, Load, Result, Row, Table};
+use crate::{Entity, Error, Result, Row, RowLoad, Table};
 use async_trait::async_trait;
 use std::{
     convert::{TryFrom, TryInto},
@@ -17,10 +17,10 @@ where
     T: Table + FromIterator<(<<T as Table>::Entity as Entity>::Key, <T as Table>::Entity)>,
     T::Entity: TryFrom<<T::Entity as Entity>::Row, Error = Error>,
     <T::Entity as Entity>::Key: From<<<T::Entity as Entity>::Row as Row>::Key>,
-    <T::Entity as Entity>::Row: Load<O>,
+    <T::Entity as Entity>::Row: RowLoad<O>,
 {
     async fn load_table(opts: &O) -> Result<Self> {
-        let items = <<T::Entity as Entity>::Row as Load<O>>::load(opts).await?;
+        let items = <<T::Entity as Entity>::Row as RowLoad<O>>::row_load(opts).await?;
 
         items
             .into_iter()

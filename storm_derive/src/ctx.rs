@@ -53,7 +53,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         });
 
         log_members.push(quote! {
-            #name: storm::TableLog<<<<#ty as storm::TableContainer<#opts_ty>>::Table as storm::Table>::Entity as storm::Entity>::Row>,
+            #name: storm::TableLog<<#ty as storm::TableContainer<#opts_ty>>::Table>,
         });
 
         trait_members.push(quote! {

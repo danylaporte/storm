@@ -1,4 +1,4 @@
-use crate::{ApplyLog, LoadTable, Result, Table, TableLog};
+use crate::{Entity, LoadTable, Result, Table, TableAppyLog, TableLog};
 use async_cell_lock::AsyncOnceCell;
 use async_trait::async_trait;
 
@@ -6,11 +6,11 @@ use async_trait::async_trait;
 pub trait TableContainer<O> {
     type Table: Table;
 
-    fn apply_log(&mut self, log: TableLog<<Self::Table as ApplyLog>::Row>)
+    fn apply_log(&mut self, log: TableLog<Self::Table>)
     where
-        Self::Table: ApplyLog;
+        Self::Table: TableAppyLog;
 
-    async fn ensure<'a>(&'a self, opts: &O) -> Result<&'a Self::Table>
+    async fn ensure<'a>(&'a self, opts: &'a O) -> Result<&'a Self::Table>
     where
         Self::Table: LoadTable<O>;
 }
@@ -20,19 +20,20 @@ impl<O, T> TableContainer<O> for AsyncOnceCell<T>
 where
     O: Send + Sync,
     T: Table + Send + Sync,
+    <T::Entity as Entity>::Key: PartialEq,
 {
     type Table = T;
 
-    fn apply_log(&mut self, log: TableLog<<T as ApplyLog>::Row>)
+    fn apply_log(&mut self, log: TableLog<Self::Table>)
     where
-        T: ApplyLog,
+        Self::Table: TableAppyLog,
     {
         if let Some(table) = self.get_mut() {
-            table.apply_log(log);
+            log.apply_log(table);
         }
     }
 
-    async fn ensure<'a>(&'a self, opts: &O) -> Result<&'a Self::Table>
+    async fn ensure<'a>(&'a self, opts: &'a O) -> Result<&'a Self::Table>
     where
         T: LoadTable<O>,
     {
