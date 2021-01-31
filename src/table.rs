@@ -32,7 +32,7 @@ where
     type Entity = E;
 }
 
-impl<'a, T: Table> Table for TableTransaction<'a, T> {
+impl<'a, L, T: Table> Table for TableTransaction<'a, L, T> {
     type Entity = T::Entity;
 }
 

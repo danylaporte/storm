@@ -1,4 +1,4 @@
-use crate::{Entity, Table, TableTransaction};
+use crate::{Entity, Table, TableLog, TableTransaction};
 use std::{
     collections::HashMap,
     hash::{BuildHasher, Hash},
@@ -42,9 +42,11 @@ where
     }
 }
 
-impl<'a, T: TableGet> TableGet for TableTransaction<'a, T>
+impl<'a, L, T> TableGet for TableTransaction<'a, L, T>
 where
     <T::Entity as Entity>::Key: PartialEq,
+    L: AsRef<TableLog<T>>,
+    T: TableGet,
 {
     fn get(&self, k: &<Self::Entity as Entity>::Key) -> Option<&Self::Entity> {
         TableTransaction::get(self, k)

@@ -21,6 +21,18 @@ async fn main() -> Result<()> {
     let log = t.commit().await?;
 
     let mut c: Ctx = Ctx::new(ConnPool);
+    let mut trx = c.transaction();
+
+    let mut users = trx.users_mut().await?;
+
+    users.insert(
+        32,
+        User {
+            name: "new user".into(),
+        },
+    );
+
+    users.remove(33);
 
     c.apply_log(log);
 

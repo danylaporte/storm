@@ -19,6 +19,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let name = &input.ident;
     let name_log = Ident::new(&format!("{}Log", &name), name.span());
     let name_tables = Ident::new(&format!("{}Tables", &name), name.span());
+    let name_tables_mut = Ident::new(&format!("{}TablesMut", &name), name.span());
     let name_transaction = Ident::new(&format!("{}Transaction", &name), name.span());
     let fields = input.fields()?;
 
@@ -36,10 +37,13 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let mut log_members = Vec::new();
     let mut new_members = Vec::new();
     let mut trait_members = Vec::new();
+    let mut trait_members_mut = Vec::new();
     let mut trx_members = Vec::new();
+    let mut trx_members_mut = Vec::new();
 
     for field in fields {
         let name = field.ident()?;
+        let name_mut = Ident::new(&format!("{}_mut", name), name.span());
 
         if name == "opts" {
             continue;
@@ -48,17 +52,8 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         let pascal_name = Ident::new(&name.to_string().to_pascal_case(), name.span());
         let ty = field.ty();
 
-        new_members.push(quote! {
-            #name: Default::default(),
-        });
-
-        log_members.push(quote! {
-            #name: storm::TableLog<<#ty as storm::TableContainer<#opts_ty>>::Table>,
-        });
-
-        trait_members.push(quote! {
-            type #pascal_name;
-            async fn #name(&'a self) -> storm::Result<Self::#pascal_name>;
+        apply_members.push(quote! {
+            storm::TableContainer::<#opts_ty>::apply_log(&mut self.#name, log.#name);
         });
 
         ctx_members.push(quote! {
@@ -69,8 +64,26 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             }
         });
 
+        log_members.push(quote! {
+            #name: storm::TableLog<<#ty as storm::TableContainer<#opts_ty>>::Table>,
+        });
+
+        new_members.push(quote! {
+            #name: Default::default(),
+        });
+
+        trait_members.push(quote! {
+            type #pascal_name;
+            async fn #name(&'a self) -> storm::Result<Self::#pascal_name>;
+        });
+
+        trait_members_mut.push(quote! {
+            type #pascal_name;
+            async fn #name_mut(&'a mut self) -> storm::Result<Self::#pascal_name>;
+        });
+
         trx_members.push(quote! {
-            type #pascal_name = storm::TableTransaction<'a, <#ty as storm::TableContainer<#opts_ty>>::Table>;
+            type #pascal_name = storm::TableTransaction<'a, &'a storm::TableLog<<#ty as storm::TableContainer<#opts_ty>>::Table>, <#ty as storm::TableContainer<#opts_ty>>::Table>;
 
             async fn #name(&'a self) -> storm::Result<Self::#pascal_name> {
                 Ok(storm::TableTransaction {
@@ -80,17 +93,26 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             }
         });
 
-        apply_members.push(quote! {
-            storm::TableContainer::<#opts_ty>::apply_log(&mut self.#name, log.#name);
+        trx_members_mut.push(quote! {
+            type #pascal_name = storm::TableTransaction<'a, &'a mut storm::TableLog<<#ty as storm::TableContainer<#opts_ty>>::Table>, <#ty as storm::TableContainer<#opts_ty>>::Table>;
+
+            async fn #name_mut(&'a mut self) -> storm::Result<Self::#pascal_name> {
+                Ok(storm::TableTransaction {
+                    log: &mut self.log.#name,
+                    table: storm::TableContainer::<#opts_ty>::ensure(&self.ctx.#name, &self.ctx.opts).await?,
+                })
+            }
         });
     }
 
+    let apply_members = quote!(#(#apply_members)*);
     let ctx_members = quote!(#(#ctx_members)*);
     let log_members = quote!(#(#log_members)*);
     let new_members = quote!(#(#new_members)*);
-    let trx_members = quote!(#(#trx_members)*);
-    let apply_members = quote!(#(#apply_members)*);
     let trait_members = quote!(#(#trait_members)*);
+    let trait_members_mut = quote!(#(#trait_members_mut)*);
+    let trx_members = quote!(#(#trx_members)*);
+    let trx_members_mut = quote!(#(#trx_members_mut)*);
 
     Ok(quote! {
         impl #name {
@@ -123,6 +145,11 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             #ctx_members
         }
 
+        #[async_trait::async_trait]
+        #vis trait #name_tables_mut<'a> {
+            #trait_members_mut
+        }
+
         #[derive(Default)]
         #vis struct #name_log {
             #log_members
@@ -145,6 +172,11 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         #[async_trait::async_trait]
         impl<'a> #name_tables<'a> for #name_transaction<'a> {
             #trx_members
+        }
+
+        #[async_trait::async_trait]
+        impl<'a> #name_tables_mut<'a> for #name_transaction<'a> {
+            #trx_members_mut
         }
     })
 }
