@@ -6,25 +6,29 @@ use vec_map::VecMap;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let c: Ctx = Ctx::new(ConnPool);
-    let users = c.users().await?;
+    // creates a new context and passing required connections.
+    let ctx = Ctx::new(ConnPool);
 
+    // loading a table in memory.
+    let users = ctx.users().await?;
+
+    // try getting an entity from memory.
     if let Some(_) = users.get(&100) {
         println!("user found.");
     }
 
     println!("{}", users.contains_key(&2));
 
-    let t = c.transaction();
-    let _users = t.users().await?;
+    // transform the context into a transaction.
+    let mut transaction = ctx.transaction();
 
-    let log = t.commit().await?;
+    // get the table in memory (loading the table if not already in memory).
+    let _users = transaction.users().await?;
 
-    let mut c: Ctx = Ctx::new(ConnPool);
-    let mut trx = c.transaction();
+    // get a mutable table in memory (loading the table if not already in memory).
+    let mut users = transaction.users_mut().await?;
 
-    let mut users = trx.users_mut().await?;
-
+    // insert or update an entity.
     users.insert(
         32,
         User {
@@ -32,9 +36,17 @@ async fn main() -> Result<()> {
         },
     );
 
+    // delete and entity.
     users.remove(33);
 
-    c.apply_log(log);
+    // commit the transaction and get back a change log.
+    let log = transaction.commit().await?;
+
+    // open the context in mutation.
+    let mut ctx = Ctx::new(ConnPool);
+
+    // apply the change log.
+    ctx.apply_log(log);
 
     Ok(())
 }

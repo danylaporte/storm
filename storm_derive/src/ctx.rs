@@ -19,7 +19,6 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let name = &input.ident;
     let name_log = Ident::new(&format!("{}Log", &name), name.span());
     let name_tables = Ident::new(&format!("{}Tables", &name), name.span());
-    let name_tables_mut = Ident::new(&format!("{}TablesMut", &name), name.span());
     let name_transaction = Ident::new(&format!("{}Transaction", &name), name.span());
     let fields = input.fields()?;
 
@@ -37,7 +36,6 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let mut log_members = Vec::new();
     let mut new_members = Vec::new();
     let mut trait_members = Vec::new();
-    let mut trait_members_mut = Vec::new();
     let mut trx_members = Vec::new();
     let mut trx_members_mut = Vec::new();
 
@@ -77,11 +75,6 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             async fn #name(&'a self) -> storm::Result<Self::#pascal_name>;
         });
 
-        trait_members_mut.push(quote! {
-            type #pascal_name;
-            async fn #name_mut(&'a mut self) -> storm::Result<Self::#pascal_name>;
-        });
-
         trx_members.push(quote! {
             type #pascal_name = storm::TableTransaction<'a, &'a storm::TableLog<<#ty as storm::TableContainer<#opts_ty>>::Table>, <#ty as storm::TableContainer<#opts_ty>>::Table>;
 
@@ -94,9 +87,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         });
 
         trx_members_mut.push(quote! {
-            type #pascal_name = storm::TableTransaction<'a, &'a mut storm::TableLog<<#ty as storm::TableContainer<#opts_ty>>::Table>, <#ty as storm::TableContainer<#opts_ty>>::Table>;
-
-            async fn #name_mut(&'a mut self) -> storm::Result<Self::#pascal_name> {
+            pub async fn #name_mut(&mut self) -> storm::Result<storm::TableTransaction<'_, &mut storm::TableLog<<#ty as storm::TableContainer<#opts_ty>>::Table>, <#ty as storm::TableContainer<#opts_ty>>::Table>> {
                 Ok(storm::TableTransaction {
                     log: &mut self.log.#name,
                     table: storm::TableContainer::<#opts_ty>::ensure(&self.ctx.#name, &self.ctx.opts).await?,
@@ -110,7 +101,6 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let log_members = quote!(#(#log_members)*);
     let new_members = quote!(#(#new_members)*);
     let trait_members = quote!(#(#trait_members)*);
-    let trait_members_mut = quote!(#(#trait_members_mut)*);
     let trx_members = quote!(#(#trx_members)*);
     let trx_members_mut = quote!(#(#trx_members_mut)*);
 
@@ -145,11 +135,6 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             #ctx_members
         }
 
-        #[async_trait::async_trait]
-        #vis trait #name_tables_mut<'a> {
-            #trait_members_mut
-        }
-
         #[derive(Default)]
         #vis struct #name_log {
             #log_members
@@ -161,6 +146,8 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         }
 
         impl<'a> #name_transaction<'a> {
+            #trx_members_mut
+
             #[must_use]
             pub async fn commit(self) -> storm::Result<#name_log> {
                 // TODO! Add commit to the transaction.
@@ -172,11 +159,6 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         #[async_trait::async_trait]
         impl<'a> #name_tables<'a> for #name_transaction<'a> {
             #trx_members
-        }
-
-        #[async_trait::async_trait]
-        impl<'a> #name_tables_mut<'a> for #name_transaction<'a> {
-            #trx_members_mut
         }
     })
 }
