@@ -117,11 +117,14 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                 #apply_members
             }
 
-            pub fn transaction(&self) -> #name_transaction {
-                #name_transaction {
+            pub async fn transaction(&self) -> storm::Result<#name_transaction<'_>> {
+                storm::OptsTransaction::transaction(&self.opts).await?;
+
+                Ok(#name_transaction {
                     ctx: self,
                     log: Default::default(),
-                }
+                    log_dropped: false,
+                })
             }
         }
 
@@ -142,17 +145,33 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
         #vis struct #name_transaction<'a> {
             ctx: &'a #name,
-            log: #name_log,
+            log: std::mem::ManuallyDrop<#name_log>,
+            log_dropped: bool,
+        }
+
+        impl<'a> Drop for #name_transaction<'a> {
+            fn drop(&mut self) {
+                if !self.log_dropped {
+                    self.log_dropped = true;
+                    storm::OptsTransaction::cancel(&self.ctx.opts);
+                    unsafe { std::mem::ManuallyDrop::drop(&mut self.log); }
+                }
+            }
         }
 
         impl<'a> #name_transaction<'a> {
             #trx_members_mut
 
             #[must_use]
-            pub async fn commit(self) -> storm::Result<#name_log> {
-                // TODO! Add commit to the transaction.
+            pub async fn commit(mut self) -> storm::Result<#name_log> {
+                // do not run the destructor (drop trait).
+                self.log_dropped = true;
 
-                Ok(self.log)
+                // extract log in place.
+                let log = unsafe { std::mem::ManuallyDrop::take(&mut self.log) };
+
+                storm::OptsTransaction::commit(&self.ctx.opts).await?;
+                Ok(log)
             }
         }
 

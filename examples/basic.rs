@@ -1,7 +1,7 @@
 use async_cell_lock::AsyncOnceCell;
 use async_trait::async_trait;
 use std::convert::TryFrom;
-use storm::{Ctx, Entity, Error, Result, Row, RowLoad};
+use storm::{Ctx, Entity, Error, OptsTransaction, Result, Row, RowLoad};
 use vec_map::VecMap;
 
 #[tokio::main]
@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
     println!("{}", users.contains_key(&2));
 
     // transform the context into a transaction.
-    let mut transaction = ctx.transaction();
+    let mut transaction = ctx.transaction().await?;
 
     // get the table in memory (loading the table if not already in memory).
     let _users = transaction.users().await?;
@@ -52,6 +52,17 @@ async fn main() -> Result<()> {
 }
 
 struct ConnPool;
+
+#[async_trait]
+impl OptsTransaction for ConnPool {
+    fn cancel(&self) {}
+    async fn commit(&self) -> Result<()> {
+        Ok(())
+    }
+    async fn transaction(&self) -> Result<()> {
+        Ok(())
+    }
+}
 
 #[derive(Ctx)]
 struct Ctx {

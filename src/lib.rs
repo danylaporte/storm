@@ -1,5 +1,6 @@
 mod entity;
 mod load_table;
+mod opts_transaction;
 mod row;
 mod row_load;
 mod table;
@@ -11,6 +12,7 @@ mod table_transaction;
 
 pub use entity::Entity;
 pub use load_table::LoadTable;
+pub use opts_transaction::OptsTransaction;
 pub use row::Row;
 pub use row_load::RowLoad;
 pub use table::Table;
