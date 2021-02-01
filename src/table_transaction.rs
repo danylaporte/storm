@@ -1,4 +1,4 @@
-use crate::{Entity, EntityUpsert, Result, Table, TableGet, TableLog};
+use crate::{Entity, EntityDelete, EntityUpsert, Result, Table, TableGet, TableLog};
 
 pub struct TableTransaction<'a, L, O, T> {
     pub log: L,
@@ -26,18 +26,21 @@ impl<'a, L, O, T> TableTransaction<'a, L, O, T> {
 impl<'a, O, T: Table> TableTransaction<'a, &'a mut TableLog<T>, O, T> {
     pub async fn insert(&mut self, k: <T::Entity as Entity>::Key, v: T::Entity) -> Result<()>
     where
-        T::Entity: EntityUpsert<O>,
         <T::Entity as Entity>::Key: PartialEq,
+        T::Entity: EntityUpsert<O>,
     {
         v.entity_upsert(&k, self.opts).await?;
         self.log.insert(k, v);
         Ok(())
     }
 
-    pub fn remove(&mut self, k: <T::Entity as Entity>::Key)
+    pub async fn remove(&mut self, k: <T::Entity as Entity>::Key) -> Result<()>
     where
         <T::Entity as Entity>::Key: PartialEq,
+        T::Entity: EntityDelete<O>,
     {
+        T::Entity::entity_delete(&k, self.opts).await?;
         self.log.remove(k);
+        Ok(())
     }
 }

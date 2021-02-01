@@ -1,6 +1,6 @@
 use async_cell_lock::AsyncOnceCell;
 use async_trait::async_trait;
-use storm::{Ctx, Entity, EntityLoad, EntityUpsert, OptsTransaction, Result};
+use storm::{Ctx, Entity, EntityDelete, EntityLoad, EntityUpsert, OptsTransaction, Result};
 use vec_map::VecMap;
 
 #[tokio::main]
@@ -38,7 +38,7 @@ async fn main() -> Result<()> {
         .await?;
 
     // delete and entity.
-    users.remove(33);
+    users.remove(33).await?;
 
     // commit the transaction and get back a change log.
     let log = transaction.commit().await?;
@@ -80,6 +80,13 @@ pub struct User {
 
 impl Entity for User {
     type Key = usize;
+}
+
+#[async_trait]
+impl EntityDelete<ConnPool> for User {
+    async fn entity_delete(_key: &usize, _opts: &ConnPool) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[async_trait]

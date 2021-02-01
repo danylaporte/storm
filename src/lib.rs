@@ -1,4 +1,5 @@
 mod entity;
+mod entity_delete;
 mod entity_load;
 mod entity_upsert;
 mod load_table;
@@ -11,6 +12,7 @@ mod table_log;
 mod table_transaction;
 
 pub use entity::Entity;
+pub use entity_delete::EntityDelete;
 pub use entity_load::EntityLoad;
 pub use entity_upsert::EntityUpsert;
 pub use load_table::LoadTable;
