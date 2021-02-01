@@ -9,20 +9,6 @@ pub trait Table: Sized {
     type Entity: Entity;
 }
 
-impl<T> Table for &T
-where
-    T: Table,
-{
-    type Entity = T::Entity;
-}
-
-impl<T> Table for &mut T
-where
-    T: Table,
-{
-    type Entity = T::Entity;
-}
-
 impl<E, S> Table for HashMap<E::Key, E, S>
 where
     E: Entity,

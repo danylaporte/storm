@@ -13,24 +13,6 @@ pub trait TableGet: Table {
     }
 }
 
-impl<T> TableGet for &T
-where
-    T: TableGet,
-{
-    fn get(&self, k: &<Self::Entity as Entity>::Key) -> Option<&Self::Entity> {
-        (**self).get(k)
-    }
-}
-
-impl<T> TableGet for &mut T
-where
-    T: TableGet,
-{
-    fn get(&self, k: &<Self::Entity as Entity>::Key) -> Option<&Self::Entity> {
-        (**self).get(k)
-    }
-}
-
 impl<K, V, S> TableGet for HashMap<K, V, S>
 where
     K: Eq + Hash,

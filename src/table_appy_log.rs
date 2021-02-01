@@ -11,19 +11,6 @@ pub trait TableAppyLog: Table {
     fn remove(&mut self, k: &<Self::Entity as Entity>::Key);
 }
 
-impl<T> TableAppyLog for &mut T
-where
-    T: TableAppyLog,
-{
-    fn insert(&mut self, k: <Self::Entity as Entity>::Key, v: Self::Entity) {
-        (**self).insert(k, v);
-    }
-
-    fn remove(&mut self, k: &<Self::Entity as Entity>::Key) {
-        (**self).remove(k);
-    }
-}
-
 impl<K, V, S> TableAppyLog for HashMap<K, V, S>
 where
     K: Eq + Hash,
