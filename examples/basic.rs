@@ -1,7 +1,6 @@
 use async_cell_lock::AsyncOnceCell;
 use async_trait::async_trait;
-use std::convert::TryFrom;
-use storm::{Ctx, Entity, Error, OptsTransaction, Result, Row, RowLoad};
+use storm::{Ctx, Entity, EntityLoad, EntityUpsert, OptsTransaction, Result};
 use vec_map::VecMap;
 
 #[tokio::main]
@@ -29,12 +28,14 @@ async fn main() -> Result<()> {
     let mut users = transaction.users_mut().await?;
 
     // insert or update an entity.
-    users.insert(
-        32,
-        User {
-            name: "new user".into(),
-        },
-    );
+    users
+        .insert(
+            32,
+            User {
+                name: "new user".into(),
+            },
+        )
+        .await?;
 
     // delete and entity.
     users.remove(33);
@@ -56,9 +57,11 @@ struct ConnPool;
 #[async_trait]
 impl OptsTransaction for ConnPool {
     fn cancel(&self) {}
+
     async fn commit(&self) -> Result<()> {
         Ok(())
     }
+
     async fn transaction(&self) -> Result<()> {
         Ok(())
     }
@@ -66,8 +69,9 @@ impl OptsTransaction for ConnPool {
 
 #[derive(Ctx)]
 struct Ctx {
-    users: AsyncOnceCell<VecMap<usize, User>>,
     opts: ConnPool,
+    //topic: Cache<usize, Topic>,
+    users: AsyncOnceCell<VecMap<usize, User>>,
 }
 
 pub struct User {
@@ -76,33 +80,18 @@ pub struct User {
 
 impl Entity for User {
     type Key = usize;
-    type Row = UserDb;
 }
 
-pub struct UserDb {
-    id: usize,
-    name: String,
-}
-
-impl Row for UserDb {
-    type Key = usize;
-
-    fn key(&self) -> Self::Key {
-        self.id
-    }
-}
-
-impl TryFrom<UserDb> for User {
-    type Error = Error;
-
-    fn try_from(db: UserDb) -> Result<Self> {
-        Ok(Self { name: db.name })
+#[async_trait]
+impl EntityUpsert<ConnPool> for User {
+    async fn entity_upsert(&self, _key: &usize, _opts: &ConnPool) -> Result<()> {
+        Ok(())
     }
 }
 
 #[async_trait]
-impl RowLoad<ConnPool> for UserDb {
-    async fn row_load(_opts: &ConnPool) -> Result<Vec<Self>> {
+impl EntityLoad<ConnPool> for User {
+    async fn entity_load(_opts: &ConnPool) -> Result<Vec<(usize, Self)>> {
         Ok(Vec::new())
     }
 }

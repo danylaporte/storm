@@ -3,7 +3,6 @@ use std::{
     collections::HashMap,
     hash::{BuildHasher, Hash},
 };
-use vec_map::VecMap;
 
 pub trait TableAppyLog: Table {
     fn insert(&mut self, k: <Self::Entity as Entity>::Key, v: Self::Entity);
@@ -26,16 +25,17 @@ where
     }
 }
 
-impl<K, V> TableAppyLog for VecMap<K, V>
+#[cfg(feature = "vec-map")]
+impl<K, V> TableAppyLog for vec_map::VecMap<K, V>
 where
     K: Clone + Into<usize>,
     V: Entity<Key = K>,
 {
     fn insert(&mut self, k: K, v: V) {
-        VecMap::insert(self, k, v);
+        vec_map::VecMap::insert(self, k, v);
     }
 
     fn remove(&mut self, k: &K) {
-        VecMap::remove(self, k);
+        vec_map::VecMap::remove(self, k);
     }
 }

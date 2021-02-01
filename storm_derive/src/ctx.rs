@@ -76,20 +76,22 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         });
 
         trx_members.push(quote! {
-            type #pascal_name = storm::TableTransaction<'a, &'a storm::TableLog<<#ty as storm::TableContainer<#opts_ty>>::Table>, <#ty as storm::TableContainer<#opts_ty>>::Table>;
+            type #pascal_name = storm::TableTransaction<'a, &'a storm::TableLog<<#ty as storm::TableContainer<#opts_ty>>::Table>, #opts_ty, <#ty as storm::TableContainer<#opts_ty>>::Table>;
 
             async fn #name(&'a self) -> storm::Result<Self::#pascal_name> {
                 Ok(storm::TableTransaction {
-                    table: storm::TableContainer::<#opts_ty>::ensure(&self.ctx.#name, &self.ctx.opts).await?,
                     log: &self.log.#name,
+                    opts: &self.ctx.opts,
+                    table: storm::TableContainer::<#opts_ty>::ensure(&self.ctx.#name, &self.ctx.opts).await?,
                 })
             }
         });
 
         trx_members_mut.push(quote! {
-            pub async fn #name_mut(&mut self) -> storm::Result<storm::TableTransaction<'_, &mut storm::TableLog<<#ty as storm::TableContainer<#opts_ty>>::Table>, <#ty as storm::TableContainer<#opts_ty>>::Table>> {
+            pub async fn #name_mut(&mut self) -> storm::Result<storm::TableTransaction<'_, &mut storm::TableLog<<#ty as storm::TableContainer<#opts_ty>>::Table>, #opts_ty, <#ty as storm::TableContainer<#opts_ty>>::Table>> {
                 Ok(storm::TableTransaction {
                     log: &mut self.log.#name,
+                    opts: &self.ctx.opts,
                     table: storm::TableContainer::<#opts_ty>::ensure(&self.ctx.#name, &self.ctx.opts).await?,
                 })
             }

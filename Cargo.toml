@@ -6,16 +6,17 @@ edition = "2018"
 publish = false
 
 [dependencies]
-async-trait = "0.1"
 async-cell-lock = { git = "https://github.com/danylaporte/async-cell-lock.git", branch = "main" }
+async-trait = "0.1"
+cache = { git = "https://github.com/danylaporte/cache.git", branch = "main", optional = true }
 storm_derive = { path = "./storm_derive", optional = true }
-vec-map = { git = "https://github.com/danylaporte/vec-map.git", branch = "main" }
+vec-map = { git = "https://github.com/danylaporte/vec-map.git", branch = "main", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"]}
 
 [features]
-default = ["derive"]
+default = ["cache", "derive", "vec-map"]
 derive = ["storm_derive"]
 
 [workspace]

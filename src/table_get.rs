@@ -3,7 +3,6 @@ use std::{
     collections::HashMap,
     hash::{BuildHasher, Hash},
 };
-use vec_map::VecMap;
 
 pub trait TableGet: Table {
     fn get(&self, k: &<Self::Entity as Entity>::Key) -> Option<&Self::Entity>;
@@ -24,7 +23,7 @@ where
     }
 }
 
-impl<'a, L, T> TableGet for TableTransaction<'a, L, T>
+impl<'a, L, O, T> TableGet for TableTransaction<'a, L, O, T>
 where
     <T::Entity as Entity>::Key: PartialEq,
     L: AsRef<TableLog<T>>,
@@ -35,12 +34,13 @@ where
     }
 }
 
-impl<K, V> TableGet for VecMap<K, V>
+#[cfg(feature = "vec-map")]
+impl<K, V> TableGet for vec_map::VecMap<K, V>
 where
     K: Clone + Into<usize>,
     V: Entity<Key = K>,
 {
     fn get(&self, k: &K) -> Option<&V> {
-        VecMap::<K, V>::get(self, k)
+        vec_map::VecMap::<K, V>::get(self, k)
     }
 }

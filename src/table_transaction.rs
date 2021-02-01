@@ -1,11 +1,12 @@
-use crate::{Entity, Table, TableGet, TableLog};
+use crate::{Entity, EntityUpsert, Result, Table, TableGet, TableLog};
 
-pub struct TableTransaction<'a, L, T> {
+pub struct TableTransaction<'a, L, O, T> {
     pub log: L,
+    pub opts: &'a O,
     pub table: &'a T,
 }
 
-impl<'a, L, T> TableTransaction<'a, L, T> {
+impl<'a, L, O, T> TableTransaction<'a, L, O, T> {
     pub fn get(&self, k: &<T::Entity as Entity>::Key) -> Option<&T::Entity>
     where
         <T::Entity as Entity>::Key: PartialEq,
@@ -22,12 +23,15 @@ impl<'a, L, T> TableTransaction<'a, L, T> {
     }
 }
 
-impl<'a, T: Table> TableTransaction<'a, &'a mut TableLog<T>, T> {
-    pub fn insert(&mut self, k: <T::Entity as Entity>::Key, v: T::Entity)
+impl<'a, O, T: Table> TableTransaction<'a, &'a mut TableLog<T>, O, T> {
+    pub async fn insert(&mut self, k: <T::Entity as Entity>::Key, v: T::Entity) -> Result<()>
     where
+        T::Entity: EntityUpsert<O>,
         <T::Entity as Entity>::Key: PartialEq,
     {
+        v.entity_upsert(&k, self.opts).await?;
         self.log.insert(k, v);
+        Ok(())
     }
 
     pub fn remove(&mut self, k: <T::Entity as Entity>::Key)

@@ -3,7 +3,6 @@ use std::{
     collections::HashMap,
     hash::{BuildHasher, Hash},
 };
-use vec_map::VecMap;
 
 pub trait Table: Sized {
     type Entity: Entity;
@@ -18,11 +17,12 @@ where
     type Entity = E;
 }
 
-impl<'a, L, T: Table> Table for TableTransaction<'a, L, T> {
+impl<'a, L, O, T: Table> Table for TableTransaction<'a, L, O, T> {
     type Entity = T::Entity;
 }
 
-impl<E> Table for VecMap<E::Key, E>
+#[cfg(feature = "vec-map")]
+impl<E> Table for vec_map::VecMap<E::Key, E>
 where
     E: Entity,
     E::Key: Clone + Into<usize>,
