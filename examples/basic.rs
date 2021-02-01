@@ -1,6 +1,9 @@
 use async_cell_lock::AsyncOnceCell;
 use async_trait::async_trait;
-use storm::{Ctx, Entity, EntityDelete, EntityLoad, EntityUpsert, OptsTransaction, Result};
+use storm::{
+    Ctx, Entity, EntityDelete, EntityLoad, EntityUpsert, OptsTransaction, OptsVersion, Result,
+    Version,
+};
 use vec_map::VecMap;
 
 #[tokio::main]
@@ -67,11 +70,17 @@ impl OptsTransaction for ConnPool {
     }
 }
 
+impl OptsVersion for ConnPool {
+    fn opts_version(&mut self) -> u64 {
+        0
+    }
+}
+
 #[derive(Ctx)]
 struct Ctx {
     opts: ConnPool,
     //topic: Cache<usize, Topic>,
-    users: AsyncOnceCell<VecMap<usize, User>>,
+    users: AsyncOnceCell<Version<VecMap<usize, User>>>,
 }
 
 pub struct User {
@@ -90,15 +99,15 @@ impl EntityDelete<ConnPool> for User {
 }
 
 #[async_trait]
-impl EntityUpsert<ConnPool> for User {
-    async fn entity_upsert(&self, _key: &usize, _opts: &ConnPool) -> Result<()> {
-        Ok(())
+impl EntityLoad<ConnPool> for User {
+    async fn entity_load(_opts: &ConnPool) -> Result<Vec<(usize, Self)>> {
+        Ok(Vec::new())
     }
 }
 
 #[async_trait]
-impl EntityLoad<ConnPool> for User {
-    async fn entity_load(_opts: &ConnPool) -> Result<Vec<(usize, Self)>> {
-        Ok(Vec::new())
+impl EntityUpsert<ConnPool> for User {
+    async fn entity_upsert(&self, _key: &usize, _opts: &ConnPool) -> Result<()> {
+        Ok(())
     }
 }

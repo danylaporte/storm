@@ -5,9 +5,9 @@ use std::{
 };
 
 pub trait TableAppyLog: Table {
-    fn insert(&mut self, k: <Self::Entity as Entity>::Key, v: Self::Entity);
+    fn insert(&mut self, k: <Self::Entity as Entity>::Key, v: Self::Entity, version: u64);
 
-    fn remove(&mut self, k: &<Self::Entity as Entity>::Key);
+    fn remove(&mut self, k: &<Self::Entity as Entity>::Key, version: u64);
 }
 
 impl<K, V, S> TableAppyLog for HashMap<K, V, S>
@@ -16,11 +16,11 @@ where
     S: BuildHasher,
     V: Entity<Key = K>,
 {
-    fn insert(&mut self, k: K, v: V) {
+    fn insert(&mut self, k: K, v: V, _: u64) {
         HashMap::insert(self, k, v);
     }
 
-    fn remove(&mut self, k: &K) {
+    fn remove(&mut self, k: &K, _: u64) {
         HashMap::remove(self, k);
     }
 }
@@ -31,11 +31,11 @@ where
     K: Clone + Into<usize>,
     V: Entity<Key = K>,
 {
-    fn insert(&mut self, k: K, v: V) {
+    fn insert(&mut self, k: K, v: V, _: u64) {
         vec_map::VecMap::insert(self, k, v);
     }
 
-    fn remove(&mut self, k: &K) {
+    fn remove(&mut self, k: &K, _: u64) {
         vec_map::VecMap::remove(self, k);
     }
 }

@@ -44,3 +44,18 @@ impl<'a, O, T: Table> TableTransaction<'a, &'a mut TableLog<T>, O, T> {
         Ok(())
     }
 }
+
+impl<'a, L, O, T: Table> Table for TableTransaction<'a, L, O, T> {
+    type Entity = T::Entity;
+}
+
+impl<'a, L, O, T> TableGet for TableTransaction<'a, L, O, T>
+where
+    <T::Entity as Entity>::Key: PartialEq,
+    L: AsRef<TableLog<T>>,
+    T: TableGet,
+{
+    fn get(&self, k: &<Self::Entity as Entity>::Key) -> Option<&Self::Entity> {
+        TableTransaction::get(self, k)
+    }
+}

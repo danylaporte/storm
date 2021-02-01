@@ -17,12 +17,14 @@ where
         self.add.iter().position(|t| &t.0 == k)
     }
 
-    pub(crate) fn apply_log(self, table: &mut T)
+    pub(crate) fn apply_log(self, table: &mut T, version: u64)
     where
         T: TableAppyLog,
     {
-        self.remove.iter().for_each(|k| table.remove(k));
-        self.add.into_iter().for_each(|t| table.insert(t.0, t.1));
+        self.remove.iter().for_each(|k| table.remove(k, version));
+        self.add
+            .into_iter()
+            .for_each(|t| table.insert(t.0, t.1, version));
     }
 
     pub(crate) fn insert(&mut self, k: <T::Entity as Entity>::Key, v: T::Entity) {

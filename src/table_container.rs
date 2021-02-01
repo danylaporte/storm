@@ -6,7 +6,7 @@ use async_trait::async_trait;
 pub trait TableContainer<O> {
     type Table: Table;
 
-    fn apply_log(&mut self, log: TableLog<Self::Table>)
+    fn apply_log(&mut self, log: TableLog<Self::Table>, version: u64)
     where
         Self::Table: TableAppyLog;
 
@@ -24,12 +24,12 @@ where
 {
     type Table = T;
 
-    fn apply_log(&mut self, log: TableLog<Self::Table>)
+    fn apply_log(&mut self, log: TableLog<Self::Table>, version: u64)
     where
         Self::Table: TableAppyLog,
     {
         if let Some(table) = self.get_mut() {
-            log.apply_log(table);
+            log.apply_log(table, version);
         }
     }
 

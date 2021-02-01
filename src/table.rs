@@ -1,4 +1,4 @@
-use crate::{Entity, TableTransaction};
+use crate::Entity;
 use std::{
     collections::HashMap,
     hash::{BuildHasher, Hash},
@@ -15,10 +15,6 @@ where
     S: BuildHasher,
 {
     type Entity = E;
-}
-
-impl<'a, L, O, T: Table> Table for TableTransaction<'a, L, O, T> {
-    type Entity = T::Entity;
 }
 
 #[cfg(feature = "vec-map")]
