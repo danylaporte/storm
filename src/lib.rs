@@ -2,6 +2,7 @@ mod entities_load;
 mod entity;
 mod entity_delete;
 mod entity_upsert;
+mod error;
 mod opts_transaction;
 mod opts_version;
 mod table;
@@ -17,6 +18,7 @@ pub use entities_load::EntitiesLoad;
 pub use entity::Entity;
 pub use entity_delete::EntityDelete;
 pub use entity_upsert::EntityUpsert;
+pub use error::Error;
 pub use opts_transaction::OptsTransaction;
 pub use opts_version::OptsVersion;
 pub use table::Table;
@@ -31,5 +33,4 @@ pub use version::Version;
 #[cfg(feature = "derive")]
 pub use storm_derive::Ctx;
 
-pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T> = std::result::Result<T, Error>;

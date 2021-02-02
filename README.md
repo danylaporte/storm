@@ -11,9 +11,10 @@ An in memory, database agnostic ORM written in rust.
 - Can be used with a Read -> Queue -> Write lock model for maximum concurrency.
 - Loading / saving are async.
 - Add versionning support of rows / tables.
+- Add support for cache.
 
 ### Roadmap
 
 - Add indexing
-- Add support for cache.
 - Implement basic conn pool for Postgresql.
+
