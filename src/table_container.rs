@@ -40,3 +40,30 @@ where
         self.get_or_try_init(T::table_load(opts)).await
     }
 }
+
+#[cfg(feature = "cache")]
+#[async_trait]
+impl<K, O, S, V> TableContainer<O> for cache::Cache<K, V, S>
+where
+    K: PartialEq + Send + Sync,
+    O: Send + Sync,
+    S: Send + Sync,
+    Self: Table<Entity = V>,
+    V: Entity<Key = K> + Send + Sync,
+{
+    type Table = Self;
+
+    fn apply_log(&mut self, log: TableLog<Self::Table>, version: u64)
+    where
+        Self::Table: TableAppyLog,
+    {
+        log.apply_log(self, version);
+    }
+
+    async fn ensure<'a>(&'a self, _opts: &'a O) -> Result<&'a Self::Table>
+    where
+        Self: TableLoad<O>,
+    {
+        Ok(self)
+    }
+}

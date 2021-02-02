@@ -8,6 +8,14 @@ pub trait Table: Sized {
     type Entity: Entity;
 }
 
+#[cfg(feature = "cache")]
+impl<K, V, S> Table for cache::Cache<K, V, S>
+where
+    V: Entity<Key = K>,
+{
+    type Entity = V;
+}
+
 impl<E, S> Table for HashMap<E::Key, E, S>
 where
     E: Entity,

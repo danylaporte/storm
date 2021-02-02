@@ -10,6 +10,22 @@ pub trait TableAppyLog: Table {
     fn remove(&mut self, k: &<Self::Entity as Entity>::Key, version: u64);
 }
 
+#[cfg(feature = "cache")]
+impl<K, V, S> TableAppyLog for cache::Cache<K, V, S>
+where
+    K: Clone + Eq + Hash,
+    S: BuildHasher,
+    V: Entity<Key = K>,
+{
+    fn insert(&mut self, k: K, v: V, _version: u64) {
+        cache::Cache::insert(self, k, v);
+    }
+
+    fn remove(&mut self, k: &K, _version: u64) {
+        cache::Cache::remove(self, k);
+    }
+}
+
 impl<K, V, S> TableAppyLog for HashMap<K, V, S>
 where
     K: Eq + Hash,

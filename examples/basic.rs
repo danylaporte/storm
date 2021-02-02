@@ -1,5 +1,6 @@
 use async_cell_lock::AsyncOnceCell;
 use async_trait::async_trait;
+use cache::Cache;
 use storm::{
     Ctx, EntitiesLoad, Entity, EntityDelete, EntityUpsert, OptsTransaction, OptsVersion, Result,
     Version,
@@ -83,7 +84,7 @@ impl OptsVersion for ConnPool {
 #[derive(Ctx)]
 struct Ctx {
     opts: ConnPool,
-    //topic: Cache<usize, Topic>,
+    topic: Cache<usize, User>,
     users: AsyncOnceCell<Version<VecMap<usize, User>>>,
 }
 
