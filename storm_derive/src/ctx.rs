@@ -116,7 +116,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             }
 
             pub fn apply_log(&mut self, log: #name_log) {
-                let version = storm::OptsVersion::opts_version(&mut self.opts);
+                let version = storm::OptsVersion::opts_new_version(&mut self.opts);
                 #apply_members
             }
 

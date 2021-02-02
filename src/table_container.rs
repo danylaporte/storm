@@ -1,4 +1,4 @@
-use crate::{Entity, LoadTable, Result, Table, TableAppyLog, TableLog};
+use crate::{Entity, Result, Table, TableAppyLog, TableLoad, TableLog};
 use async_cell_lock::AsyncOnceCell;
 use async_trait::async_trait;
 
@@ -12,7 +12,7 @@ pub trait TableContainer<O> {
 
     async fn ensure<'a>(&'a self, opts: &'a O) -> Result<&'a Self::Table>
     where
-        Self::Table: LoadTable<O>;
+        Self::Table: TableLoad<O>;
 }
 
 #[async_trait]
@@ -35,8 +35,8 @@ where
 
     async fn ensure<'a>(&'a self, opts: &'a O) -> Result<&'a Self::Table>
     where
-        T: LoadTable<O>,
+        T: TableLoad<O>,
     {
-        self.get_or_try_init(T::load_table(opts)).await
+        self.get_or_try_init(T::table_load(opts)).await
     }
 }

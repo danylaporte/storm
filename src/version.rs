@@ -1,8 +1,6 @@
-use crate::{Entity, Table, TableAppyLog};
-use std::{
-    iter::FromIterator,
-    ops::{Deref, DerefMut},
-};
+use crate::{EntitiesLoad, Entity, OptsVersion, Result, Table, TableAppyLog, TableLoad};
+use async_trait::async_trait;
+use std::ops::{Deref, DerefMut};
 
 pub struct Version<T> {
     table: T,
@@ -20,18 +18,6 @@ impl<T> Deref for Version<T> {
 impl<T> DerefMut for Version<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.table
-    }
-}
-
-impl<E, U> FromIterator<E> for Version<U>
-where
-    U: FromIterator<E>,
-{
-    fn from_iter<T: IntoIterator<Item = E>>(iter: T) -> Self {
-        Version {
-            table: U::from_iter(iter),
-            version: 0,
-        }
     }
 }
 
@@ -54,5 +40,20 @@ where
     fn remove(&mut self, k: &<Self::Entity as Entity>::Key, version: u64) {
         self.version = version;
         T::remove(self, k, version);
+    }
+}
+
+#[async_trait]
+impl<O, T> TableLoad<O> for Version<T>
+where
+    O: OptsVersion + Send + Sync,
+    T: TableLoad<O>,
+    T::Entity: EntitiesLoad<O>,
+{
+    async fn table_load(opts: &O) -> Result<Self> {
+        Ok(Version {
+            table: T::table_load(opts).await?,
+            version: opts.opts_version(),
+        })
     }
 }

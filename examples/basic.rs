@@ -1,7 +1,7 @@
 use async_cell_lock::AsyncOnceCell;
 use async_trait::async_trait;
 use storm::{
-    Ctx, Entity, EntityDelete, EntityLoad, EntityUpsert, OptsTransaction, OptsVersion, Result,
+    Ctx, EntitiesLoad, Entity, EntityDelete, EntityUpsert, OptsTransaction, OptsVersion, Result,
     Version,
 };
 use vec_map::VecMap;
@@ -71,7 +71,11 @@ impl OptsTransaction for ConnPool {
 }
 
 impl OptsVersion for ConnPool {
-    fn opts_version(&mut self) -> u64 {
+    fn opts_new_version(&mut self) -> u64 {
+        0
+    }
+
+    fn opts_version(&self) -> u64 {
         0
     }
 }
@@ -87,6 +91,13 @@ pub struct User {
     pub name: String,
 }
 
+#[async_trait]
+impl EntitiesLoad<ConnPool> for User {
+    async fn entities_load(_opts: &ConnPool) -> Result<Vec<(usize, Self)>> {
+        Ok(Vec::new())
+    }
+}
+
 impl Entity for User {
     type Key = usize;
 }
@@ -95,13 +106,6 @@ impl Entity for User {
 impl EntityDelete<ConnPool> for User {
     async fn entity_delete(_key: &usize, _opts: &ConnPool) -> Result<()> {
         Ok(())
-    }
-}
-
-#[async_trait]
-impl EntityLoad<ConnPool> for User {
-    async fn entity_load(_opts: &ConnPool) -> Result<Vec<(usize, Self)>> {
-        Ok(Vec::new())
     }
 }
 
