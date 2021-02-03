@@ -3,7 +3,7 @@ use async_trait::async_trait;
 
 #[async_trait]
 pub trait OptsTransaction {
-    async fn cancel(&self);
+    fn cancel(&self);
 
     async fn commit(&self) -> Result<()>;
 

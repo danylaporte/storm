@@ -33,4 +33,7 @@ pub use version::Version;
 #[cfg(feature = "derive")]
 pub use storm_derive::Ctx;
 
+#[cfg(all(feature = "derive", feature = "postgres"))]
+pub use storm_derive::{FromSql, ToSql};
+
 pub type Result<T> = std::result::Result<T, Error>;
