@@ -48,7 +48,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         }
 
         let pascal_name = Ident::new(&name.to_string().to_pascal_case(), name.span());
-        let ty = field.ty();
+        let ty = &field.ty;
 
         apply_members.push(quote! {
             storm::TableContainer::<#opts_ty>::apply_log(&mut self.#name, log.#name, version);

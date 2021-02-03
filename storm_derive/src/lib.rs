@@ -3,13 +3,20 @@ extern crate proc_macro;
 #[macro_use]
 mod macros;
 
+mod attrs_ext;
 mod ctx;
 mod derive_input_ext;
 mod field_ext;
 
 #[cfg(feature = "postgres")]
+mod errors;
+
+#[cfg(feature = "postgres")]
+use errors::Errors;
+#[cfg(feature = "postgres")]
 mod postgres;
 
+use attrs_ext::AttrsExt;
 use derive_input_ext::DeriveInputExt;
 use field_ext::FieldExt;
 use proc_macro::TokenStream;
@@ -33,4 +40,11 @@ pub fn from_sql(input: TokenStream) -> TokenStream {
 pub fn to_sql(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     postgres::to_sql(&input).into()
+}
+
+#[cfg(feature = "postgres")]
+#[proc_macro_derive(Upsert, attributes(column, key, table))]
+pub fn upsert(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    postgres::upsert(&input).into()
 }

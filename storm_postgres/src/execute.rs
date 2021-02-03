@@ -2,11 +2,11 @@ use async_trait::async_trait;
 use postgres_types::ToSql;
 use std::fmt::Debug;
 use storm::Result;
-use tokio_postgres::{Row, ToStatement};
+use tokio_postgres::ToStatement;
 
 #[async_trait]
-pub trait Query {
-    async fn query_rows<S, P>(&self, s: &S, params: &[&(dyn ToSql + Sync)]) -> Result<Vec<Row>>
+pub trait Execute {
+    async fn execute<S>(&self, s: &S, params: &[&(dyn ToSql + Sync)]) -> Result<u64>
     where
         S: ?Sized + Debug + ToStatement + Send + Sync;
 }

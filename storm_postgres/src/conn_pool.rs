@@ -1,5 +1,6 @@
-use crate::{ClientFactory, Query};
+use crate::{ClientFactory, Execute, Query};
 use async_trait::async_trait;
+use postgres_types::ToSql;
 use std::{
     fmt::Debug,
     intrinsics::transmute,
@@ -7,7 +8,7 @@ use std::{
 };
 use storm::{Error, OptsTransaction, OptsVersion, Result};
 use tokio::sync::Mutex;
-use tokio_postgres::{types::ToSql, Client, Row, ToStatement, Transaction};
+use tokio_postgres::{Client, Row, ToStatement, Transaction};
 use tracing::{error, instrument};
 
 pub struct ConnPool<C> {
@@ -15,6 +16,25 @@ pub struct ConnPool<C> {
     state: Mutex<State>,
     transaction_state: AtomicUsize,
     version: u64,
+}
+
+#[async_trait]
+impl<C> Execute for ConnPool<C>
+where
+    C: ClientFactory + Send + Sync,
+{
+    #[instrument(skip(self), err)]
+    async fn execute<S>(&self, statement: &S, params: &[&(dyn ToSql + Sync)]) -> Result<u64>
+    where
+        S: ?Sized + Debug + ToStatement + Send + Sync,
+    {
+        let mut state = self.state.lock().await;
+
+        match state.transaction(&self.transaction_state) {
+            Some(t) => t.execute(statement, params).await.map_err(Error::std),
+            None => Err(Error::NotInTransaction),
+        }
+    }
 }
 
 #[async_trait]
@@ -94,7 +114,7 @@ where
         params: &[&(dyn ToSql + Sync)],
     ) -> Result<Vec<Row>>
     where
-        S: Debug + ToStatement + Send + Sync,
+        S: ?Sized + Debug + ToStatement + Send + Sync,
     {
         let mut state = self.state.lock().await;
 

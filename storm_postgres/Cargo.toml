@@ -7,10 +7,17 @@ publish = false
 
 [dependencies]
 async-trait = "0.1"
+bytes = "1"
 native-tls = "0.2"
 postgres-native-tls = "0.5"
-storm = { path = ".." }
-tokio = { version = "1", features = ["sync"] }
+postgres-types = "0.2"
+storm = { path = "../storm", features = ["postgres"] }
+tokio = { version = "1", features = ["rt-multi-thread", "sync"] }
 tokio-postgres = "0.7"
 tracing = "0.1"
 tracing-futures = "0.2"
+
+[features]
+default = ["cache", "vec-map"]
+cache = ["storm/cache"]
+vec-map = ["storm/vec-map"]
