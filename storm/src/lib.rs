@@ -34,6 +34,6 @@ pub use version::Version;
 pub use storm_derive::Ctx;
 
 #[cfg(all(feature = "derive", feature = "postgres"))]
-pub use storm_derive::{FromSql, ToSql, Upsert};
+pub use storm_derive::{FromSql, Load, ToSql, Upsert};
 
 pub type Result<T> = std::result::Result<T, Error>;

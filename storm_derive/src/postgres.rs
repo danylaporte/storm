@@ -1,7 +1,7 @@
 use crate::{DeriveInputExt, Errors, FieldExt};
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{spanned::Spanned, DeriveInput, Error, LitStr};
+use syn::{spanned::Spanned, DeriveInput, Error, LitInt, LitStr};
 
 pub fn from_sql(input: &DeriveInput) -> TokenStream {
     let ts = try_ts!(from_sql_internal(input));
@@ -24,6 +24,85 @@ fn from_sql_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
             fn accepts(ty: &postgres_types::Type) -> bool {
                 <#t as postgres_types::FromSql>::accepts(ty)
+            }
+        }
+    })
+}
+
+pub fn load(input: &DeriveInput) -> TokenStream {
+    let ts = try_ts!(load_internal(input));
+    quote! { #ts }
+}
+
+fn load_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
+    let ident = &input.ident;
+
+    let mut clauses = String::new();
+    let mut errors = Vec::new();
+    let mut fields = Vec::new();
+    let mut params = Vec::new();
+    let mut sql = String::new();
+    let mut types = Vec::new();
+    let mut param_index = 0;
+
+    for (index, field) in input.fields()?.iter().enumerate() {
+        let column = continue_ts!(field.column(), errors);
+        sql.add_sep(",").add_field(&column);
+
+        clauses.add_sep(" AND ").add(&format!(
+            r#"COALESCE(${}, "{}")="{}""#,
+            index + 1,
+            column,
+            column,
+        ));
+
+        let index = LitInt::new(&index.to_string(), field.span());
+
+        if field.is_key() {
+            let param = LitInt::new(&param_index.to_string(), field.span());
+            params.push(quote! { &p.#param as _ });
+
+            param_index += 1;
+        }
+
+        let m = field.ident()?;
+
+        fields.push(quote! { #m: row.get(#index) });
+        types.push(&field.ty);
+    }
+
+    errors.result()?;
+
+    if !clauses.is_empty() {
+        clauses.insert_str(0, " WHERE ");
+    }
+
+    sql.insert_str(0, "SELECT ");
+    sql.push_str(" FROM ");
+    sql.push_str(&input.table()?);
+    sql.push_str(&clauses);
+
+    let sql = LitStr::new(&sql, ident.span());
+    let fields = quote! { #(#fields,)* };
+    let params = quote! { [#(#params,)*] };
+    let types = quote! { (#(Option<#types>,)*) };
+    let (impl_generics, ty_generics, where_clause) = &input.generics.split_for_impl();
+
+    Ok(quote! {
+        #[async_trait::async_trait]
+        impl #impl_generics storm_postgres::Load<#types> for #ident #ty_generics #where_clause {
+            async fn load<C>(client: &C, p: &#types) -> storm_postgres::Result<Vec<Self>>
+            where
+                C: storm_postgres::Query + Send + Sync,
+            {
+                let p = #params;
+
+                Ok(client
+                    .query_rows(#sql, &p)
+                    .await?
+                    .into_iter()
+                    .map(|row| Self { #fields })
+                    .collect())
             }
         }
     })

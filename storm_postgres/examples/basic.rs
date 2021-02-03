@@ -1,4 +1,4 @@
-use storm_postgres::{FromSql, ToSql, Upsert};
+use storm_postgres::{FromSql, Load, ToSql, Upsert};
 
 fn main() {}
 
@@ -11,7 +11,7 @@ impl From<UserId> for usize {
     }
 }
 
-#[derive(Upsert)]
+#[derive(Load, Upsert)]
 #[table("public.users")]
 pub struct UserRow {
     #[key]

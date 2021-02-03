@@ -108,11 +108,7 @@ where
     C: ClientFactory + Send + Sync,
 {
     #[instrument(skip(self), err)]
-    async fn query_rows<S, P>(
-        &self,
-        statement: &S,
-        params: &[&(dyn ToSql + Sync)],
-    ) -> Result<Vec<Row>>
+    async fn query_rows<S>(&self, statement: &S, params: &[&(dyn ToSql + Sync)]) -> Result<Vec<Row>>
     where
         S: ?Sized + Debug + ToStatement + Send + Sync,
     {

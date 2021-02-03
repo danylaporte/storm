@@ -36,6 +36,13 @@ pub fn from_sql(input: TokenStream) -> TokenStream {
 }
 
 #[cfg(feature = "postgres")]
+#[proc_macro_derive(Load, attributes(column, key, table))]
+pub fn load(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    postgres::load(&input).into()
+}
+
+#[cfg(feature = "postgres")]
 #[proc_macro_derive(ToSql)]
 pub fn to_sql(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
