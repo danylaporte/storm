@@ -1,4 +1,4 @@
-use crate::{DeriveInputExt, Errors, FieldExt};
+use crate::{DeriveInputExt, Errors, FieldExt, StringExt};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{spanned::Spanned, DeriveInput, Error, LitInt, LitStr};
@@ -47,9 +47,9 @@ fn load_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
     for (index, field) in input.fields()?.iter().enumerate() {
         let column = continue_ts!(field.column(), errors);
-        sql.add_sep(",").add_field(&column);
+        sql.add_sep(',').add_field(&column);
 
-        clauses.add_sep(" AND ").add(&format!(
+        clauses.add_sep_str(" AND ").add_str(&format!(
             r#"COALESCE(${}, "{}")="{}""#,
             index + 1,
             column,
@@ -164,17 +164,17 @@ fn upsert_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         let column = continue_ts!(field.column(), errors);
         let field_ident = continue_ts!(field.ident(), errors);
 
-        insert_names.add_sep(",").add_field(&column);
-        insert_values.add_sep(",").add_param(index + 1);
+        insert_names.add_sep(',').add_field(&column);
+        insert_values.add_sep(',').add_param(index + 1);
 
         if field.is_key() {
-            keys.add_sep(",").add_field(&column);
+            keys.add_sep(',').add_field(&column);
         }
 
         updates
-            .add_sep(",")
+            .add_sep(',')
             .add_field(&column)
-            .add("=")
+            .add('=')
             .add_param(index + 1);
 
         params.push(quote! { &self.#field_ident as &(dyn tokio_postgres::types::ToSql + Sync) });
@@ -214,57 +214,14 @@ fn upsert_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     })
 }
 
-trait SqlStringExt {
-    fn add(&mut self, s: &str) -> &mut Self;
-    fn add_sep(&mut self, sep: &str) -> &mut Self;
-    fn add_diff(&mut self, field: &str, index: usize) -> &mut Self;
-    fn add_field(&mut self, field: &str) -> &mut Self;
-    fn add_field_with_alias(&mut self, field: &str, table_alias: &str) -> &mut Self;
-    fn add_param(&mut self, index: usize) -> &mut Self;
-}
-
-impl SqlStringExt for String {
-    fn add(&mut self, s: &str) -> &mut Self {
-        self.push_str(s);
-        self
-    }
-
-    fn add_sep(&mut self, sep: &str) -> &mut Self {
-        if !self.is_empty() {
-            self.push_str(sep)
-        }
-        self
-    }
-
-    fn add_diff(&mut self, field: &str, index: usize) -> &mut Self {
-        let s = format!(
-            "[{field}] != @p{index} OR ([{field}] IS NULL AND @p{index} IS NOT NULL) OR ([{field}] IS NOT NULL AND @p{index} IS NULL)",
-            field = field,
-            index = index,
-        );
-        self.push_str(&s);
-        self
-    }
-
+trait SqlStringExt: StringExt {
     fn add_field(&mut self, field: &str) -> &mut Self {
-        self.push('\"');
-        self.push_str(field);
-        self.push('\"');
-        self
-    }
-
-    fn add_field_with_alias(&mut self, field: &str, table_alias: &str) -> &mut Self {
-        self.push('\"');
-        self.push_str(table_alias);
-        self.push('.');
-        self.push_str(field);
-        self.push('\"');
-        self
+        self.add_str(field).add('\"').add_str(field).add('\"')
     }
 
     fn add_param(&mut self, index: usize) -> &mut Self {
-        self.push('$');
-        self.push_str(&index.to_string());
-        self
+        self.add('$').add_str(&index.to_string())
     }
 }
+
+impl<T> SqlStringExt for T where T: StringExt {}

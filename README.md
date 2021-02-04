@@ -12,9 +12,13 @@ An in memory, database agnostic ORM written in rust.
 - Loading / saving are async.
 - Add versionning support of rows / tables.
 - Add support for cache.
+- Support for Postgres
 
 ### Roadmap
 
 - Add indexing
-- Implement basic conn pool for Postgresql.
+- Add support for mssql (initial dev started)
+- Remove double allocation when loading rows
+- Improve row / entity mapping.
+- Separate rows from entity in the TransactionLog.
 
