@@ -24,6 +24,10 @@ pub struct StormFieldAttrs {
 
 impl StormFieldAttrs {
     pub fn column(&self, field: &Field) -> Result<String, TokenStream> {
+        if let Some(c) = self.column.as_ref().filter(|c| !c.is_empty()) {
+            return Ok(c.clone());
+        }
+
         let s = self
             .ident
             .as_ref()
@@ -70,7 +74,7 @@ fn load_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         where_one_sql
             .add_sep_str(" AND ")
             .add_field(key)
-            .add_str(" = @")
+            .add_str("=@p")
             .add_str(&select_all_index_str);
 
         select_key.push(quote! {
@@ -219,14 +223,13 @@ fn save_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
         insert_value_sql
             .add_sep(',')
-            .add('@')
+            .add_str("@p")
             .add_str(param_index_str);
 
         update_set_sql
             .add_sep(',')
             .add_field(column)
-            .add('=')
-            .add('@')
+            .add_str("=@p")
             .add_str(param_index_str);
 
         params.push(quote!(&v.#ident,));
@@ -240,14 +243,13 @@ fn save_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
         insert_value_sql
             .add_sep(',')
-            .add('@')
+            .add_str("@p")
             .add_str(&param_index_str);
 
         update_where_sql
             .add_sep_str(" AND ")
             .add_field(key)
-            .add('=')
-            .add('@')
+            .add_str("=@p")
             .add_str(&param_index_str);
 
         if keys.len() == 1 {
@@ -294,10 +296,6 @@ fn save_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 trait SqlStringExt: StringExt {
     fn add_field(&mut self, field: &str) -> &mut Self {
         self.add('[').add_str(field).add(']')
-    }
-
-    fn add_param(&mut self, index: usize) -> &mut Self {
-        self.add('@').add_str(&index.to_string())
     }
 }
 

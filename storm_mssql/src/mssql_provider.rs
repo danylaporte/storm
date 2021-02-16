@@ -68,7 +68,7 @@ where
         }
 
         client
-            .simple_query("BEGIN TRANS")
+            .simple_query("BEGIN TRAN")
             .await
             .map_err(Error::std)?;
 
