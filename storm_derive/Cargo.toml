@@ -9,6 +9,7 @@ publish = false
 proc-macro = true
 
 [dependencies]
+darling = "0.12"
 Inflector = "0.11"
 either = "1"
 proc-macro2 = "1"
@@ -21,3 +22,5 @@ toml = "0.5"
 
 [features]
 postgres = []
+mssql = []
+default = ["mssql"]

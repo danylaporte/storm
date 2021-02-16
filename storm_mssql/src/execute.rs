@@ -5,7 +5,7 @@ use tiberius::ToSql;
 
 #[async_trait]
 pub trait Execute {
-    async fn execute<'a, S>(&self, s: S, params: &[&(dyn ToSql)]) -> Result<u64>
+    async fn execute<'a, S>(&self, statement: S, params: &[&(dyn ToSql)]) -> Result<u64>
     where
         S: ?Sized + Debug + Into<Cow<'a, str>> + Send;
 }

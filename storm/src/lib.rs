@@ -1,39 +1,33 @@
-mod entities_load;
+mod apply_log;
+mod ctx_types;
 mod entity;
-mod entity_delete;
-mod entity_upsert;
 mod error;
-mod opts_transaction;
-mod opts_version;
-mod table;
-mod table_appy_log;
-mod table_container;
-mod table_get;
-mod table_load;
-mod table_log;
-mod table_transaction;
-mod version;
+mod get;
+mod get_or_load;
+mod init;
+mod map_transaction;
+pub mod mem;
+pub mod provider;
+mod state;
+mod trx_cell;
 
-pub use entities_load::EntitiesLoad;
+pub use apply_log::ApplyLog;
+pub use ctx_types::CtxTypes;
 pub use entity::Entity;
-pub use entity_delete::EntityDelete;
-pub use entity_upsert::EntityUpsert;
 pub use error::Error;
-pub use opts_transaction::OptsTransaction;
-pub use opts_version::OptsVersion;
-pub use table::Table;
-pub use table_appy_log::TableAppyLog;
-pub use table_container::TableContainer;
-pub use table_get::TableGet;
-pub use table_load::TableLoad;
-pub use table_log::TableLog;
-pub use table_transaction::TableTransaction;
-pub use version::Version;
+pub use get::Get;
+pub use get_or_load::GetOrLoad;
+pub use init::Init;
+pub use map_transaction::MapTransaction;
+pub use once_cell::sync::OnceCell;
+use state::State;
+pub use trx_cell::TrxCell;
+
+type Log<E> = fxhash::FxHashMap<<E as Entity>::Key, State<E>>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 #[cfg(feature = "derive")]
 pub use storm_derive::Ctx;
 
-#[cfg(all(feature = "derive", feature = "postgres"))]
-pub use storm_derive::{FromSql, Load, ToSql, Upsert};
-
-pub type Result<T> = std::result::Result<T, Error>;
+#[cfg(feature = "mssql")]
+pub use storm_derive::{MssqlLoad, MssqlSave};

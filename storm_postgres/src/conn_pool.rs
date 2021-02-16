@@ -21,7 +21,7 @@ pub struct ConnPool<C> {
 #[async_trait]
 impl<C> Execute for ConnPool<C>
 where
-    C: ClientFactory + Send + Sync,
+    C: ClientFactory,
 {
     #[instrument(skip(self), err)]
     async fn execute<S>(&self, statement: &S, params: &[&(dyn ToSql + Sync)]) -> Result<u64>
@@ -40,7 +40,7 @@ where
 #[async_trait]
 impl<C> OptsTransaction for ConnPool<C>
 where
-    C: ClientFactory + Send + Sync,
+    C: ClientFactory,
 {
     fn cancel(&self) {
         use transaction_states::{ACTIVE, CANCELLED};
@@ -105,7 +105,7 @@ impl<C> OptsVersion for ConnPool<C> {
 #[async_trait]
 impl<C> Query for ConnPool<C>
 where
-    C: ClientFactory + Send + Sync,
+    C: ClientFactory,
 {
     #[instrument(skip(self), err)]
     async fn query_rows<S>(&self, statement: &S, params: &[&(dyn ToSql + Sync)]) -> Result<Vec<Row>>

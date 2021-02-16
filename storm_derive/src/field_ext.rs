@@ -1,5 +1,6 @@
 use crate::AttrsExt;
 use proc_macro2::TokenStream;
+use quote::ToTokens;
 use syn::{spanned::Spanned, Error, Field, Ident, LitStr};
 
 pub trait FieldExt {
@@ -22,10 +23,25 @@ pub trait FieldExt {
     fn is_key(&self) -> bool {
         self.field().attrs.iter().any(|a| a.path.is_ident("key"))
     }
+
+    fn type_info(&self) -> TypeInfo {
+        let s = self.field().ty.to_token_stream().to_string();
+
+        if s.find("OnceCell").is_some() {
+            return TypeInfo::OnceCell;
+        }
+
+        TypeInfo::Other
+    }
 }
 
 impl FieldExt for Field {
     fn field(&self) -> &Field {
         self
     }
+}
+
+pub enum TypeInfo {
+    OnceCell,
+    Other,
 }
