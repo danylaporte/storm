@@ -147,30 +147,18 @@ pub struct MssqlTransaction<'a, F> {
 impl<'a, F> MssqlTransaction<'a, F> {
     #[instrument(name = "MssqlTransaction::commit", skip(self), err)]
     pub async fn commit(mut self) -> Result<()> {
+        let result = transaction_state_client(self.provider, self.id).await;
+
+        // indicate that the transaction is now disposed.
         self.id = 0;
 
-        let (mut state, mut client) = self.state_client().await?;
+        let (mut state, mut client) = result?;
 
         state.current_transaction = 0;
         client.simple_query("COMMIT").await.map_err(Error::std)?;
         state.client = Some(client);
 
         Ok(())
-    }
-
-    async fn state_client(&self) -> Result<(MutexGuard<'_, State>, Client)> {
-        let mut state = self.provider.state.lock().await;
-
-        if state.current_transaction != self.id {
-            return Err(Error::NotInTransaction);
-        }
-
-        if let Some(client) = state.client.take() {
-            return Ok((state, client));
-        }
-
-        state.current_transaction = 0;
-        Err(Error::NotInTransaction)
     }
 }
 
@@ -192,7 +180,7 @@ where
     where
         S: ?Sized + Debug + Into<Cow<'b, str>> + Send,
     {
-        let (mut state, mut client) = self.state_client().await?;
+        let (mut state, mut client) = transaction_state_client(self.provider, self.id).await?;
 
         let count = client
             .execute(statement, params)
@@ -257,4 +245,22 @@ struct State {
     client: Option<Client>,
     transaction_counter: u64,
     current_transaction: u64,
+}
+
+async fn transaction_state_client<F>(
+    provider: &MssqlProvider<F>,
+    transaction_id: u64,
+) -> Result<(MutexGuard<'_, State>, Client)> {
+    let mut state = provider.state.lock().await;
+
+    if state.current_transaction != transaction_id {
+        return Err(Error::NotInTransaction);
+    }
+
+    if let Some(client) = state.client.take() {
+        return Ok((state, client));
+    }
+
+    state.current_transaction = 0;
+    Err(Error::NotInTransaction)
 }

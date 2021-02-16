@@ -1,6 +1,8 @@
 use std::collections::HashMap;
-
-use storm::{mem::Transaction, Ctx, Entity, MssqlLoad, MssqlSave, OnceCell, Result};
+use storm::{
+    mem::{Commit, Transaction},
+    ApplyLog, Ctx, Entity, GetOrLoad, MssqlLoad, MssqlSave, OnceCell, Result,
+};
 use storm_mssql::{ClientFactory, Execute, MssqlProvider};
 use tiberius::{AuthMethod, Config};
 
@@ -33,7 +35,33 @@ async fn crud() -> Result<()> {
         o: None,
     };
 
+    // insert
     entities1.insert(1, e1, &transaction).await?;
+
+    let mut e1 = entities1.get(&1).unwrap().clone();
+
+    e1.o = Some(5);
+
+    // update
+    entities1.insert(1, e1, &transaction).await?;
+
+    transaction.commit().await?;
+    let log = trx.commit();
+
+    let mut ctx = TestCtx::default();
+    ctx.apply_log(log);
+
+    let ctx = TestCtx::default();
+
+    let entities1 = ctx.entities1.get_or_load(provider).await?;
+
+    assert_eq!(
+        entities1.get(&1).unwrap().clone(),
+        Entity1 {
+            name: "E1".to_string(),
+            o: Some(5),
+        }
+    );
 
     Ok(())
 }
@@ -43,7 +71,7 @@ struct TestCtx {
     entities1: OnceCell<HashMap<i32, Entity1>>,
 }
 
-#[derive(MssqlLoad, MssqlSave)]
+#[derive(Clone, Debug, MssqlLoad, MssqlSave, PartialEq)]
 #[storm(table = "##Tbl", keys = "Id")]
 struct Entity1 {
     name: String,
