@@ -35,23 +35,24 @@ impl StormTypeAttrs {
     }
 }
 
-#[derive(Clone, Copy, Debug, FromMeta)]
+#[derive(Clone, Copy, Debug, Eq, FromMeta, PartialEq)]
 pub enum StormFieldRenameAll {
+    #[darling(rename = "PascalCase")]
     PascalCase,
 
-    #[allow(non_camel_case_types)]
-    camelCase,
+    #[darling(rename = "camelCase")]
+    CamelCase,
 
-    #[allow(non_camel_case_types)]
-    snake_case,
+    #[darling(rename = "snake_case")]
+    SnakeCase,
 }
 
 impl StormFieldRenameAll {
-    pub fn rename(&self, s: impl Inflector) -> String {
+    pub fn rename(&self, s: String) -> String {
         match self {
+            Self::CamelCase => s.to_camel_case(),
             Self::PascalCase => s.to_pascal_case(),
-            Self::camelCase => s.to_camel_case(),
-            Self::snake_case => s.to_snake_case(),
+            Self::SnakeCase => s.to_snake_case(),
         }
     }
 }
@@ -69,7 +70,7 @@ impl StormFieldAttrs {
     pub fn column(
         &self,
         field: &Field,
-        rename: Option<StormFieldRenameAll>,
+        rename_all: Option<StormFieldRenameAll>,
     ) -> Result<String, TokenStream> {
         if let Some(c) = self.column.as_ref().filter(|c| !c.is_empty()) {
             return Ok(c.clone());
@@ -81,7 +82,7 @@ impl StormFieldAttrs {
             .ok_or_else(|| syn::Error::new(field.span(), "Ident expected.").to_compile_error())?
             .to_string();
 
-        Ok(match rename {
+        Ok(match rename_all {
             Some(r) => r.rename(s),
             None => s,
         })
