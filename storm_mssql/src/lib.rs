@@ -3,7 +3,6 @@ mod execute;
 mod from_sql;
 mod mssql_provider;
 mod query_rows;
-mod to_sql;
 
 pub use client_factory::ClientFactory;
 pub use execute::Execute;
