@@ -15,11 +15,11 @@ impl<P, E, S> Init<P> for HashMap<E::Key, E, S>
 where
     E: Entity + Send,
     E::Key: Eq + Hash + Send,
-    P: Sync + LoadAll<E>,
+    P: Sync + LoadAll<E, ()>,
     S: BuildHasher + Default + Send,
 {
     async fn init(provider: &P) -> Result<Self> {
-        provider.load_all().await
+        provider.load_all(&()).await
     }
 }
 
@@ -29,9 +29,9 @@ impl<P, E> Init<P> for vec_map::VecMap<E::Key, E>
 where
     E: Entity + Send,
     E::Key: Into<usize> + Send,
-    P: Sync + LoadAll<E>,
+    P: Sync + LoadAll<E, ()>,
 {
     async fn init(provider: &P) -> Result<Self> {
-        provider.load_all().await
+        provider.load_all(&()).await
     }
 }

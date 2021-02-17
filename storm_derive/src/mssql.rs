@@ -203,12 +203,22 @@ fn load_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         }
 
         #[async_trait::async_trait]
-        impl<F> storm::provider::LoadAll<#ident> for storm_mssql::MssqlProvider<F>
+        impl<F, FILTER> storm::provider::LoadAll<#ident, FILTER> for storm_mssql::MssqlProvider<F>
         where
             F: storm_mssql::ClientFactory,
+            FILTER: storm_mssql::FilterSql,
         {
-            async fn load_all<C: Default + Extend<(<#ident as storm::Entity>::Key, #ident)> + Send>(&self) -> storm::Result<C> {
-                storm_mssql::QueryRows::query_rows(self, #select_all_sql.to_string(), &[], |row| {
+            async fn load_all<C: Default + Extend<(<#ident as storm::Entity>::Key, #ident)> + Send>(&self, filter: &FILTER) -> storm::Result<C> {
+                const SQL: &str = #select_all_sql;
+
+                let (sql, params) = storm_mssql::FilterSql::filter_sql(filter, 0);
+
+                let sql = match sql.is_empty() {
+                    false => format!("{} WHERE {}", SQL, sql),
+                    true => SQL.to_string(),
+                };
+
+                storm_mssql::QueryRows::query_rows(self, sql, &*params, |row| {
                     Ok((
                         #select_key_ts,
                         #ident { #select_all_field }

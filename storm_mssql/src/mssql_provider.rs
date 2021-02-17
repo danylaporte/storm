@@ -1,4 +1,4 @@
-use crate::{Client, ClientFactory, Execute, QueryRows};
+use crate::{Client, ClientFactory, Execute, FilterSql, QueryRows};
 use async_trait::async_trait;
 use futures_util::TryStreamExt;
 use std::{
@@ -227,17 +227,19 @@ where
 }
 
 #[async_trait::async_trait]
-impl<'a, E, F> storm::provider::LoadAll<E> for MssqlTransaction<'a, F>
+impl<'a, E, F, FILTER> storm::provider::LoadAll<E, FILTER> for MssqlTransaction<'a, F>
 where
     E: storm::Entity + Send + 'a,
     E::Key: Send,
     F: ClientFactory,
-    MssqlProvider<F>: storm::provider::LoadAll<E>,
+    FILTER: FilterSql,
+    MssqlProvider<F>: storm::provider::LoadAll<E, FILTER>,
 {
     async fn load_all<C: Default + Extend<(<E as storm::Entity>::Key, E)> + Send>(
         &self,
+        filter: &FILTER,
     ) -> storm::Result<C> {
-        storm::provider::LoadAll::<E>::load_all(self.provider).await
+        storm::provider::LoadAll::<E, FILTER>::load_all(self.provider, filter).await
     }
 }
 

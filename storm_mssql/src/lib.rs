@@ -1,11 +1,13 @@
 mod client_factory;
 mod execute;
+mod filter_sql;
 mod from_sql;
 mod mssql_provider;
 mod query_rows;
 
 pub use client_factory::ClientFactory;
 pub use execute::Execute;
+pub use filter_sql::FilterSql;
 pub use from_sql::FromSql;
 pub use mssql_provider::{MssqlProvider, MssqlTransaction};
 pub use query_rows::QueryRows;

@@ -47,8 +47,8 @@ impl Entity for User {
 }
 
 #[async_trait]
-impl LoadAll<User> for () {
-    async fn load_all<C: Default + Extend<(usize, User)>>(&self) -> Result<C> {
+impl LoadAll<User, ()> for () {
+    async fn load_all<C: Default + Extend<(usize, User)>>(&self, _: &()) -> Result<C> {
         Ok(C::default())
     }
 }
