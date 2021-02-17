@@ -23,7 +23,7 @@ impl StormTypeAttrs {
 
         if vec.is_empty() {
             errors.push(
-                Error::new(self.keys.span(), "Must specify at least one key.").into_compile_error(),
+                Error::new(self.keys.span(), "Must specify at least one key.").to_compile_error(),
             );
         }
 
