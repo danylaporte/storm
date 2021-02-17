@@ -1,5 +1,6 @@
 use crate::{token_stream_ext::TokenStreamExt, DeriveInputExt, Errors, FieldExt, StringExt};
 use darling::{FromDeriveInput, FromField, FromMeta};
+use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{spanned::Spanned, DeriveInput, Error, Field, Ident, LitInt, LitStr};
@@ -11,6 +12,48 @@ pub struct StormTypeAttrs {
     attrs: Vec<syn::Attribute>,
     table: String,
     keys: String,
+
+    #[darling(default)]
+    rename_all: Option<StormFieldRenameAll>,
+}
+
+impl StormTypeAttrs {
+    pub fn keys(&self, errors: &mut Vec<TokenStream>) -> Vec<&str> {
+        let vec = self.keys_internal();
+
+        if vec.is_empty() {
+            errors.push(
+                Error::new(self.keys.span(), "Must specify at least one key.").into_compile_error(),
+            );
+        }
+
+        vec
+    }
+
+    fn keys_internal(&self) -> Vec<&str> {
+        self.keys.split(',').filter(|s| !s.is_empty()).collect()
+    }
+}
+
+#[derive(Clone, Copy, Debug, FromMeta)]
+pub enum StormFieldRenameAll {
+    PascalCase,
+
+    #[allow(non_camel_case_types)]
+    camelCase,
+
+    #[allow(non_camel_case_types)]
+    snake_case,
+}
+
+impl StormFieldRenameAll {
+    pub fn rename(&self, s: impl Inflector) -> String {
+        match self {
+            Self::PascalCase => s.to_pascal_case(),
+            Self::camelCase => s.to_camel_case(),
+            Self::snake_case => s.to_snake_case(),
+        }
+    }
 }
 
 #[derive(Debug, FromField)]
@@ -23,7 +66,11 @@ pub struct StormFieldAttrs {
 }
 
 impl StormFieldAttrs {
-    pub fn column(&self, field: &Field) -> Result<String, TokenStream> {
+    pub fn column(
+        &self,
+        field: &Field,
+        rename: Option<StormFieldRenameAll>,
+    ) -> Result<String, TokenStream> {
         if let Some(c) = self.column.as_ref().filter(|c| !c.is_empty()) {
             return Ok(c.clone());
         }
@@ -34,7 +81,10 @@ impl StormFieldAttrs {
             .ok_or_else(|| syn::Error::new(field.span(), "Ident expected.").to_compile_error())?
             .to_string();
 
-        Ok(s)
+        Ok(match rename {
+            Some(r) => r.rename(s),
+            None => s,
+        })
     }
 }
 
@@ -63,7 +113,8 @@ fn load_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let mut select_one_sql = String::new();
     let mut where_one_sql = String::new();
 
-    let keys = attrs.keys.split(",").collect::<Vec<_>>();
+    let keys = attrs.keys(&mut errors);
+    let rename_all = attrs.rename_all;
 
     for key in &keys {
         let select_all_index_str = select_all_index.to_string();
@@ -97,7 +148,7 @@ fn load_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             errors
         );
 
-        let column = continue_ts!(attrs.column(field), errors);
+        let column = continue_ts!(attrs.column(field, rename_all), errors);
         let ident = continue_ts!(field.ident(), errors);
 
         select_all_sql.add_sep(',').add_field(&column);
@@ -123,17 +174,10 @@ fn load_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     select_one_sql.push_str(" WHERE ");
     select_one_sql.push_str(&where_one_sql);
 
-    let select_key_ts;
-
-    match keys.len() {
-        0 => return Err(must_have_at_least_one_key(input)),
-        1 => {
-            select_key_ts = quote!(#(#select_key)*);
-        }
-        _ => {
-            select_key_ts = quote!(#(#select_key,)*);
-        }
-    }
+    let select_key_ts = match keys.len() {
+        1 => quote!(#(#select_key)*),
+        _ => quote!(#(#select_key,)*),
+    };
 
     errors.result()?;
 
@@ -174,10 +218,6 @@ fn load_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     })
 }
 
-fn must_have_at_least_one_key(input: &DeriveInput) -> TokenStream {
-    Error::new(input.ident.span(), "Must have at least one key.").to_compile_error()
-}
-
 pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let ts = try_ts!(save_internal(input));
     quote! { #ts }
@@ -196,11 +236,8 @@ fn save_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let mut params = Vec::new();
     let mut errors = Vec::new();
 
-    let keys = attrs.keys.split(",").collect::<Vec<_>>();
-
-    if keys.is_empty() {
-        errors.push(must_have_at_least_one_key(input));
-    }
+    let keys = attrs.keys(&mut errors);
+    let rename_all = attrs.rename_all;
 
     for field in input.fields()? {
         let attrs: StormFieldAttrs = continue_ts!(
@@ -208,7 +245,7 @@ fn save_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             errors
         );
 
-        let column = &continue_ts!(attrs.column(field), errors);
+        let column = &continue_ts!(attrs.column(field, rename_all), errors);
         let ident = continue_ts!(field.ident(), errors);
 
         // keys are processed at the end.
