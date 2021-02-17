@@ -10,5 +10,6 @@ pub use execute::Execute;
 pub use from_sql::FromSql;
 pub use mssql_provider::{MssqlProvider, MssqlTransaction};
 pub use query_rows::QueryRows;
+pub use storm::{Error, Result};
 
 pub type Client = tiberius::Client<tokio_util::compat::Compat<tokio::net::TcpStream>>;
