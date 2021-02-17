@@ -193,7 +193,7 @@ fn load_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         where
             F: storm_mssql::ClientFactory,
         {
-            async fn load_one(&self, k: &<#ident as Entity>::Key) -> Result<Option<#ident>> {
+            async fn load_one(&self, k: &<#ident as Entity>::Key) -> storm::Result<Option<#ident>> {
                 let mut vec: Vec<_> = storm_mssql::QueryRows::query_rows(self, #select_one_sql.to_string(), &[#params_one], |row| Ok(#ident {
                     #select_one_field
                 })).await?;
