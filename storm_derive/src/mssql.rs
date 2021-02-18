@@ -224,6 +224,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let mut insert_field = String::new();
     let mut insert_value = String::new();
     let mut params = Vec::new();
+    let mut tmps = Vec::new();
     let mut update_set = String::new();
     let mut update_where = String::new();
 
@@ -267,7 +268,11 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
             .add_str(param);
 
         params.push(match attrs.save_with.as_ref() {
-            Some(f) => quote!(#f(k, v),),
+            Some(f) => {
+                let ident = Ident::new(&format!("tmp{}", tmps.len()), attrs.save_with.span());
+                tmps.push(quote!(let #ident = #f(k, v);));
+                quote!(&#ident,)
+            }
             None => quote!(&v.#ident,),
         });
     }
@@ -313,6 +318,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     );
 
     let sql = LitStr::new(&sql, input.span());
+    let tmps = tmps.ts();
 
     quote! {
         #[async_trait::async_trait]
@@ -321,6 +327,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
             F: Send + Sync,
         {
             async fn upsert(&self, k: &<#ident as storm::Entity>::Key, v: &#ident) -> storm::Result<()> {
+                #tmps
                 storm_mssql::Execute::execute(self, #sql.to_string(), &[#params]).await.map(|_| ())
             }
         }
