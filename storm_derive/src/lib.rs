@@ -6,6 +6,8 @@ mod macros;
 mod attrs_ext;
 mod ctx;
 mod derive_input_ext;
+mod rename_all;
+
 #[cfg(any(feature = "postgres", feature = "mssql"))]
 mod errors;
 mod field_ext;
@@ -22,6 +24,8 @@ use derive_input_ext::DeriveInputExt;
 use errors::Errors;
 use field_ext::FieldExt;
 use proc_macro::TokenStream;
+#[cfg(feature = "mssql")]
+use rename_all::RenameAll;
 #[cfg(any(feature = "postgres", feature = "mssql"))]
 use string_ext::StringExt;
 use syn::{parse_macro_input, DeriveInput};

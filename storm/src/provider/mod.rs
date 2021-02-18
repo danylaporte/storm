@@ -10,6 +10,6 @@ pub use commit::Commit;
 pub use delete::Delete;
 pub use gate::Gate;
 pub use load_all::LoadAll;
-pub use load_one::LoadOne;
+pub use load_one::*;
 pub use transaction::Transaction;
 pub use upsert::Upsert;

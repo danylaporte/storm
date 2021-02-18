@@ -1,23 +1,74 @@
-use crate::{token_stream_ext::TokenStreamExt, DeriveInputExt, Errors, FieldExt, StringExt};
-use darling::{FromDeriveInput, FromField, FromMeta};
-use inflector::Inflector;
+use crate::{
+    token_stream_ext::TokenStreamExt, DeriveInputExt, Errors, FieldExt, RenameAll, StringExt,
+};
+use darling::{util::SpannedValue, FromDeriveInput, FromField, FromMeta};
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{spanned::Spanned, DeriveInput, Error, Field, Ident, LitInt, LitStr};
+use syn::{spanned::Spanned, DeriveInput, Error, Ident, LitInt, LitStr};
+
+#[derive(Debug, FromField)]
+#[darling(attributes(storm))]
+struct FieldAttrs {
+    #[darling(default)]
+    column: Option<String>,
+
+    #[darling(default)]
+    load_with: Option<Ident>,
+
+    #[darling(default)]
+    save_with: SpannedValue<Option<Ident>>,
+
+    #[darling(default)]
+    skip: SpannedValue<Option<bool>>,
+
+    #[darling(default)]
+    skip_load: SpannedValue<Option<bool>>,
+
+    #[darling(default)]
+    skip_save: SpannedValue<Option<bool>>,
+}
+
+const SKIP_IS_INCOMPATIBLE: &str = "`skip` is incompatible.";
+
+impl FieldAttrs {
+    fn skip_load(&self) -> bool {
+        self.skip_load.unwrap_or_default() || self.skip.unwrap_or_default()
+    }
+
+    fn skip_save(&self) -> bool {
+        self.skip_save.unwrap_or_default() || self.skip.unwrap_or_default()
+    }
+
+    fn validate_load(&self, errors: &mut Vec<TokenStream>) {
+        if let (Some(true), Some(false)) = (*self.skip, *self.skip_load) {
+            errors.push(Error::new(self.skip_load.span(), SKIP_IS_INCOMPATIBLE).to_compile_error());
+        }
+    }
+
+    fn validate_save(&self, errors: &mut Vec<TokenStream>) {
+        if let (Some(true), Some(false)) = (*self.skip, *self.skip_save) {
+            errors.push(Error::new(self.skip_save.span(), SKIP_IS_INCOMPATIBLE).to_compile_error());
+        }
+
+        if self.skip_save() && self.save_with.is_some() {
+            errors.push(Error::new(self.save_with.span(), "Save is skipped.").to_compile_error());
+        }
+    }
+}
 
 #[derive(Debug, FromDeriveInput)]
 #[darling(attributes(storm))]
-pub struct StormTypeAttrs {
+struct TypeAttrs {
     ident: Ident,
     attrs: Vec<syn::Attribute>,
     table: String,
     keys: String,
 
     #[darling(default)]
-    rename_all: Option<StormFieldRenameAll>,
+    rename_all: Option<RenameAll>,
 }
 
-impl StormTypeAttrs {
+impl TypeAttrs {
     pub fn keys(&self, errors: &mut Vec<TokenStream>) -> Vec<&str> {
         let vec = self.keys_internal();
 
@@ -35,173 +86,96 @@ impl StormTypeAttrs {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, FromMeta, PartialEq)]
-pub enum StormFieldRenameAll {
-    #[darling(rename = "PascalCase")]
-    PascalCase,
-
-    #[darling(rename = "camelCase")]
-    CamelCase,
-
-    #[darling(rename = "snake_case")]
-    SnakeCase,
-}
-
-impl StormFieldRenameAll {
-    pub fn rename(&self, s: String) -> String {
-        match self {
-            Self::CamelCase => s.to_camel_case(),
-            Self::PascalCase => s.to_pascal_case(),
-            Self::SnakeCase => s.to_snake_case(),
-        }
-    }
-}
-
-#[derive(Debug, FromField)]
-#[darling(attributes(storm))]
-pub struct StormFieldAttrs {
-    ident: Option<Ident>,
-
-    #[darling(default)]
-    column: Option<String>,
-}
-
-impl StormFieldAttrs {
-    pub fn column(
-        &self,
-        field: &Field,
-        rename_all: Option<StormFieldRenameAll>,
-    ) -> Result<String, TokenStream> {
-        if let Some(c) = self.column.as_ref().filter(|c| !c.is_empty()) {
-            return Ok(c.clone());
-        }
-
-        let s = self
-            .ident
-            .as_ref()
-            .ok_or_else(|| syn::Error::new(field.span(), "Ident expected.").to_compile_error())?
-            .to_string();
-
-        Ok(match rename_all {
-            Some(r) => r.rename(s),
-            None => s,
-        })
-    }
-}
-
 #[derive(Debug, FromMeta)]
 pub struct Key(String);
 
 pub(crate) fn load(input: &DeriveInput) -> TokenStream {
-    let ts = try_ts!(load_internal(input));
-    quote! { #ts }
-}
-
-fn load_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let ident = &input.ident;
-
-    let attrs: StormTypeAttrs =
-        FromDeriveInput::from_derive_input(input).map_err(|e| e.write_errors())?;
-
-    let mut errors = Vec::new();
-    let mut params_one = Vec::new();
-    let mut select_all_field = Vec::new();
-    let mut select_all_index = 0;
-    let mut select_all_sql = String::new();
-    let mut select_key = Vec::new();
-    let mut select_one_field = Vec::new();
-    let mut select_one_index = 0;
-    let mut select_one_sql = String::new();
-    let mut where_one_sql = String::new();
-
-    let keys = attrs.keys(&mut errors);
+    let attrs = try_ts!(TypeAttrs::from_derive_input(input).map_err(|e| e.write_errors()));
     let rename_all = attrs.rename_all;
 
+    let mut col_index = 0;
+    let mut errors = Vec::new();
+    let mut filter_params = Vec::new();
+    let mut filter_sql = String::new();
+    let mut load_field = Vec::new();
+    let mut load_key = Vec::new();
+    let mut load_sql = String::new();
+
+    let keys = attrs.keys(&mut errors);
+
     for key in &keys {
-        let select_all_index_str = select_all_index.to_string();
-        let lit = LitInt::new(&select_all_index_str, ident.span());
+        let col_index_str = &col_index.to_string();
 
-        select_all_sql.add_sep(',').add_field(key);
+        load_sql.add_sep(',').add_field(key);
 
-        where_one_sql
-            .add_sep_str(" AND ")
-            .add_field(key)
-            .add_str("=@p")
-            .add_str(&select_all_index_str);
-
-        select_key.push(quote! {
-            storm_mssql::FromSql::from_sql(row.try_get(#lit).map_err(storm::Error::Mssql)?)?
+        load_key.push({
+            let lit = LitInt::new(col_index_str, ident.span());
+            quote!(storm_mssql::FromSql::from_sql(row.try_get(#lit).map_err(storm::Error::Mssql)?)?)
         });
 
+        filter_sql
+            .add_sep_str("AND")
+            .add('(')
+            .add_field(key)
+            .add_str("=@p")
+            .add_str(&(filter_params.len() + 1).to_string())
+            .add(')');
+
         if keys.len() == 1 {
-            params_one.push(quote!(k));
+            filter_params.push(quote!(k as _));
         } else {
-            let key = Ident::new(&select_all_index_str, ident.span());
-            params_one.push(quote!(&k.#key,));
+            let key = Ident::new(col_index_str, ident.span());
+            filter_params.push(quote!(&k.#key as _,));
         }
 
-        select_all_index += 1;
+        col_index += 1;
     }
 
-    for field in input.fields()? {
-        let attrs: StormFieldAttrs = continue_ts!(
-            StormFieldAttrs::from_field(field).map_err(|e| e.write_errors()),
+    for field in try_ts!(input.fields()) {
+        let attrs: FieldAttrs = continue_ts!(
+            FieldAttrs::from_field(field).map_err(|e| e.write_errors()),
             errors
         );
 
-        let column = continue_ts!(attrs.column(field, rename_all), errors);
-        let ident = continue_ts!(field.ident(), errors);
+        attrs.validate_load(&mut errors);
 
-        select_all_sql.add_sep(',').add_field(&column);
-        select_one_sql.add_sep(',').add_field(&column);
-
-        let lit_all = LitInt::new(&select_all_index.to_string(), field.span());
-        let lit_one = LitInt::new(&select_one_index.to_string(), field.span());
-
-        select_all_field.push(quote!(#ident: storm_mssql::FromSql::from_sql(row.try_get(#lit_all).map_err(storm::Error::Mssql)?)?,));
-        select_one_field.push(quote!(#ident: storm_mssql::FromSql::from_sql(row.try_get(#lit_one).map_err(storm::Error::Mssql)?)?,));
-
-        select_all_index += 1;
-        select_one_index += 1;
-    }
-
-    select_all_sql.insert_str(0, "SELECT ");
-    select_all_sql.push_str(" FROM ");
-    select_all_sql.push_str(&attrs.table);
-
-    select_one_sql.insert_str(0, "SELEC ");
-    select_one_sql.push_str(" FROM ");
-    select_one_sql.push_str(&attrs.table);
-    select_one_sql.push_str(" WHERE ");
-    select_one_sql.push_str(&where_one_sql);
-
-    let select_key_ts = match keys.len() {
-        1 => quote!(#(#select_key)*),
-        _ => quote!(#(#select_key,)*),
-    };
-
-    errors.result()?;
-
-    let params_one = params_one.ts();
-    let select_all_sql = LitStr::new(&select_all_sql, ident.span());
-    let select_all_field = select_all_field.ts();
-    let select_one_field = select_one_field.ts();
-
-    Ok(quote! {
-        #[async_trait::async_trait]
-        impl<F> storm::provider::LoadOne<#ident> for storm_mssql::MssqlProvider<F>
-        where
-            F: storm_mssql::ClientFactory,
-        {
-            async fn load_one(&self, k: &<#ident as Entity>::Key) -> storm::Result<Option<#ident>> {
-                let mut vec: Vec<_> = storm_mssql::QueryRows::query_rows(self, #select_one_sql.to_string(), &[#params_one], |row| Ok(#ident {
-                    #select_one_field
-                })).await?;
-
-                Ok(vec.pop())
-            }
+        if attrs.skip_load() {
+            continue;
         }
 
+        let column = continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
+
+        load_sql.add_sep(',').add_field(&column);
+
+        let ident = continue_ts!(field.ident(), errors);
+        let lit = LitInt::new(&col_index.to_string(), field.span());
+
+        load_field.push(match attrs.load_with.as_ref() {
+            Some(f) => quote!(#ident: #f(&row)?,),
+            None => quote!(#ident: storm_mssql::FromSql::from_sql(row.try_get(#lit).map_err(storm::Error::Mssql)?)?,)
+        });
+
+        col_index += 1;
+    }
+
+    try_ts!(errors.result());
+
+    load_sql.insert_str(0, "SELECT ");
+    load_sql.push_str(" FROM ");
+    load_sql.push_str(&attrs.table);
+
+    let load_key = match keys.len() {
+        1 => quote!(#(#load_key)*),
+        _ => quote!(#(#load_key,)*),
+    };
+
+    let filter_params = filter_params.ts();
+    let filter_sql = LitStr::new(&filter_sql, ident.span());
+    let load_field = load_field.ts();
+    let load_sql = LitStr::new(&load_sql, ident.span());
+
+    quote! {
         #[async_trait::async_trait]
         impl<F, FILTER> storm::provider::LoadAll<#ident, FILTER> for storm_mssql::MssqlProvider<F>
         where
@@ -209,7 +183,7 @@ fn load_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             FILTER: storm_mssql::FilterSql,
         {
             async fn load_all<C: Default + Extend<(<#ident as storm::Entity>::Key, #ident)> + Send>(&self, filter: &FILTER) -> storm::Result<C> {
-                const SQL: &str = #select_all_sql;
+                const SQL: &str = #load_sql;
 
                 let (sql, params) = storm_mssql::FilterSql::filter_sql(filter, 0);
 
@@ -220,115 +194,127 @@ fn load_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
                 storm_mssql::QueryRows::query_rows(self, sql, &*params, |row| {
                     Ok((
-                        #select_key_ts,
-                        #ident { #select_all_field }
+                        #load_key,
+                        #ident { #load_field }
                     ))
                 }).await
             }
         }
-    })
+
+        #[async_trait::async_trait]
+        impl<F> storm::provider::LoadOne<#ident> for storm_mssql::MssqlProvider<F>
+        where
+            F: storm_mssql::ClientFactory,
+        {
+            async fn load_one(&self, k: &<#ident as Entity>::Key) -> storm::Result<Option<#ident>> {
+                let filter = (#filter_sql, &[#filter_params][..]);
+                let v: storm::provider::LoadOneInternal<#ident> = storm::provider::LoadAll::load_all(self, &filter).await?;
+                Ok(v.into_inner())
+            }
+        }
+    }
 }
 
 pub(crate) fn save(input: &DeriveInput) -> TokenStream {
-    let ts = try_ts!(save_internal(input));
-    quote! { #ts }
-}
-
-fn save_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let ident = &input.ident;
-
-    let attrs: StormTypeAttrs =
-        FromDeriveInput::from_derive_input(input).map_err(|e| e.write_errors())?;
-
-    let mut insert_field_sql = String::new();
-    let mut insert_value_sql = String::new();
-    let mut update_set_sql = String::new();
-    let mut update_where_sql = String::new();
-    let mut params = Vec::new();
-    let mut errors = Vec::new();
-
-    let keys = attrs.keys(&mut errors);
+    let attrs = try_ts!(TypeAttrs::from_derive_input(input).map_err(|e| e.write_errors()));
     let rename_all = attrs.rename_all;
 
-    for field in input.fields()? {
-        let attrs: StormFieldAttrs = continue_ts!(
-            StormFieldAttrs::from_field(field).map_err(|e| e.write_errors()),
+    let mut errors = Vec::new();
+    let mut insert_field = String::new();
+    let mut insert_value = String::new();
+    let mut params = Vec::new();
+    let mut update_set = String::new();
+    let mut update_where = String::new();
+
+    let keys = attrs.keys(&mut errors);
+
+    for field in try_ts!(input.fields()) {
+        let attrs: FieldAttrs = continue_ts!(
+            FieldAttrs::from_field(field).map_err(|e| e.write_errors()),
             errors
         );
 
-        let column = &continue_ts!(attrs.column(field, rename_all), errors);
-        let ident = continue_ts!(field.ident(), errors);
+        attrs.validate_save(&mut errors);
 
-        // keys are processed at the end.
-        if keys.contains(&column.as_str()) {
+        if attrs.skip_save() {
             continue;
         }
 
-        let param_index = params.len() + 1;
-        let param_index_str = &param_index.to_string();
+        let column = &continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
 
-        insert_field_sql.add_sep(',').add_field(column);
+        // keys are processed at the end.
+        if keys.contains(&column.as_str()) {
+            if attrs.save_with.is_some() {
+                errors.push(
+                    Error::new(attrs.save_with.span(), "Invalid since this field is a key.")
+                        .to_compile_error(),
+                );
+            }
+            continue;
+        }
 
-        insert_value_sql
-            .add_sep(',')
-            .add_str("@p")
-            .add_str(param_index_str);
+        let ident = continue_ts!(field.ident(), errors);
+        let param = &(params.len() + 1).to_string();
 
-        update_set_sql
+        insert_field.add_sep(',').add_field(column);
+        insert_value.add_sep(',').add_str("@p").add_str(param);
+
+        update_set
             .add_sep(',')
             .add_field(column)
             .add_str("=@p")
-            .add_str(param_index_str);
+            .add_str(param);
 
-        params.push(quote!(&v.#ident,));
+        params.push(match attrs.save_with.as_ref() {
+            Some(f) => quote!(#f(k, v),),
+            None => quote!(&v.#ident,),
+        });
     }
 
-    for (index, key) in keys.iter().enumerate() {
-        let param_index = params.len() + 1;
-        let param_index_str = param_index.to_string();
+    for key in &keys {
+        let param = &(params.len() + 1).to_string();
 
-        insert_field_sql.add_sep(',').add_field(key);
+        insert_field.add_sep(',').add_field(key);
+        insert_value.add_sep(',').add_str("@p").add_str(param);
 
-        insert_value_sql
-            .add_sep(',')
-            .add_str("@p")
-            .add_str(&param_index_str);
-
-        update_where_sql
+        update_where
             .add_sep_str(" AND ")
             .add_field(key)
             .add_str("=@p")
-            .add_str(&param_index_str);
+            .add_str(param);
 
         if keys.len() == 1 {
             params.push(quote!(k,));
         } else {
-            let ident = Ident::new(&(index + 1).to_string(), input.span());
+            let ident = Ident::new(param, input.span());
             params.push(quote!(&k.#ident,));
         }
     }
+
+    try_ts!(errors.result());
 
     let params = params.ts();
 
     let sql = format!(
         "BEGIN TRY
-            INSERT INTO {table} ({insert_field_sql}) VALUES ({insert_value_sql});
+            INSERT INTO {table} ({insert_field}) VALUES ({insert_value});
         END TRY
         BEGIN CATCH
             IF ERROR_NUMBER() IN (2601, 2627)
-                UPDATE {table} SET {update_set_sql} WHERE {update_where_sql};
+                UPDATE {table} SET {update_set} WHERE {update_where};
         END CATCH
         ",
         table = attrs.table,
-        insert_field_sql = insert_field_sql,
-        insert_value_sql = insert_value_sql,
-        update_set_sql = update_set_sql,
-        update_where_sql = update_where_sql,
+        insert_field = insert_field,
+        insert_value = insert_value,
+        update_set = update_set,
+        update_where = update_where,
     );
 
     let sql = LitStr::new(&sql, input.span());
 
-    Ok(quote! {
+    quote! {
         #[async_trait::async_trait]
         impl<'a, F> storm::provider::Upsert<#ident> for storm_mssql::MssqlTransaction<'a, F>
         where
@@ -338,7 +324,7 @@ fn save_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                 storm_mssql::Execute::execute(self, #sql.to_string(), &[#params]).await.map(|_| ())
             }
         }
-    })
+    }
 }
 
 trait SqlStringExt: StringExt {

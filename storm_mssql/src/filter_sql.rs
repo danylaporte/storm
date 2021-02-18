@@ -31,3 +31,9 @@ impl FilterSql for () {
         (Cow::Borrowed(""), Cow::Borrowed(&[]))
     }
 }
+
+impl FilterSql for (&str, &[&'_ dyn ToSql]) {
+    fn filter_sql(&self, _: usize) -> (Cow<'_, str>, Cow<'_, [&'_ dyn ToSql]>) {
+        (Cow::Borrowed(self.0), Cow::Borrowed(&self.1))
+    }
+}
