@@ -16,7 +16,6 @@ tiberius = { version = "0.5", optional = true }
 tokio = { version = "1", features = ["parking_lot", "sync"], optional = true }
 vec-map = { git = "https://github.com/danylaporte/vec-map.git", branch = "main", optional = true }
 
-
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "parking_lot", "rt-multi-thread", "sync"] }
 

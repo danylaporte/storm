@@ -6,6 +6,8 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{spanned::Spanned, DeriveInput, Error, Ident, LitInt, LitStr};
 
+const SKIP_IS_INCOMPATIBLE: &str = "`skip` is incompatible.";
+
 #[derive(Debug, FromField)]
 #[darling(attributes(storm))]
 struct FieldAttrs {
@@ -14,6 +16,9 @@ struct FieldAttrs {
 
     #[darling(default)]
     load_with: Option<Ident>,
+
+    #[darling(default)]
+    part: bool,
 
     #[darling(default)]
     save_with: SpannedValue<Option<Ident>>,
@@ -27,8 +32,6 @@ struct FieldAttrs {
     #[darling(default)]
     skip_save: SpannedValue<Option<bool>>,
 }
-
-const SKIP_IS_INCOMPATIBLE: &str = "`skip` is incompatible.";
 
 impl FieldAttrs {
     fn skip_load(&self) -> bool {
@@ -52,6 +55,12 @@ impl FieldAttrs {
 
         if self.skip_save() && self.save_with.is_some() {
             errors.push(Error::new(self.save_with.span(), "Save is skipped.").to_compile_error());
+        }
+
+        if self.part && self.save_with.is_some() {
+            errors.push(
+                Error::new(self.save_with.span(), "Ignored on part field.").to_compile_error(),
+            );
         }
     }
 }
@@ -221,12 +230,8 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let rename_all = attrs.rename_all;
 
     let mut errors = Vec::new();
-    let mut insert_field = String::new();
-    let mut insert_value = String::new();
-    let mut params = Vec::new();
-    let mut tmps = Vec::new();
-    let mut update_set = String::new();
-    let mut update_where = String::new();
+    let mut save_part = Vec::new();
+    let mut wheres = Vec::new();
 
     let keys = attrs.keys(&mut errors);
 
@@ -256,69 +261,39 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
         }
 
         let ident = continue_ts!(field.ident(), errors);
-        let param = &(params.len() + 1).to_string();
+        let name = LitStr::new(&column, ident.span());
 
-        insert_field.add_sep(',').add_field(column);
-        insert_value.add_sep(',').add_str("@p").add_str(param);
-
-        update_set
-            .add_sep(',')
-            .add_field(column)
-            .add_str("=@p")
-            .add_str(param);
-
-        params.push(match attrs.save_with.as_ref() {
-            Some(f) => {
-                let ident = Ident::new(&format!("tmp{}", tmps.len()), attrs.save_with.span());
-                tmps.push(quote!(let #ident = #f(k, v);));
-                quote!(&#ident,)
+        save_part.push(if attrs.part {
+            quote!(storm_mssql::SaveEntityPart::save_entity_part(&self.#ident, k, builder);)
+        } else {
+            match attrs.save_with.as_ref() {
+                Some(f) => quote!(builder.add_field_owned(#name, #f(k, self));),
+                None => quote!(builder.add_field_ref(#name, &self.#ident);),
             }
-            None => quote!(&v.#ident,),
         });
     }
 
-    for key in &keys {
-        let param = &(params.len() + 1).to_string();
+    for (index, key) in keys.iter().enumerate() {
+        let name = LitStr::new(key, ident.span());
 
-        insert_field.add_sep(',').add_field(key);
-        insert_value.add_sep(',').add_str("@p").add_str(param);
+        let k = match keys.len() > 1 {
+            true => {
+                let n = LitInt::new(&index.to_string(), ident.span());
+                quote! { &k.#n }
+            }
+            false => quote! { k },
+        };
 
-        update_where
-            .add_sep_str(" AND ")
-            .add_field(key)
-            .add_str("=@p")
-            .add_str(param);
-
-        if keys.len() == 1 {
-            params.push(quote!(k,));
-        } else {
-            let ident = Ident::new(param, input.span());
-            params.push(quote!(&k.#ident,));
-        }
+        wheres.push(quote!(builder.add_key_ref(#name, #k);));
     }
 
     try_ts!(errors.result());
 
-    let params = params.ts();
+    let save_part = save_part.ts();
+    let wheres = wheres.ts();
 
-    let sql = format!(
-        "BEGIN TRY
-            INSERT INTO {table} ({insert_field}) VALUES ({insert_value});
-        END TRY
-        BEGIN CATCH
-            IF ERROR_NUMBER() IN (2601, 2627)
-                UPDATE {table} SET {update_set} WHERE {update_where};
-        END CATCH
-        ",
-        table = attrs.table,
-        insert_field = insert_field,
-        insert_value = insert_value,
-        update_set = update_set,
-        update_where = update_where,
-    );
-
-    let sql = LitStr::new(&sql, input.span());
-    let tmps = tmps.ts();
+    //let sql = LitStr::new(&sql, input.span());
+    let table = LitStr::new(&attrs.table, ident.span());
 
     quote! {
         #[async_trait::async_trait]
@@ -327,8 +302,21 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
             F: Send + Sync,
         {
             async fn upsert(&self, k: &<#ident as storm::Entity>::Key, v: &#ident) -> storm::Result<()> {
-                #tmps
-                storm_mssql::Execute::execute(self, #sql.to_string(), &[#params]).await.map(|_| ())
+                //storm_mssql::Execute::execute(self, #sql.to_string(), &[#params]).await.map(|_| ())
+
+                let mut builder = storm_mssql::UpsertBuilder::new(#table);
+
+                storm_mssql::SaveEntityPart::save_entity_part(v, k, &mut builder);
+
+                #wheres
+
+                builder.execute(self).await
+            }
+        }
+
+        impl storm_mssql::SaveEntityPart for #ident {
+            fn save_entity_part<'a>(&'a self, k: &'a Self::Key, builder: &mut storm_mssql::UpsertBuilder<'a>) {
+                #save_part
             }
         }
     }
