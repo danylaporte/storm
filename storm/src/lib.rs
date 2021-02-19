@@ -1,4 +1,5 @@
 mod apply_log;
+mod cache_island;
 mod ctx_types;
 mod entity;
 mod error;
@@ -12,6 +13,7 @@ mod state;
 mod trx_cell;
 
 pub use apply_log::ApplyLog;
+pub use cache_island::CacheIsland;
 pub use ctx_types::CtxTypes;
 pub use entity::Entity;
 pub use error::Error;
