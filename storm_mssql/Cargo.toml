@@ -7,6 +7,7 @@ publish = false
 
 [dependencies]
 async-trait = "0.1"
+cache_crate = { package = "cache", git = "https://github.com/danylaporte/cache.git", branch = "main", optional = true }
 chrono = "0.4"
 futures-util = "0.3"
 storm = { path = "../storm", features = ["mssql"] }
@@ -20,3 +21,6 @@ tracing-futures = "0.2"
 once_cell = "1.4"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 vec-map = { git = "https://github.com/danylaporte/vec-map.git", branch = "main" }
+
+[features]
+cache = ["cache_crate", "storm/cache"]

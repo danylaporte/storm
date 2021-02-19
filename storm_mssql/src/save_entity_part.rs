@@ -1,11 +1,12 @@
 use crate::UpsertBuilder;
-use storm::{CacheIsland, Entity};
+use storm::Entity;
 
 pub trait SaveEntityPart: Entity {
     fn save_entity_part<'a>(&'a self, k: &'a Self::Key, builder: &mut UpsertBuilder<'a>);
 }
 
-impl<T> SaveEntityPart for CacheIsland<T>
+#[cfg(feature = "cache")]
+impl<T> SaveEntityPart for cache_crate::CacheIsland<T>
 where
     T: SaveEntityPart,
 {
