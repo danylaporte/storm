@@ -142,6 +142,8 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     }
 
     for field in try_ts!(input.fields()) {
+        let ident = continue_ts!(field.ident(), errors);
+
         let attrs: FieldAttrs = continue_ts!(
             FieldAttrs::from_field(field).map_err(|e| e.write_errors()),
             errors
@@ -150,15 +152,14 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
         attrs.validate_load(&mut errors);
 
         if attrs.skip_load() {
+            load_field.push(quote!(#ident: Default::default(),));
             continue;
         }
 
         let column = continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
+        let lit = LitInt::new(&col_index.to_string(), field.span());
 
         load_sql.add_sep(',').add_field(&column);
-
-        let ident = continue_ts!(field.ident(), errors);
-        let lit = LitInt::new(&col_index.to_string(), field.span());
 
         load_field.push(match attrs.load_with.as_ref() {
             Some(f) => quote!(#ident: #f(&row)?,),
