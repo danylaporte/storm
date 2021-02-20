@@ -4,6 +4,7 @@ pub enum Error {
     AlreadyInTransaction,
     ClientInError,
     ColumnNull,
+    ConvertFailed(String),
     EntityNotFound,
     NotInTransaction,
     Std(StdError),
@@ -36,6 +37,7 @@ impl Display for Error {
         match self {
             Self::AlreadyInTransaction => f.write_str("Already in transaction."),
             Self::ColumnNull => f.write_str("Column is null."),
+            Self::ConvertFailed(s) => f.write_str(&format!("Convert failed: `{}`", s)),
             Self::ClientInError => f.write_str("Client in error state."),
             Self::EntityNotFound => f.write_str("Entity not found."),
             Self::NotInTransaction => f.write_str("Not in transaction."),
