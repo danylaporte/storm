@@ -10,6 +10,7 @@ pub mod mem;
 pub mod provider;
 mod state;
 mod trx_cell;
+mod version;
 
 pub use apply_log::ApplyLog;
 pub use ctx_types::CtxTypes;
@@ -22,6 +23,7 @@ pub use map_transaction::MapTransaction;
 pub use once_cell::sync::OnceCell;
 use state::State;
 pub use trx_cell::TrxCell;
+pub use version::Version;
 
 type Log<E> = fxhash::FxHashMap<<E as Entity>::Key, State<E>>;
 pub type Result<T> = std::result::Result<T, Error>;
