@@ -1,4 +1,6 @@
 mod apply_log;
+#[cfg(feature = "async-cell-lock")]
+mod ctx_lock;
 mod ctx_types;
 mod entity;
 mod error;
@@ -13,6 +15,8 @@ mod trx_cell;
 mod version;
 
 pub use apply_log::ApplyLog;
+#[cfg(feature = "async-cell-lock")]
+pub use ctx_lock::CtxLock;
 pub use ctx_types::CtxTypes;
 pub use entity::Entity;
 pub use error::Error;
