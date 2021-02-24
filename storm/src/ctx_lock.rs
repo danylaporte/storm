@@ -21,6 +21,15 @@ impl<'a, CTX, PROVIDER> CtxRead<'a, CTX, PROVIDER> {
     }
 }
 
+impl<'a, T, CTX, PROVIDER> AsRef<T> for CtxRead<'a, CTX, PROVIDER>
+where
+    CTX: AsRef<T>,
+{
+    fn as_ref(&self) -> &T {
+        self.0 .0.as_ref()
+    }
+}
+
 pub struct CtxQueue<'a, CTX, PROVIDER>(QueueWriteGuard<'a, (CTX, PROVIDER)>);
 
 impl<'a, CTX, PROVIDER> CtxQueue<'a, CTX, PROVIDER> {
@@ -42,5 +51,14 @@ impl<'a, CTX, PROVIDER> CtxQueue<'a, CTX, PROVIDER> {
     {
         provider::Transaction::transaction(&self.0 .1).await?;
         Ok(mem::Transaction::transaction(&self.0 .0))
+    }
+}
+
+impl<'a, T, CTX, PROVIDER> AsRef<T> for CtxQueue<'a, CTX, PROVIDER>
+where
+    CTX: AsRef<T>,
+{
+    fn as_ref(&self) -> &T {
+        self.0 .0.as_ref()
     }
 }

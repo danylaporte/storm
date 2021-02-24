@@ -13,13 +13,14 @@ pub fn generate(input: &DeriveInput) -> TokenStream {
 
 fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let vis = &input.vis;
-    let name = &input.ident;
 
-    let log_name = Ident::new(&format!("{}Log", &name), name.span());
-    let trx_name = Ident::new(&format!("{}Transaction", &name), name.span());
+    let ctx_name = &input.ident;
+    let log_name = Ident::new(&format!("{}Log", &ctx_name), ctx_name.span());
+    let trx_name = Ident::new(&format!("{}Transaction", &ctx_name), ctx_name.span());
     let fields = input.fields()?;
 
     let mut apply_log = Vec::new();
+    let mut as_ref_impl = Vec::new();
     let mut log_members = Vec::new();
     let mut log_members_new = Vec::new();
     let mut trx_members = Vec::new();
@@ -50,6 +51,20 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                 log_members.push(quote!(#name: Option<<#ty as storm::ApplyLog>::Log>,));
             }
             TypeInfo::Other => {
+                as_ref_impl.push(quote! {
+                    impl<'a> AsRef<<#ty as storm::mem::Transaction<'a>>::Transaction> for #trx_name<'a> {
+                        fn as_ref(&self) -> &<#ty as storm::mem::Transaction<'a>>::Transaction {
+                            &self.#name
+                        }
+                    }
+
+                    impl AsRef<#ty> for #ctx_name {
+                        fn as_ref(&self) -> &#ty {
+                            &self.#name
+                        }
+                    }
+                });
+
                 trx_members.push(quote! {
                     #vis #name: <#ty as storm::CtxTypes<'a>>::Transaction,
                 });
@@ -65,6 +80,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     }
 
     let apply_log = apply_log.ts();
+    let as_ref_impl = as_ref_impl.ts();
     let log_members = log_members.ts();
     let log_members_new = log_members_new.ts();
     let trx_members = trx_members.ts();
@@ -80,11 +96,19 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             #trx_members
         }
 
-        impl storm::ApplyLog for #name {
+        impl storm::ApplyLog for #ctx_name {
             type Log = #log_name;
 
             fn apply_log(&mut self, log: Self::Log) {
                 #apply_log
+            }
+        }
+
+        #as_ref_impl
+
+        impl AsRef<#ctx_name> for #ctx_name {
+            fn as_ref(&self) -> &#ctx_name {
+                self
             }
         }
 
@@ -98,7 +122,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             }
         }
 
-        impl<'a> storm::mem::Transaction<'a> for #name {
+        impl<'a> storm::mem::Transaction<'a> for #ctx_name {
             type Transaction = #trx_name<'a>;
 
             fn transaction(&'a self) -> Self::Transaction {
