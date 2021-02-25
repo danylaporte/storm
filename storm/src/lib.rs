@@ -1,6 +1,6 @@
 mod apply_log;
 mod commit;
-mod ctx_provider;
+mod connected;
 mod ctx_types;
 mod entity;
 mod error;
@@ -17,7 +17,7 @@ mod version;
 
 pub use apply_log::ApplyLog;
 pub use commit::Commit;
-pub use ctx_provider::{CtxProvider, TrxProvider};
+pub use connected::Connected;
 pub use ctx_types::CtxTypes;
 pub use entity::Entity;
 pub use error::Error;

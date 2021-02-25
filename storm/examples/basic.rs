@@ -1,11 +1,11 @@
 use async_cell_lock::QueueRwLock;
 use cache::Cache;
-use storm::{ApplyLog, Commit, Ctx, CtxProvider, Entity, OnceCell, Result, Transaction};
+use storm::{ApplyLog, Commit, Connected, Ctx, Entity, OnceCell, Result, Transaction};
 use vec_map::VecMap;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let lock = QueueRwLock::new(CtxProvider {
+    let lock = QueueRwLock::new(Connected {
         ctx: Ctx::default(),
         provider: (),
     });
