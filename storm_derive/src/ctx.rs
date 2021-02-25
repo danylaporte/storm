@@ -46,9 +46,9 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         match type_info {
             TypeInfo::OnceCell => {
                 tbl_members.push(quote! {
-                    async fn #name<'a>(&'a self) -> storm::Result<&'a <#ty as storm::GetOrLoad<'a, Self::Provider>>::Output>
+                    async fn #name<'a>(&'a self) -> storm::Result<&'a <#ty as storm::GetOrLoad<Self::Provider>>::Output>
                     where
-                        #ty: storm::GetOrLoad<'a, Self::Provider>,
+                        #ty: storm::GetOrLoad<Self::Provider>,
                     {
                         storm::GetOrLoad::get_or_load(&self.ctx().#name, self.provider()).await
                     }

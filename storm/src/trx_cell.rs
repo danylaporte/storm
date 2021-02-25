@@ -37,7 +37,7 @@ impl<'a, T: mem::Transaction<'a>> TrxCell<'a, T> {
         provider: &P,
     ) -> Result<&'b mut <T as mem::Transaction<'a>>::Transaction>
     where
-        OnceCell<T>: GetOrLoad<'a, P, Output = T>,
+        OnceCell<T>: GetOrLoad<P, Output = T>,
         T: mem::Transaction<'a>,
     {
         if self.trx.get().is_none() {
@@ -54,7 +54,7 @@ impl<'a, T: mem::Transaction<'a>> TrxCell<'a, T> {
         provider: &P,
     ) -> Result<&'b <T as mem::Transaction<'a>>::Transaction>
     where
-        OnceCell<T>: GetOrLoad<'a, P, Output = T>,
+        OnceCell<T>: GetOrLoad<P, Output = T>,
         T: mem::Transaction<'a>,
     {
         if let Some(v) = self.trx.get() {
