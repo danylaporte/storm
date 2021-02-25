@@ -15,7 +15,7 @@ either = "1"
 proc-macro2 = "1"
 quote = "1"
 serde = "1"
-syn = "1"
+syn = { version = "1", features = ["full"] }
 toml = "0.5"
 
 [dev-dependencies]

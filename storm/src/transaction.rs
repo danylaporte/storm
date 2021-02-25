@@ -7,11 +7,3 @@ pub trait Transaction<'a> {
 
     async fn transaction(&'a self) -> Result<Self::Transaction>;
 }
-
-#[async_trait]
-impl<'a> Transaction<'a> for () {
-    type Transaction = ();
-    async fn transaction(&'a self) -> Result<Self::Transaction> {
-        Ok(())
-    }
-}

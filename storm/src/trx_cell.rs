@@ -25,7 +25,14 @@ impl<'a, T: mem::Transaction<'a>> TrxCell<'a, T> {
         }
     }
 
-    pub async fn get_mut<'b, P>(
+    pub fn get_mut<'b>(&'b mut self) -> Option<&'b mut <T as mem::Transaction<'a>>::Transaction>
+    where
+        T: mem::Transaction<'a>,
+    {
+        self.trx.get_mut()
+    }
+
+    pub async fn get_mut_or_init<'b, P>(
         &'b mut self,
         provider: &P,
     ) -> Result<&'b mut <T as mem::Transaction<'a>>::Transaction>

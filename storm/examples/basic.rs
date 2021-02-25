@@ -1,33 +1,43 @@
-//use async_trait::async_trait;
-use async_trait::async_trait;
+use async_cell_lock::QueueRwLock;
 use cache::Cache;
-use storm::{
-    mem::Transaction,
-    provider::{LoadAll, Upsert},
-    Ctx, Entity, OnceCell, Result,
-};
+use storm::{ApplyLog, Commit, Ctx, CtxProvider, Entity, OnceCell, Result, Transaction};
 use vec_map::VecMap;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let ctx = Ctx::default();
-    let provider = &();
-    //let users = ctx.users.get_or_load(provider).await?;
+    let lock = QueueRwLock::new(CtxProvider {
+        ctx: Ctx::default(),
+        provider: (),
+    });
 
-    let mut trx = ctx.transaction();
-    let users = trx.users.get_mut(provider).await?;
+    let ctx_provider = lock.read().await;
 
-    users
-        .insert(
-            2,
-            User {
-                name: "Test2".to_string(),
-            },
-            provider,
-        )
-        .await?;
+    let _topic = ctx_provider.topic();
+    let _users = ctx_provider.users().await?;
 
-    // creates a new context and passing required connections.
+    let ctx_provider = ctx_provider.queue().await;
+
+    let mut trx = ctx_provider.transaction().await?;
+
+    let _users = trx.users().await?;
+    let _users_mut = trx.users_mut().await?;
+
+    // not working yet:
+    // users_mut.insert(
+    //     1,
+    //     User {
+    //         name: "Test2".to_string(),
+    //     },
+    // );
+
+    let _topic = trx.topic();
+    let _topic_mut = trx.topic_mut();
+
+    let log = trx.commit().await?;
+
+    let mut ctx_provider = ctx_provider.write().await;
+
+    ctx_provider.apply_log(log);
 
     Ok(())
 }
@@ -44,18 +54,4 @@ struct User {
 
 impl Entity for User {
     type Key = usize;
-}
-
-#[async_trait]
-impl LoadAll<User, ()> for () {
-    async fn load_all<C: Default + Extend<(usize, User)>>(&self, _: &()) -> Result<C> {
-        Ok(C::default())
-    }
-}
-
-#[async_trait]
-impl Upsert<User> for () {
-    async fn upsert(&self, _k: &usize, _v: &User) -> Result<()> {
-        Ok(())
-    }
 }

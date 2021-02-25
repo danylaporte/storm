@@ -20,7 +20,7 @@ vec-map = { git = "https://github.com/danylaporte/vec-map.git", branch = "main",
 tokio = { version = "1", features = ["macros", "parking_lot", "rt-multi-thread", "sync"] }
 
 [features]
-default = ["cache", "derive", "tokio", "vec-map"]
+default = ["async-cell-lock", "cache", "derive", "tokio", "vec-map"]
 derive = ["storm_derive"]
 mssql = ["storm_derive/mssql", "tiberius"]
 postgres = ["storm_derive/postgres"]

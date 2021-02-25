@@ -6,6 +6,7 @@ mod macros;
 mod attrs_ext;
 mod ctx;
 mod derive_input_ext;
+mod indexing;
 mod rename_all;
 
 #[cfg(any(feature = "postgres", feature = "mssql"))]
@@ -28,7 +29,7 @@ use proc_macro::TokenStream;
 use rename_all::RenameAll;
 #[cfg(any(feature = "postgres", feature = "mssql"))]
 use string_ext::StringExt;
-use syn::{parse_macro_input, DeriveInput};
+use syn::{parse_macro_input, DeriveInput, Item};
 use token_stream_ext::TokenStreamExt;
 
 #[proc_macro_derive(Ctx)]
@@ -42,6 +43,12 @@ pub fn ctx(input: TokenStream) -> TokenStream {
 pub fn from_sql(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     postgres::from_sql(&input).into()
+}
+
+#[proc_macro_attribute]
+pub fn indexing(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(item as Item);
+    indexing::indexing(item).into()
 }
 
 #[cfg(feature = "postgres")]

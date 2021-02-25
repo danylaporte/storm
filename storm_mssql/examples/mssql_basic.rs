@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
     let mssql_trx = provider.transaction().await?;
     let mut trx = ctx.transaction();
 
-    let users = trx.users.get_mut(provider).await?;
+    let users = trx.users.get_mut_or_init(provider).await?;
 
     users
         .insert(

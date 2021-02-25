@@ -1,6 +1,6 @@
 mod apply_log;
-#[cfg(feature = "async-cell-lock")]
-mod ctx_lock;
+mod commit;
+mod ctx_provider;
 mod ctx_types;
 mod entity;
 mod error;
@@ -11,12 +11,13 @@ mod map_transaction;
 pub mod mem;
 pub mod provider;
 mod state;
+mod transaction;
 mod trx_cell;
 mod version;
 
 pub use apply_log::ApplyLog;
-#[cfg(feature = "async-cell-lock")]
-pub use ctx_lock::CtxLock;
+pub use commit::Commit;
+pub use ctx_provider::{CtxProvider, TrxProvider};
 pub use ctx_types::CtxTypes;
 pub use entity::Entity;
 pub use error::Error;
@@ -26,6 +27,7 @@ pub use init::Init;
 pub use map_transaction::MapTransaction;
 pub use once_cell::sync::OnceCell;
 use state::State;
+pub use transaction::Transaction;
 pub use trx_cell::TrxCell;
 pub use version::Version;
 

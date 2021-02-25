@@ -28,7 +28,7 @@ async fn crud() -> Result<()> {
 
     let ctx = TestCtx::default();
     let mut trx = ctx.transaction();
-    let entities1 = trx.entities1.get_mut(&transaction).await?;
+    let entities1 = trx.entities1.get_mut_or_init(&transaction).await?;
 
     let e1 = Entity1 {
         name: "E1".to_string(),
