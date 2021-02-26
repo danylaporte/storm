@@ -1,4 +1,4 @@
-use crate::{mem, provider, ApplyLog, Commit, Entity, Insert, Remove, Result};
+use crate::{mem, provider, ApplyLog, Commit, Entity, Get, Insert, Remove, Result};
 use async_trait::async_trait;
 use std::ops::{Deref, DerefMut};
 
@@ -43,6 +43,16 @@ impl<T, P> Deref for Connected<T, P> {
 impl<T, P> DerefMut for Connected<T, P> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.ctx
+    }
+}
+
+impl<E, T, P> Get<E> for Connected<T, P>
+where
+    E: Entity,
+    T: Get<E>,
+{
+    fn get(&self, k: &E::Key) -> Option<&E> {
+        self.ctx.get(k)
     }
 }
 

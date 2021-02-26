@@ -4,6 +4,7 @@ use std::collections::HashMap;
 pub trait Transaction<'a> {
     type Transaction;
 
+    #[must_use]
     fn transaction(&'a self) -> Self::Transaction;
 }
 

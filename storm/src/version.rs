@@ -1,4 +1,4 @@
-use crate::{ApplyLog, Get, Init, Result};
+use crate::{mem, ApplyLog, GetVersion, Init, Result};
 use async_trait::async_trait;
 use std::{
     cmp::Ordering,
@@ -10,15 +10,15 @@ use std::{
 
 #[derive(Clone)]
 pub struct Version<T> {
-    tag: u64,
     val: T,
+    ver: u64,
 }
 
 impl<T> Version<T> {
     pub fn new(val: T) -> Self {
         Self {
-            tag: COUNTER.fetch_add(1, Relaxed),
             val,
+            ver: COUNTER.fetch_add(1, Relaxed),
         }
     }
 }
@@ -30,7 +30,7 @@ where
     type Log = T::Log;
 
     fn apply_log(&mut self, log: Self::Log) {
-        self.tag = COUNTER.fetch_add(1, Relaxed);
+        self.ver = COUNTER.fetch_add(1, Relaxed);
         self.val.apply_log(log);
     }
 }
@@ -44,8 +44,8 @@ impl<T: Debug> Debug for Version<T> {
 impl<T: Default> Default for Version<T> {
     fn default() -> Self {
         Self {
-            tag: COUNTER.fetch_add(1, Relaxed),
             val: Default::default(),
+            ver: COUNTER.fetch_add(1, Relaxed),
         }
     }
 }
@@ -60,7 +60,7 @@ impl<T> Deref for Version<T> {
 
 impl<T> DerefMut for Version<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.tag = COUNTER.fetch_add(1, Relaxed);
+        self.ver = COUNTER.fetch_add(1, Relaxed);
         &mut self.val
     }
 }
@@ -73,12 +73,9 @@ impl<T: Display> Display for Version<T> {
 
 impl<T: Eq> Eq for Version<T> {}
 
-impl<K, V, T> Get<K, V> for Version<T>
-where
-    T: Get<K, V>,
-{
-    fn get(&self, k: &K) -> Option<&V> {
-        self.val.get(k)
+impl<T> GetVersion for Version<T> {
+    fn get_version(&self) -> u64 {
+        self.ver
     }
 }
 
@@ -96,8 +93,8 @@ where
 {
     async fn init(provider: &P) -> Result<Self> {
         Ok(Self {
-            tag: COUNTER.fetch_add(1, Relaxed),
             val: T::init(provider).await?,
+            ver: COUNTER.fetch_add(1, Relaxed),
         })
     }
 }
@@ -108,6 +105,29 @@ impl<T: IntoIterator> IntoIterator for Version<T> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.val.into_iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a Version<T>
+where
+    &'a T: IntoIterator,
+{
+    type IntoIter = <&'a T as IntoIterator>::IntoIter;
+    type Item = <&'a T as IntoIterator>::Item;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (&self.val).into_iter()
+    }
+}
+
+impl<'a, T> mem::Transaction<'a> for Version<T>
+where
+    T: mem::Transaction<'a>,
+{
+    type Transaction = T::Transaction;
+
+    fn transaction(&'a self) -> Self::Transaction {
+        self.val.transaction()
     }
 }
 

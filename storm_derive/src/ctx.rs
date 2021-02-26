@@ -51,7 +51,9 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                         <#ty as storm::CtxMember>::Member: storm::Init<Self::Provider>,
                         Self::Provider: for<'c> storm::provider::Gate<'c>,
                     {
-                        storm::GetOrLoad::get_or_load(&self.ctx().#name, self.provider()).await
+                        let (ctx, provider) = self.ctx();
+
+                        storm::GetOrLoad::get_or_load(&ctx.#name, provider).await
                     }
                 });
 
@@ -96,8 +98,9 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             }
             TypeInfo::Other => {
                 tbl_members.push(quote! {
+                    #[must_use]
                     fn #name(&self) -> &#ty {
-                        &self.ctx().#name
+                        &self.ctx().0.#name
                     }
                 });
 
@@ -110,6 +113,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                 });
 
                 trx_tbl_members.push(quote! {
+                    #[must_use]
                     fn #name<'b>(&'b self) -> storm::Connected<&'b<#ty as storm::mem::Transaction<'a>>::Transaction, &'b Self::Provider>
                     where
                         #ty: storm::mem::Transaction<'a>,
@@ -123,6 +127,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                         }
                     }
 
+                    #[must_use]
                     fn #name_mut<'b>(&'b mut self) -> storm::Connected<&'b mut <#ty as storm::mem::Transaction<'a>>::Transaction, &'b Self::Provider>
                     where
                         'a: 'b,
@@ -213,8 +218,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         #vis trait #tbl_name {
             type Provider: Sync;
 
-            fn ctx(&self) -> &#ctx_name;
-            fn provider(&self) -> &Self::Provider;
+            fn ctx(&self) -> (&#ctx_name, &Self::Provider);
 
             #tbl_members
         }
@@ -227,12 +231,8 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         {
             type Provider = P;
 
-            fn ctx(&self) -> &#ctx_name {
-                self.ctx.as_ref()
-            }
-
-            fn provider(&self) -> &Self::Provider {
-                &self.provider
+            fn ctx(&self) -> (&#ctx_name, &Self::Provider) {
+                (self.ctx.as_ref(), &self.provider)
             }
         }
 
@@ -240,7 +240,10 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         #vis trait #trx_tbl_name<'a> {
             type Provider: Sync;
 
+            #[must_use]
             fn ctx(&self) -> (&#trx_name<'a>, &Self::Provider);
+
+            #[must_use]
             fn ctx_mut(&mut self) -> (&mut #trx_name<'a>, &Self::Provider);
 
             #trx_tbl_members

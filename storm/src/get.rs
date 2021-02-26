@@ -3,54 +3,62 @@ use std::{
     hash::{BuildHasher, Hash},
 };
 
-pub trait Get<K, V> {
-    fn get(&self, k: &K) -> Option<&V>;
+use crate::Entity;
+
+pub trait Get<E: Entity> {
+    fn get(&self, k: &E::Key) -> Option<&E>;
 }
 
-impl<K, V, T> Get<K, V> for &T
+impl<E, T> Get<E> for &T
 where
-    T: Get<K, V>,
+    E: Entity,
+    T: Get<E>,
 {
-    fn get(&self, k: &K) -> Option<&V> {
+    fn get(&self, k: &E::Key) -> Option<&E> {
         (*self).get(k)
     }
 }
 
-impl<K, V, T> Get<K, V> for &mut T
+impl<E, T> Get<E> for &mut T
 where
-    T: Get<K, V>,
+    E: Entity,
+    T: Get<E>,
 {
-    fn get(&self, k: &K) -> Option<&V> {
+    fn get(&self, k: &E::Key) -> Option<&E> {
         (**self).get(k)
     }
 }
 
 #[cfg(feature = "cache")]
-impl<K, V, S> Get<K, V> for cache::Cache<K, V, S>
+impl<E, S> Get<E> for cache::Cache<E::Key, E, S>
 where
-    K: Eq + Hash,
+    E: Entity,
+    E::Key: Eq + Hash,
     S: BuildHasher,
 {
-    fn get(&self, k: &K) -> Option<&V> {
+    fn get(&self, k: &E::Key) -> Option<&E> {
         cache::Cache::get(self, k)
     }
 }
 
-impl<K, V> Get<K, V> for HashMap<K, V>
+impl<E, S> Get<E> for HashMap<E::Key, E, S>
 where
-    K: Eq + Hash,
+    E: Entity,
+    E::Key: Eq + Hash,
+    S: BuildHasher,
 {
-    fn get(&self, k: &K) -> Option<&V> {
+    fn get(&self, k: &E::Key) -> Option<&E> {
         HashMap::get(self, k)
     }
 }
 
 #[cfg(feature = "vec-map")]
-impl<K, V> Get<K, V> for vec_map::VecMap<K, V>
+impl<E> Get<E> for vec_map::VecMap<E::Key, E>
 where
-    K: Clone + Into<usize>,
+    E: Entity,
+    E::Key: Clone + Into<usize>,
 {
-    fn get(&self, k: &K) -> Option<&V> {
+    fn get(&self, k: &E::Key) -> Option<&E> {
         vec_map::VecMap::get(self, k)
     }
 }
