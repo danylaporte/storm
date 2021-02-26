@@ -11,6 +11,7 @@ mod init;
 mod insert;
 mod map_transaction;
 pub mod mem;
+pub mod prelude;
 pub mod provider;
 mod remove;
 mod state;

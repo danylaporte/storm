@@ -1,8 +1,6 @@
 use async_cell_lock::QueueRwLock;
 use cache::Cache;
-use storm::{
-    Connected, Ctx, Entity, Get, GetVersion, Insert, OnceCell, Remove, Result, Transaction, Version,
-};
+use storm::{prelude::*, Connected, Ctx, Entity, GetVersion, OnceCell, Result, Version};
 use vec_map::VecMap;
 
 fn create_ctx() -> QueueRwLock<Connected<Ctx, ()>> {
@@ -10,6 +8,25 @@ fn create_ctx() -> QueueRwLock<Connected<Ctx, ()>> {
         ctx: Ctx::default(),
         provider: (),
     })
+}
+
+#[tokio::test]
+async fn flow() -> Result<()> {
+    let ctx = create_ctx();
+
+    let ctx = ctx.read().await;
+    let ctx = ctx.queue().await;
+
+    let trx = ctx.transaction().await?;
+    let log = trx.commit().await?;
+
+    let mut ctx = ctx.write().await;
+
+    ctx.apply_log(log);
+
+    let _ = ctx.read().await;
+
+    Ok(())
 }
 
 #[tokio::test]
@@ -44,7 +61,7 @@ async fn read() -> Result<()> {
 }
 
 #[tokio::test]
-async fn transaction_actions() -> Result<()> {
+async fn transaction() -> Result<()> {
     let ctx = create_ctx();
 
     let ctx = ctx.read().await.queue().await;
