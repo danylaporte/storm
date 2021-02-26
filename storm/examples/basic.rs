@@ -1,6 +1,8 @@
 use async_cell_lock::QueueRwLock;
 use cache::Cache;
-use storm::{ApplyLog, Commit, Connected, Ctx, Entity, OnceCell, Result, Transaction};
+use storm::{
+    ApplyLog, Commit, Connected, Ctx, Entity, Insert, OnceCell, Remove, Result, Transaction,
+};
 use vec_map::VecMap;
 
 #[tokio::main]
@@ -20,15 +22,18 @@ async fn main() -> Result<()> {
     let mut trx = ctx_provider.transaction().await?;
 
     let _users = trx.users().await?;
-    let _users_mut = trx.users_mut().await?;
+    let mut users_mut = trx.users_mut().await?;
 
-    // not working yet:
-    // users_mut.insert(
-    //     1,
-    //     User {
-    //         name: "Test2".to_string(),
-    //     },
-    // );
+    users_mut
+        .insert(
+            1,
+            User {
+                name: "Test2".to_string(),
+            },
+        )
+        .await?;
+
+    users_mut.remove(1).await?;
 
     let _topic = trx.topic();
     let _topic_mut = trx.topic_mut();

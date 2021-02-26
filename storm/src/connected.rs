@@ -1,7 +1,6 @@
-use std::ops::{Deref, DerefMut};
-
-use crate::{mem, provider, ApplyLog, Commit, Result};
+use crate::{mem, provider, ApplyLog, Commit, Entity, Insert, Remove, Result};
 use async_trait::async_trait;
+use std::ops::{Deref, DerefMut};
 
 pub struct Connected<T, P> {
     pub ctx: T,
@@ -44,6 +43,36 @@ impl<T, P> Deref for Connected<T, P> {
 impl<T, P> DerefMut for Connected<T, P> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.ctx
+    }
+}
+
+#[async_trait]
+impl<E, T, P> Insert<E> for Connected<T, P>
+where
+    E: Entity + Send + Sync + 'static,
+    E::Key: Send + Sync,
+    P: provider::Upsert<E> + Send + Sync,
+    T: mem::Insert<E> + Send,
+{
+    async fn insert(&mut self, k: E::Key, v: E) -> Result<()> {
+        self.provider.upsert(&k, &v).await?;
+        self.ctx.insert(k, v);
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl<E, T, P> Remove<E> for Connected<T, P>
+where
+    E: Entity + Send + Sync + 'static,
+    E::Key: Send + Sync,
+    P: provider::Delete<E> + Send + Sync,
+    T: mem::Remove<E> + Send,
+{
+    async fn remove(&mut self, k: E::Key) -> Result<()> {
+        self.provider.delete(&k).await?;
+        self.ctx.remove(k);
+        Ok(())
     }
 }
 

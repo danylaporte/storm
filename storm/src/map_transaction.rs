@@ -18,7 +18,6 @@ impl<E: Entity, M> MapTransaction<E, M> {
         }
     }
 }
-
 impl<E: Entity, M> MapTransaction<E, M>
 where
     E::Key: Eq + Hash,
@@ -39,7 +38,7 @@ where
         P: Upsert<E>,
     {
         provider.upsert(&k, &v).await?;
-        self.log.insert(k, State::Inserted(v));
+        mem::Insert::insert(self, k, v);
         Ok(())
     }
 
@@ -48,7 +47,7 @@ where
         P: Delete<E>,
     {
         provider.delete(&k).await?;
-        self.log.insert(k, State::Removed);
+        mem::Remove::remove(self, k);
         Ok(())
     }
 }
@@ -60,6 +59,24 @@ where
 {
     fn get(&self, k: &E::Key) -> Option<&E> {
         Self::get(self, k)
+    }
+}
+
+impl<E: Entity, M> mem::Insert<E> for MapTransaction<E, M>
+where
+    E::Key: Eq + Hash,
+{
+    fn insert(&mut self, k: E::Key, v: E) {
+        self.log.insert(k, State::Inserted(v));
+    }
+}
+
+impl<E: Entity, M> mem::Remove<E> for MapTransaction<E, M>
+where
+    E::Key: Eq + Hash,
+{
+    fn remove(&mut self, k: E::Key) {
+        self.log.insert(k, State::Removed);
     }
 }
 

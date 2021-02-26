@@ -46,40 +46,48 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         match type_info {
             TypeInfo::OnceCell => {
                 tbl_members.push(quote! {
-                    async fn #name<'a>(&'a self) -> storm::Result<&'a <#ty as storm::GetOrLoad<Self::Provider>>::Output>
+                    async fn #name<'a>(&'a self) -> storm::Result<&'a <#ty as storm::CtxMember>::Member>
                     where
-                        #ty: storm::GetOrLoad<Self::Provider>,
+                        <#ty as storm::CtxMember>::Member: storm::Init<Self::Provider>,
+                        Self::Provider: for<'c> storm::provider::Gate<'c>,
                     {
                         storm::GetOrLoad::get_or_load(&self.ctx().#name, self.provider()).await
                     }
                 });
 
                 trx_members.push(quote! {
-                    #vis #name: storm::TrxCell<'a, <#ty as storm::CtxTypes<'a>>::Output>,
+                    #vis #name: storm::TrxCell<'a, <#ty as storm::CtxMember>::Member>,
                 });
 
                 trx_members_new.push(quote!(#name: storm::TrxCell::new(&self.#name),));
 
                 trx_tbl_members.push(quote! {
-                    async fn #name<'b>(&'b self) -> storm::Result<&'b <#ty as storm::CtxTypes<'a>>::Transaction>
+                    async fn #name<'b>(&'b self) -> storm::Result<storm::Connected<&'b <<#ty as storm::CtxMember>::Member as storm::mem::Transaction<'a>>::Transaction, &'b <Self as #trx_tbl_name<'a>>::Provider>>
                     where
                         'a: 'b,
-                        <#ty as storm::CtxTypes<'static>>::Output: storm::Init<Self::Provider>,
+                        <#ty as storm::CtxMember>::Member: storm::Init<Self::Provider>,
                         Self::Provider: for<'c> storm::provider::Gate<'c>,
                     {
                         let (ctx, provider) = self.ctx();
-                        ctx.#name.get_or_init(provider).await
+
+                        Ok(storm::Connected {
+                            ctx: ctx.#name.get_or_init(provider).await?,
+                            provider,
+                        })                        
                     }
 
-                    async fn #name_mut<'b>(&'b mut self) -> storm::Result<&'b mut <#ty as storm::CtxTypes<'a>>::Transaction>
+                    async fn #name_mut<'b>(&'b mut self) -> storm::Result<storm::Connected<&'b mut <<#ty as storm::CtxMember>::Member as storm::mem::Transaction<'a>>::Transaction, &'b <Self as #trx_tbl_name<'a>>::Provider>>
                     where
                         'a: 'b,
-                        <#ty as storm::CtxTypes<'static>>::Output: storm::Init<Self::Provider>,
+                        <#ty as storm::CtxMember>::Member: storm::Init<Self::Provider>,
                         Self::Provider: for<'c> storm::provider::Gate<'c>,
-                        Self: Sync,
                     {
                         let (ctx, provider) = self.ctx_mut();
-                        ctx.#name.get_mut_or_init(provider).await
+
+                        Ok(storm::Connected {
+                            ctx: ctx.#name.get_mut_or_init(provider).await?,
+                            provider,
+                        })                        
                     }
                 });
 
@@ -94,11 +102,11 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                 });
 
                 trx_members.push(quote! {
-                    #vis #name: <#ty as storm::CtxTypes<'a>>::Transaction,
+                    #vis #name: <#ty as storm::mem::Transaction<'a>>::Transaction,
                 });
 
                 trx_members_new.push(quote! {
-                    #name: storm::mem::Transaction::transaction(&self.#name),
+                    #name: storm::mem::Transaction::<'a>::transaction(&self.#name),
                 });
 
                 trx_tbl_members.push(quote! {
@@ -246,11 +254,11 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         {
             type Provider = P;
 
-            fn ctx(&self) -> (&#trx_name<'a>, &Self::Provider) {
+            fn ctx(&self) -> (&#trx_name<'a>, &P) {
                 (self.ctx.as_ref(), &self.provider)
             }
 
-            fn ctx_mut(&mut self) -> (&mut #trx_name<'a>, &Self::Provider) {
+            fn ctx_mut(&mut self) -> (&mut #trx_name<'a>, &P) {
                 (self.ctx.as_mut(), &self.provider)
             }
         }
