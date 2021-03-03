@@ -1,6 +1,6 @@
 use async_cell_lock::QueueRwLock;
 use cache::Cache;
-use storm::{prelude::*, Connected, Ctx, Entity, GetVersion, OnceCell, Result, Version};
+use storm::{prelude::*, Connected, Ctx, Entity, GetVersion, OnceCell, Result};
 use vec_map::VecMap;
 
 fn create_ctx() -> QueueRwLock<Connected<Ctx, ()>> {

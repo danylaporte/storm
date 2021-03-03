@@ -74,8 +74,8 @@ impl<T: Display> Display for Version<T> {
 impl<T: Eq> Eq for Version<T> {}
 
 impl<T> GetVersion for Version<T> {
-    fn get_version(&self) -> u64 {
-        self.ver
+    fn get_version(&self) -> Option<u64> {
+        Some(self.ver)
     }
 }
 

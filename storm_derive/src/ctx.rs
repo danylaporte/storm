@@ -1,4 +1,5 @@
 use crate::{field_ext::TypeInfo, DeriveInputExt, FieldExt, TokenStreamExt};
+use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{DeriveInput, Ident};
@@ -22,6 +23,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let fields = input.fields()?;
 
     let mut apply_log = Vec::new();
+    let mut globals = Vec::new();
     let mut log_members = Vec::new();
     let mut log_members_new = Vec::new();
     let mut tbl_members = Vec::new();
@@ -35,20 +37,22 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         let vis = &field.vis;
         let name = field.ident()?;
         let name_mut = Ident::new(&format!("{}_mut", &name), name.span());
+        let alias = Ident::new(&name.to_string().to_pascal_case(), name.span());
 
         let ty = &field.ty;
         let type_info = field.type_info();
 
+        globals.push(quote!(#vis type #alias = <#ty as storm::CtxMember>::Member;));
+        log_members_new.push(quote!(#name: storm::mem::Commit::commit(self.#name),));
         trx_members_new_log.push(quote!(#name: #name.log,));
         trx_members_new_trx.push(quote!(#name: #name.table,));
-        log_members_new.push(quote!(#name: storm::mem::Commit::commit(self.#name),));
 
         match type_info {
             TypeInfo::OnceCell => {
                 tbl_members.push(quote! {
-                    async fn #name<'a>(&'a self) -> storm::Result<&'a <#ty as storm::CtxMember>::Member>
+                    async fn #name<'a>(&'a self) -> storm::Result<&'a #alias>
                     where
-                        <#ty as storm::CtxMember>::Member: storm::Init<Self::Provider>,
+                        #alias: storm::Init<Self::Provider>,
                         Self::Provider: for<'c> storm::provider::Gate<'c>,
                     {
                         let (ctx, provider) = self.ctx();
@@ -58,16 +62,16 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                 });
 
                 trx_members.push(quote! {
-                    #vis #name: storm::TrxCell<'a, <#ty as storm::CtxMember>::Member>,
+                    #vis #name: storm::TrxCell<'a, #alias>,
                 });
 
                 trx_members_new.push(quote!(#name: storm::TrxCell::new(&self.#name),));
 
                 trx_tbl_members.push(quote! {
-                    async fn #name<'b>(&'b self) -> storm::Result<storm::Connected<&'b <<#ty as storm::CtxMember>::Member as storm::mem::Transaction<'a>>::Transaction, &'b <Self as #trx_tbl_name<'a>>::Provider>>
+                    async fn #name<'b>(&'b self) -> storm::Result<storm::Connected<&'b <#alias as storm::mem::Transaction<'a>>::Transaction, &'b <Self as #trx_tbl_name<'a>>::Provider>>
                     where
                         'a: 'b,
-                        <#ty as storm::CtxMember>::Member: storm::Init<Self::Provider>,
+                        #alias: storm::Init<Self::Provider>,
                         Self::Provider: for<'c> storm::provider::Gate<'c>,
                     {
                         let (ctx, provider) = self.ctx();
@@ -78,10 +82,10 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                         })                        
                     }
 
-                    async fn #name_mut<'b>(&'b mut self) -> storm::Result<storm::Connected<&'b mut <<#ty as storm::CtxMember>::Member as storm::mem::Transaction<'a>>::Transaction, &'b <Self as #trx_tbl_name<'a>>::Provider>>
+                    async fn #name_mut<'b>(&'b mut self) -> storm::Result<storm::Connected<&'b mut <#alias as storm::mem::Transaction<'a>>::Transaction, &'b <Self as #trx_tbl_name<'a>>::Provider>>
                     where
                         'a: 'b,
-                        <#ty as storm::CtxMember>::Member: storm::Init<Self::Provider>,
+                        #alias: storm::Init<Self::Provider>,
                         Self::Provider: for<'c> storm::provider::Gate<'c>,
                     {
                         let (ctx, provider) = self.ctx_mut();
@@ -149,6 +153,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     }
 
     let apply_log = apply_log.ts();
+    let globals = globals.ts();
     let log_members = log_members.ts();
     let log_members_new = log_members_new.ts();
     let tbl_members = tbl_members.ts();
@@ -265,5 +270,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                 (self.ctx.as_mut(), &self.provider)
             }
         }
+
+        #globals
     })
 }

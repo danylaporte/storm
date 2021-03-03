@@ -6,15 +6,14 @@ mod macros;
 mod attrs_ext;
 mod ctx;
 mod derive_input_ext;
-mod indexing;
-mod rename_all;
-
 #[cfg(any(feature = "postgres", feature = "mssql"))]
 mod errors;
 mod field_ext;
+mod indexing;
 mod mssql;
 #[cfg(feature = "postgres")]
 mod postgres;
+mod rename_all;
 #[cfg(any(feature = "postgres", feature = "mssql"))]
 mod string_ext;
 mod token_stream_ext;

@@ -6,9 +6,12 @@ pub(crate) trait TokenStreamExt {
     fn ts(self) -> TokenStream;
 }
 
-impl TokenStreamExt for Vec<TokenStream> {
+impl<I> TokenStreamExt for I
+where
+    I: IntoIterator<Item = TokenStream>,
+{
     fn ts(self) -> TokenStream {
-        let v = self;
+        let v = self.into_iter();
         quote!(#(#v)*)
     }
 }

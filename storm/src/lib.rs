@@ -6,6 +6,7 @@ mod entity;
 mod error;
 mod get;
 mod get_or_load;
+mod get_or_load_sync;
 mod get_version;
 mod init;
 mod insert;
@@ -27,6 +28,7 @@ pub use entity::Entity;
 pub use error::Error;
 pub use get::Get;
 pub use get_or_load::GetOrLoad;
+pub use get_or_load_sync::GetOrLoadSync;
 pub use get_version::GetVersion;
 pub use init::Init;
 pub use insert::Insert;
@@ -42,7 +44,7 @@ type Log<E> = fxhash::FxHashMap<<E as Entity>::Key, State<E>>;
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[cfg(feature = "derive")]
-pub use storm_derive::Ctx;
+pub use storm_derive::{indexing, Ctx};
 
 #[cfg(feature = "mssql")]
 pub use storm_derive::{MssqlLoad, MssqlSave};

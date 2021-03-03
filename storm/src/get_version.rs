@@ -1,4 +1,4 @@
 pub trait GetVersion {
     #[must_use]
-    fn get_version(&self) -> u64;
+    fn get_version(&self) -> Option<u64>;
 }
