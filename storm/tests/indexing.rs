@@ -5,7 +5,8 @@ use vec_map::VecMap;
 #[derive(Ctx, Default)]
 struct Ctx {
     tbl: OnceCell<Version<VecMap<usize, User>>>,
-    //next_id: OnceCell<storm::Index<usize>>,
+    #[storm(index = true)]
+    next_id: OnceCell<NextId>,
 }
 
 #[derive(Default)]

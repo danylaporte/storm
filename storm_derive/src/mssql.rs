@@ -144,7 +144,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     for field in try_ts!(input.fields()) {
         let ident = continue_ts!(field.ident(), errors);
 
-        let attrs: FieldAttrs = continue_ts!(
+        let attrs = continue_ts!(
             FieldAttrs::from_field(field).map_err(|e| e.write_errors()),
             errors
         );

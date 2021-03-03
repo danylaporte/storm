@@ -1,4 +1,5 @@
 use crate::{field_ext::TypeInfo, DeriveInputExt, FieldExt, TokenStreamExt};
+use darling::FromField;
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -39,115 +40,132 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         let name_mut = Ident::new(&format!("{}_mut", &name), name.span());
         let alias = Ident::new(&name.to_string().to_pascal_case(), name.span());
 
+        let field_attrs = FieldAttrs::from_field(field).map_err(|e| e.write_errors())?;
         let ty = &field.ty;
-        let type_info = field.type_info();
 
-        globals.push(quote!(#vis type #alias = <#ty as storm::CtxMember>::Member;));
-        log_members_new.push(quote!(#name: storm::mem::Commit::commit(self.#name),));
-        trx_members_new_log.push(quote!(#name: #name.log,));
-        trx_members_new_trx.push(quote!(#name: #name.table,));
-
-        match type_info {
-            TypeInfo::OnceCell => {
-                tbl_members.push(quote! {
-                    async fn #name<'a>(&'a self) -> storm::Result<&'a #alias>
-                    where
-                        #alias: storm::Init<Self::Provider>,
-                        Self::Provider: for<'c> storm::provider::Gate<'c>,
-                    {
-                        let (ctx, provider) = self.ctx();
-
-                        storm::GetOrLoad::get_or_load(&ctx.#name, provider).await
-                    }
-                });
-
-                trx_members.push(quote! {
-                    #vis #name: storm::TrxCell<'a, #alias>,
-                });
-
-                trx_members_new.push(quote!(#name: storm::TrxCell::new(&self.#name),));
-
-                trx_tbl_members.push(quote! {
-                    async fn #name<'b>(&'b self) -> storm::Result<storm::Connected<&'b <#alias as storm::mem::Transaction<'a>>::Transaction, &'b <Self as #trx_tbl_name<'a>>::Provider>>
-                    where
-                        'a: 'b,
-                        #alias: storm::Init<Self::Provider>,
-                        Self::Provider: for<'c> storm::provider::Gate<'c>,
-                    {
-                        let (ctx, provider) = self.ctx();
-
-                        Ok(storm::Connected {
-                            ctx: ctx.#name.get_or_init(provider).await?,
-                            provider,
-                        })                        
+        if field_attrs.index {
+            globals.push(quote! {
+                impl<C> storm::GetOrLoadSync<#alias, C> for #ctx_name
+                where
+                    storm::OnceCell<#alias>: storm::GetOrLoadSync<#alias, C>
+                {
+                    fn get_or_load_sync<'a>(&'a self, ctx: &C) -> &'a #alias {
+                        storm::GetOrLoadSync::get_or_load_sync(&self.#name, ctx)
                     }
 
-                    async fn #name_mut<'b>(&'b mut self) -> storm::Result<storm::Connected<&'b mut <#alias as storm::mem::Transaction<'a>>::Transaction, &'b <Self as #trx_tbl_name<'a>>::Provider>>
-                    where
-                        'a: 'b,
-                        #alias: storm::Init<Self::Provider>,
-                        Self::Provider: for<'c> storm::provider::Gate<'c>,
-                    {
-                        let (ctx, provider) = self.ctx_mut();
-
-                        Ok(storm::Connected {
-                            ctx: ctx.#name.get_mut_or_init(provider).await?,
-                            provider,
-                        })                        
+                    fn get_mut(&mut self) -> Option<&mut #alias> {
+                        storm::GetOrLoadSync::<#alias, C>::get_mut(&mut self.#name)
                     }
-                });
+                }
+            });
+        } else {
+            globals.push(quote!(#vis type #alias = <#ty as storm::CtxMember>::Member;));
+            log_members_new.push(quote!(#name: storm::mem::Commit::commit(self.#name),));
+            trx_members_new_log.push(quote!(#name: #name.log,));
+            trx_members_new_trx.push(quote!(#name: #name.table,));
 
-                apply_log.push(quote!(self.#name.apply_log_opt(log.#name);));
-                log_members.push(quote!(#name: Option<<#ty as storm::ApplyLog>::Log>,));
-            }
-            TypeInfo::Other => {
-                tbl_members.push(quote! {
-                    #[must_use]
-                    fn #name(&self) -> &#ty {
-                        &self.ctx().0.#name
-                    }
-                });
+            match field.type_info() {
+                TypeInfo::OnceCell => {
+                    tbl_members.push(quote! {
+                        async fn #name<'a>(&'a self) -> storm::Result<&'a #alias>
+                        where
+                            #alias: storm::Init<Self::Provider>,
+                            Self::Provider: for<'c> storm::provider::Gate<'c>,
+                        {
+                            let (ctx, provider) = self.ctx();
 
-                trx_members.push(quote! {
-                    #vis #name: <#ty as storm::mem::Transaction<'a>>::Transaction,
-                });
-
-                trx_members_new.push(quote! {
-                    #name: storm::mem::Transaction::<'a>::transaction(&self.#name),
-                });
-
-                trx_tbl_members.push(quote! {
-                    #[must_use]
-                    fn #name<'b>(&'b self) -> storm::Connected<&'b<#ty as storm::mem::Transaction<'a>>::Transaction, &'b Self::Provider>
-                    where
-                        #ty: storm::mem::Transaction<'a>,
-                        'a: 'b,
-                    {
-                        let (ctx, provider) = self.ctx();
-
-                        storm::Connected {
-                            ctx: &ctx.#name,
-                            provider,
+                            storm::GetOrLoad::get_or_load(&ctx.#name, provider).await
                         }
-                    }
+                    });
 
-                    #[must_use]
-                    fn #name_mut<'b>(&'b mut self) -> storm::Connected<&'b mut <#ty as storm::mem::Transaction<'a>>::Transaction, &'b Self::Provider>
-                    where
-                        'a: 'b,
-                        #ty: storm::mem::Transaction<'a>,
-                    {
-                        let (ctx, provider) = self.ctx_mut();
+                    trx_members.push(quote! {
+                        #vis #name: storm::TrxCell<'a, #alias>,
+                    });
 
-                        storm::Connected {
-                            ctx: &mut ctx.#name,
-                            provider,
+                    trx_members_new.push(quote!(#name: storm::TrxCell::new(&self.#name),));
+
+                    trx_tbl_members.push(quote! {
+                        async fn #name<'b>(&'b self) -> storm::Result<storm::Connected<&'b <#alias as storm::mem::Transaction<'a>>::Transaction, &'b <Self as #trx_tbl_name<'a>>::Provider>>
+                        where
+                            'a: 'b,
+                            #alias: storm::Init<Self::Provider>,
+                            Self::Provider: for<'c> storm::provider::Gate<'c>,
+                        {
+                            let (ctx, provider) = self.ctx();
+
+                            Ok(storm::Connected {
+                                ctx: ctx.#name.get_or_init(provider).await?,
+                                provider,
+                            })
                         }
-                    }
-                });
 
-                apply_log.push(quote!(self.#name.apply_log(log.#name);));
-                log_members.push(quote!(#name: <#ty as storm::ApplyLog>::Log,));
+                        async fn #name_mut<'b>(&'b mut self) -> storm::Result<storm::Connected<&'b mut <#alias as storm::mem::Transaction<'a>>::Transaction, &'b <Self as #trx_tbl_name<'a>>::Provider>>
+                        where
+                            'a: 'b,
+                            #alias: storm::Init<Self::Provider>,
+                            Self::Provider: for<'c> storm::provider::Gate<'c>,
+                        {
+                            let (ctx, provider) = self.ctx_mut();
+
+                            Ok(storm::Connected {
+                                ctx: ctx.#name.get_mut_or_init(provider).await?,
+                                provider,
+                            })
+                        }
+                    });
+
+                    apply_log.push(quote!(self.#name.apply_log_opt(log.#name);));
+                    log_members.push(quote!(#name: Option<<#ty as storm::ApplyLog>::Log>,));
+                }
+                TypeInfo::Other => {
+                    tbl_members.push(quote! {
+                        #[must_use]
+                        fn #name(&self) -> &#ty {
+                            &self.ctx().0.#name
+                        }
+                    });
+
+                    trx_members.push(quote! {
+                        #vis #name: <#ty as storm::mem::Transaction<'a>>::Transaction,
+                    });
+
+                    trx_members_new.push(quote! {
+                        #name: storm::mem::Transaction::<'a>::transaction(&self.#name),
+                    });
+
+                    trx_tbl_members.push(quote! {
+                        #[must_use]
+                        fn #name<'b>(&'b self) -> storm::Connected<&'b<#ty as storm::mem::Transaction<'a>>::Transaction, &'b Self::Provider>
+                        where
+                            #ty: storm::mem::Transaction<'a>,
+                            'a: 'b,
+                        {
+                            let (ctx, provider) = self.ctx();
+
+                            storm::Connected {
+                                ctx: &ctx.#name,
+                                provider,
+                            }
+                        }
+
+                        #[must_use]
+                        fn #name_mut<'b>(&'b mut self) -> storm::Connected<&'b mut <#ty as storm::mem::Transaction<'a>>::Transaction, &'b Self::Provider>
+                        where
+                            'a: 'b,
+                            #ty: storm::mem::Transaction<'a>,
+                        {
+                            let (ctx, provider) = self.ctx_mut();
+
+                            storm::Connected {
+                                ctx: &mut ctx.#name,
+                                provider,
+                            }
+                        }
+                    });
+
+                    apply_log.push(quote!(self.#name.apply_log(log.#name);));
+                    log_members.push(quote!(#name: <#ty as storm::ApplyLog>::Log,));
+                }
             }
         }
     }
@@ -273,4 +291,11 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
         #globals
     })
+}
+
+#[derive(Debug, FromField)]
+#[darling(attributes(storm))]
+struct FieldAttrs {
+    #[darling(default)]
+    index: bool,
 }

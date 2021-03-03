@@ -4,7 +4,6 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{spanned::Spanned, Error, FnArg, Ident, Item, ItemFn, ReturnType, Type};
 
-#[allow(unused_variables)]
 pub(crate) fn indexing(item: Item) -> TokenStream {
     match &item {
         Item::Fn(f) => indexing_fn(f),
