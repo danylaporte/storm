@@ -46,12 +46,34 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
             })
         });
 
+    let as_ref_async_wheres = args
+        .iter()
+        .map(|a| unref(&a.ty))
+        .map(|t| quote!(+ storm::AsRefAsync<#t>))
+        .ts();
+
     let as_refs = args.iter().map(|_| quote!(ctx.as_ref(),)).ts();
+
+    let as_ref_asyncs = args
+        .iter()
+        .map(|_| quote!(storm::AsRefAsync::as_ref_async(ctx).await?,))
+        .ts();
 
     let init_version = args
         .iter()
         .map(|t| unref(&t.ty))
         .map(|t| quote!(storm::GetVersion::get_version(AsRef::<#t>::as_ref(ctx)).unwrap_or(0)))
+        .fold(None, |acc, v| {
+            Some(match acc {
+                Some(acc) => quote!(std::cmp::max(#acc, #v)),
+                None => v,
+            })
+        });
+
+    let init_version_async = args
+        .iter()
+        .map(|t| unref(&t.ty))
+        .map(|t| quote!(storm::GetVersion::get_version(storm::AsRefAsync::<#t>::as_ref_async(ctx).await?).unwrap_or(0)))
         .fold(None, |acc, v| {
             Some(match acc {
                 Some(acc) => quote!(std::cmp::max(#acc, #v)),
@@ -70,14 +92,24 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
             }
         }
 
-        impl<C> storm::GetOrLoadSync<#index_name, C> for storm::OnceCell<#index_name> #as_ref_wheres,
+        impl<C> storm::GetOrLoad<#index_name, C> for storm::OnceCell<#index_name> #as_ref_wheres
         {
-            fn get_or_load_sync(&self, ctx: &C) -> &#index_name {
+            fn get_or_load(&self, ctx: &C) -> &#index_name {
                 self.get_or_init(|| #index_name(#name(#as_refs), #init_version))
             }
 
             fn get_mut(&mut self) -> Option<&mut #index_name> {
                 self.get_mut()
+            }
+        }
+
+        #[async_trait::async_trait]
+        impl<C> storm::Init<C> for #index_name
+        where
+            C: Send + Sync #as_ref_async_wheres
+        {
+            async fn init(ctx: &C) -> storm::Result<#index_name> {
+                Ok(#index_name(#name(#as_ref_asyncs), #init_version_async))
             }
         }
 

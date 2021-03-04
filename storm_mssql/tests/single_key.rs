@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use storm::{
     mem::{Commit, Transaction},
-    ApplyLog, Ctx, Entity, GetOrLoad, MssqlLoad, MssqlSave, OnceCell, Result,
+    ApplyLog, Ctx, Entity, GetOrLoadAsync, MssqlLoad, MssqlSave, OnceCell, Result,
 };
 use storm_mssql::{ClientFactory, Execute, MssqlProvider};
 use tiberius::{AuthMethod, Config};
@@ -53,7 +53,7 @@ async fn crud() -> Result<()> {
 
     let ctx = TestCtx::default();
 
-    let entities1 = ctx.entities1.get_or_load(provider).await?;
+    let entities1 = ctx.entities1.get_or_load_async(provider).await?;
 
     assert_eq!(
         entities1.get(&1).unwrap().clone(),

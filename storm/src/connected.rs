@@ -46,6 +46,19 @@ impl<T, P> DerefMut for Connected<T, P> {
     }
 }
 
+#[async_trait]
+impl<'a, T, P> provider::Gate<'a> for Connected<T, P>
+where
+    T: Send + Sync,
+    P: provider::Gate<'a> + Send + Sync,
+{
+    type Gate = P::Gate;
+
+    async fn gate(&'a self) -> Self::Gate {
+        self.provider.gate().await
+    }
+}
+
 impl<E, T, P> Get<E> for Connected<T, P>
 where
     E: Entity,

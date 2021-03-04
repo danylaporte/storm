@@ -87,7 +87,7 @@ where
     E::Key: Clone + Eq + Hash,
     S: BuildHasher,
 {
-    pub async fn get_or_load<P>(&mut self, k: &E::Key, provider: &P) -> Result<Option<&E>>
+    pub async fn get_or_load_async<P>(&mut self, k: &E::Key, provider: &P) -> Result<Option<&E>>
     where
         P: LoadOne<E>,
     {

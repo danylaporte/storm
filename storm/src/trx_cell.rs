@@ -1,4 +1,4 @@
-use crate::{mem, GetOrLoad, Result};
+use crate::{mem, GetOrLoadAsync, Result};
 use once_cell::sync::OnceCell;
 
 pub struct TrxCell<'a, T: mem::Transaction<'a>> {
@@ -37,11 +37,11 @@ impl<'a, T: mem::Transaction<'a>> TrxCell<'a, T> {
         provider: &P,
     ) -> Result<&'b mut <T as mem::Transaction<'a>>::Transaction>
     where
-        OnceCell<T>: GetOrLoad<P, Output = T>,
+        OnceCell<T>: GetOrLoadAsync<T, P>,
         T: mem::Transaction<'a>,
     {
         if self.trx.get().is_none() {
-            let ctx = GetOrLoad::get_or_load(self.ctx, provider).await?;
+            let ctx = GetOrLoadAsync::get_or_load_async(self.ctx, provider).await?;
             let trx = ctx.transaction();
             let _ = self.trx.set(trx);
         }
@@ -54,14 +54,14 @@ impl<'a, T: mem::Transaction<'a>> TrxCell<'a, T> {
         provider: &P,
     ) -> Result<&'b <T as mem::Transaction<'a>>::Transaction>
     where
-        OnceCell<T>: GetOrLoad<P, Output = T>,
+        OnceCell<T>: GetOrLoadAsync<T, P>,
         T: mem::Transaction<'a>,
     {
         if let Some(v) = self.trx.get() {
             return Ok(v);
         }
 
-        let ctx = GetOrLoad::get_or_load(self.ctx, provider).await?;
+        let ctx = GetOrLoadAsync::get_or_load_async(self.ctx, provider).await?;
         Ok(self.trx.get_or_init(|| ctx.transaction()))
     }
 }

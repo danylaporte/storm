@@ -38,27 +38,42 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         let vis = &field.vis;
         let name = field.ident()?;
         let name_mut = Ident::new(&format!("{}_mut", &name), name.span());
-        let alias = Ident::new(&name.to_string().to_pascal_case(), name.span());
 
         let field_attrs = FieldAttrs::from_field(field).map_err(|e| e.write_errors())?;
         let ty = &field.ty;
 
         if field_attrs.index {
+            let alias = quote!( <#ty as storm::CtxMember>::Member);
+
             globals.push(quote! {
-                impl<C> storm::GetOrLoadSync<#alias, C> for #ctx_name
+                impl<C> storm::GetOrLoad<#alias, C> for #ctx_name
                 where
-                    storm::OnceCell<#alias>: storm::GetOrLoadSync<#alias, C>
+                    storm::OnceCell<#alias>: storm::GetOrLoad<#alias, C>
                 {
-                    fn get_or_load_sync<'a>(&'a self, ctx: &C) -> &'a #alias {
-                        storm::GetOrLoadSync::get_or_load_sync(&self.#name, ctx)
+                    fn get_or_load<'a>(&'a self, ctx: &C) -> &'a #alias {
+                        storm::GetOrLoad::get_or_load(&self.#name, ctx)
                     }
 
                     fn get_mut(&mut self) -> Option<&mut #alias> {
-                        storm::GetOrLoadSync::<#alias, C>::get_mut(&mut self.#name)
+                        storm::GetOrLoad::<#alias, C>::get_mut(&mut self.#name)
                     }
                 }
             });
+
+            tbl_members.push(quote! {
+                async fn #name<'a>(&'a self) -> storm::Result<&'a #alias>
+                where
+                    #alias: storm::Init<storm::Connected<&'a #ctx_name, &'a Self::Provider>>,
+                    Self::Provider: for<'b> storm::provider::Gate<'b> + Send,
+                {
+                    let (ctx, provider) = self.ctx();
+                    let connected = storm::Connected { ctx, provider };
+
+                    storm::GetOrLoadAsync::get_or_load_async(&ctx.#name, &connected).await
+                }
+            });
         } else {
+            let alias = Ident::new(&name.to_string().to_pascal_case(), name.span());
             globals.push(quote!(#vis type #alias = <#ty as storm::CtxMember>::Member;));
             log_members_new.push(quote!(#name: storm::mem::Commit::commit(self.#name),));
             trx_members_new_log.push(quote!(#name: #name.log,));
@@ -74,7 +89,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                         {
                             let (ctx, provider) = self.ctx();
 
-                            storm::GetOrLoad::get_or_load(&ctx.#name, provider).await
+                            storm::GetOrLoadAsync::get_or_load_async(&ctx.#name, provider).await
                         }
                     });
 

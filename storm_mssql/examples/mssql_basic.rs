@@ -1,7 +1,7 @@
 use std::usize;
 use storm::{
     mem::{Commit, Transaction},
-    ApplyLog, Ctx, Entity, GetOrLoad, OnceCell, Result,
+    ApplyLog, Ctx, Entity, GetOrLoadAsync, OnceCell, Result,
 };
 use storm_mssql::ClientFactory;
 use tiberius::{FromSql, ToSql};
@@ -15,7 +15,7 @@ async fn main() -> Result<()> {
     let provider = &config.create_provider();
     let ctx = Ctx::default();
 
-    let _users = ctx.users.get_or_load(provider).await?;
+    let _users = ctx.users.get_or_load_async(provider).await?;
 
     let mssql_trx = provider.transaction().await?;
     let mut trx = ctx.transaction();
