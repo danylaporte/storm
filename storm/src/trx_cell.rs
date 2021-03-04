@@ -1,8 +1,8 @@
-use crate::{mem, GetOrLoadAsync, Result};
+use crate::{mem, AsyncOnceCell, GetOrLoadAsync, Result};
 use once_cell::sync::OnceCell;
 
 pub struct TrxCell<'a, T: mem::Transaction<'a>> {
-    ctx: &'a OnceCell<T>,
+    ctx: &'a AsyncOnceCell<T>,
     trx: OnceCell<T::Transaction>,
 }
 
@@ -18,7 +18,7 @@ where
 }
 
 impl<'a, T: mem::Transaction<'a>> TrxCell<'a, T> {
-    pub fn new(ctx: &'a OnceCell<T>) -> Self {
+    pub fn new(ctx: &'a AsyncOnceCell<T>) -> Self {
         Self {
             ctx,
             trx: OnceCell::new(),
@@ -37,7 +37,7 @@ impl<'a, T: mem::Transaction<'a>> TrxCell<'a, T> {
         provider: &P,
     ) -> Result<&'b mut <T as mem::Transaction<'a>>::Transaction>
     where
-        OnceCell<T>: GetOrLoadAsync<T, P>,
+        AsyncOnceCell<T>: GetOrLoadAsync<T, P>,
         T: mem::Transaction<'a>,
     {
         if self.trx.get().is_none() {
@@ -54,7 +54,7 @@ impl<'a, T: mem::Transaction<'a>> TrxCell<'a, T> {
         provider: &P,
     ) -> Result<&'b <T as mem::Transaction<'a>>::Transaction>
     where
-        OnceCell<T>: GetOrLoadAsync<T, P>,
+        AsyncOnceCell<T>: GetOrLoadAsync<T, P>,
         T: mem::Transaction<'a>,
     {
         if let Some(v) = self.trx.get() {

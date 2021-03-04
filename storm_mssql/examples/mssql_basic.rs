@@ -1,7 +1,7 @@
 use std::usize;
 use storm::{
     mem::{Commit, Transaction},
-    ApplyLog, Ctx, Entity, GetOrLoadAsync, OnceCell, Result,
+    ApplyLog, AsyncOnceCell, Ctx, Entity, GetOrLoadAsync, Result,
 };
 use storm_mssql::ClientFactory;
 use tiberius::{FromSql, ToSql};
@@ -47,7 +47,7 @@ async fn main() -> Result<()> {
 
 #[derive(Ctx, Default)]
 struct Ctx {
-    users: OnceCell<VecMap<UserId, User>>,
+    users: AsyncOnceCell<VecMap<UserId, User>>,
 }
 
 #[derive(storm::MssqlLoad, storm::MssqlSave)]

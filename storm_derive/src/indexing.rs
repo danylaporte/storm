@@ -92,10 +92,10 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
             }
         }
 
-        impl<C> storm::GetOrLoad<#index_name, C> for storm::OnceCell<#index_name> #as_ref_wheres
+        impl<C> storm::GetOrLoad<#index_name, C> for storm::AsyncOnceCell<#index_name> #as_ref_wheres
         {
             fn get_or_load(&self, ctx: &C) -> &#index_name {
-                self.get_or_init(|| #index_name(#name(#as_refs), #init_version))
+                self.get_or_init_sync(|| #index_name(#name(#as_refs), #init_version))
             }
 
             fn get_mut(&mut self) -> Option<&mut #index_name> {

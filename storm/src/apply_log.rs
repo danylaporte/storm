@@ -1,5 +1,4 @@
-use crate::{Entity, Log, State};
-use once_cell::sync::OnceCell;
+use crate::{AsyncOnceCell, Entity, Log, State};
 use std::{
     collections::HashMap,
     hash::{BuildHasher, Hash},
@@ -60,7 +59,7 @@ where
     }
 }
 
-impl<T> ApplyLog for OnceCell<T>
+impl<T> ApplyLog for AsyncOnceCell<T>
 where
     T: ApplyLog,
 {

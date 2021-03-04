@@ -1,6 +1,5 @@
-use async_cell_lock::QueueRwLock;
 use cache::Cache;
-use storm::{prelude::*, Connected, Ctx, Entity, OnceCell, Result};
+use storm::{prelude::*, AsyncOnceCell, Connected, Ctx, Entity, QueueRwLock, Result};
 use vec_map::VecMap;
 
 #[tokio::main]
@@ -48,7 +47,7 @@ async fn main() -> Result<()> {
 #[derive(Ctx, Default)]
 struct Ctx {
     topic: Cache<usize, User>,
-    users: OnceCell<VecMap<usize, User>>,
+    users: AsyncOnceCell<VecMap<usize, User>>,
 }
 
 struct User {

@@ -3,7 +3,7 @@ use darling::FromField;
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{DeriveInput, Ident};
+use syn::{DeriveInput, GenericArgument, Ident, PathArguments, Type};
 
 pub fn generate(input: &DeriveInput) -> TokenStream {
     let implement = try_ts!(implement(input));
@@ -43,28 +43,28 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         let ty = &field.ty;
 
         if field_attrs.index {
-            let alias = quote!( <#ty as storm::CtxMember>::Member);
+            let ty = get_async_once_cell_ty(ty);
 
             globals.push(quote! {
-                impl<C> storm::GetOrLoad<#alias, C> for #ctx_name
+                impl<C> storm::GetOrLoad<#ty, C> for #ctx_name
                 where
-                    storm::OnceCell<#alias>: storm::GetOrLoad<#alias, C>
+                    storm::AsyncOnceCell<#ty>: storm::GetOrLoad<#ty, C>
                 {
-                    fn get_or_load<'a>(&'a self, ctx: &C) -> &'a #alias {
+                    fn get_or_load<'a>(&'a self, ctx: &C) -> &'a #ty {
                         storm::GetOrLoad::get_or_load(&self.#name, ctx)
                     }
 
-                    fn get_mut(&mut self) -> Option<&mut #alias> {
-                        storm::GetOrLoad::<#alias, C>::get_mut(&mut self.#name)
+                    fn get_mut(&mut self) -> Option<&mut #ty> {
+                        storm::GetOrLoad::<#ty, C>::get_mut(&mut self.#name)
                     }
                 }
             });
 
             tbl_members.push(quote! {
-                async fn #name<'a>(&'a self) -> storm::Result<&'a #alias>
+                async fn #name<'a>(&'a self) -> storm::Result<&'a #ty>
                 where
-                    #alias: storm::Init<storm::Connected<&'a #ctx_name, &'a Self::Provider>>,
-                    Self::Provider: for<'b> storm::provider::Gate<'b> + Send,
+                    #ty: storm::Init<storm::Connected<&'a #ctx_name, &'a Self::Provider>>,
+                    Self::Provider: Send,
                 {
                     let (ctx, provider) = self.ctx();
                     let connected = storm::Connected { ctx, provider };
@@ -73,19 +73,21 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                 }
             });
         } else {
-            let alias = Ident::new(&name.to_string().to_pascal_case(), name.span());
-            globals.push(quote!(#vis type #alias = <#ty as storm::CtxMember>::Member;));
             log_members_new.push(quote!(#name: storm::mem::Commit::commit(self.#name),));
             trx_members_new_log.push(quote!(#name: #name.log,));
             trx_members_new_trx.push(quote!(#name: #name.table,));
 
             match field.type_info() {
-                TypeInfo::OnceCell => {
+                TypeInfo::AsyncOnceCell => {
+                    let ty = get_async_once_cell_ty(ty);
+                    let alias = Ident::new(&name.to_string().to_pascal_case(), name.span());
+
+                    globals.push(quote!(#vis type #alias = #ty;));
+
                     tbl_members.push(quote! {
                         async fn #name<'a>(&'a self) -> storm::Result<&'a #alias>
                         where
                             #alias: storm::Init<Self::Provider>,
-                            Self::Provider: for<'c> storm::provider::Gate<'c>,
                         {
                             let (ctx, provider) = self.ctx();
 
@@ -104,7 +106,6 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                         where
                             'a: 'b,
                             #alias: storm::Init<Self::Provider>,
-                            Self::Provider: for<'c> storm::provider::Gate<'c>,
                         {
                             let (ctx, provider) = self.ctx();
 
@@ -118,7 +119,6 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                         where
                             'a: 'b,
                             #alias: storm::Init<Self::Provider>,
-                            Self::Provider: for<'c> storm::provider::Gate<'c>,
                         {
                             let (ctx, provider) = self.ctx_mut();
 
@@ -131,8 +131,24 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
                     apply_log.push(quote!(self.#name.apply_log_opt(log.#name);));
                     log_members.push(quote!(#name: Option<<#ty as storm::ApplyLog>::Log>,));
+
+                    globals.push(quote! {
+                        #[async_trait::async_trait]
+                        impl<P> storm::GetOrLoadAsync<#alias, P> for #ctx_name
+                        where
+                            P: Sync,
+                            #alias: storm::Init<P> + Send + Sync,
+                        {
+                            async fn get_or_load_async<'a>(&'a self, provider: &P) -> storm::Result<&'a #alias> {
+                                storm::GetOrLoadAsync::get_or_load_async(&self.#name, provider).await
+                            }
+                        }
+                    });
                 }
                 TypeInfo::Other => {
+                    let alias = Ident::new(&name.to_string().to_pascal_case(), name.span());
+                    globals.push(quote!(#vis type #alias = #ty;));
+
                     tbl_members.push(quote! {
                         #[must_use]
                         fn #name(&self) -> &#ty {
@@ -313,4 +329,24 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 struct FieldAttrs {
     #[darling(default)]
     index: bool,
+}
+
+fn get_async_once_cell_ty(t: &Type) -> &Type {
+    match t {
+        Type::Reference(r) => get_async_once_cell_ty(&r.elem),
+        Type::Path(p) => p
+            .path
+            .segments
+            .last()
+            .and_then(|s| match &s.arguments {
+                PathArguments::AngleBracketed(a) => a.args.first(),
+                _ => None,
+            })
+            .and_then(|a| match a {
+                GenericArgument::Type(t) => Some(t),
+                _ => None,
+            })
+            .unwrap_or(t),
+        _ => t,
+    }
 }

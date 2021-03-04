@@ -1,6 +1,6 @@
 use async_cell_lock::QueueRwLock;
 use cache::Cache;
-use storm::{prelude::*, Connected, Ctx, Entity, GetVersion, OnceCell, Result};
+use storm::{prelude::*, AsyncOnceCell, Connected, Ctx, Entity, GetVersion, Result};
 use vec_map::VecMap;
 
 fn create_ctx() -> QueueRwLock<Connected<Ctx, ()>> {
@@ -36,26 +36,26 @@ async fn read() -> Result<()> {
     let ctx = ctx.read().await;
 
     // once_cell<VecMap<_>>
-    let oc_vm = ctx.oc_vm().await?;
-    let _ = oc_vm.get(&0).is_none();
-    let _ = oc_vm.into_iter();
+    let oc_vms = ctx.oc_vms().await?;
+    let _ = oc_vms.get(&0).is_none();
+    let _ = oc_vms.into_iter();
 
     // once_cell<Version<VecMap<_>>>
-    let oc_v_vm = ctx.oc_v_vm().await?;
-    let _ = oc_v_vm.get(&0).is_none();
-    let _ = oc_v_vm.get_version();
-    let _ = oc_v_vm.into_iter();
+    let oc_v_vms = ctx.oc_v_vms().await?;
+    let _ = oc_v_vms.get(&0).is_none();
+    let _ = oc_v_vms.get_version();
+    let _ = oc_v_vms.into_iter();
 
     // Cache<_>
-    let c = ctx.c();
-    let _ = c.get(&0).is_none();
-    let _ = c.into_iter();
+    let cs = ctx.cs();
+    let _ = cs.get(&0).is_none();
+    let _ = cs.into_iter();
 
     // Version<Cache<_>>
-    let v_c = ctx.v_c();
-    let _ = v_c.get(&0).is_none();
-    let _ = v_c.get_version();
-    let _ = v_c.into_iter();
+    let v_cs = ctx.v_cs();
+    let _ = v_cs.get(&0).is_none();
+    let _ = v_cs.get_version();
+    let _ = v_cs.into_iter();
 
     Ok(())
 }
@@ -69,74 +69,83 @@ async fn transaction() -> Result<()> {
     let mut trx = ctx.transaction().await?;
 
     // once_cell<VecMap<_>>
-    let oc_vm = trx.oc_vm().await?;
-    let _ = oc_vm.get(&0).is_none();
+    let oc_vms = trx.oc_vms().await?;
+    let _ = oc_vms.get(&0).is_none();
 
-    let mut oc_vm = trx.oc_vm_mut().await?;
-    let _ = oc_vm.get(&0).is_none();
-    oc_vm.insert(1, User::default()).await?;
-    oc_vm.remove(2).await?;
+    let mut oc_vms = trx.oc_vms_mut().await?;
+    let _ = oc_vms.get(&0).is_none();
+    oc_vms.insert(1, OcVm::default()).await?;
+    oc_vms.remove(2).await?;
 
     // once_cell<Version<VecMap<_>>>
-    let oc_v_vm = trx.oc_v_vm().await?;
-    let _ = oc_v_vm.get(&0).is_none();
+    let oc_v_vms = trx.oc_v_vms().await?;
+    let _ = oc_v_vms.get(&0).is_none();
 
-    let mut oc_v_vm = trx.oc_vm_mut().await?;
-    let _ = oc_v_vm.get(&0).is_none();
-    oc_v_vm.insert(1, User::default()).await?;
-    oc_v_vm.remove(2).await?;
+    let mut oc_v_vms = trx.oc_v_vms_mut().await?;
+    let _ = oc_v_vms.get(&0).is_none();
+    oc_v_vms.insert(1, OcVVm::default()).await?;
+    oc_v_vms.remove(2).await?;
 
     // Cache<_>
-    let c = trx.c();
-    let _ = c.get(&0).is_none();
+    let cs = trx.cs();
+    let _ = cs.get(&0).is_none();
 
-    let mut c = trx.c_mut();
-    let _ = c.get(&0).is_none();
-    c.insert(1, User::default()).await?;
-    c.remove(2).await?;
+    let mut cs = trx.cs_mut();
+    let _ = cs.get(&0).is_none();
+    cs.insert(1, C::default()).await?;
+    cs.remove(2).await?;
 
     // Version<Cache<_>>
-    let v_c = trx.v_c();
-    let _ = v_c.get(&0).is_none();
+    let v_cs = trx.v_cs();
+    let _ = v_cs.get(&0).is_none();
 
-    let mut v_c = trx.v_c_mut();
-    let _ = v_c.get(&0).is_none();
-    v_c.insert(1, User::default()).await?;
-    v_c.remove(2).await?;
+    let mut v_cs = trx.v_cs_mut();
+    let _ = v_cs.get(&0).is_none();
+    v_cs.insert(1, VC::default()).await?;
+    v_cs.remove(2).await?;
 
     // tests that all traits are correctly propagating.
-    async fn actions_mut<T>(mut t: T) -> Result<()>
+    async fn actions_mut<T, E>(mut t: T) -> Result<()>
     where
-        T: Get<User> + Insert<User> + Remove<User>,
+        E: Default + Entity<Key = usize>,
+        T: Get<E> + Insert<E> + Remove<E>,
     {
         let _ = t.get(&0).is_none();
-        t.insert(1, User::default()).await?;
+        t.insert(1, E::default()).await?;
         t.remove(2).await?;
         Ok(())
     }
 
-    actions_mut(trx.oc_vm_mut().await?).await?;
-    actions_mut(trx.oc_v_vm_mut().await?).await?;
-    actions_mut(trx.c_mut()).await?;
-    actions_mut(trx.v_c_mut()).await?;
+    actions_mut(trx.oc_vms_mut().await?).await?;
+    actions_mut(trx.oc_v_vms_mut().await?).await?;
+    actions_mut(trx.cs_mut()).await?;
+    actions_mut(trx.v_cs_mut()).await?;
 
     Ok(())
 }
 
 #[derive(Ctx, Default)]
 struct Ctx {
-    oc_vm: OnceCell<VecMap<usize, User>>,
-    oc_v_vm: OnceCell<Version<VecMap<usize, User>>>,
-
-    c: Cache<usize, User>,
-    v_c: Version<Cache<usize, User>>,
+    oc_vms: AsyncOnceCell<VecMap<usize, OcVm>>,
+    oc_v_vms: AsyncOnceCell<Version<VecMap<usize, OcVVm>>>,
+    cs: Cache<usize, C>,
+    v_cs: Version<Cache<usize, VC>>,
 }
 
-#[derive(Default)]
-struct User {
-    pub name: String,
+macro_rules! entity {
+    ($n:ident) => {
+        #[derive(Default)]
+        struct $n {
+            pub name: String,
+        }
+
+        impl Entity for $n {
+            type Key = usize;
+        }
+    };
 }
 
-impl Entity for User {
-    type Key = usize;
-}
+entity!(OcVm);
+entity!(OcVVm);
+entity!(C);
+entity!(VC);

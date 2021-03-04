@@ -6,7 +6,7 @@ use std::{
     fmt::Debug,
     sync::atomic::{AtomicU64, Ordering::Relaxed},
 };
-use storm::{provider::Gate, Error, Result};
+use storm::{Error, Result};
 use tiberius::{Row, ToSql};
 use tokio::sync::{Mutex, MutexGuard};
 use tracing::instrument;
@@ -14,7 +14,6 @@ use tracing::instrument;
 pub struct MssqlProvider<F> {
     cancel_transaction: AtomicU64,
     client_factory: F,
-    gate: Mutex<()>,
     state: Mutex<State>,
 }
 
@@ -26,7 +25,6 @@ where
         Self {
             cancel_transaction: Default::default(),
             client_factory,
-            gate: Mutex::new(()),
             state: Mutex::new(State {
                 client: None,
                 current_transaction: 0,
@@ -80,18 +78,6 @@ where
         state.transaction_counter += 1;
 
         Ok(MssqlTransaction { id, provider: self })
-    }
-}
-
-#[async_trait]
-impl<'a, F> Gate<'a> for MssqlProvider<F>
-where
-    F: Send + Sync,
-{
-    type Gate = MutexGuard<'a, ()>;
-
-    async fn gate(&'a self) -> Self::Gate {
-        self.gate.lock().await
     }
 }
 
@@ -190,18 +176,6 @@ where
 
         state.client = Some(client);
         Ok(count)
-    }
-}
-
-#[async_trait]
-impl<'a, 'b, F> Gate<'b> for MssqlTransaction<'a, F>
-where
-    F: Send + Sync,
-{
-    type Gate = MutexGuard<'b, ()>;
-
-    async fn gate(&'b self) -> Self::Gate {
-        self.provider.gate.lock().await
     }
 }
 

@@ -27,8 +27,8 @@ pub trait FieldExt {
     fn type_info(&self) -> TypeInfo {
         let s = self.field().ty.to_token_stream().to_string();
 
-        if s.find("OnceCell").is_some() {
-            return TypeInfo::OnceCell;
+        if s.find("AsyncOnceCell").is_some() {
+            return TypeInfo::AsyncOnceCell;
         }
 
         TypeInfo::Other
@@ -42,6 +42,6 @@ impl FieldExt for Field {
 }
 
 pub enum TypeInfo {
-    OnceCell,
+    AsyncOnceCell,
     Other,
 }
