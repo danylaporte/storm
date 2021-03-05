@@ -2,9 +2,9 @@ use crate::{
     token_stream_ext::TokenStreamExt, DeriveInputExt, Errors, FieldExt, RenameAll, StringExt,
 };
 use darling::{util::SpannedValue, FromDeriveInput, FromField, FromMeta};
-use proc_macro2::TokenStream;
-use quote::quote;
-use syn::{spanned::Spanned, DeriveInput, Error, Ident, LitInt, LitStr};
+use proc_macro2::{Span, TokenStream};
+use quote::{quote, ToTokens, TokenStreamExt as _};
+use syn::{spanned::Spanned, DeriveInput, Error, Field, Ident, LitInt, LitStr, Type};
 
 const SKIP_IS_INCOMPATIBLE: &str = "`skip` is incompatible.";
 
@@ -75,10 +75,35 @@ struct TypeAttrs {
 
     #[darling(default)]
     rename_all: Option<RenameAll>,
+
+    #[darling(default)]
+    translate_table: String,
+
+    #[darling(default)]
+    translate_keys: SpannedValue<String>,
 }
 
 impl TypeAttrs {
-    pub fn keys(&self, errors: &mut Vec<TokenStream>) -> Vec<&str> {
+    fn check_translated(&self, has_translated_field: bool, errors: &mut Vec<TokenStream>) {
+        if has_translated_field {
+            if self.translate_table.is_empty() {
+                errors.push(
+                    Error::new(
+                        self.translate_table.span(),
+                        "Translated table must have a translated table name.",
+                    )
+                    .to_compile_error(),
+                );
+            }
+        } else if !self.translate_table.is_empty() {
+            errors.push(
+                Error::new(self.translate_table.span(), "No translated field found.")
+                    .to_compile_error(),
+            );
+        }
+    }
+
+    fn keys(&self, errors: &mut Vec<TokenStream>) -> Vec<&str> {
         let vec = self.keys_internal();
 
         if vec.is_empty() {
@@ -93,56 +118,57 @@ impl TypeAttrs {
     fn keys_internal(&self) -> Vec<&str> {
         self.keys.split(',').filter(|s| !s.is_empty()).collect()
     }
-}
 
-#[derive(Debug, FromMeta)]
-pub struct Key(String);
+    fn translate_keys(&self, errors: &mut Vec<TokenStream>) -> Vec<&str> {
+        if self.translate_table.is_empty() {
+            return Vec::new();
+        }
+
+        let keys = self.keys_internal();
+
+        if self.translate_keys.is_empty() {
+            return keys;
+        }
+
+        let translate_keys = self.translate_keys_internal();
+
+        if translate_keys.len() != keys.len() {
+            errors.push(
+                Error::new(
+                    self.translate_keys.span(),
+                    "translate_keys must have the same keys count.",
+                )
+                .to_compile_error(),
+            );
+        }
+
+        translate_keys
+    }
+
+    fn translate_keys_internal(&self) -> Vec<&str> {
+        self.translate_keys
+            .split(',')
+            .filter(|s| !s.is_empty())
+            .collect()
+    }
+}
 
 pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let ident = &input.ident;
     let attrs = try_ts!(TypeAttrs::from_derive_input(input).map_err(|e| e.write_errors()));
     let rename_all = attrs.rename_all;
 
-    let mut col_index = 0;
     let mut errors = Vec::new();
-    let mut filter_params = Vec::new();
-    let mut filter_sql = String::new();
-    let mut load_field = Vec::new();
-    let mut load_key = Vec::new();
-    let mut load_sql = String::new();
+    let mut filter_sql = FilterSqlImpl::default();
+    let mut load_keys_fields = LoadKeysFields::default();
 
-    let keys = attrs.keys(&mut errors);
-
-    for key in &keys {
-        let col_index_str = &col_index.to_string();
-
-        load_sql.add_sep(',').add_field(key);
-
-        load_key.push({
-            let lit = LitInt::new(col_index_str, ident.span());
-            quote!(storm_mssql::FromSql::from_sql(row.try_get(#lit).map_err(storm::Error::Mssql)?)?)
-        });
-
-        filter_sql
-            .add_sep_str("AND")
-            .add('(')
-            .add_field(key)
-            .add_str("=@p")
-            .add_str(&(filter_params.len() + 1).to_string())
-            .add(')');
-
-        if keys.len() == 1 {
-            filter_params.push(quote!(k as _));
-        } else {
-            let key = Ident::new(col_index_str, ident.span());
-            filter_params.push(quote!(&k.#key as _,));
-        }
-
-        col_index += 1;
+    for key in attrs.keys(&mut errors) {
+        load_keys_fields.add_key(key);
+        filter_sql.add_filter(key);
     }
 
     for field in try_ts!(input.fields()) {
-        let ident = continue_ts!(field.ident(), errors);
+        continue_ts!(field.ident(), errors);
 
         let attrs = continue_ts!(
             FieldAttrs::from_field(field).map_err(|e| e.write_errors()),
@@ -151,39 +177,19 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
 
         attrs.validate_load(&mut errors);
 
-        if attrs.skip_load() {
-            load_field.push(quote!(#ident: Default::default(),));
-            continue;
-        }
-
         let column = continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
-        let lit = LitInt::new(&col_index.to_string(), field.span());
 
-        load_sql.add_sep(',').add_field(&column);
-
-        load_field.push(match attrs.load_with.as_ref() {
-            Some(f) => quote!(#ident: #f(&row)?,),
-            None => quote!(#ident: storm_mssql::FromSql::from_sql(row.try_get(#lit).map_err(storm::Error::Mssql)?)?,)
-        });
-
-        col_index += 1;
+        load_keys_fields.add_field(field, &attrs, &column);
     }
+
+    //attrs.check_translated(!load_translated_field.is_empty(), &mut errors);
 
     try_ts!(errors.result());
 
-    load_sql.insert_str(0, "SELECT ");
-    load_sql.push_str(" FROM ");
-    load_sql.push_str(&attrs.table);
+    load_keys_fields.finish_with_table(&attrs.table);
 
-    let load_key = match keys.len() {
-        1 => quote!(#(#load_key)*),
-        _ => quote!(#(#load_key,)*),
-    };
-
-    let filter_params = filter_params.ts();
-    let filter_sql = LitStr::new(&filter_sql, ident.span());
-    let load_field = load_field.ts();
-    let load_sql = LitStr::new(&load_sql, ident.span());
+    let row_fold_ts = load_keys_fields.row_fold_ts(ident);
+    let load_sql = load_keys_fields.sql_ts();
 
     quote! {
         #[async_trait::async_trait]
@@ -202,12 +208,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
                     true => SQL.to_string(),
                 };
 
-                storm_mssql::QueryRows::query_rows(self, sql, &*params, |row| {
-                    Ok((
-                        #load_key,
-                        #ident { #load_field }
-                    ))
-                }).await
+                storm_mssql::QueryRows::query_rows(self, sql, &*params, #row_fold_ts).await
             }
         }
 
@@ -217,7 +218,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             F: storm_mssql::ClientFactory,
         {
             async fn load_one(&self, k: &<#ident as Entity>::Key) -> storm::Result<Option<#ident>> {
-                let filter = (#filter_sql, &[#filter_params][..]);
+                let filter = #filter_sql;
                 let v: storm::provider::LoadOneInternal<#ident> = storm::provider::LoadAll::load_all(self, &filter).await?;
                 Ok(v.into_inner())
             }
@@ -323,6 +324,18 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     }
 }
 
+fn is_translated(t: &Type) -> bool {
+    match t {
+        Type::Path(p) => p
+            .path
+            .segments
+            .iter()
+            .last()
+            .map_or(false, |s| &s.ident == "Translated"),
+        _ => false,
+    }
+}
+
 trait SqlStringExt: StringExt {
     fn add_field(&mut self, field: &str) -> &mut Self {
         self.add('[').add_str(field).add(']')
@@ -330,3 +343,108 @@ trait SqlStringExt: StringExt {
 }
 
 impl<T> SqlStringExt for T where T: StringExt {}
+
+#[derive(Default)]
+struct FilterSqlImpl {
+    params: Vec<TokenStream>,
+    sql: String,
+}
+
+impl FilterSqlImpl {
+    fn add_filter(&mut self, key: &str) {
+        self.sql
+            .add_sep_str("AND")
+            .add('(')
+            .add_field(key)
+            .add_str("=@p")
+            .add_str(&(self.params.len() + 1).to_string())
+            .add(')');
+
+        let index = LitInt::new(&self.params.len().to_string(), Span::call_site());
+        self.params.push(quote!(&k.#index as _,));
+    }
+}
+
+impl ToTokens for FilterSqlImpl {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let params = &self.params;
+
+        let params = if params.len() == 1 {
+            quote!(k as _)
+        } else {
+            quote!(#(#params)*)
+        };
+
+        let sql = LitStr::new(&self.sql, Span::call_site());
+        tokens.append_all(quote!((#sql, &[#params][..])));
+    }
+}
+
+#[derive(Default)]
+struct LoadKeysFields {
+    count: usize,
+    fields: Vec<TokenStream>,
+    keys: Vec<TokenStream>,
+    sql: String,
+}
+
+impl LoadKeysFields {
+    fn add_field(&mut self, field: &Field, attrs: &FieldAttrs, column: &str) {
+        let ident = &field.ident;
+
+        if attrs.skip_load() {
+            self.fields.push(quote!(#ident: Default::default(),));
+            return;
+        }
+
+        let lit = LitInt::new(&self.count.to_string(), field.span());
+
+        self.fields.push(match attrs.load_with.as_ref() {
+                Some(f) => quote!(#ident: #f(&row)?,),
+                None => quote!(#ident: storm_mssql::FromSql::from_sql(row.try_get(#lit).map_err(storm::Error::Mssql)?)?,)
+            });
+
+        self.sql.add_sep(',').add_field(&column);
+        self.count += 1;
+    }
+
+    fn add_key(&mut self, key: &str) {
+        let l = LitInt::new(&self.count.to_string(), Span::call_site());
+
+        self.sql.add_sep(',').add_field(key);
+        self.keys.push(
+            quote!(storm_mssql::FromSql::from_sql(row.try_get(#l).map_err(storm::Error::Mssql)?)?),
+        );
+        self.count += 1;
+    }
+
+    fn finish_with_table(&mut self, table: &str) {
+        self.sql.insert_str(0, "SELECT ");
+        self.sql.push_str(" FROM ");
+        self.sql.push_str(table);
+    }
+
+    fn row_fold_ts(&self, entity: &Ident) -> TokenStream {
+        let keys = &self.keys;
+
+        let keys = match keys.len() {
+            1 => quote!(#(#keys)*),
+            _ => quote!(#(#keys,)*),
+        };
+
+        let fields = &self.fields;
+        let fields = quote!(#(#fields)*);
+
+        quote! { |row| {
+            Ok((
+                #keys,
+                #entity { #fields }
+            ))
+        }}
+    }
+
+    fn sql_ts(&self) -> TokenStream {
+        let sql = LitStr::new(&self.sql, Span::call_site());
+        quote!(#sql)
+    }
+}
