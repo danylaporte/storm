@@ -2,24 +2,30 @@ use crate::{Entity, Result};
 use async_trait::async_trait;
 
 #[async_trait]
-pub trait LoadAll<E: Entity, FILTER: Send + Sync> {
-    async fn load_all<C: Default + Extend<(E::Key, E)> + Send>(&self, filter: &FILTER)
-        -> Result<C>;
+pub trait LoadAll<E: Entity, FILTER: Send + Sync, C>
+where
+    C: Default + Extend<(E::Key, E)> + Send,
+{
+    async fn load_all(&self, filter: &FILTER) -> Result<C>;
 }
 
 #[async_trait]
-impl<E: Entity + 'static, P> LoadAll<E, ()> for &P
+impl<C, E: Entity + 'static, P> LoadAll<E, (), C> for &P
 where
-    P: LoadAll<E, ()> + Send + Sync,
+    C: Default + Extend<(E::Key, E)> + Send + 'static,
+    P: LoadAll<E, (), C> + Send + Sync,
 {
-    async fn load_all<C: Default + Extend<(E::Key, E)> + Send>(&self, filter: &()) -> Result<C> {
+    async fn load_all(&self, filter: &()) -> Result<C> {
         (**self).load_all(filter).await
     }
 }
 
 #[async_trait]
-impl<E: Entity + 'static> LoadAll<E, ()> for () {
-    async fn load_all<C: Default + Extend<(E::Key, E)>>(&self, _: &()) -> Result<C> {
+impl<C, E: Entity + 'static> LoadAll<E, (), C> for ()
+where
+    C: Default + Extend<(E::Key, E)> + Send + 'static,
+{
+    async fn load_all(&self, _: &()) -> Result<C> {
         Ok(C::default())
     }
 }

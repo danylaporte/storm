@@ -200,20 +200,18 @@ where
     }
 }
 
-#[async_trait::async_trait]
-impl<'a, E, F, FILTER> storm::provider::LoadAll<E, FILTER> for MssqlTransaction<'a, F>
+#[async_trait]
+impl<'a, C, E, F, FILTER> storm::provider::LoadAll<E, FILTER, C> for MssqlTransaction<'a, F>
 where
+    C: Default + Extend<(E::Key, E)> + Send + 'static,
     E: storm::Entity + Send + 'a,
     E::Key: Send,
     F: ClientFactory,
     FILTER: FilterSql,
-    MssqlProvider<F>: storm::provider::LoadAll<E, FILTER>,
+    MssqlProvider<F>: storm::provider::LoadAll<E, FILTER, C>,
 {
-    async fn load_all<C: Default + Extend<(<E as storm::Entity>::Key, E)> + Send>(
-        &self,
-        filter: &FILTER,
-    ) -> storm::Result<C> {
-        storm::provider::LoadAll::<E, FILTER>::load_all(self.provider, filter).await
+    async fn load_all(&self, filter: &FILTER) -> storm::Result<C> {
+        storm::provider::LoadAll::<E, FILTER, C>::load_all(self.provider, filter).await
     }
 }
 

@@ -87,7 +87,7 @@ struct TypeAttrs {
     rename_all: Option<RenameAll>,
 
     #[darling(default)]
-    translate_table: String,
+    translate_table: SpannedValue<String>,
 
     #[darling(default)]
     translate_keys: SpannedValue<String>,
@@ -105,11 +105,16 @@ impl TypeAttrs {
                     .to_compile_error(),
                 );
             }
-        } else if !self.translate_table.is_empty() {
-            errors.push(
-                Error::new(self.translate_table.span(), "No translated field found.")
-                    .to_compile_error(),
-            );
+        } else {
+            const MSG: &str = "No translated field found.";
+
+            if !self.translate_table.is_empty() {
+                errors.push(Error::new(self.translate_table.span(), MSG).to_compile_error());
+            }
+
+            if !self.translate_keys.is_empty() {
+                errors.push(Error::new(self.translate_keys.span(), MSG).to_compile_error());
+            }
         }
     }
 
@@ -214,16 +219,18 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     try_ts!(errors.result());
 
     let load = load_keys_fields.to_tokens(ident, &attrs.table);
-    let translated = translate_keys_fields.to_tokens(&attrs.translate_table, &attrs.table);
+    let translated_where = translate_keys_fields.to_where_clause(&ident);
+    let translated = translate_keys_fields.to_tokens(&ident, &attrs.translate_table, &attrs.table);
 
     quote! {
         #[async_trait::async_trait]
-        impl<F, FILTER> storm::provider::LoadAll<#ident, FILTER> for storm_mssql::MssqlProvider<F>
+        impl<C, F, FILTER> storm::provider::LoadAll<#ident, FILTER, C> for storm_mssql::MssqlProvider<F>
         where
+            C: Default + Extend<(<#ident as storm::Entity>::Key, #ident)> #translated_where + Send + 'static,
             F: storm_mssql::ClientFactory,
             FILTER: storm_mssql::FilterSql,
         {
-            async fn load_all<C: Default + Extend<(<#ident as storm::Entity>::Key, #ident)> + Send>(&self, filter: &FILTER) -> storm::Result<C> {
+            async fn load_all(&self, filter: &FILTER) -> storm::Result<C> {
                 let (sql, params) = storm_mssql::FilterSql::filter_sql(filter, 0);
                 #load
                 #translated
@@ -374,9 +381,9 @@ impl FilterSqlImpl {
     fn add_filter(&mut self, key: &str) {
         self.sql
             .add_sep_str("AND")
-            .add('(')
-            .add_field(key)
-            .add_str("=@p")
+            .add_str("(t.[")
+            .add_str(key)
+            .add_str("]=@p")
             .add_str(&(self.params.len() + 1).to_string())
             .add(')');
 
@@ -416,14 +423,24 @@ impl LoadKeysFields {
         let load = attrs.load_row(self.count);
 
         self.fields.push(quote!(#ident: #load,));
-        self.select.add_sep(',').add_field(&column);
+
+        self.select
+            .add_sep(',')
+            .add_str("t.[")
+            .add_str(column)
+            .add(']');
+
         self.count += 1;
     }
 
     fn add_key(&mut self, key: &str) {
         let l = LitInt::new(&self.count.to_string(), Span::call_site());
 
-        self.select.add_sep(',').add_field(key);
+        self.select
+            .add_sep(',')
+            .add_str("t.[")
+            .add_str(key)
+            .add(']');
 
         self.keys.push(
             quote!(storm_mssql::FromSql::from_sql(row.try_get(#l).map_err(storm::Error::Mssql)?)?),
@@ -449,7 +466,7 @@ impl LoadKeysFields {
         let fields = quote!(#(#fields)*);
 
         let sql = LitStr::new(
-            &format!("SELECT {} FROM {}", &self.select, table),
+            &format!("SELECT {} FROM {} t", &self.select, table),
             Span::call_site(),
         );
 
@@ -461,7 +478,7 @@ impl LoadKeysFields {
                 true => SQL.to_string(),
             };
 
-            let mut map = storm_mssql::QueryRows::query_rows(self, load_sql, &*params, |row| {
+            let mut map: C = storm_mssql::QueryRows::query_rows(self, load_sql, &*params, |row| {
                 Ok((
                     #keys,
                     #entity { #fields }
@@ -477,9 +494,9 @@ impl LoadKeysFields {
 struct TranslatedKeysFields {
     count: usize,
     fields: Vec<TokenStream>,
+    joins: String,
     keys: Vec<TokenStream>,
     select: String,
-    wheres: String,
 }
 
 impl TranslatedKeysFields {
@@ -487,7 +504,10 @@ impl TranslatedKeysFields {
         let ident = &field.ident;
         let load = attrs.load_row(self.count);
 
-        self.fields.push(quote!(#ident = #load;));
+        self.fields.push(quote! {
+            let v: &str = #load;
+            val.#ident.set(culture, v);
+        });
 
         self.select
             .add_sep(',')
@@ -511,11 +531,11 @@ impl TranslatedKeysFields {
             .add_str(translate_key)
             .add(']');
 
-        self.wheres
+        self.joins
             .add_sep_str("AND")
             .add_str("(a.[")
             .add_str(translate_key)
-            .add_str("]=b.[")
+            .add_str("]=t.[")
             .add_str(key)
             .add_str("])");
 
@@ -526,7 +546,7 @@ impl TranslatedKeysFields {
         self.fields.is_empty()
     }
 
-    fn to_tokens(&self, translated_table: &str, main_table: &str) -> TokenStream {
+    fn to_tokens(&self, entity: &Ident, translated_table: &str, main_table: &str) -> TokenStream {
         if self.fields.is_empty() {
             return quote!();
         }
@@ -539,33 +559,50 @@ impl TranslatedKeysFields {
         };
 
         let sql = LitStr::new(
-            &format!("SELECT {} FROM {} a", &self.select, translated_table),
+            &format!(
+                "SELECT {},a.[Culture] FROM {} a",
+                &self.select, translated_table
+            ),
             Span::call_site(),
         );
 
-        let wheres = LitStr::new(
-            &format!("{{}} INNER JOIN {} b WHERE {}", main_table, &self.wheres),
+        let joins = LitStr::new(
+            &format!(
+                "{{}} INNER JOIN {} t ON {} WHERE {{}}",
+                main_table, &self.joins
+            ),
             Span::call_site(),
         );
 
         let fields = &self.fields;
         let fields = quote!(#(#fields)*);
+        let culture = LitInt::new(&self.count.to_string(), Span::call_site());
 
         quote! {
             const TRANSLATED_SQL: &str = #sql;
 
             let translated_sql = match sql.is_empty() {
-                false => format!(#wheres, TRANSLATED_SQL, sql),
+                false => format!(#joins, TRANSLATED_SQL, sql),
                 true => TRANSLATED_SQL.to_string(),
             };
 
-            storm_mssql::QueryRows::query_rows(self, translated_sql, &*params, |row| {
-                let key = #keys;
+            let _: storm::provider::LoadDoNothing = storm_mssql::QueryRows::query_rows(self, translated_sql, &*params, |row| {
+                let key: <#entity as storm::Entity>::Key = #keys;
+                let culture = storm_mssql::FromSql::from_sql(row.try_get(#culture).map_err(storm::Error::Mssql)?)?;
 
                 if let Some(val) = map.get_mut(&key) {
                     #fields
                 }
+
+                Ok(())
             }).await?;
+        }
+    }
+
+    fn to_where_clause(&self, ident: &Ident) -> TokenStream {
+        match self.fields.is_empty() {
+            false => quote!(+ storm::GetMut<#ident>),
+            true => quote!(),
         }
     }
 }

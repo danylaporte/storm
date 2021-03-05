@@ -1,9 +1,8 @@
+use crate::Entity;
 use std::{
     collections::HashMap,
     hash::{BuildHasher, Hash},
 };
-
-use crate::Entity;
 
 pub trait Get<E: Entity> {
     fn get(&self, k: &E::Key) -> Option<&E>;
