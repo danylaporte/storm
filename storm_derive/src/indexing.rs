@@ -97,10 +97,6 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
             fn get_or_load(&self, ctx: &C) -> &#index_name {
                 self.get_or_init_sync(|| #index_name(#name(#as_refs), #init_version))
             }
-
-            fn get_mut(&mut self) -> Option<&mut #index_name> {
-                self.get_mut()
-            }
         }
 
         #[async_trait::async_trait]

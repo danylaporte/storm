@@ -53,10 +53,6 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                     fn get_or_load<'a>(&'a self, ctx: &C) -> &'a #ty {
                         storm::GetOrLoad::get_or_load(&self.#name, ctx)
                     }
-
-                    fn get_mut(&mut self) -> Option<&mut #ty> {
-                        storm::GetOrLoad::<#ty, C>::get_mut(&mut self.#name)
-                    }
                 }
             });
 
