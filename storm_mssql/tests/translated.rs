@@ -1,6 +1,6 @@
 use std::{borrow::Cow, collections::HashMap};
 use storm::{AsyncOnceCell, Connected, Ctx, Entity, Error, MssqlLoad, QueueRwLock, Result};
-use storm_mssql::{ClientFactory, FromSql, MssqlProvider};
+use storm_mssql::{ClientFactory, Execute, FromSql, MssqlProvider};
 use tiberius::{AuthMethod, Config, ToSql};
 use vec_map::VecMap;
 
@@ -20,9 +20,25 @@ fn provider() -> MssqlProvider<Config> {
 
 #[tokio::test]
 
-async fn flow() -> storm::Result<()> {
+async fn translated_flow() -> storm::Result<()> {
     let ctx = create_ctx();
-    let _ctx = ctx.read().await;
+    let ctx = ctx.read().await;
+
+    {
+        let t = ctx.provider.transaction().await?;
+        t.execute("CREATE TABLE ##Labels (Id Int PRIMARY KEY NOT NULL);", &[])
+            .await?;
+
+        t.execute(
+            "CREATE TABLE ##LabelsTranslatedValues (Id2 Int NOT NULL, Culture Int NOT NULL, Name NVARCHAR(50) NOT NULL);",
+            &[],
+        )
+        .await?;
+
+        t.commit().await?;
+    }
+
+    let _labels = ctx.labels().await?;
 
     Ok(())
 }
@@ -37,7 +53,7 @@ struct Ctx {
     table = "##Labels",
     keys = "Id",
     translate_table = "##LabelsTranslatedValues",
-    translate_keys = "Id"
+    translate_keys = "Id2"
 )]
 struct Label {
     name: Translated,
