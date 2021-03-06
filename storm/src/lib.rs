@@ -1,4 +1,5 @@
 mod apply_log;
+mod as_mut_opt;
 mod as_ref_async;
 mod commit;
 mod connected;
@@ -22,6 +23,7 @@ mod trx_cell;
 mod version;
 
 pub use apply_log::ApplyLog;
+pub use as_mut_opt::AsMutOpt;
 pub use as_ref_async::AsRefAsync;
 pub use async_cell_lock::{AsyncOnceCell, QueueRwLock};
 pub use commit::Commit;

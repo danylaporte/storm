@@ -54,6 +54,12 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                         storm::GetOrLoad::get_or_load(&self.#name, ctx)
                     }
                 }
+
+                impl storm::AsMutOpt<#ty> for #ctx_name {
+                    fn as_mut_opt(&mut self) -> Option<&mut #ty> {
+                        self.#name.get_mut()
+                    }
+                }
             });
 
             tbl_members.push(quote! {
@@ -78,7 +84,15 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                     let ty = get_async_once_cell_ty(ty);
                     let alias = Ident::new(&name.to_string().to_pascal_case(), name.span());
 
-                    globals.push(quote!(#vis type #alias = #ty;));
+                    globals.push(quote! {
+                        #vis type #alias = #ty;
+
+                        impl storm::AsMutOpt<#ty> for #ctx_name {
+                            fn as_mut_opt(&mut self) -> Option<&mut #ty> {
+                                self.#name.get_mut()
+                            }
+                        }
+                    });
 
                     tbl_members.push(quote! {
                         async fn #name<'a>(&'a self) -> storm::Result<&'a #alias>
@@ -143,7 +157,15 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                 }
                 TypeInfo::Other => {
                     let alias = Ident::new(&name.to_string().to_pascal_case(), name.span());
-                    globals.push(quote!(#vis type #alias = #ty;));
+                    globals.push(quote! {
+                        #vis type #alias = #ty;
+
+                        impl storm::AsMutOpt<#ty> for #ctx_name {
+                            fn as_mut_opt(&mut self) -> Option<&mut #ty> {
+                                Some(&mut self.#name)
+                            }
+                        }
+                    });
 
                     tbl_members.push(quote! {
                         #[must_use]
