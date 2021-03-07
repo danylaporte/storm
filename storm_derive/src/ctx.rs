@@ -24,6 +24,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let fields = input.fields()?;
 
     let mut apply_log = Vec::new();
+    let mut apply_log_indexes = Vec::new();
     let mut globals = Vec::new();
     let mut log_members = Vec::new();
     let mut log_members_new = Vec::new();
@@ -44,6 +45,12 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
         if field_attrs.index {
             let ty = get_async_once_cell_ty(ty);
+            apply_log_indexes.push(quote! {
+                if self.#name.get().map_or(false, |c| c.is_version_obsolete(self)) {
+                    changed = true;
+                    self.#name.take();
+                }
+            });
 
             globals.push(quote! {
                 impl<C> storm::GetOrLoad<#ty, C> for #ctx_name
@@ -55,9 +62,9 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                     }
                 }
 
-                impl storm::AsMutOpt<#ty> for #ctx_name {
-                    fn as_mut_opt(&mut self) -> Option<&mut #ty> {
-                        self.#name.get_mut()
+                impl storm::AsRefOpt<#ty> for #ctx_name {
+                    fn as_ref_opt(&self) -> Option<&#ty> {
+                        self.#name.get()
                     }
                 }
             });
@@ -87,9 +94,9 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                     globals.push(quote! {
                         #vis type #alias = #ty;
 
-                        impl storm::AsMutOpt<#ty> for #ctx_name {
-                            fn as_mut_opt(&mut self) -> Option<&mut #ty> {
-                                self.#name.get_mut()
+                        impl storm::AsRefOpt<#ty> for #ctx_name {
+                            fn as_ref_opt(&self) -> Option<&#ty> {
+                                self.#name.get()
                             }
                         }
                     });
@@ -160,9 +167,9 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                     globals.push(quote! {
                         #vis type #alias = #ty;
 
-                        impl storm::AsMutOpt<#ty> for #ctx_name {
-                            fn as_mut_opt(&mut self) -> Option<&mut #ty> {
-                                Some(&mut self.#name)
+                        impl storm::AsRefOpt<#ty> for #ctx_name {
+                            fn as_ref_opt(&self) -> Option<&#ty> {
+                                Some(&self.#name)
                             }
                         }
                     });
@@ -228,6 +235,17 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let trx_members_new = trx_members_new.ts();
     let trx_tbl_members = trx_tbl_members.ts();
 
+    let apply_log_indexes = match apply_log_indexes.is_empty() {
+        true => quote!(),
+        false => quote! {
+            let mut changed = true;
+            while changed {
+                changed = false;
+                #(#apply_log_indexes)*
+            }
+        },
+    };
+
     Ok(quote! {
         #[must_use]
         #[derive(Default)]
@@ -245,6 +263,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
             fn apply_log(&mut self, log: Self::Log) {
                 #apply_log
+                #apply_log_indexes
             }
         }
 

@@ -46,6 +46,17 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
             })
         });
 
+    let as_ref_opt_wheres_for_ctx = args
+        .iter()
+        .map(|a| unref(&a.ty))
+        .map(|t| quote!(storm::AsRefOpt<#t>))
+        .fold(None, |acc, v| {
+            Some(match acc {
+                Some(acc) => quote!(#acc + #v),
+                None => quote!(where C: #v),
+            })
+        });
+
     let as_ref_async_wheres = args
         .iter()
         .map(|a| unref(&a.ty))
@@ -81,8 +92,27 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
             })
         });
 
+    let is_version_obsolete = args
+        .iter()
+        .map(|t| unref(&t.ty))
+        .map(|t| quote!(storm::GetVersion::get_version(&storm::AsRefOpt::<#t>::as_ref_opt(ctx)).unwrap_or(0)))
+        .fold(None, |acc, v| {
+            Some(match acc {
+                Some(acc) => quote!(std::cmp::max(#acc, #v)),
+                None => v,
+            })
+        });
+
     quote! {
         #vis struct #index_name(#ty, u64);
+
+        impl #index_name {
+            pub fn is_version_obsolete<C>(&self, ctx: &C) -> bool
+            #as_ref_opt_wheres_for_ctx
+            {
+                self.1 != #is_version_obsolete
+            }
+        }
 
         impl std::ops::Deref for #index_name {
             type Target = #ty;
