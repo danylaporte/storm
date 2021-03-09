@@ -1,5 +1,7 @@
 mod attrs;
 mod builders;
+mod load_fields;
+mod load_translated;
 mod save_translated;
 
 use crate::{
@@ -7,10 +9,12 @@ use crate::{
 };
 use attrs::{FieldAttrs, TypeAttrs};
 use darling::{FromDeriveInput, FromField};
+use load_fields::LoadFields;
+use load_translated::LoadTranslated;
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt as _};
 use save_translated::SaveTranslated;
-use syn::{DeriveInput, Error, Field, Ident, LitInt, LitStr, Type};
+use syn::{DeriveInput, Error, LitInt, LitStr, Type};
 
 pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let ident = &input.ident;
@@ -19,20 +23,11 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
 
     let mut errors = Vec::new();
     let mut filter_sql = FilterSqlImpl::default();
-    let mut load_keys_fields = LoadKeysFields::default();
-    let mut translate_keys_fields = TranslatedKeysFields::default();
+    let mut load = LoadFields::new(ident, &attrs);
+    let mut translated = LoadTranslated::new(ident, &attrs);
 
     for key in attrs.keys(&mut errors) {
-        load_keys_fields.add_key(key);
         filter_sql.add_filter(key);
-    }
-
-    for (translated_key, key) in attrs
-        .translate_keys(&mut errors)
-        .iter()
-        .zip(attrs.keys_internal())
-    {
-        translate_keys_fields.add_key(translated_key, key);
     }
 
     for field in try_ts!(input.fields()) {
@@ -48,23 +43,19 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
         if is_translated(&field.ty) {
             let column = continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
 
-            load_keys_fields.skip_field(field);
-            translate_keys_fields.add_field(field, &attrs, &column);
+            load.skip_field(field, &attrs, &mut errors);
+            translated.add_field(field, &column);
         } else if attrs.skip_load() {
-            load_keys_fields.skip_field(field);
+            load.skip_field(field, &attrs, &mut errors);
         } else {
             let column = continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
-            load_keys_fields.add_field(field, &attrs, &column);
+            load.add_field(field, &attrs, &column);
         }
     }
 
-    attrs.check_translated(!translate_keys_fields.is_empty(), &mut errors);
-
     try_ts!(errors.result());
 
-    let load = load_keys_fields.to_tokens(ident, &attrs.table);
-    let translated_where = translate_keys_fields.to_where_clause(&ident);
-    let translated = translate_keys_fields.to_tokens(&ident, &attrs.translate_table, &attrs.table);
+    let translated_where = translated.to_where_clause();
 
     quote! {
         #[async_trait::async_trait]
@@ -249,202 +240,14 @@ impl ToTokens for FilterSqlImpl {
     }
 }
 
-/// creates a select sql query for each field and keys and generate the
-/// loading code
-#[derive(Default)]
-struct LoadKeysFields {
-    count: usize,
-    fields: Vec<TokenStream>,
-    keys: Vec<TokenStream>,
-    select: String,
+fn read_row(column_index: usize) -> TokenStream {
+    let l = LitInt::new(&column_index.to_string(), Span::call_site());
+    quote!(storm_mssql::FromSql::from_sql(row.try_get(#l).map_err(storm::Error::Mssql)?)?)
 }
 
-impl LoadKeysFields {
-    fn add_field(&mut self, field: &Field, attrs: &FieldAttrs, column: &str) {
-        let ident = &field.ident;
-        let load = attrs.load_row(self.count);
-
-        self.fields.push(quote!(#ident: #load,));
-
-        self.select
-            .add_sep(',')
-            .add_str("t.[")
-            .add_str(column)
-            .add(']');
-
-        self.count += 1;
-    }
-
-    fn add_key(&mut self, key: &str) {
-        let l = LitInt::new(&self.count.to_string(), Span::call_site());
-
-        self.select
-            .add_sep(',')
-            .add_str("t.[")
-            .add_str(key)
-            .add(']');
-
-        self.keys.push(
-            quote!(storm_mssql::FromSql::from_sql(row.try_get(#l).map_err(storm::Error::Mssql)?)?),
-        );
-
-        self.count += 1;
-    }
-
-    fn skip_field(&mut self, field: &Field) {
-        let ident = &field.ident;
-        self.fields.push(quote!(#ident: Default::default(),));
-    }
-
-    fn to_tokens(&self, entity: &Ident, table: &str) -> TokenStream {
-        let keys = &self.keys;
-
-        let keys = match keys.len() {
-            1 => quote!(#(#keys)*),
-            _ => quote!(#(#keys,)*),
-        };
-
-        let fields = &self.fields;
-        let fields = quote!(#(#fields)*);
-
-        let sql = LitStr::new(
-            &format!("SELECT {} FROM {} t", &self.select, table),
-            Span::call_site(),
-        );
-
-        quote! {
-            const SQL: &str = #sql;
-
-            let load_sql = match sql.is_empty() {
-                false => format!("{} WHERE {}", SQL, sql),
-                true => SQL.to_string(),
-            };
-
-            let mut map: C = storm_mssql::QueryRows::query_rows(self, load_sql, &*params, |row| {
-                Ok((
-                    #keys,
-                    #entity { #fields }
-                ))
-            }).await?;
-        }
-    }
-}
-
-/// creates a select sql query for each field and keys and generate the
-/// loading code for translated fields.
-#[derive(Default)]
-struct TranslatedKeysFields {
-    count: usize,
-    fields: Vec<TokenStream>,
-    joins: String,
-    keys: Vec<TokenStream>,
-    select: String,
-}
-
-impl TranslatedKeysFields {
-    fn add_field(&mut self, field: &Field, attrs: &FieldAttrs, column: &str) {
-        let ident = &field.ident;
-        let load = attrs.load_row(self.count);
-
-        self.fields.push(quote! {
-            let v: &str = #load;
-            val.#ident.set(culture, v);
-        });
-
-        self.select
-            .add_sep(',')
-            .add_str("a.[")
-            .add_str(column)
-            .add(']');
-
-        self.count += 1;
-    }
-
-    fn add_key(&mut self, translate_key: &str, key: &str) {
-        let l = LitInt::new(&self.count.to_string(), Span::call_site());
-
-        self.keys.push(
-            quote!(storm_mssql::FromSql::from_sql(row.try_get(#l).map_err(storm::Error::Mssql)?)?),
-        );
-
-        self.select
-            .add_sep(',')
-            .add_str("a.[")
-            .add_str(translate_key)
-            .add(']');
-
-        self.joins
-            .add_sep_str("AND")
-            .add_str("(a.[")
-            .add_str(translate_key)
-            .add_str("]=t.[")
-            .add_str(key)
-            .add_str("])");
-
-        self.count += 1;
-    }
-
-    fn is_empty(&self) -> bool {
-        self.fields.is_empty()
-    }
-
-    fn to_tokens(&self, entity: &Ident, translated_table: &str, main_table: &str) -> TokenStream {
-        if self.fields.is_empty() {
-            return quote!();
-        }
-
-        let keys = &self.keys;
-
-        let keys = match keys.len() {
-            1 => quote!(#(#keys)*),
-            _ => quote!(#(#keys,)*),
-        };
-
-        let sql = LitStr::new(
-            &format!(
-                "SELECT {},a.[Culture] FROM {} a",
-                &self.select, translated_table
-            ),
-            Span::call_site(),
-        );
-
-        let joins = LitStr::new(
-            &format!(
-                "{{}} INNER JOIN {} t ON {} WHERE {{}}",
-                main_table, &self.joins
-            ),
-            Span::call_site(),
-        );
-
-        let fields = &self.fields;
-        let fields = quote!(#(#fields)*);
-        let culture = LitInt::new(&self.count.to_string(), Span::call_site());
-
-        quote! {
-            const TRANSLATED_SQL: &str = #sql;
-
-            let translated_sql = match sql.is_empty() {
-                false => format!(#joins, TRANSLATED_SQL, sql),
-                true => TRANSLATED_SQL.to_string(),
-            };
-
-            let _: storm::provider::LoadDoNothing = storm_mssql::QueryRows::query_rows(self, translated_sql, &*params, |row| {
-                let key: <#entity as storm::Entity>::Key = #keys;
-                let culture = storm_mssql::FromSql::from_sql(row.try_get(#culture).map_err(storm::Error::Mssql)?)?;
-
-                if let Some(val) = map.get_mut(&key) {
-                    #fields
-                }
-
-                Ok(())
-            }).await?;
-        }
-    }
-
-    fn to_where_clause(&self, ident: &Ident) -> TokenStream {
-        match self.fields.is_empty() {
-            false => quote!(+ storm::GetMut<#ident>),
-            true => quote!(),
-        }
+fn read_row_with(column_index: usize, attrs: &FieldAttrs) -> TokenStream {
+    match attrs.load_with.as_ref() {
+        Some(f) => quote!(#f(row)),
+        None => read_row(column_index),
     }
 }

@@ -1,8 +1,7 @@
 use crate::rename_all::RenameAll;
 use darling::{util::SpannedValue, FromDeriveInput, FromField};
-use proc_macro2::{Span, TokenStream};
-use quote::quote;
-use syn::{spanned::Spanned, Error, Ident, LitInt};
+use proc_macro2::TokenStream;
+use syn::{Error, Ident};
 
 #[derive(Debug, FromField)]
 #[darling(attributes(storm))]
@@ -11,7 +10,7 @@ pub(super) struct FieldAttrs {
     pub column: Option<String>,
 
     #[darling(default)]
-    pub load_with: Option<Ident>,
+    pub load_with: SpannedValue<Option<Ident>>,
 
     #[darling(default)]
     pub part: bool,
@@ -30,16 +29,6 @@ pub(super) struct FieldAttrs {
 }
 
 impl FieldAttrs {
-    pub fn load_row(&self, row_index: usize) -> TokenStream {
-        match &self.load_with {
-            Some(f) => quote!(#f(&row)?),
-            None => {
-                let l = LitInt::new(&row_index.to_string(), Span::call_site());
-                quote!(storm_mssql::FromSql::from_sql(row.try_get(#l).map_err(storm::Error::Mssql)?)?)
-            }
-        }
-    }
-
     pub fn skip_load(&self) -> bool {
         self.skip_load.unwrap_or_default() || self.skip.unwrap_or_default()
     }
@@ -74,8 +63,8 @@ impl FieldAttrs {
 #[derive(Debug, FromDeriveInput)]
 #[darling(attributes(storm))]
 pub(super) struct TypeAttrs {
-    pub table: String,
-    keys: String,
+    pub table: SpannedValue<String>,
+    pub keys: SpannedValue<String>,
 
     #[darling(default)]
     pub rename_all: Option<RenameAll>,
@@ -88,30 +77,6 @@ pub(super) struct TypeAttrs {
 }
 
 impl TypeAttrs {
-    pub fn check_translated(&self, has_translated_field: bool, errors: &mut Vec<TokenStream>) {
-        if has_translated_field {
-            if self.translate_table.is_empty() {
-                errors.push(
-                    Error::new(
-                        self.translate_table.span(),
-                        "Translated table must have a translated table name.",
-                    )
-                    .to_compile_error(),
-                );
-            }
-        } else {
-            const MSG: &str = "No translated field found.";
-
-            if !self.translate_table.is_empty() {
-                errors.push(Error::new(self.translate_table.span(), MSG).to_compile_error());
-            }
-
-            if !self.translate_keys.is_empty() {
-                errors.push(Error::new(self.translate_keys.span(), MSG).to_compile_error());
-            }
-        }
-    }
-
     pub fn keys(&self, errors: &mut Vec<TokenStream>) -> Vec<&str> {
         let vec = self.keys_internal();
 

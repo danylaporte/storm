@@ -8,16 +8,16 @@ use quote::{quote, ToTokens, TokenStreamExt as _};
 use syn::{Field, LitInt};
 
 pub(super) struct SaveTranslated<'a> {
+    attrs: &'a TypeAttrs,
     params: ParamsBuilder,
-    type_attrs: &'a TypeAttrs,
     upsert: UpsertBuilder,
 }
 
 impl<'a> SaveTranslated<'a> {
-    pub fn new(type_attrs: &'a TypeAttrs) -> Self {
+    pub fn new(attrs: &'a TypeAttrs) -> Self {
         Self {
+            attrs,
             params: Default::default(),
-            type_attrs,
             upsert: Default::default(),
         }
     }
@@ -35,20 +35,20 @@ impl<'a> ToTokens for SaveTranslated<'a> {
         let mut errors = Vec::new();
 
         if self.params.is_empty() {
-            check_empty(&self.type_attrs.translate_table, &mut errors);
-            check_empty(&self.type_attrs.translate_keys, &mut errors);
+            check_empty(&self.attrs.translate_table, &mut errors);
+            check_empty(&self.attrs.translate_keys, &mut errors);
         } else {
-            check_required(&self.type_attrs.translate_table, &mut errors);
+            check_required(&self.attrs.translate_table, &mut errors);
 
             let mut params = self.params.clone();
             let mut upsert = self.upsert.clone();
-            let keys = self.type_attrs.translate_keys(&mut errors);
+            let keys = self.attrs.translate_keys(&mut errors);
 
             add_keys(&keys, &mut params, &mut upsert);
 
             upsert.add_key("culture", &params.add_ts(quote!(&culture)).to_string());
 
-            let sql = upsert.to_sql_lit(&self.type_attrs.translate_table);
+            let sql = upsert.to_sql_lit(&self.attrs.translate_table);
             let params = &self.params;
 
             tokens.append_all(quote! {
@@ -62,11 +62,11 @@ impl<'a> ToTokens for SaveTranslated<'a> {
     }
 }
 
-fn add_keys(keys: &Vec<&str>, params: &mut ParamsBuilder, builder: &mut UpsertBuilder) {
-    if keys.len() == 1 {
-        add_key_single(&keys[0], quote!(k), params, builder);
-    } else {
-        add_key_many(keys, params, builder);
+#[cold]
+fn add_key_many(keys: &Vec<&str>, params: &mut ParamsBuilder, builder: &mut UpsertBuilder) {
+    for (index, column) in keys.iter().enumerate() {
+        let i = LitInt::new(&index.to_string(), Span::call_site());
+        add_key_single(column, quote!(&k.#i), params, builder);
     }
 }
 
@@ -80,10 +80,10 @@ fn add_key_single(
     builder.add_key(column, &i.to_string());
 }
 
-#[cold]
-fn add_key_many(keys: &Vec<&str>, params: &mut ParamsBuilder, builder: &mut UpsertBuilder) {
-    for (index, column) in keys.iter().enumerate() {
-        let i = LitInt::new(&index.to_string(), Span::call_site());
-        add_key_single(column, quote!(&k.#i), params, builder);
+fn add_keys(keys: &Vec<&str>, params: &mut ParamsBuilder, builder: &mut UpsertBuilder) {
+    if keys.len() == 1 {
+        add_key_single(&keys[0], quote!(k), params, builder);
+    } else {
+        add_key_many(keys, params, builder);
     }
 }

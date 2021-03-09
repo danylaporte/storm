@@ -23,6 +23,41 @@ impl InsertBuilder {
     }
 }
 
+#[must_use]
+pub(super) struct JoinConditions<'a>(&'a mut String);
+
+impl<'a> JoinConditions<'a> {
+    pub fn add(
+        &mut self,
+        (alias_left, left): (Option<&str>, &str),
+        (alias_right, right): (Option<&str>, &str),
+    ) {
+        self.0.add_sep_str(" AND ");
+        add_alias_field(&mut self.0, (alias_left, left));
+        self.0.add('=');
+        add_alias_field(&mut self.0, (alias_right, right));
+    }
+}
+
+#[derive(Default)]
+pub(super) struct JoinBuilder(String);
+
+impl JoinBuilder {
+    pub fn inner_join<'a>(&'a mut self, table: &str, alias: Option<&str>) -> JoinConditions<'a> {
+        self.0.add_str(" INNER JOIN ").add_str(table);
+
+        if let Some(alias) = alias {
+            self.0.add(' ').add_str(alias);
+        }
+
+        JoinConditions(&mut self.0)
+    }
+
+    pub fn to_sql(&self) -> &str {
+        &self.0
+    }
+}
+
 #[derive(Clone, Default)]
 pub(super) struct ParamsBuilder(Vec<TokenStream>);
 
@@ -41,6 +76,50 @@ impl ToTokens for ParamsBuilder {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let p = &self.0;
         tokens.append_all(quote!(&[#(#p,)*][..]));
+    }
+}
+
+#[derive(Clone, Default)]
+pub(super) struct SelectBuilder {
+    alias: Option<&'static str>,
+    count: usize,
+    select: String,
+}
+
+impl SelectBuilder {
+    pub fn with_alias(alias: &'static str) -> Self {
+        Self {
+            alias: Some(alias),
+            count: 0,
+            select: String::new(),
+        }
+    }
+
+    pub fn add_field(&mut self, column: &str) -> usize {
+        let index = self.count;
+
+        self.select.add_sep(',');
+        add_alias_field(&mut self.select, (self.alias, column));
+        self.count += 1;
+
+        index
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.select.is_empty()
+    }
+
+    fn to_sql(&self, table: &str) -> String {
+        format!(
+            "SELECT {} FROM {} {}",
+            self.select,
+            table,
+            self.alias.unwrap_or("")
+        )
+    }
+
+    pub fn to_sql_lit(&self, table: &str) -> LitStr {
+        LitStr::new(&self.to_sql(table), Span::call_site())
     }
 }
 
@@ -112,4 +191,12 @@ impl UpsertBuilder {
     pub fn to_sql_lit(&self, table: &str) -> LitStr {
         LitStr::new(&self.to_sql(table), Span::call_site())
     }
+}
+
+fn add_alias_field(sql: &mut String, (alias, field): (Option<&str>, &str)) {
+    if let Some(alias) = alias {
+        sql.add_str(alias).add('.');
+    }
+
+    sql.add('[').add_str(field).add(']');
 }
