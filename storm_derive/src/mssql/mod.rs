@@ -1,172 +1,16 @@
+mod attrs;
+mod builders;
+mod save_translated;
+
 use crate::{
     token_stream_ext::TokenStreamExt, DeriveInputExt, Errors, FieldExt, RenameAll, StringExt,
 };
-use darling::{util::SpannedValue, FromDeriveInput, FromField};
+use attrs::{FieldAttrs, TypeAttrs};
+use darling::{FromDeriveInput, FromField};
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt as _};
-use syn::{spanned::Spanned, DeriveInput, Error, Field, Ident, LitInt, LitStr, Type};
-
-const SKIP_IS_INCOMPATIBLE: &str = "`skip` is incompatible.";
-
-#[derive(Debug, FromField)]
-#[darling(attributes(storm))]
-struct FieldAttrs {
-    #[darling(default)]
-    column: Option<String>,
-
-    #[darling(default)]
-    load_with: Option<Ident>,
-
-    #[darling(default)]
-    part: bool,
-
-    #[darling(default)]
-    save_with: SpannedValue<Option<Ident>>,
-
-    #[darling(default)]
-    skip: SpannedValue<Option<bool>>,
-
-    #[darling(default)]
-    skip_load: SpannedValue<Option<bool>>,
-
-    #[darling(default)]
-    skip_save: SpannedValue<Option<bool>>,
-}
-
-impl FieldAttrs {
-    fn load_row(&self, row_index: usize) -> TokenStream {
-        match &self.load_with {
-            Some(f) => quote!(#f(&row)?),
-            None => {
-                let l = LitInt::new(&row_index.to_string(), Span::call_site());
-                quote!(storm_mssql::FromSql::from_sql(row.try_get(#l).map_err(storm::Error::Mssql)?)?)
-            }
-        }
-    }
-
-    fn skip_load(&self) -> bool {
-        self.skip_load.unwrap_or_default() || self.skip.unwrap_or_default()
-    }
-
-    fn skip_save(&self) -> bool {
-        self.skip_save.unwrap_or_default() || self.skip.unwrap_or_default()
-    }
-
-    fn validate_load(&self, errors: &mut Vec<TokenStream>) {
-        if let (Some(true), Some(false)) = (*self.skip, *self.skip_load) {
-            errors.push(Error::new(self.skip_load.span(), SKIP_IS_INCOMPATIBLE).to_compile_error());
-        }
-    }
-
-    fn validate_save(&self, errors: &mut Vec<TokenStream>) {
-        if let (Some(true), Some(false)) = (*self.skip, *self.skip_save) {
-            errors.push(Error::new(self.skip_save.span(), SKIP_IS_INCOMPATIBLE).to_compile_error());
-        }
-
-        if self.skip_save() && self.save_with.is_some() {
-            errors.push(Error::new(self.save_with.span(), "Save is skipped.").to_compile_error());
-        }
-
-        if self.part && self.save_with.is_some() {
-            errors.push(
-                Error::new(self.save_with.span(), "Ignored on part field.").to_compile_error(),
-            );
-        }
-    }
-}
-
-#[derive(Debug, FromDeriveInput)]
-#[darling(attributes(storm))]
-struct TypeAttrs {
-    ident: Ident,
-    attrs: Vec<syn::Attribute>,
-    table: String,
-    keys: String,
-
-    #[darling(default)]
-    rename_all: Option<RenameAll>,
-
-    #[darling(default)]
-    translate_table: SpannedValue<String>,
-
-    #[darling(default)]
-    translate_keys: SpannedValue<String>,
-}
-
-impl TypeAttrs {
-    fn check_translated(&self, has_translated_field: bool, errors: &mut Vec<TokenStream>) {
-        if has_translated_field {
-            if self.translate_table.is_empty() {
-                errors.push(
-                    Error::new(
-                        self.translate_table.span(),
-                        "Translated table must have a translated table name.",
-                    )
-                    .to_compile_error(),
-                );
-            }
-        } else {
-            const MSG: &str = "No translated field found.";
-
-            if !self.translate_table.is_empty() {
-                errors.push(Error::new(self.translate_table.span(), MSG).to_compile_error());
-            }
-
-            if !self.translate_keys.is_empty() {
-                errors.push(Error::new(self.translate_keys.span(), MSG).to_compile_error());
-            }
-        }
-    }
-
-    fn keys(&self, errors: &mut Vec<TokenStream>) -> Vec<&str> {
-        let vec = self.keys_internal();
-
-        if vec.is_empty() {
-            errors.push(
-                Error::new(self.keys.span(), "Must specify at least one key.").to_compile_error(),
-            );
-        }
-
-        vec
-    }
-
-    fn keys_internal(&self) -> Vec<&str> {
-        self.keys.split(',').filter(|s| !s.is_empty()).collect()
-    }
-
-    fn translate_keys(&self, errors: &mut Vec<TokenStream>) -> Vec<&str> {
-        if self.translate_table.is_empty() {
-            return Vec::new();
-        }
-
-        let keys = self.keys_internal();
-
-        if self.translate_keys.is_empty() {
-            return keys;
-        }
-
-        let translate_keys = self.translate_keys_internal();
-
-        if translate_keys.len() != keys.len() {
-            errors.push(
-                Error::new(
-                    self.translate_keys.span(),
-                    "translate_keys must have the same keys count.",
-                )
-                .to_compile_error(),
-            );
-        }
-
-        translate_keys
-    }
-
-    fn translate_keys_internal(&self) -> Vec<&str> {
-        self.translate_keys
-            .split(',')
-            .filter(|s| !s.is_empty())
-            .collect()
-    }
-}
+use save_translated::SaveTranslated;
+use syn::{DeriveInput, Error, Field, Ident, LitInt, LitStr, Type};
 
 pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let ident = &input.ident;
@@ -260,6 +104,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let mut errors = Vec::new();
     let mut save_part = Vec::new();
     let mut wheres = Vec::new();
+    let mut translated = SaveTranslated::new(&attrs);
 
     let keys = attrs.keys(&mut errors);
 
@@ -285,6 +130,11 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
                         .to_compile_error(),
                 );
             }
+            continue;
+        }
+
+        if is_translated(&field.ty) {
+            translated.add_field(field, column);
             continue;
         }
 
@@ -319,8 +169,6 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
 
     let save_part = save_part.ts();
     let wheres = wheres.ts();
-
-    //let sql = LitStr::new(&sql, input.span());
     let table = LitStr::new(&attrs.table, ident.span());
 
     quote! {
@@ -330,15 +178,17 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
             F: Send + Sync,
         {
             async fn upsert(&self, k: &<#ident as storm::Entity>::Key, v: &#ident) -> storm::Result<()> {
-                //storm_mssql::Execute::execute(self, #sql.to_string(), &[#params]).await.map(|_| ())
-
                 let mut builder = storm_mssql::UpsertBuilder::new(#table);
 
                 storm_mssql::SaveEntityPart::save_entity_part(v, k, &mut builder);
 
                 #wheres
 
-                builder.execute(self).await
+                builder.execute(self).await?;
+
+                #translated
+
+                Ok(())
             }
         }
 
@@ -361,14 +211,6 @@ fn is_translated(t: &Type) -> bool {
         _ => false,
     }
 }
-
-trait SqlStringExt: StringExt {
-    fn add_field(&mut self, field: &str) -> &mut Self {
-        self.add('[').add_str(field).add(']')
-    }
-}
-
-impl<T> SqlStringExt for T where T: StringExt {}
 
 /// Creates a where clauses and parameters for the load sql query.
 #[derive(Default)]
