@@ -38,24 +38,24 @@ async fn read() -> Result<()> {
     // once_cell<VecMap<_>>
     let oc_vms = ctx.oc_vms().await?;
     let _ = oc_vms.get(&0).is_none();
-    let _ = oc_vms.into_iter();
+    let _ = oc_vms.iter();
 
     // once_cell<Version<VecMap<_>>>
     let oc_v_vms = ctx.oc_v_vms().await?;
     let _ = oc_v_vms.get(&0).is_none();
     let _ = oc_v_vms.get_version();
-    let _ = oc_v_vms.into_iter();
+    let _ = oc_v_vms.iter();
 
     // Cache<_>
     let cs = ctx.cs();
     let _ = cs.get(&0).is_none();
-    let _ = cs.into_iter();
+    let _ = cs.iter();
 
     // Version<Cache<_>>
     let v_cs = ctx.v_cs();
     let _ = v_cs.get(&0).is_none();
     let _ = v_cs.get_version();
-    let _ = v_cs.into_iter();
+    let _ = v_cs.iter();
 
     Ok(())
 }

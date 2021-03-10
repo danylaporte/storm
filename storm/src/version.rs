@@ -99,27 +99,6 @@ where
     }
 }
 
-impl<T: IntoIterator> IntoIterator for Version<T> {
-    type IntoIter = T::IntoIter;
-    type Item = T::Item;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.val.into_iter()
-    }
-}
-
-impl<'a, T> IntoIterator for &'a Version<T>
-where
-    &'a T: IntoIterator,
-{
-    type IntoIter = <&'a T as IntoIterator>::IntoIter;
-    type Item = <&'a T as IntoIterator>::Item;
-
-    fn into_iter(self) -> Self::IntoIter {
-        (&self.val).into_iter()
-    }
-}
-
 impl<'a, T> mem::Transaction<'a> for Version<T>
 where
     T: mem::Transaction<'a>,
