@@ -149,6 +149,10 @@ impl UpdateBuilder {
             .add(')');
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.fields.is_empty()
+    }
+
     pub fn to_sql(&self, table: &str) -> String {
         format!(
             "UPDATE {} SET {} WHERE {}",

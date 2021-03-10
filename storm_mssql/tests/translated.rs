@@ -1,5 +1,8 @@
-use std::{borrow::Cow, collections::HashMap};
-use storm::{AsyncOnceCell, Connected, Ctx, Entity, Error, MssqlLoad, QueueRwLock, Result};
+use std::borrow::Cow;
+use storm::{
+    prelude::*, AsyncOnceCell, Connected, Ctx, Entity, Error, MssqlLoad, MssqlSave, QueueRwLock,
+    Result,
+};
 use storm_mssql::{ClientFactory, Execute, FromSql, MssqlProvider};
 use tiberius::{AuthMethod, Config, ToSql};
 use vec_map::VecMap;
@@ -38,7 +41,37 @@ async fn translated_flow() -> storm::Result<()> {
         t.commit().await?;
     }
 
-    let _labels = ctx.labels().await?;
+    let ctx = ctx.queue().await;
+
+    let mut trx = ctx.transaction().await?;
+
+    let mut labels = trx.labels_mut().await?;
+    let id = LabelId(2);
+
+    labels
+        .insert(
+            id,
+            Label {
+                name: Translated {
+                    en: "english".to_owned(),
+                    fr: "french".to_owned(),
+                },
+            },
+        )
+        .await?;
+
+    let log = trx.commit().await?;
+
+    let mut ctx = ctx.write().await;
+
+    ctx.apply_log(log);
+
+    let ctx = ctx.read().await;
+
+    let v = ctx.labels().await?.get(&id);
+    println!("{:?}", v);
+
+    //let _labels = ctx.labels().await?;
 
     Ok(())
 }
@@ -48,7 +81,7 @@ struct Ctx {
     labels: AsyncOnceCell<VecMap<LabelId, Label>>,
 }
 
-#[derive(Clone, Debug, MssqlLoad)]
+#[derive(Clone, Debug, MssqlLoad, MssqlSave)]
 #[storm(
     table = "##Labels",
     keys = "Id",
@@ -63,7 +96,7 @@ impl Entity for Label {
     type Key = LabelId;
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct LabelId(i32);
 
 impl<'a> FromSql<'a> for LabelId {
@@ -96,12 +129,54 @@ impl ToSql for LabelId {
 }
 
 #[derive(Clone, Default, Debug)]
-struct Translated(HashMap<Culture, String>);
+struct Translated {
+    en: String,
+    fr: String,
+}
 
 impl Translated {
+    fn get(&self, culture: Culture) -> &str {
+        match culture {
+            Culture::En => &self.en,
+            Culture::Fr => &self.fr,
+        }
+    }
+
     fn set<'a>(&mut self, culture: Culture, value: impl Into<Cow<'a, str>>) {
-        self.0.insert(culture, value.into().to_string());
+        *(match culture {
+            Culture::En => &mut self.en,
+            Culture::Fr => &mut self.fr,
+        }) = value.into().to_string();
     }
 }
 
-type Culture = i32;
+#[derive(Clone, Copy, Debug)]
+pub enum Culture {
+    Fr = 0,
+    En = 1,
+}
+
+impl Culture {
+    pub fn iter() -> impl Iterator<Item = Culture> {
+        [Culture::Fr, Culture::En].iter().copied()
+    }
+}
+
+impl<'a> FromSql<'a> for Culture {
+    type Column = i32;
+
+    fn from_sql(col: Option<Self::Column>) -> Result<Self> {
+        match col {
+            Some(0) => Ok(Culture::Fr),
+            Some(1) => Ok(Culture::En),
+            Some(v) => Err(Error::ConvertFailed(format!("Culture `{}` invalid.", v))),
+            None => Err(Error::ColumnNull),
+        }
+    }
+}
+
+impl ToSql for Culture {
+    fn to_sql(&self) -> tiberius::ColumnData<'_> {
+        tiberius::ColumnData::I32(Some(*self as i32))
+    }
+}

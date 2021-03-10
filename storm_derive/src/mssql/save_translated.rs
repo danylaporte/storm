@@ -24,7 +24,7 @@ impl<'a> SaveTranslated<'a> {
 
     pub fn add_field(&mut self, field: &Field, column: &str) {
         let ident = &field.ident;
-        let param_index = self.params.add_ts(quote!(value.#ident.get(culture)));
+        let param_index = self.params.add_ts(quote!(&v.#ident.get(culture) as _));
 
         self.upsert.add_field(column, &param_index.to_string());
     }
@@ -46,13 +46,12 @@ impl<'a> ToTokens for SaveTranslated<'a> {
 
             add_keys(&keys, &mut params, &mut upsert);
 
-            upsert.add_key("culture", &params.add_ts(quote!(&culture)).to_string());
+            upsert.add_key("culture", &params.add_ts(quote!(&culture as _)).to_string());
 
             let sql = upsert.to_sql_lit(&self.attrs.translate_table);
-            let params = &self.params;
 
             tokens.append_all(quote! {
-                for culture in Culture::cultures() {
+                for culture in Culture::iter() {
                     storm_mssql::Execute::execute(self, #sql, #params).await?;
                 }
             });
@@ -66,7 +65,7 @@ impl<'a> ToTokens for SaveTranslated<'a> {
 fn add_key_many(keys: &Vec<&str>, params: &mut ParamsBuilder, builder: &mut UpsertBuilder) {
     for (index, column) in keys.iter().enumerate() {
         let i = LitInt::new(&index.to_string(), Span::call_site());
-        add_key_single(column, quote!(&k.#i), params, builder);
+        add_key_single(column, quote!(&k.#i as _), params, builder);
     }
 }
 
@@ -82,7 +81,7 @@ fn add_key_single(
 
 fn add_keys(keys: &Vec<&str>, params: &mut ParamsBuilder, builder: &mut UpsertBuilder) {
     if keys.len() == 1 {
-        add_key_single(&keys[0], quote!(k), params, builder);
+        add_key_single(&keys[0], quote!(k as _), params, builder);
     } else {
         add_key_many(keys, params, builder);
     }

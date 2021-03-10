@@ -85,21 +85,28 @@ impl<'a> UpsertBuilder<'a> {
     }
 
     pub fn sql(&self) -> String {
+        let update = if self.update_setters.is_empty() {
+            String::new()
+        } else {
+            format!(
+                "IF ERROR_NUMBER() IN (2601, 2627) UPDATE {} SET {} WHERE {};",
+                self.table, self.update_setters, self.update_wheres,
+            )
+        };
+
         format!(
             "
             BEGIN TRY
                 INSERT INTO {table} ({insert_fields}) VALUES ({insert_values});
             END TRY
             BEGIN CATCH
-                IF ERROR_NUMBER() IN (2601, 2627)
-                    UPDATE {table} SET {update_setters} WHERE {update_wheres};
+                {update}
             END CATCH
             ",
             table = self.table,
             insert_fields = self.insert_fields,
             insert_values = self.insert_values,
-            update_setters = self.update_setters,
-            update_wheres = self.update_wheres,
+            update = update,
         )
     }
 }

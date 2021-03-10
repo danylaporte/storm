@@ -6,7 +6,7 @@ use std::{
     fmt::Debug,
     sync::atomic::{AtomicU64, Ordering::Relaxed},
 };
-use storm::{Error, Result};
+use storm::{provider, Error, Result};
 use tiberius::{Row, ToSql};
 use tokio::sync::{Mutex, MutexGuard};
 use tracing::instrument;
@@ -125,6 +125,18 @@ where
     }
 }
 
+#[async_trait]
+impl<'a, F> provider::Transaction<'a> for MssqlProvider<F>
+where
+    F: ClientFactory + Send + Sync + 'a,
+{
+    type Transaction = MssqlTransaction<'a, F>;
+
+    async fn transaction(&'a self) -> Result<Self::Transaction> {
+        MssqlProvider::transaction(self).await
+    }
+}
+
 pub struct MssqlTransaction<'a, F> {
     id: u64,
     provider: &'a MssqlProvider<F>,
@@ -145,6 +157,16 @@ impl<'a, F> MssqlTransaction<'a, F> {
         state.client = Some(client);
 
         Ok(())
+    }
+}
+
+#[async_trait]
+impl<'a, F> provider::Commit for MssqlTransaction<'a, F>
+where
+    F: Send + Sync,
+{
+    async fn commit(self) -> Result<()> {
+        MssqlTransaction::commit(self).await
     }
 }
 
