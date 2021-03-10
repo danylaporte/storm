@@ -247,7 +247,7 @@ fn read_row(column_index: usize) -> TokenStream {
 
 fn read_row_with(column_index: usize, attrs: &FieldAttrs) -> TokenStream {
     match attrs.load_with.as_ref() {
-        Some(f) => quote!(#f(row)),
+        Some(f) => quote!(#f(&row)?),
         None => read_row(column_index),
     }
 }

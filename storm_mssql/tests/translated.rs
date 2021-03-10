@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, ops::Index};
 use storm::{
     prelude::*, AsyncOnceCell, Connected, Ctx, Entity, Error, MssqlLoad, MssqlSave, QueueRwLock,
     Result,
@@ -135,13 +135,6 @@ struct Translated {
 }
 
 impl Translated {
-    fn get(&self, culture: Culture) -> &str {
-        match culture {
-            Culture::En => &self.en,
-            Culture::Fr => &self.fr,
-        }
-    }
-
     fn set<'a>(&mut self, culture: Culture, value: impl Into<Cow<'a, str>>) {
         *(match culture {
             Culture::En => &mut self.en,
@@ -157,9 +150,7 @@ pub enum Culture {
 }
 
 impl Culture {
-    pub fn iter() -> impl Iterator<Item = Culture> {
-        [Culture::Fr, Culture::En].iter().copied()
-    }
+    pub const DB_CULTURES: [Culture; 2] = [Self::En, Self::Fr];
 }
 
 impl<'a> FromSql<'a> for Culture {
@@ -171,6 +162,17 @@ impl<'a> FromSql<'a> for Culture {
             Some(1) => Ok(Culture::En),
             Some(v) => Err(Error::ConvertFailed(format!("Culture `{}` invalid.", v))),
             None => Err(Error::ColumnNull),
+        }
+    }
+}
+
+impl Index<Culture> for Translated {
+    type Output = str;
+
+    fn index(&self, culture: Culture) -> &str {
+        match culture {
+            Culture::En => &self.en,
+            Culture::Fr => &self.fr,
         }
     }
 }

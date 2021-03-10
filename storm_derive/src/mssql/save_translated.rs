@@ -24,7 +24,7 @@ impl<'a> SaveTranslated<'a> {
 
     pub fn add_field(&mut self, field: &Field, column: &str) {
         let ident = &field.ident;
-        let param_index = self.params.add_ts(quote!(&v.#ident.get(culture) as _));
+        let param_index = self.params.add_ts(quote!(&&v.#ident[culture] as _));
 
         self.upsert.add_field(column, &param_index.to_string());
     }
@@ -51,7 +51,7 @@ impl<'a> ToTokens for SaveTranslated<'a> {
             let sql = upsert.to_sql_lit(&self.attrs.translate_table);
 
             tokens.append_all(quote! {
-                for culture in Culture::iter() {
+                for &culture in Culture::DB_CULTURES.iter() {
                     storm_mssql::Execute::execute(self, #sql, #params).await?;
                 }
             });
