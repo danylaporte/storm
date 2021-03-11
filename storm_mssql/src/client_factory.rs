@@ -1,4 +1,4 @@
-use crate::{Client, MssqlProvider};
+use crate::Client;
 use async_trait::async_trait;
 use storm::{Error, Result};
 use tiberius::{Config, SqlBrowser};
@@ -7,10 +7,8 @@ use tokio_util::compat::TokioAsyncWriteCompatExt;
 use tracing::instrument;
 
 #[async_trait]
-pub trait ClientFactory: Sized + Send + Sync {
+pub trait ClientFactory: Send + Sync {
     async fn create_client(&self) -> Result<Client>;
-
-    fn create_provider(self) -> MssqlProvider<Self>;
 }
 
 #[async_trait]
@@ -26,9 +24,5 @@ impl ClientFactory for Config {
             .map_err(Error::std)?;
 
         Ok(client)
-    }
-
-    fn create_provider(self) -> MssqlProvider<Self> {
-        MssqlProvider::new(self)
     }
 }

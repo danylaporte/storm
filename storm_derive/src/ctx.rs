@@ -306,8 +306,8 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         }
 
         #[async_trait::async_trait]
-        #vis trait #tbl_name {
-            type Provider: Sync;
+        #vis trait #tbl_name: Send + Sync {
+            type Provider: Send + Sync;
 
             fn ctx(&self) -> (&#ctx_name, &Self::Provider);
 
@@ -317,8 +317,8 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         #[async_trait::async_trait]
         impl<'a, C, P> #tbl_name for storm::Connected<C, P>
         where
-            C: AsRef<#ctx_name>,
-            P: Sync,
+            C: AsRef<#ctx_name> + Send + Sync,
+            P: Send + Sync,
         {
             type Provider = P;
 

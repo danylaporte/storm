@@ -3,15 +3,16 @@ use storm::{
     mem::{Commit, Transaction},
     ApplyLog, AsyncOnceCell, Ctx, Entity, GetOrLoadAsync, MssqlLoad, MssqlSave, Result,
 };
-use storm_mssql::{ClientFactory, Execute, MssqlProvider};
+use storm_mssql::{Execute, MssqlProvider};
 use tiberius::{AuthMethod, Config};
 
-fn provider() -> MssqlProvider<Config> {
+fn provider() -> MssqlProvider {
     let mut config = Config::default();
     config.database("master");
     config.authentication(AuthMethod::Integrated);
     config.trust_cert();
-    config.create_provider()
+
+    MssqlProvider::new(config)
 }
 
 #[tokio::test]

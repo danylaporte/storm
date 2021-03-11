@@ -3,7 +3,7 @@ use storm::{
     mem::{Commit, Transaction},
     ApplyLog, AsyncOnceCell, Ctx, Entity, GetOrLoadAsync, Result,
 };
-use storm_mssql::ClientFactory;
+use storm_mssql::MssqlProvider;
 use tiberius::{FromSql, ToSql};
 use vec_map::VecMap;
 
@@ -12,7 +12,7 @@ async fn main() -> Result<()> {
     let mut config = tiberius::Config::default();
     config.database("master");
 
-    let provider = &config.create_provider();
+    let provider = &MssqlProvider::new(config);
     let ctx = Ctx::default();
 
     let _users = ctx.users.get_or_load_async(provider).await?;

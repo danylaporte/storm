@@ -11,17 +11,14 @@ use tiberius::{Row, ToSql};
 use tokio::sync::{Mutex, MutexGuard};
 use tracing::instrument;
 
-pub struct MssqlProvider<F> {
+pub struct MssqlProvider {
     cancel_transaction: AtomicU64,
-    client_factory: F,
+    client_factory: Box<dyn ClientFactory>,
     state: Mutex<State>,
 }
 
-impl<F> MssqlProvider<F>
-where
-    F: ClientFactory,
-{
-    pub(crate) fn new(client_factory: F) -> Self {
+impl From<Box<dyn ClientFactory>> for MssqlProvider {
+    fn from(client_factory: Box<dyn ClientFactory>) -> Self {
         Self {
             cancel_transaction: Default::default(),
             client_factory,
@@ -31,6 +28,12 @@ where
                 transaction_counter: 1,
             }),
         }
+    }
+}
+
+impl MssqlProvider {
+    pub fn new<F: ClientFactory + 'static>(client_factory: F) -> Self {
+        (Box::new(client_factory) as Box<dyn ClientFactory>).into()
     }
 
     async fn state_client(&self) -> Result<(MutexGuard<'_, State>, Client)> {
@@ -57,7 +60,7 @@ where
     }
 
     #[instrument(name = "MssqlProvider::transaction", skip(self), err)]
-    pub async fn transaction(&self) -> Result<MssqlTransaction<'_, F>> {
+    pub async fn transaction(&self) -> Result<MssqlTransaction<'_>> {
         let (mut state, mut client) = self.state_client().await?;
 
         if state.current_transaction > 0 {
@@ -82,10 +85,7 @@ where
 }
 
 #[async_trait]
-impl<F> QueryRows for MssqlProvider<F>
-where
-    F: ClientFactory,
-{
+impl QueryRows for MssqlProvider {
     #[instrument(name = "MssqlProvider::query_rows", skip(self, mapper, params), err)]
     async fn query_rows<S, M, R, C>(
         &self,
@@ -126,23 +126,20 @@ where
 }
 
 #[async_trait]
-impl<'a, F> provider::Transaction<'a> for MssqlProvider<F>
-where
-    F: ClientFactory + Send + Sync + 'a,
-{
-    type Transaction = MssqlTransaction<'a, F>;
+impl<'a> provider::Transaction<'a> for MssqlProvider {
+    type Transaction = MssqlTransaction<'a>;
 
     async fn transaction(&'a self) -> Result<Self::Transaction> {
         MssqlProvider::transaction(self).await
     }
 }
 
-pub struct MssqlTransaction<'a, F> {
+pub struct MssqlTransaction<'a> {
     id: u64,
-    provider: &'a MssqlProvider<F>,
+    provider: &'a MssqlProvider,
 }
 
-impl<'a, F> MssqlTransaction<'a, F> {
+impl<'a> MssqlTransaction<'a> {
     #[instrument(name = "MssqlTransaction::commit", skip(self), err)]
     pub async fn commit(mut self) -> Result<()> {
         let result = transaction_state_client(self.provider, self.id).await;
@@ -161,16 +158,13 @@ impl<'a, F> MssqlTransaction<'a, F> {
 }
 
 #[async_trait]
-impl<'a, F> provider::Commit for MssqlTransaction<'a, F>
-where
-    F: Send + Sync,
-{
+impl<'a> provider::Commit for MssqlTransaction<'a> {
     async fn commit(self) -> Result<()> {
         MssqlTransaction::commit(self).await
     }
 }
 
-impl<'a, F> Drop for MssqlTransaction<'a, F> {
+impl<'a> Drop for MssqlTransaction<'a> {
     fn drop(&mut self) {
         if self.id > 0 {
             self.provider.cancel_transaction.store(self.id, Relaxed);
@@ -179,10 +173,7 @@ impl<'a, F> Drop for MssqlTransaction<'a, F> {
 }
 
 #[async_trait]
-impl<'a, F> Execute for MssqlTransaction<'a, F>
-where
-    F: Send + Sync,
-{
+impl<'a> Execute for MssqlTransaction<'a> {
     #[instrument(name = "MssqlTransaction::execute", skip(self, params), err)]
     async fn execute<'b, S>(&self, statement: S, params: &[&(dyn ToSql)]) -> Result<u64>
     where
@@ -202,10 +193,7 @@ where
 }
 
 #[async_trait]
-impl<'a, F> QueryRows for MssqlTransaction<'a, F>
-where
-    F: ClientFactory,
-{
+impl<'a> QueryRows for MssqlTransaction<'a> {
     async fn query_rows<S, M, R, C>(
         &self,
         statement: S,
@@ -223,14 +211,13 @@ where
 }
 
 #[async_trait]
-impl<'a, C, E, F, FILTER> storm::provider::LoadAll<E, FILTER, C> for MssqlTransaction<'a, F>
+impl<'a, C, E, FILTER> storm::provider::LoadAll<E, FILTER, C> for MssqlTransaction<'a>
 where
     C: Default + Extend<(E::Key, E)> + Send + 'static,
     E: storm::Entity + Send + 'a,
     E::Key: Send,
-    F: ClientFactory,
     FILTER: FilterSql,
-    MssqlProvider<F>: storm::provider::LoadAll<E, FILTER, C>,
+    MssqlProvider: storm::provider::LoadAll<E, FILTER, C>,
 {
     async fn load_all(&self, filter: &FILTER) -> storm::Result<C> {
         storm::provider::LoadAll::<E, FILTER, C>::load_all(self.provider, filter).await
@@ -243,8 +230,8 @@ struct State {
     current_transaction: u64,
 }
 
-async fn transaction_state_client<F>(
-    provider: &MssqlProvider<F>,
+async fn transaction_state_client(
+    provider: &MssqlProvider,
     transaction_id: u64,
 ) -> Result<(MutexGuard<'_, State>, Client)> {
     let mut state = provider.state.lock().await;

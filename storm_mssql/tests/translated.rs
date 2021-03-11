@@ -3,22 +3,23 @@ use storm::{
     prelude::*, AsyncOnceCell, Connected, Ctx, Entity, Error, MssqlLoad, MssqlSave, QueueRwLock,
     Result,
 };
-use storm_mssql::{ClientFactory, Execute, FromSql, MssqlProvider};
+use storm_mssql::{Execute, FromSql, MssqlProvider};
 use tiberius::{AuthMethod, Config, ToSql};
 use vec_map::VecMap;
 
-fn create_ctx() -> QueueRwLock<Connected<Ctx, MssqlProvider<Config>>> {
+fn create_ctx() -> QueueRwLock<Connected<Ctx, MssqlProvider>> {
     QueueRwLock::new(Connected {
         ctx: Ctx::default(),
         provider: provider(),
     })
 }
-fn provider() -> MssqlProvider<Config> {
+fn provider() -> MssqlProvider {
     let mut config = Config::default();
     config.database("master");
     config.authentication(AuthMethod::Integrated);
     config.trust_cert();
-    config.create_provider()
+
+    MssqlProvider::new(config)
 }
 
 #[tokio::test]

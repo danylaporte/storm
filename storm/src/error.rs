@@ -7,6 +7,7 @@ pub enum Error {
     ConvertFailed(String),
     EntityNotFound,
     NotInTransaction,
+    ProviderNotFound,
     Std(StdError),
 
     #[cfg(feature = "mssql")]
@@ -41,6 +42,7 @@ impl Display for Error {
             Self::ClientInError => f.write_str("Client in error state."),
             Self::EntityNotFound => f.write_str("Entity not found."),
             Self::NotInTransaction => f.write_str("Not in transaction."),
+            Self::ProviderNotFound => f.write_str("Provider not found."),
 
             #[cfg(feature = "mssql")]
             Self::Mssql(e) => Display::fmt(e, f),
