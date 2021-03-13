@@ -10,7 +10,9 @@ mod derive_input_ext;
 mod errors;
 mod field_ext;
 mod indexing;
+#[cfg(feature = "mssql")]
 mod mssql;
+mod noop;
 #[cfg(feature = "postgres")]
 mod postgres;
 mod rename_all;
@@ -83,4 +85,22 @@ pub fn mssql_load(input: TokenStream) -> TokenStream {
 pub fn mssql_save(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     mssql::save(&input).into()
+}
+
+#[proc_macro_derive(NoopDelete)]
+pub fn noop_delete(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    noop::delete(&input).into()
+}
+
+#[proc_macro_derive(NoopLoad)]
+pub fn noop_load(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    noop::load(&input).into()
+}
+
+#[proc_macro_derive(NoopSave)]
+pub fn noop_save(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    noop::save(&input).into()
 }

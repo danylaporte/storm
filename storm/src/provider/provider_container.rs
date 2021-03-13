@@ -1,10 +1,11 @@
+use super::{Provider, ProviderFactory, TransactionProvider};
 use crate::{Error, Result};
 use async_cell_lock::AsyncOnceCell;
 use async_trait::async_trait;
 use std::{
     any::{Any, TypeId},
     marker::PhantomData,
-    sync::atomic::{AtomicU64, Ordering::Relaxed},
+    sync::atomic::{AtomicBool, AtomicU64, Ordering::Relaxed},
 };
 
 /// Last recent use counter
@@ -12,8 +13,8 @@ type LRU = AtomicU64;
 
 /// A trait that wrap the ProviderFactory to be able to use it in a Box<Any> trait object context.
 #[async_trait]
-trait AnyFactory {
-    async fn create(&self) -> Result<Box<dyn Any>>;
+trait AnyFactory: Send + Sync + 'static {
+    async fn create(&self) -> Result<Box<dyn Any + Send + Sync>>;
 }
 
 /// Wrap a ProviderFactory trait to be able to use it in a Box<Any> trait object context.
@@ -36,9 +37,9 @@ impl<F, P> Factory<F, P> {
 impl<F, P> AnyFactory for Factory<F, P>
 where
     F: ProviderFactory<Provider = P>,
-    P: Send + Sync + 'static,
+    P: Provider,
 {
-    async fn create(&self) -> Result<Box<dyn Any>> {
+    async fn create(&self) -> Result<Box<dyn Any + Send + Sync>> {
         Ok(Box::new(self.factory.create_provider().await?))
     }
 }
@@ -53,13 +54,12 @@ pub struct ProviderContainer {
 }
 
 impl ProviderContainer {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     fn find_index(&self, type_id: TypeId, name: &str) -> std::result::Result<usize, usize> {
-        self.records.binary_search_by(|probe| {
-            probe
-                .type_id
-                .cmp(&type_id)
-                .then_with(|| (*probe.name).cmp(name))
-        })
+        self.records.binary_search_by_key(&(type_id, name), rec_key)
     }
 
     fn find_record<'a>(&'a self, type_id: TypeId, name: &str) -> Result<&'a Rec> {
@@ -79,7 +79,7 @@ impl ProviderContainer {
             for r in &mut self.records {
                 if r.provider
                     .get_mut()
-                    .map_or(false, |(_, lru)| *lru.get_mut() <= last_gc)
+                    .map_or(false, |r| *r.lru.get_mut() <= last_gc)
                 {
                     r.provider.take();
                 }
@@ -89,10 +89,14 @@ impl ProviderContainer {
         }
     }
 
+    pub(super) fn iter_transaction(&self) -> impl Iterator<Item = &'_ dyn Provider> {
+        self.records.iter().filter_map(|r| r.for_commit())
+    }
+
     /// Gets or creates a database provider that have been previously registered with
     /// the `register` method.
-    pub async fn provide<'a, T: Any>(&'a self, name: &str) -> Result<&'a T> {
-        let type_id = TypeId::of::<T>();
+    pub async fn provide<'a, P: Provider>(&'a self, name: &str) -> Result<&'a P> {
+        let type_id = TypeId::of::<P>();
         let rec = self.find_record(type_id, name)?;
         let provider = rec.get_or_init(&self.lru).await?;
 
@@ -100,10 +104,7 @@ impl ProviderContainer {
     }
 
     /// Register a provider factory that creates provider on demand. A provider can be named.
-    pub fn register<'a, F>(&mut self, name: impl Into<Box<str>>, factory: F)
-    where
-        F: ProviderFactory + 'static,
-    {
+    pub fn register<'a, F: ProviderFactory>(&mut self, name: impl Into<Box<str>>, factory: F) {
         let rec = Rec {
             factory: Box::new(Factory::new(factory)),
             name: name.into(),
@@ -115,6 +116,10 @@ impl ProviderContainer {
             Ok(index) => self.records[index] = rec,
             Err(index) => self.records.insert(index, rec),
         }
+    }
+
+    pub fn transaction(&self) -> TransactionProvider<'_> {
+        TransactionProvider(self)
     }
 }
 
@@ -128,32 +133,61 @@ impl Default for ProviderContainer {
     }
 }
 
-#[async_trait]
-pub trait ProviderFactory: Send + Sync {
-    type Provider: Send + Sync + 'static;
+struct ProviderRec {
+    in_transaction: AtomicBool,
+    lru: LRU,
+    provider: Box<dyn Any + Send + Sync>,
+}
 
-    async fn create_provider(&self) -> Result<Self::Provider>;
+impl ProviderRec {
+    fn new(provider: Box<dyn Any + Send + Sync>) -> Self {
+        Self {
+            in_transaction: Default::default(),
+            lru: Default::default(),
+            provider,
+        }
+    }
+
+    fn for_commit(&self) -> Option<&dyn Provider> {
+        if self.in_transaction.swap(false, Relaxed) {
+            Some(
+                *self
+                    .provider
+                    .downcast_ref::<&dyn Provider>()
+                    .expect("commit"),
+            )
+        } else {
+            None
+        }
+    }
 }
 
 struct Rec {
     factory: Box<dyn AnyFactory>,
     name: Box<str>,
-    provider: AsyncOnceCell<(Box<dyn Any>, LRU)>,
+    provider: AsyncOnceCell<ProviderRec>,
     type_id: TypeId,
 }
 
 impl Rec {
-    async fn get_or_init(&self, lru: &LRU) -> Result<&Box<dyn Any>> {
-        let (provider, rec_lru) = self
+    fn for_commit(&self) -> Option<&dyn Provider> {
+        self.provider.get()?.for_commit()
+    }
+
+    async fn get_or_init(&self, lru: &LRU) -> Result<&Box<dyn Any + Send + Sync>> {
+        let provider_rec = self
             .provider
             .get_or_try_init::<_, Error>(async {
-                let provider = self.factory.create().await?;
-                Ok((provider, AtomicU64::new(0)))
+                Ok(ProviderRec::new(self.factory.create().await?))
             })
             .await?;
 
-        rec_lru.store(lru.fetch_add(1, Relaxed), Relaxed);
+        provider_rec.lru.store(lru.fetch_add(1, Relaxed), Relaxed);
 
-        Ok(provider)
+        Ok(&provider_rec.provider)
     }
+}
+
+fn rec_key(rec: &Rec) -> (TypeId, &str) {
+    (rec.type_id, &rec.name)
 }

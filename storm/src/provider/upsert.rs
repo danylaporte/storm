@@ -17,14 +17,3 @@ where
         (**self).upsert(k, v).await
     }
 }
-
-#[async_trait]
-impl<E> Upsert<E> for ()
-where
-    E: Entity + Sync,
-    E::Key: Sync,
-{
-    async fn upsert(&self, _k: &E::Key, _v: &E) -> Result<()> {
-        Ok(())
-    }
-}

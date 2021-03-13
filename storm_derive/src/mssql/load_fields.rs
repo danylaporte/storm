@@ -62,7 +62,7 @@ impl<'a> ToTokens for LoadFields<'a> {
                 true => SQL.to_string(),
             };
 
-            let mut map: C = storm_mssql::QueryRows::query_rows(self, load_sql, &*params, |row| {
+            let mut map: C = storm_mssql::QueryRows::query_rows(provider, load_sql, &*params, |row| {
                 Ok((
                     #keys,
                     #entity { #fields }

@@ -1,7 +1,7 @@
 use crate::rename_all::RenameAll;
 use darling::{util::SpannedValue, FromDeriveInput, FromField};
-use proc_macro2::TokenStream;
-use syn::{Error, Ident};
+use proc_macro2::{Span, TokenStream};
+use syn::{Error, Ident, LitStr};
 
 #[derive(Debug, FromField)]
 #[darling(attributes(storm))]
@@ -67,6 +67,10 @@ pub(super) struct TypeAttrs {
     pub keys: SpannedValue<String>,
 
     #[darling(default)]
+    /// The name of the provider in the ProviderContainer
+    pub provider: String,
+
+    #[darling(default)]
     pub rename_all: Option<RenameAll>,
 
     #[darling(default)]
@@ -91,6 +95,10 @@ impl TypeAttrs {
 
     pub fn keys_internal(&self) -> Vec<&str> {
         self.keys.split(',').filter(|s| !s.is_empty()).collect()
+    }
+
+    pub fn provider(&self) -> LitStr {
+        LitStr::new(&self.provider, Span::call_site())
     }
 
     pub fn translate_keys(&self, errors: &mut Vec<TokenStream>) -> Vec<&str> {

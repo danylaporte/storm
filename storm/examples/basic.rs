@@ -1,12 +1,15 @@
 use cache::Cache;
-use storm::{prelude::*, AsyncOnceCell, Connected, Ctx, Entity, QueueRwLock, Result};
+use storm::{
+    prelude::*, AsyncOnceCell, Connected, Ctx, Entity, NoopDelete, NoopLoad, NoopSave, QueueRwLock,
+    Result,
+};
 use vec_map::VecMap;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let lock = QueueRwLock::new(Connected {
         ctx: Ctx::default(),
-        provider: (),
+        provider: Default::default(),
     });
 
     let ctx_provider = lock.read().await;
@@ -16,7 +19,7 @@ async fn main() -> Result<()> {
 
     let ctx_provider = ctx_provider.queue().await;
 
-    let mut trx = ctx_provider.transaction().await?;
+    let mut trx = ctx_provider.transaction();
 
     let _users = trx.users().await?;
     let mut users_mut = trx.users_mut().await?;
@@ -50,6 +53,7 @@ struct Ctx {
     users: AsyncOnceCell<VecMap<usize, User>>,
 }
 
+#[derive(NoopDelete, NoopLoad, NoopSave)]
 struct User {
     pub name: String,
 }

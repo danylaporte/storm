@@ -27,7 +27,7 @@ pub use as_ref_async::AsRefAsync;
 pub use as_ref_opt::AsRefOpt;
 pub use async_cell_lock::{AsyncOnceCell, QueueRwLock};
 pub use commit::Commit;
-pub use connected::Connected;
+pub use connected::{Connected, ConnectedTrx, ConnectedTrxRef};
 pub use entity::Entity;
 pub use error::Error;
 pub use get::Get;
@@ -38,6 +38,7 @@ pub use get_version::GetVersion;
 pub use init::Init;
 pub use insert::Insert;
 pub use map_transaction::MapTransaction;
+pub use provider::ProviderContainer;
 pub use remove::Remove;
 use state::State;
 pub use transaction::Transaction;
@@ -49,6 +50,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[cfg(feature = "derive")]
 pub use storm_derive::{indexing, Ctx};
-
 #[cfg(feature = "mssql")]
 pub use storm_derive::{MssqlLoad, MssqlSave};
+pub use storm_derive::{NoopDelete, NoopLoad, NoopSave};

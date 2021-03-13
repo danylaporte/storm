@@ -1,12 +1,15 @@
 use async_cell_lock::QueueRwLock;
 use cache::Cache;
-use storm::{prelude::*, AsyncOnceCell, Connected, Ctx, Entity, GetVersion, Result};
+use storm::{
+    prelude::*, provider::ProviderContainer, AsyncOnceCell, Connected, Ctx, Entity, GetVersion,
+    NoopDelete, NoopLoad, NoopSave, Result,
+};
 use vec_map::VecMap;
 
-fn create_ctx() -> QueueRwLock<Connected<Ctx, ()>> {
+fn create_ctx() -> QueueRwLock<Connected<Ctx>> {
     QueueRwLock::new(Connected {
         ctx: Ctx::default(),
-        provider: (),
+        provider: ProviderContainer::new(),
     })
 }
 
@@ -17,7 +20,7 @@ async fn flow() -> Result<()> {
     let ctx = ctx.read().await;
     let ctx = ctx.queue().await;
 
-    let trx = ctx.transaction().await?;
+    let trx = ctx.transaction();
     let log = trx.commit().await?;
 
     let mut ctx = ctx.write().await;
@@ -66,7 +69,7 @@ async fn transaction() -> Result<()> {
 
     let ctx = ctx.read().await.queue().await;
 
-    let mut trx = ctx.transaction().await?;
+    let mut trx = ctx.transaction();
 
     // once_cell<VecMap<_>>
     let oc_vms = trx.oc_vms().await?;
@@ -134,7 +137,7 @@ struct Ctx {
 
 macro_rules! entity {
     ($n:ident) => {
-        #[derive(Default)]
+        #[derive(Default, NoopDelete, NoopLoad, NoopSave)]
         struct $n {
             pub name: String,
         }

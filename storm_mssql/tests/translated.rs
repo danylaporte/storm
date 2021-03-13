@@ -1,25 +1,28 @@
 use std::{borrow::Cow, ops::Index};
 use storm::{
-    prelude::*, AsyncOnceCell, Connected, Ctx, Entity, Error, MssqlLoad, MssqlSave, QueueRwLock,
-    Result,
+    prelude::*, provider::ProviderContainer, AsyncOnceCell, Connected, Ctx, Entity, Error,
+    MssqlLoad, MssqlSave, QueueRwLock, Result,
 };
-use storm_mssql::{Execute, FromSql, MssqlProvider};
+use storm_mssql::{Execute, FromSql, MssqlFactory, MssqlProvider};
 use tiberius::{AuthMethod, Config, ToSql};
 use vec_map::VecMap;
 
-fn create_ctx() -> QueueRwLock<Connected<Ctx, MssqlProvider>> {
+fn create_ctx() -> QueueRwLock<Connected<Ctx>> {
     QueueRwLock::new(Connected {
         ctx: Ctx::default(),
         provider: provider(),
     })
 }
-fn provider() -> MssqlProvider {
+fn provider() -> ProviderContainer {
     let mut config = Config::default();
     config.database("master");
     config.authentication(AuthMethod::Integrated);
     config.trust_cert();
 
-    MssqlProvider::new(config)
+    let mut provider = ProviderContainer::new();
+    provider.register("", MssqlFactory(config));
+
+    provider
 }
 
 #[tokio::test]
@@ -28,23 +31,21 @@ async fn translated_flow() -> storm::Result<()> {
     let ctx = create_ctx();
     let ctx = ctx.read().await;
 
-    {
-        let t = ctx.provider.transaction().await?;
-        t.execute("CREATE TABLE ##Labels (Id Int PRIMARY KEY NOT NULL);", &[])
-            .await?;
+    let provider = ctx.provider.provide::<MssqlProvider>("").await?;
 
-        t.execute(
-            "CREATE TABLE ##LabelsTranslatedValues (Id2 Int NOT NULL, Culture Int NOT NULL, Name NVARCHAR(50) NOT NULL);",
-            &[],
-        )
+    provider
+        .execute("CREATE TABLE ##Labels (Id Int PRIMARY KEY NOT NULL);", &[])
         .await?;
 
-        t.commit().await?;
-    }
+    provider.execute(
+        "CREATE TABLE ##LabelsTranslatedValues (Id2 Int NOT NULL, Culture Int NOT NULL, Name NVARCHAR(50) NOT NULL);",
+        &[],
+    )
+    .await?;
 
     let ctx = ctx.queue().await;
 
-    let mut trx = ctx.transaction().await?;
+    let mut trx = ctx.transaction();
 
     let mut labels = trx.labels_mut().await?;
     let id = LabelId(2);

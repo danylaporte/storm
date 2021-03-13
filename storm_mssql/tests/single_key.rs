@@ -1,35 +1,45 @@
 use std::collections::HashMap;
 use storm::{
-    mem::{Commit, Transaction},
-    ApplyLog, AsyncOnceCell, Ctx, Entity, GetOrLoadAsync, MssqlLoad, MssqlSave, Result,
+    prelude::*, provider::ProviderContainer, AsyncOnceCell, Connected, Ctx, Entity, MssqlLoad,
+    MssqlSave, QueueRwLock, Result,
 };
-use storm_mssql::{Execute, MssqlProvider};
+use storm_mssql::{Execute, MssqlFactory, MssqlProvider};
 use tiberius::{AuthMethod, Config};
-
-fn provider() -> MssqlProvider {
+fn create_ctx() -> QueueRwLock<Connected<Ctx>> {
+    QueueRwLock::new(Connected {
+        ctx: Ctx::default(),
+        provider: provider(),
+    })
+}
+fn provider() -> ProviderContainer {
     let mut config = Config::default();
     config.database("master");
     config.authentication(AuthMethod::Integrated);
     config.trust_cert();
 
-    MssqlProvider::new(config)
+    let mut provider = ProviderContainer::new();
+    provider.register("", MssqlFactory(config));
+
+    provider
 }
 
 #[tokio::test]
 async fn crud() -> Result<()> {
-    let provider = &provider();
-    let transaction = provider.transaction().await?;
+    let ctx = create_ctx();
+    let ctx = ctx.read().await;
+    let provider = ctx.provider.provide::<MssqlProvider>("").await?;
 
-    transaction
+    provider
         .execute(
             "CREATE TABLE ##Tbl (Id INT NOT NULL, Name NVARCHAR(100) NOT NULL, Other INT NULL);",
             &[],
         )
         .await?;
 
-    let ctx = TestCtx::default();
+    let ctx = ctx.queue().await;
     let mut trx = ctx.transaction();
-    let entities1 = trx.entities1.get_mut_or_init(&transaction).await?;
+
+    let mut entities1 = trx.entities1_mut().await?;
 
     let e1 = Entity1 {
         name: "E1".to_string(),
@@ -37,24 +47,23 @@ async fn crud() -> Result<()> {
     };
 
     // insert
-    entities1.insert(1, e1, &transaction).await?;
+    entities1.insert(1, e1).await?;
 
     let mut e1 = entities1.get(&1).unwrap().clone();
 
     e1.o = Some(5);
 
     // update
-    entities1.insert(1, e1, &transaction).await?;
+    entities1.insert(1, e1).await?;
 
-    transaction.commit().await?;
-    let log = trx.commit();
+    let log = trx.commit().await?;
 
-    let mut ctx = TestCtx::default();
+    let mut ctx = ctx.write().await;
+
     ctx.apply_log(log);
 
-    let ctx = TestCtx::default();
-
-    let entities1 = ctx.entities1.get_or_load_async(provider).await?;
+    let ctx = ctx.read().await;
+    let entities1 = ctx.entities1().await?;
 
     assert_eq!(
         entities1.get(&1).unwrap().clone(),
@@ -68,7 +77,7 @@ async fn crud() -> Result<()> {
 }
 
 #[derive(Ctx, Default)]
-struct TestCtx {
+struct Ctx {
     entities1: AsyncOnceCell<HashMap<i32, Entity1>>,
 }
 

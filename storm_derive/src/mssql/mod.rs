@@ -56,15 +56,17 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     try_ts!(errors.result());
 
     let translated_where = translated.to_where_clause();
+    let provider = attrs.provider();
 
     quote! {
         #[async_trait::async_trait]
-        impl<C, FILTER> storm::provider::LoadAll<#ident, FILTER, C> for storm_mssql::MssqlProvider
+        impl<C, FILTER> storm::provider::LoadAll<#ident, FILTER, C> for storm::provider::ProviderContainer
         where
             C: Default + Extend<(<#ident as storm::Entity>::Key, #ident)> #translated_where + Send + 'static,
             FILTER: storm_mssql::FilterSql,
         {
             async fn load_all(&self, filter: &FILTER) -> storm::Result<C> {
+                let provider: &MssqlProvider = self.provide(#provider).await?;
                 let (sql, params) = storm_mssql::FilterSql::filter_sql(filter, 0);
                 #load
                 #translated
@@ -73,7 +75,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
         }
 
         #[async_trait::async_trait]
-        impl storm::provider::LoadOne<#ident> for storm_mssql::MssqlProvider {
+        impl storm::provider::LoadOne<#ident> for storm::provider::ProviderContainer {
             async fn load_one(&self, k: &<#ident as Entity>::Key) -> storm::Result<Option<#ident>> {
                 let filter = #filter_sql;
                 let v: storm::provider::LoadOneInternal<#ident> = storm::provider::LoadAll::load_all(self, &filter).await?;
@@ -157,18 +159,20 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let save_part = save_part.ts();
     let wheres = wheres.ts();
     let table = LitStr::new(&attrs.table, ident.span());
+    let provider = attrs.provider();
 
     quote! {
         #[async_trait::async_trait]
-        impl<'a> storm::provider::Upsert<#ident> for storm_mssql::MssqlTransaction<'a> {
+        impl<'a> storm::provider::Upsert<#ident> for storm::provider::TransactionProvider<'a> {
             async fn upsert(&self, k: &<#ident as storm::Entity>::Key, v: &#ident) -> storm::Result<()> {
+                let provider: &storm_mssql::MssqlProvider = self.container().provide(#provider).await?;
                 let mut builder = storm_mssql::UpsertBuilder::new(#table);
 
                 storm_mssql::SaveEntityPart::save_entity_part(v, k, &mut builder);
 
                 #wheres
 
-                builder.execute(self).await?;
+                builder.execute(provider).await?;
 
                 #translated
 

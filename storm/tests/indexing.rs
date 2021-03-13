@@ -1,11 +1,11 @@
 use async_cell_lock::QueueRwLock;
-use storm::{indexing, prelude::*, AsyncOnceCell, Connected, Ctx, Entity, Result};
+use storm::{indexing, prelude::*, AsyncOnceCell, Connected, Ctx, Entity, NoopLoad, Result};
 use vec_map::VecMap;
 
-fn create_ctx() -> QueueRwLock<Connected<Ctx, ()>> {
+fn create_ctx() -> QueueRwLock<Connected<Ctx>> {
     QueueRwLock::new(Connected {
         ctx: Ctx::default(),
-        provider: (),
+        provider: Default::default(),
     })
 }
 
@@ -25,7 +25,7 @@ struct Ctx {
     next_id: AsyncOnceCell<NextId>,
 }
 
-#[derive(Default)]
+#[derive(Default, NoopLoad)]
 struct User {
     pub name: String,
 }
