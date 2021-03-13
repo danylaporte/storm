@@ -27,7 +27,7 @@ pub use as_ref_async::AsRefAsync;
 pub use as_ref_opt::AsRefOpt;
 pub use async_cell_lock::{AsyncOnceCell, QueueRwLock};
 pub use commit::Commit;
-pub use connected::{Connected, ConnectedTrx, ConnectedTrxRef};
+pub use connected::{Connected, ConnectedRef, ConnectedTrx, ConnectedTrxRef};
 pub use entity::Entity;
 pub use error::Error;
 pub use get::Get;

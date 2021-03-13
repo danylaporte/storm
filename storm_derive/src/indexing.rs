@@ -60,7 +60,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
     let as_ref_async_wheres = args
         .iter()
         .map(|a| unref(&a.ty))
-        .map(|t| quote!(+ storm::AsRefAsync<#t>))
+        .map(|t| quote!(+ for<'v> storm::AsRefAsync<'v, #t>))
         .ts();
 
     let as_refs = args.iter().map(|_| quote!(ctx.as_ref(),)).ts();

@@ -4,7 +4,6 @@ use crate::{
     ApplyLog, Entity, Get, Insert, Remove, Result,
 };
 use async_trait::async_trait;
-use std::ops::{Deref, DerefMut};
 
 pub struct Connected<T> {
     pub ctx: T,
@@ -22,21 +21,22 @@ where
     }
 }
 
-impl<T> Deref for Connected<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.ctx
-    }
-}
-
-impl<T> DerefMut for Connected<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.ctx
-    }
-}
-
 impl<E, T> Get<E> for Connected<T>
+where
+    E: Entity,
+    T: Get<E>,
+{
+    fn get(&self, k: &E::Key) -> Option<&E> {
+        self.ctx.get(k)
+    }
+}
+
+pub struct ConnectedRef<'a, T> {
+    pub ctx: T,
+    pub provider: &'a ProviderContainer,
+}
+
+impl<'a, E, T> Get<E> for ConnectedRef<'a, T>
 where
     E: Entity,
     T: Get<E>,

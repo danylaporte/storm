@@ -72,10 +72,10 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             tbl_members.push(quote! {
                 async fn #name<'a>(&'a self) -> storm::Result<&'a #ty>
                 where
-                    #ty: storm::Init<storm::Connected<&'a #ctx_name>>,
+                    #ty: storm::Init<storm::ConnectedRef<'a, &'a #ctx_name>>,
                 {
                     let (ctx, provider) = self.ctx();
-                    let connected = storm::Connected { ctx, provider };
+                    let connected = storm::ConnectedRef { ctx, provider };
 
                     storm::GetOrLoadAsync::get_or_load_async(&ctx.#name, &connected).await
                 }
