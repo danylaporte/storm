@@ -20,6 +20,7 @@ syn = "1"
 [dev-dependencies]
 
 [features]
-postgres = []
+metrics = []
 mssql = []
+postgres = []
 default = ["mssql"]

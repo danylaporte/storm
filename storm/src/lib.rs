@@ -38,6 +38,8 @@ pub use get_version::GetVersion;
 pub use init::Init;
 pub use insert::Insert;
 pub use map_transaction::MapTransaction;
+#[cfg(feature = "metrics")]
+pub use metrics;
 pub use provider::ProviderContainer;
 pub use remove::Remove;
 use state::State;
@@ -53,3 +55,14 @@ pub use storm_derive::{indexing, Ctx};
 #[cfg(feature = "mssql")]
 pub use storm_derive::{MssqlLoad, MssqlSave};
 pub use storm_derive::{NoopDelete, NoopLoad, NoopSave};
+
+#[cfg(feature = "metrics")]
+pub fn register_metrics() {
+    use metrics::{register_histogram, Unit};
+
+    register_histogram!(
+        "storm.execution_time",
+        Unit::Seconds,
+        "execution time of a storm request."
+    );
+}

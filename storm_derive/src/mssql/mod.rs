@@ -14,7 +14,7 @@ use load_translated::LoadTranslated;
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt as _};
 use save_translated::SaveTranslated;
-use syn::{DeriveInput, Error, LitInt, LitStr, Type};
+use syn::{DeriveInput, Error, Ident, LitInt, LitStr, Type};
 
 pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let ident = &input.ident;
@@ -57,6 +57,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
 
     let translated_where = translated.to_where_clause();
     let provider = attrs.provider();
+    let (metrics_start, metrics_end) = metrics(&ident, "load");
 
     quote! {
         #[async_trait::async_trait]
@@ -68,8 +69,10 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             async fn load_all(&self, filter: &FILTER) -> storm::Result<C> {
                 let provider: &MssqlProvider = self.provide(#provider).await?;
                 let (sql, params) = storm_mssql::FilterSql::filter_sql(filter, 0);
+                #metrics_start
                 #load
                 #translated
+                #metrics_end
                 Ok(map)
             }
         }
@@ -160,6 +163,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let wheres = wheres.ts();
     let table = LitStr::new(&attrs.table, ident.span());
     let provider = attrs.provider();
+    let (metrics_start, metrics_end) = metrics(&ident, "upsert");
 
     quote! {
         #[async_trait::async_trait]
@@ -167,6 +171,8 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
             async fn upsert(&self, k: &<#ident as storm::Entity>::Key, v: &#ident) -> storm::Result<()> {
                 let provider: &storm_mssql::MssqlProvider = self.container().provide(#provider).await?;
                 let mut builder = storm_mssql::UpsertBuilder::new(#table);
+
+                #metrics_start
 
                 storm_mssql::SaveEntityPart::save_entity_part(v, k, &mut builder);
 
@@ -176,6 +182,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
 
                 #translated
 
+                #metrics_end
                 Ok(())
             }
         }
@@ -198,6 +205,28 @@ fn is_translated(t: &Type) -> bool {
             .map_or(false, |s| &s.ident == "Translated"),
         _ => false,
     }
+}
+
+#[cfg(not(feature = "metrics"))]
+fn metrics(ident: &Ident, ops: &str) -> (TokenStream, TokenStream) {
+    (quote!(), quote!())
+}
+
+#[cfg(feature = "metrics")]
+fn metrics(ident: &Ident, ops: &str) -> (TokenStream, TokenStream) {
+    let start = quote! {
+        let instant = std::time::Instant::now();
+    };
+
+    let ops = LitStr::new(ops, Span::call_site());
+    let typ = LitStr::new(&ident.to_string(), ident.span());
+
+    let end = quote! {
+        use storm::metrics;
+        metrics::histogram!("storm.execution_time", instant.elapsed().as_secs_f64(), "operation" => #ops, "type" => #typ);
+    };
+
+    (start, end)
 }
 
 /// Creates a where clauses and parameters for the load sql query.
