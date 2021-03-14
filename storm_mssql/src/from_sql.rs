@@ -48,6 +48,18 @@ from_sql!(i64, i64);
 from_sql!(u8, u8);
 from_sql!(&'a [u8], &'a [u8]);
 
+#[cfg(feature = "dec19x5")]
+impl<'a> FromSql<'a> for dec19x5::Decimal {
+    type Column = dec19x5::Decimal;
+
+    fn from_sql(col: Option<Self::Column>) -> Result<Self> {
+        match col {
+            Some(v) => Ok(v),
+            None => Err(storm::Error::ColumnNull),
+        }
+    }
+}
+
 impl<'a> FromSql<'a> for String {
     type Column = &'a str;
 
