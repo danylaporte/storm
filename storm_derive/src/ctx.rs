@@ -141,7 +141,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                     log_members.push(quote!(#name: Option<<#ty as storm::ApplyLog>::Log>,));
 
                     globals.push(quote! {
-                        #[async_trait::async_trait]
+                        #[storm::async_trait::async_trait]
                         impl<P> storm::GetOrLoadAsync<#alias, P> for #ctx_name
                         where
                             P: Sync,
@@ -288,14 +288,14 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             }
         }
 
-        #[async_trait::async_trait]
+        #[storm::async_trait::async_trait]
         #vis trait #tbl_name: Send + Sync {
             fn ctx(&self) -> (&#ctx_name, &storm::provider::ProviderContainer);
 
             #tbl_members
         }
 
-        #[async_trait::async_trait]
+        #[storm::async_trait::async_trait]
         impl<'a, C> #tbl_name for storm::Connected<C>
         where
             C: AsRef<#ctx_name> + Send + Sync,
@@ -305,7 +305,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             }
         }
 
-        #[async_trait::async_trait]
+        #[storm::async_trait::async_trait]
         #vis trait #trx_tbl_name<'a> {
             #[must_use]
             fn ctx(&self) -> (&#trx_name<'a>, &storm::provider::TransactionProvider<'a>);
@@ -316,7 +316,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             #trx_tbl_members
         }
 
-        #[async_trait::async_trait]
+        #[storm::async_trait::async_trait]
         impl<'a, T> #trx_tbl_name<'a> for storm::ConnectedTrx<'a, T>
         where
             T: AsRef<#trx_name<'a>> + AsMut<#trx_name<'a>>,

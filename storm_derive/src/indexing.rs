@@ -116,7 +116,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
             }
         }
 
-        #[async_trait::async_trait]
+        #[storm::async_trait::async_trait]
         impl<C> storm::Init<C> for #index_name
         where
             C: Send + Sync #as_ref_async_wheres

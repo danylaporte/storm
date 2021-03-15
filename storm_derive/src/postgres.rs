@@ -89,7 +89,7 @@ fn load_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let (impl_generics, ty_generics, where_clause) = &input.generics.split_for_impl();
 
     Ok(quote! {
-        #[async_trait::async_trait]
+        #[storm::async_trait::async_trait]
         impl #impl_generics storm_postgres::Load<#types> for #ident #ty_generics #where_clause {
             async fn load<C>(client: &C, p: &#types) -> storm_postgres::Result<Vec<Self>>
             where
@@ -201,7 +201,7 @@ fn upsert_internal(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let (impl_generics, ty_generics, where_clause) = &input.generics.split_for_impl();
 
     Ok(quote! {
-        #[async_trait::async_trait]
+        #[storm::async_trait::async_trait]
         impl #impl_generics storm_postgres::Upsert for #ident #ty_generics #where_clause {
             async fn upsert<C>(&self, client: &C) -> storm_postgres::Result<u64>
             where

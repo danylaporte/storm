@@ -60,7 +60,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let (metrics_start, metrics_end) = metrics(&ident, "load");
 
     quote! {
-        #[async_trait::async_trait]
+        #[storm::async_trait::async_trait]
         impl<C, FILTER> storm::provider::LoadAll<#ident, FILTER, C> for storm::provider::ProviderContainer
         where
             C: Default + Extend<(<#ident as storm::Entity>::Key, #ident)> #translated_where + Send + 'static,
@@ -77,7 +77,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             }
         }
 
-        #[async_trait::async_trait]
+        #[storm::async_trait::async_trait]
         impl storm::provider::LoadOne<#ident> for storm::provider::ProviderContainer {
             async fn load_one(&self, k: &<#ident as Entity>::Key) -> storm::Result<Option<#ident>> {
                 let filter = #filter_sql;
@@ -166,7 +166,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let (metrics_start, metrics_end) = metrics(&ident, "upsert");
 
     quote! {
-        #[async_trait::async_trait]
+        #[storm::async_trait::async_trait]
         impl<'a> storm::provider::Upsert<#ident> for storm::provider::TransactionProvider<'a> {
             async fn upsert(&self, k: &<#ident as storm::Entity>::Key, v: &#ident) -> storm::Result<()> {
                 let provider: &storm_mssql::MssqlProvider = self.container().provide(#provider).await?;
