@@ -1,3 +1,6 @@
+#[macro_use]
+mod version_deps;
+
 mod apply_log;
 mod as_ref_async;
 mod as_ref_opt;
