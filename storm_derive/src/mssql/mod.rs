@@ -67,7 +67,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             FILTER: storm_mssql::FilterSql,
         {
             async fn load_all(&self, filter: &FILTER) -> storm::Result<C> {
-                let provider: &MssqlProvider = self.provide(#provider).await?;
+                let provider: &storm_mssql::MssqlProvider = self.provide(#provider).await?;
                 let (sql, params) = storm_mssql::FilterSql::filter_sql(filter, 0);
                 #metrics_start
                 #load
