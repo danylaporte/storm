@@ -73,7 +73,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
     let init_version = args
         .iter()
         .map(|t| unref(&t.ty))
-        .map(|t| quote!(storm::GetVersion::get_version(AsRef::<#t>::as_ref(ctx)).unwrap_or(0)))
+        .map(|t| quote!(storm::GetVersion::get_version(AsRef::<#t>::as_ref(ctx))))
         .fold(None, |acc, v| {
             Some(match acc {
                 Some(acc) => quote!(std::cmp::max(#acc, #v)),
@@ -84,7 +84,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
     let init_version_async = args
         .iter()
         .map(|t| unref(&t.ty))
-        .map(|t| quote!(storm::GetVersion::get_version(storm::AsRefAsync::<#t>::as_ref_async(ctx).await?).unwrap_or(0)))
+        .map(|t| quote!(storm::GetVersion::get_version(storm::AsRefAsync::<#t>::as_ref_async(ctx).await?)))
         .fold(None, |acc, v| {
             Some(match acc {
                 Some(acc) => quote!(std::cmp::max(#acc, #v)),
@@ -95,7 +95,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
     let is_version_obsolete = args
         .iter()
         .map(|t| unref(&t.ty))
-        .map(|t| quote!(storm::GetVersion::get_version(&storm::AsRefOpt::<#t>::as_ref_opt(ctx)).unwrap_or(0)))
+        .map(|t| quote!(storm::GetVersionOpt::get_version_opt(&storm::AsRefOpt::<#t>::as_ref_opt(ctx)).unwrap_or(0)))
         .fold(None, |acc, v| {
             Some(match acc {
                 Some(acc) => quote!(std::cmp::max(#acc, #v)),
@@ -140,7 +140,13 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         }
 
         impl storm::GetVersion for #index_name {
-            fn get_version(&self) -> Option<u64> {
+            fn get_version(&self) -> u64 {
+                self.1
+            }
+        }
+
+        impl storm::GetVersionOpt for #index_name {
+            fn get_version_opt(&self) -> Option<u64> {
                 Some(self.1)
             }
         }

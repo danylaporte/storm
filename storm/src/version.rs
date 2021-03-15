@@ -1,4 +1,4 @@
-use crate::{mem, ApplyLog, GetVersion, Init, Result};
+use crate::{mem, ApplyLog, GetVersion, GetVersionOpt, Init, Result};
 use async_trait::async_trait;
 use std::{
     cmp::Ordering,
@@ -74,7 +74,13 @@ impl<T: Display> Display for Version<T> {
 impl<T: Eq> Eq for Version<T> {}
 
 impl<T> GetVersion for Version<T> {
-    fn get_version(&self) -> Option<u64> {
+    fn get_version(&self) -> u64 {
+        self.ver
+    }
+}
+
+impl<T> GetVersionOpt for Version<T> {
+    fn get_version_opt(&self) -> Option<u64> {
         Some(self.ver)
     }
 }

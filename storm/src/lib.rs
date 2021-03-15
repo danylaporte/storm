@@ -34,7 +34,7 @@ pub use get::Get;
 pub use get_mut::GetMut;
 pub use get_or_load::GetOrLoad;
 pub use get_or_load_async::GetOrLoadAsync;
-pub use get_version::GetVersion;
+pub use get_version::{GetVersion, GetVersionOpt};
 pub use init::Init;
 pub use insert::Insert;
 pub use map_transaction::MapTransaction;
