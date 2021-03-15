@@ -208,7 +208,7 @@ fn is_translated(t: &Type) -> bool {
 }
 
 #[cfg(not(feature = "metrics"))]
-fn metrics(ident: &Ident, ops: &str) -> (TokenStream, TokenStream) {
+fn metrics(_ident: &Ident, _ops: &str) -> (TokenStream, TokenStream) {
     (quote!(), quote!())
 }
 
