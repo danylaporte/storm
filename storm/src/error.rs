@@ -54,6 +54,12 @@ impl Display for Error {
 
 impl std::error::Error for Error {}
 
+impl From<Box<dyn std::error::Error + Send + Sync>> for Error {
+    fn from(b: Box<dyn std::error::Error + Send + Sync>) -> Self {
+        Self::Std(b)
+    }
+}
+
 #[cfg(feature = "mssql")]
 impl From<tiberius::error::Error> for Error {
     fn from(e: tiberius::error::Error) -> Self {
