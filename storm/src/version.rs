@@ -1,4 +1,4 @@
-use crate::{mem, ApplyLog, GetVersion, GetVersionOpt, Init, Result};
+use crate::{ApplyLog, GetVersion, GetVersionOpt, Init, Result, Transaction};
 use async_trait::async_trait;
 use std::{
     cmp::Ordering,
@@ -105,9 +105,9 @@ where
     }
 }
 
-impl<'a, T> mem::Transaction<'a> for Version<T>
+impl<'a, T> Transaction<'a> for Version<T>
 where
-    T: mem::Transaction<'a>,
+    T: Transaction<'a>,
 {
     type Transaction = T::Transaction;
 

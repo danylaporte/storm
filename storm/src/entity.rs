@@ -1,5 +1,5 @@
-pub trait Entity {
-    type Key;
+pub trait Entity: Send + Sync {
+    type Key: Send + Sync;
 }
 
 #[cfg(feature = "cache")]

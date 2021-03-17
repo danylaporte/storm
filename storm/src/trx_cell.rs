@@ -1,12 +1,12 @@
-use crate::{mem, AsyncOnceCell, GetOrLoadAsync, Result};
+use crate::{mem, AsyncOnceCell, GetOrLoadAsync, Result, Transaction};
 use once_cell::sync::OnceCell;
 
-pub struct TrxCell<'a, T: mem::Transaction<'a>> {
+pub struct TrxCell<'a, T: Transaction<'a>> {
     ctx: &'a AsyncOnceCell<T>,
     trx: OnceCell<T::Transaction>,
 }
 
-impl<'a, T: mem::Transaction<'a>> mem::Commit for TrxCell<'a, T>
+impl<'a, T: Transaction<'a>> mem::Commit for TrxCell<'a, T>
 where
     T::Transaction: mem::Commit,
 {
@@ -17,7 +17,7 @@ where
     }
 }
 
-impl<'a, T: mem::Transaction<'a>> TrxCell<'a, T> {
+impl<'a, T: Transaction<'a>> TrxCell<'a, T> {
     pub fn new(ctx: &'a AsyncOnceCell<T>) -> Self {
         Self {
             ctx,
@@ -25,9 +25,9 @@ impl<'a, T: mem::Transaction<'a>> TrxCell<'a, T> {
         }
     }
 
-    pub fn get_mut<'b>(&'b mut self) -> Option<&'b mut <T as mem::Transaction<'a>>::Transaction>
+    pub fn get_mut<'b>(&'b mut self) -> Option<&'b mut <T as Transaction<'a>>::Transaction>
     where
-        T: mem::Transaction<'a>,
+        T: Transaction<'a>,
     {
         self.trx.get_mut()
     }
@@ -35,10 +35,10 @@ impl<'a, T: mem::Transaction<'a>> TrxCell<'a, T> {
     pub async fn get_mut_or_init<'b, P>(
         &'b mut self,
         provider: &P,
-    ) -> Result<&'b mut <T as mem::Transaction<'a>>::Transaction>
+    ) -> Result<&'b mut <T as Transaction<'a>>::Transaction>
     where
         AsyncOnceCell<T>: GetOrLoadAsync<T, P>,
-        T: mem::Transaction<'a>,
+        T: Transaction<'a>,
     {
         if self.trx.get().is_none() {
             let ctx = GetOrLoadAsync::get_or_load_async(self.ctx, provider).await?;
@@ -52,10 +52,10 @@ impl<'a, T: mem::Transaction<'a>> TrxCell<'a, T> {
     pub async fn get_or_init<'b, P>(
         &'b self,
         provider: &P,
-    ) -> Result<&'b <T as mem::Transaction<'a>>::Transaction>
+    ) -> Result<&'b <T as Transaction<'a>>::Transaction>
     where
         AsyncOnceCell<T>: GetOrLoadAsync<T, P>,
-        T: mem::Transaction<'a>,
+        T: Transaction<'a>,
     {
         if let Some(v) = self.trx.get() {
             return Ok(v);

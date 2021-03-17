@@ -1,7 +1,7 @@
 use crate::{
     mem,
     provider::{self, Delete, ProviderContainer, TransactionProvider, Upsert},
-    ApplyLog, Entity, Get, Insert, Remove, Result,
+    ApplyLog, Entity, Get, Insert, Remove, Result, Transaction,
 };
 use async_trait::async_trait;
 
@@ -128,16 +128,16 @@ where
     }
 }
 
-impl<'a, 'b, T> crate::Transaction<'b> for async_cell_lock::QueueRwLockQueueGuard<'a, Connected<T>>
+impl<'a, 'b, T> Transaction<'b> for async_cell_lock::QueueRwLockQueueGuard<'a, Connected<T>>
 where
-    T: mem::Transaction<'b> + Send + Sync,
+    T: Transaction<'b> + Send + Sync,
 {
-    type Transaction = ConnectedTrx<'b, <T as mem::Transaction<'b>>::Transaction>;
+    type Transaction = ConnectedTrx<'b, <T as Transaction<'b>>::Transaction>;
 
     fn transaction(&'b self) -> Self::Transaction {
         ConnectedTrx {
             provider: self.provider.transaction(),
-            trx: mem::Transaction::transaction(&self.ctx),
+            trx: Transaction::transaction(&self.ctx),
         }
     }
 }

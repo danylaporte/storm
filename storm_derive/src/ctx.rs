@@ -118,7 +118,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                     trx_members_new.push(quote!(#name: storm::TrxCell::new(&self.#name),));
 
                     trx_tbl_members.push(quote! {
-                        async fn #name<'b>(&'b self) -> storm::Result<storm::ConnectedTrxRef<'b, &'b <#alias as storm::mem::Transaction<'a>>::Transaction>>
+                        async fn #name<'b>(&'b self) -> storm::Result<storm::ConnectedTrxRef<'b, &'b <#alias as storm::Transaction<'a>>::Transaction>>
                         where
                             'a: 'b,
                             #alias: storm::Init<storm::provider::ProviderContainer>,
@@ -127,7 +127,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                             Ok(storm::ConnectedTrxRef::new(ctx.#name.get_or_init(provider).await?, provider))
                         }
 
-                        async fn #name_mut<'b>(&'b mut self) -> storm::Result<storm::ConnectedTrxRef<'b, &'b mut <#alias as storm::mem::Transaction<'a>>::Transaction>>
+                        async fn #name_mut<'b>(&'b mut self) -> storm::Result<storm::ConnectedTrxRef<'b, &'b mut <#alias as storm::Transaction<'a>>::Transaction>>
                         where
                             'a: 'b,
                             #alias: storm::Init<storm::provider::ProviderContainer>,
@@ -173,18 +173,18 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                     });
 
                     trx_members.push(quote! {
-                        #vis #name: <#ty as storm::mem::Transaction<'a>>::Transaction,
+                        #vis #name: <#ty as storm::Transaction<'a>>::Transaction,
                     });
 
                     trx_members_new.push(quote! {
-                        #name: storm::mem::Transaction::<'a>::transaction(&self.#name),
+                        #name: storm::Transaction::<'a>::transaction(&self.#name),
                     });
 
                     trx_tbl_members.push(quote! {
                         #[must_use]
-                        fn #name<'b>(&'b self) -> storm::ConnectedTrxRef<'b, &'b <#ty as storm::mem::Transaction<'a>>::Transaction>
+                        fn #name<'b>(&'b self) -> storm::ConnectedTrxRef<'b, &'b <#ty as storm::Transaction<'a>>::Transaction>
                         where
-                            #ty: storm::mem::Transaction<'a>,
+                            #ty: storm::Transaction<'a>,
                             'a: 'b,
                         {
                             let (ctx, provider) = self.ctx();
@@ -192,10 +192,10 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                         }
 
                         #[must_use]
-                        fn #name_mut<'b>(&'b mut self) -> storm::ConnectedTrxRef<'b, &'b mut <#ty as storm::mem::Transaction<'a>>::Transaction>
+                        fn #name_mut<'b>(&'b mut self) -> storm::ConnectedTrxRef<'b, &'b mut <#ty as storm::Transaction<'a>>::Transaction>
                         where
                             'a: 'b,
-                            #ty: storm::mem::Transaction<'a>,
+                            #ty: storm::Transaction<'a>,
                         {
                             let (ctx, provider) = self.ctx_mut();
                             storm::ConnectedTrxRef::new(&mut ctx.#name, provider)
@@ -278,7 +278,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             }
         }
 
-        impl<'a> storm::mem::Transaction<'a> for #ctx_name {
+        impl<'a> storm::Transaction<'a> for #ctx_name {
             type Transaction = #trx_name<'a>;
 
             fn transaction(&'a self) -> Self::Transaction {
