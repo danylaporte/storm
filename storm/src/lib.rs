@@ -30,6 +30,8 @@ pub use as_ref_async::AsRefAsync;
 pub use as_ref_opt::AsRefOpt;
 pub use async_cell_lock::{AsyncOnceCell, QueueRwLock};
 pub use async_trait;
+#[cfg(feature = "cache")]
+pub use cache;
 pub use commit::Commit;
 pub use connected::{Connected, ConnectedRef, ConnectedTrx, ConnectedTrxRef};
 pub use entity::Entity;
@@ -44,11 +46,16 @@ pub use insert::Insert;
 pub use map_transaction::MapTransaction;
 #[cfg(feature = "metrics")]
 pub use metrics;
+pub use once_cell::sync::OnceCell;
 pub use provider::ProviderContainer;
 pub use remove::Remove;
 use state::State;
 pub use transaction::Transaction;
 pub use trx_cell::TrxCell;
+#[cfg(feature = "vec-map")]
+pub use vec_map;
+#[cfg(feature = "vec-map")]
+pub use vec_map::VecMap;
 pub use version::Version;
 
 type Log<E> = fxhash::FxHashMap<<E as Entity>::Key, State<E>>;
