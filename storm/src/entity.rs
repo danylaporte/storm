@@ -1,4 +1,4 @@
-pub trait Entity: Send + Sync {
+pub trait Entity: Send + Sync + 'static {
     type Key: Send + Sync;
 }
 
