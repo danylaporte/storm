@@ -74,6 +74,13 @@ pub fn upsert(input: TokenStream) -> TokenStream {
 }
 
 #[cfg(feature = "mssql")]
+#[proc_macro_derive(MssqlDelete, attributes(storm))]
+pub fn mssql_delete(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    mssql::delete(&input).into()
+}
+
+#[cfg(feature = "mssql")]
 #[proc_macro_derive(MssqlLoad, attributes(storm))]
 pub fn mssql_load(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);

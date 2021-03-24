@@ -4,6 +4,31 @@ use quote::{quote, ToTokens, TokenStreamExt};
 use syn::LitStr;
 
 #[derive(Clone, Default)]
+pub(super) struct DeleteBuilder {
+    wheres: String,
+}
+
+impl DeleteBuilder {
+    pub fn add_key(&mut self, column: &str, param_index: &str) {
+        self.wheres
+            .add_sep_str("AND")
+            .add_str("([")
+            .add_str(column)
+            .add_str("]=@p")
+            .add_str(param_index)
+            .add(')');
+    }
+
+    pub fn to_sql(&self, table: &str) -> String {
+        format!("DELETE FROM {} WHERE {}", table, self.wheres)
+    }
+
+    pub fn to_sql_lit(&self, table: &str) -> LitStr {
+        LitStr::new(&self.to_sql(table), Span::call_site())
+    }
+}
+
+#[derive(Clone, Default)]
 pub(super) struct InsertBuilder {
     fields: String,
     values: String,

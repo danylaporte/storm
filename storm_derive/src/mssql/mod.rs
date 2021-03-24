@@ -1,5 +1,6 @@
 mod attrs;
 mod builders;
+mod delete;
 mod load_fields;
 mod load_translated;
 mod save_translated;
@@ -9,12 +10,40 @@ use crate::{
 };
 use attrs::{FieldAttrs, TypeAttrs};
 use darling::{FromDeriveInput, FromField};
+use delete::Delete;
 use load_fields::LoadFields;
 use load_translated::LoadTranslated;
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt as _};
 use save_translated::SaveTranslated;
 use syn::{DeriveInput, Error, Ident, LitInt, LitStr, Type};
+
+pub(crate) fn delete(input: &DeriveInput) -> TokenStream {
+    let ident = &input.ident;
+    let attrs = try_ts!(TypeAttrs::from_derive_input(input).map_err(|e| e.write_errors()));
+    let normal = Delete::<delete::selectors::Normal>::new(&attrs);
+    let translate = Delete::<delete::selectors::Translate>::new(&attrs);
+
+    let provider = attrs.provider();
+    let (metrics_start, metrics_end) = metrics(&ident, "delete");
+
+    quote! {
+        #[storm::async_trait::async_trait]
+        impl<'a> storm::provider::Delete<#ident> for storm::provider::TransactionProvider<'a> {
+            async fn delete(&self, k: &<#ident as storm::Entity>::Key) -> storm::Result<()> {
+                let provider: &storm_mssql::MssqlProvider = self.container().provide(#provider).await?;
+
+                #metrics_start
+
+                #normal
+                #translate
+
+                #metrics_end
+                Ok(())
+            }
+        }
+    }
+}
 
 pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let ident = &input.ident;

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use storm::{
-    prelude::*, provider::ProviderContainer, AsyncOnceCell, Connected, Ctx, Entity, MssqlLoad,
-    MssqlSave, QueueRwLock, Result,
+    prelude::*, provider::ProviderContainer, AsyncOnceCell, Connected, Ctx, Entity, MssqlDelete,
+    MssqlLoad, MssqlSave, QueueRwLock, Result,
 };
 use storm_mssql::{Execute, MssqlFactory, MssqlProvider};
 use tiberius::{AuthMethod, Config};
@@ -56,6 +56,15 @@ async fn crud() -> Result<()> {
     // update
     entities1.insert(1, e1).await?;
 
+    let e2 = Entity1 {
+        name: "E2".to_string(),
+        o: None,
+    };
+    entities1.insert(2, e2).await?;
+
+    // delete
+    entities1.remove(2).await?;
+
     let log = trx.commit().await?;
 
     let mut ctx = ctx.write().await;
@@ -73,6 +82,8 @@ async fn crud() -> Result<()> {
         }
     );
 
+    assert!(entities1.get(&2).is_none());
+
     Ok(())
 }
 
@@ -81,7 +92,7 @@ struct Ctx {
     entities1: AsyncOnceCell<HashMap<i32, Entity1>>,
 }
 
-#[derive(Clone, Debug, MssqlLoad, MssqlSave, PartialEq)]
+#[derive(Clone, Debug, MssqlDelete, MssqlLoad, MssqlSave, PartialEq)]
 #[storm(table = "##Tbl", keys = "Id")]
 struct Entity1 {
     name: String,
