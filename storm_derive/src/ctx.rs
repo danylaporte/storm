@@ -89,9 +89,13 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                 TypeInfo::AsyncOnceCell => {
                     let ty = get_async_once_cell_ty(ty);
                     let alias = Ident::new(&name.to_string().to_pascal_case(), name.span());
+                    let alias_trx = Ident::new(&format!("{}Trx", &alias), name.span());
+                    let alias_trx_mut = Ident::new(&format!("{}TrxMut", &alias), name.span());
 
                     globals.push(quote! {
                         #vis type #alias = #ty;
+                        #vis type #alias_trx<'a, 'b> = storm::ConnectedTrxRef<'a, &'a <#alias as storm::Transaction<'b>>::Transaction>;
+                        #vis type #alias_trx_mut<'a, 'b> = storm::ConnectedTrxRef<'a, &'a mut <#alias as storm::Transaction<'b>>::Transaction>;
 
                         impl storm::AsRefOpt<#ty> for #ctx_name {
                             fn as_ref_opt(&self) -> Option<&#ty> {
@@ -118,7 +122,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                     trx_members_new.push(quote!(#name: storm::TrxCell::new(&self.#name),));
 
                     trx_tbl_members.push(quote! {
-                        async fn #name<'b>(&'b self) -> storm::Result<storm::ConnectedTrxRef<'b, &'b <#alias as storm::Transaction<'a>>::Transaction>>
+                        async fn #name<'b>(&'b self) -> storm::Result<#alias_trx<'b, 'a>>
                         where
                             'a: 'b,
                             #alias: storm::Init<storm::provider::ProviderContainer>,
@@ -127,7 +131,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                             Ok(storm::ConnectedTrxRef::new(ctx.#name.get_or_init(provider).await?, provider))
                         }
 
-                        async fn #name_mut<'b>(&'b mut self) -> storm::Result<storm::ConnectedTrxRef<'b, &'b mut <#alias as storm::Transaction<'a>>::Transaction>>
+                        async fn #name_mut<'b>(&'b mut self) -> storm::Result<#alias_trx_mut<'b, 'a>>
                         where
                             'a: 'b,
                             #alias: storm::Init<storm::provider::ProviderContainer>,

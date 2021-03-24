@@ -21,3 +21,23 @@ where
         (**self).load_all(filter).await
     }
 }
+
+pub struct LoadAllKeyOnly<E: Entity>(Vec<E::Key>);
+
+impl<E: Entity> LoadAllKeyOnly<E> {
+    pub fn into_inner(self) -> Vec<E::Key> {
+        self.0
+    }
+}
+
+impl<E: Entity> Default for LoadAllKeyOnly<E> {
+    fn default() -> Self {
+        Self(Vec::new())
+    }
+}
+
+impl<E: Entity> Extend<(E::Key, E)> for LoadAllKeyOnly<E> {
+    fn extend<T: IntoIterator<Item = (E::Key, E)>>(&mut self, iter: T) {
+        self.0.extend(iter.into_iter().map(|t| t.0))
+    }
+}

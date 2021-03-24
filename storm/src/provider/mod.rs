@@ -8,7 +8,7 @@ mod transaction_provider;
 mod upsert;
 
 pub use delete::Delete;
-pub use load_all::LoadAll;
+pub use load_all::*;
 pub use load_one::*;
 pub use provider::Provider;
 pub use provider_container::ProviderContainer;

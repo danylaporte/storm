@@ -37,3 +37,26 @@ impl FilterSql for (&str, &[&'_ dyn ToSql]) {
         (Cow::Borrowed(self.0), Cow::Borrowed(&self.1))
     }
 }
+
+pub struct KeysFilter<'a, K>(pub &'a str, pub &'a [K]);
+
+impl<'a, K> FilterSql for KeysFilter<'a, K>
+where
+    K: ToSql,
+{
+    fn filter_sql(&self, param_index: usize) -> (Cow<'_, str>, Cow<'_, [&'_ dyn ToSql]>) {
+        let s = self
+            .1
+            .iter()
+            .enumerate()
+            .map(|t| format!("@p{}", t.0 + 1 + param_index))
+            .collect::<Vec<_>>()
+            .join(",");
+
+        let s = format!("{} IN ({})", &self.0, s);
+        (
+            Cow::Owned(s),
+            Cow::Owned(self.1.iter().map(|v| v as &dyn ToSql).collect()),
+        )
+    }
+}

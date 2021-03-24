@@ -28,7 +28,7 @@ mod version;
 pub use apply_log::ApplyLog;
 pub use as_ref_async::AsRefAsync;
 pub use as_ref_opt::AsRefOpt;
-pub use async_cell_lock::{AsyncOnceCell, QueueRwLock};
+pub use async_cell_lock::{self, AsyncOnceCell, QueueRwLock};
 pub use async_trait;
 #[cfg(feature = "cache")]
 pub use cache;

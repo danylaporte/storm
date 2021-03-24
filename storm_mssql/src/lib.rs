@@ -11,7 +11,7 @@ mod upsert_builder;
 
 pub use client_factory::ClientFactory;
 pub use execute::Execute;
-pub use filter_sql::FilterSql;
+pub use filter_sql::*;
 pub use from_sql::FromSql;
 pub use mssql_factory::MssqlFactory;
 pub use mssql_provider::MssqlProvider;
