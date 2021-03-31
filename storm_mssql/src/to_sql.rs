@@ -103,3 +103,11 @@ impl ToSql for dec19x5::Decimal {
         tiberius::ToSql::to_sql(self)
     }
 }
+
+#[cfg(feature = "dec19x5")]
+impl ToSqlNull for dec19x5::Decimal {
+    #[inline]
+    fn to_sql_null() -> ColumnData {
+        tiberius::ToSql::to_sql(&Option::<Self>::None)
+    }
+}
