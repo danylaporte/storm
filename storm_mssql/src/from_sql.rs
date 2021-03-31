@@ -1,6 +1,6 @@
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use std::sync::Arc;
-use storm::Result;
+use storm::{Error, Result};
 use tiberius::Uuid;
 
 pub trait FromSql<'a>: Sized {
@@ -99,5 +99,27 @@ impl<'a, T: FromSql<'a>> FromSql<'a> for Box<T> {
 
     fn from_sql(col: Option<Self::Column>) -> Result<Self> {
         T::from_sql(col).map(|v| Box::new(v))
+    }
+}
+
+impl<'a> FromSql<'a> for Box<[u8]> {
+    type Column = &'a [u8];
+
+    fn from_sql(col: Option<Self::Column>) -> Result<Self> {
+        match col {
+            Some(col) => Ok(col.to_vec().into_boxed_slice()),
+            None => Err(Error::ColumnNull),
+        }
+    }
+}
+
+impl<'a> FromSql<'a> for Box<str> {
+    type Column = &'a str;
+
+    fn from_sql(col: Option<Self::Column>) -> Result<Self> {
+        match col {
+            Some(col) => Ok(col.to_string().into_boxed_str()),
+            None => Err(Error::ColumnNull),
+        }
     }
 }

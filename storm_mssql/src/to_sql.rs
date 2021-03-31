@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::Arc};
 use tiberius::ColumnData;
 
 pub trait ToSql: Send + Sync {
@@ -15,10 +15,34 @@ impl<T: ToSql> ToSql for &T {
     }
 }
 
-impl<T> ToSql for std::sync::Arc<T>
+impl<T> ToSql for Arc<T>
 where
     T: ToSql,
 {
+    fn to_sql(&self) -> ColumnData {
+        (**self).to_sql()
+    }
+}
+
+impl<'a> ToSql for Arc<[u8]> {
+    fn to_sql(&self) -> ColumnData {
+        (**self).to_sql()
+    }
+}
+
+impl<'a> ToSql for Arc<str> {
+    fn to_sql(&self) -> ColumnData {
+        (**self).to_sql()
+    }
+}
+
+impl ToSql for Box<[u8]> {
+    fn to_sql(&self) -> ColumnData {
+        (**self).to_sql()
+    }
+}
+
+impl ToSql for Box<str> {
     fn to_sql(&self) -> ColumnData {
         (**self).to_sql()
     }
@@ -28,6 +52,18 @@ impl<T> ToSql for Box<T>
 where
     T: ToSql,
 {
+    fn to_sql(&self) -> ColumnData {
+        (**self).to_sql()
+    }
+}
+
+impl<'a> ToSql for std::borrow::Cow<'a, [u8]> {
+    fn to_sql(&self) -> ColumnData {
+        (**self).to_sql()
+    }
+}
+
+impl<'a> ToSql for std::borrow::Cow<'a, str> {
     fn to_sql(&self) -> ColumnData {
         (**self).to_sql()
     }
