@@ -1,7 +1,8 @@
+use crate::ToSql;
 use async_trait::async_trait;
 use std::{borrow::Cow, fmt::Debug};
 use storm::Result;
-use tiberius::{Row, ToSql};
+use tiberius::Row;
 
 #[async_trait]
 pub trait QueryRows {

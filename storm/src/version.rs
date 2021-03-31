@@ -105,6 +105,19 @@ where
     }
 }
 
+impl<'a, I, T> IntoIterator for &'a Version<T>
+where
+    I: Iterator,
+    &'a T: IntoIterator<IntoIter = I> + 'a,
+{
+    type Item = I::Item;
+    type IntoIter = I;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.val.into_iter()
+    }
+}
+
 impl<'a, T> Transaction<'a> for Version<T>
 where
     T: Transaction<'a>,

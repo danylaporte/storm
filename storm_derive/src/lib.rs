@@ -3,24 +3,22 @@ extern crate proc_macro;
 #[macro_use]
 mod macros;
 
-mod attrs_ext;
+//mod attrs_ext;
 mod ctx;
 mod derive_input_ext;
 #[cfg(any(feature = "postgres", feature = "mssql"))]
 mod errors;
 mod field_ext;
 mod indexing;
+mod locks_await;
 #[cfg(feature = "mssql")]
 mod mssql;
 mod noop;
-#[cfg(feature = "postgres")]
-mod postgres;
 mod rename_all;
 #[cfg(any(feature = "postgres", feature = "mssql"))]
 mod string_ext;
 mod token_stream_ext;
 
-use attrs_ext::AttrsExt;
 use derive_input_ext::DeriveInputExt;
 #[cfg(any(feature = "postgres", feature = "mssql"))]
 use errors::Errors;
@@ -39,38 +37,16 @@ pub fn ctx(input: TokenStream) -> TokenStream {
     ctx::generate(&input).into()
 }
 
-#[cfg(feature = "postgres")]
-#[proc_macro_derive(FromSql)]
-pub fn from_sql(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    postgres::from_sql(&input).into()
-}
-
 #[proc_macro_attribute]
 pub fn indexing(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
     indexing::indexing(item).into()
 }
 
-#[cfg(feature = "postgres")]
-#[proc_macro_derive(Load, attributes(column, key, table))]
-pub fn load(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(LocksAwait, attributes(storm))]
+pub fn locks_await(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    postgres::load(&input).into()
-}
-
-#[cfg(feature = "postgres")]
-#[proc_macro_derive(ToSql)]
-pub fn to_sql(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    postgres::to_sql(&input).into()
-}
-
-#[cfg(feature = "postgres")]
-#[proc_macro_derive(Upsert, attributes(column, key, table))]
-pub fn upsert(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    postgres::upsert(&input).into()
+    locks_await::locks_await(&input).into()
 }
 
 #[cfg(feature = "mssql")]

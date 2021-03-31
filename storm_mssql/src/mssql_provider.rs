@@ -1,4 +1,4 @@
-use crate::{Client, ClientFactory, Execute, QueryRows};
+use crate::{Client, ClientFactory, Execute, Parameter, QueryRows, ToSql};
 use async_trait::async_trait;
 use futures_util::TryStreamExt;
 use std::{
@@ -8,7 +8,7 @@ use std::{
     sync::atomic::{AtomicBool, Ordering::Relaxed},
 };
 use storm::{provider, Error, Result};
-use tiberius::{Row, ToSql};
+use tiberius::Row;
 use tokio::sync::{Mutex, MutexGuard};
 use tracing::instrument;
 
@@ -59,12 +59,16 @@ impl Execute for MssqlProvider {
         S: ?Sized + Debug + Into<Cow<'a, str>> + Send,
     {
         let (mut guard, mut state) = self.client().await?;
+        let mut intermediate = Vec::new();
+        let mut output = Vec::new();
+
+        adapt_params(params, &mut intermediate, &mut output);
 
         state.transaction().await?;
 
         let count = state
             .client
-            .execute(statement, params)
+            .execute(statement, &output)
             .await
             .map_err(Error::std)?
             .total();
@@ -118,10 +122,14 @@ impl QueryRows for MssqlProvider {
         S: ?Sized + Debug + for<'a> Into<Cow<'a, str>> + Send,
     {
         let (mut guard, mut state) = self.client().await?;
+        let mut intermediate = Vec::new();
+        let mut output = Vec::new();
+
+        adapt_params(params, &mut intermediate, &mut output);
 
         let mut results = state
             .client
-            .query(statement, params)
+            .query(statement, &output)
             .await
             .map_err(Error::std)?;
 
@@ -185,4 +193,13 @@ impl State {
 
         Ok(())
     }
+}
+
+fn adapt_params<'a>(
+    input: &'a [&dyn ToSql],
+    intermediate: &'a mut Vec<Parameter<'a>>,
+    output: &mut Vec<&'a dyn tiberius::ToSql>,
+) {
+    intermediate.extend(input.into_iter().map(|p| Parameter(p.to_sql())));
+    output.extend(intermediate.iter().map(|p| p as &dyn tiberius::ToSql));
 }

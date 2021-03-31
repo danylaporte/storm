@@ -62,10 +62,9 @@ type Log<E> = fxhash::FxHashMap<<E as Entity>::Key, State<E>>;
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[cfg(feature = "derive")]
-pub use storm_derive::{indexing, Ctx};
+pub use storm_derive::{indexing, Ctx, LocksAwait, NoopDelete, NoopLoad, NoopSave};
 #[cfg(feature = "mssql")]
 pub use storm_derive::{MssqlDelete, MssqlLoad, MssqlSave};
-pub use storm_derive::{NoopDelete, NoopLoad, NoopSave};
 
 #[cfg(feature = "metrics")]
 pub fn register_metrics() {

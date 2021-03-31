@@ -3,8 +3,8 @@ use storm::{
     prelude::*, provider::ProviderContainer, AsyncOnceCell, Connected, Ctx, Entity, Error,
     MssqlLoad, MssqlSave, QueueRwLock, Result,
 };
-use storm_mssql::{Execute, FromSql, MssqlFactory, MssqlProvider};
-use tiberius::{AuthMethod, Config, ToSql};
+use storm_mssql::{Execute, FromSql, MssqlFactory, MssqlProvider, ToSql};
+use tiberius::{AuthMethod, Config};
 use vec_map::VecMap;
 
 fn create_ctx() -> QueueRwLock<Connected<Ctx>> {
@@ -128,6 +128,10 @@ impl ToSql for LabelId {
     fn to_sql(&self) -> tiberius::ColumnData<'_> {
         self.0.to_sql()
     }
+
+    fn to_sql_null(&self) -> tiberius::ColumnData<'static> {
+        self.0.to_sql_null()
+    }
 }
 
 #[derive(Clone, Default, Debug)]
@@ -182,5 +186,9 @@ impl Index<Culture> for Translated {
 impl ToSql for Culture {
     fn to_sql(&self) -> tiberius::ColumnData<'_> {
         tiberius::ColumnData::I32(Some(*self as i32))
+    }
+
+    fn to_sql_null(&self) -> tiberius::ColumnData<'static> {
+        tiberius::ColumnData::I32(None)
     }
 }

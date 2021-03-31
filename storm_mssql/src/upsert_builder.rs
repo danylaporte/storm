@@ -1,5 +1,4 @@
-use crate::{Execute, Parameter, Result};
-use tiberius::ToSql;
+use crate::{Execute, Parameter, Result, ToSql};
 
 pub struct UpsertBuilder<'a> {
     insert_fields: String,

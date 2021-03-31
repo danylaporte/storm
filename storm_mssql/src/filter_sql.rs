@@ -1,13 +1,12 @@
+use crate::ToSql;
 use std::borrow::Cow;
-use tiberius::ToSql;
 
 /// Allow to filter a list of rows.
 ///
 /// # Implement FilterSql
 /// ```
 /// use std::borrow::Cow;
-/// use storm_mssql::FilterSql;
-/// use tiberius::ToSql;
+/// use storm_mssql::{FilterSql, ToSql};
 ///
 /// type TopicId = i32;
 ///
