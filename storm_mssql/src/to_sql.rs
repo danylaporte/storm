@@ -15,6 +15,33 @@ impl<T: ToSql> ToSql for &T {
     }
 }
 
+impl<T> ToSql for std::sync::Arc<T>
+where
+    T: ToSql,
+{
+    fn to_sql(&self) -> ColumnData {
+        (**self).to_sql()
+    }
+}
+
+impl<T> ToSql for Box<T>
+where
+    T: ToSql,
+{
+    fn to_sql(&self) -> ColumnData {
+        (**self).to_sql()
+    }
+}
+
+impl<'a, T> ToSql for std::borrow::Cow<'a, T>
+where
+    T: Clone + ToSql + 'a,
+{
+    fn to_sql(&self) -> ColumnData {
+        (**self).to_sql()
+    }
+}
+
 impl<T> ToSql for Option<T>
 where
     T: ToSql + ToSqlNull,
@@ -75,11 +102,12 @@ macro_rules! to_sql {
     };
 }
 
-to_sql!(borrowed [u8] => Binary);
-to_sql!(borrowed Vec<u8> => Binary);
-to_sql!(borrowed str => String);
+to_sql!(borrowed &[u8] => Binary);
 to_sql!(borrowed &str => String);
 to_sql!(borrowed String => String);
+to_sql!(borrowed Vec<u8> => Binary);
+to_sql!(borrowed [u8] => Binary);
+to_sql!(borrowed str => String);
 
 to_sql!(copied bool => Bit);
 to_sql!(copied f32 => F32);

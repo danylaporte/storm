@@ -1,4 +1,5 @@
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
+use std::sync::Arc;
 use storm::Result;
 use tiberius::Uuid;
 
@@ -38,8 +39,11 @@ macro_rules! from_sql {
 }
 
 from_sql!(&'a str, &'a str);
+from_sql!(DateTime<FixedOffset>, DateTime<FixedOffset>);
+from_sql!(DateTime<Utc>, DateTime<Utc>);
 from_sql!(NaiveDate, NaiveDate);
 from_sql!(NaiveDateTime, NaiveDateTime);
+from_sql!(NaiveTime, NaiveTime);
 from_sql!(Uuid, Uuid);
 from_sql!(bool, bool);
 from_sql!(i16, i16);
@@ -79,5 +83,21 @@ impl<'a> FromSql<'a> for Vec<u8> {
             Some(v) => Ok(v.to_owned()),
             None => Err(storm::Error::ColumnNull),
         }
+    }
+}
+
+impl<'a, T: FromSql<'a>> FromSql<'a> for Arc<T> {
+    type Column = T::Column;
+
+    fn from_sql(col: Option<Self::Column>) -> Result<Self> {
+        T::from_sql(col).map(|v| Arc::new(v))
+    }
+}
+
+impl<'a, T: FromSql<'a>> FromSql<'a> for Box<T> {
+    type Column = T::Column;
+
+    fn from_sql(col: Option<Self::Column>) -> Result<Self> {
+        T::from_sql(col).map(|v| Box::new(v))
     }
 }
