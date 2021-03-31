@@ -47,29 +47,6 @@ impl<'a> ToSql for Parameter<'a> {
     fn to_sql(&self) -> ColumnData<'_> {
         tiberius::ToSql::to_sql(self)
     }
-
-    fn to_sql_null(&self) -> ColumnData<'static> {
-        match &self.0 {
-            ColumnData::Binary(_) => ColumnData::Binary(None),
-            ColumnData::Bit(_) => ColumnData::Bit(None),
-            ColumnData::Date(_) => ColumnData::Date(None),
-            ColumnData::DateTime(_) => ColumnData::DateTime(None),
-            ColumnData::DateTime2(_) => ColumnData::DateTime2(None),
-            ColumnData::DateTimeOffset(_) => ColumnData::DateTimeOffset(None),
-            ColumnData::F32(_) => ColumnData::F32(None),
-            ColumnData::F64(_) => ColumnData::F64(None),
-            ColumnData::Guid(_) => ColumnData::Guid(None),
-            ColumnData::I16(_) => ColumnData::I16(None),
-            ColumnData::I32(_) => ColumnData::I32(None),
-            ColumnData::I64(_) => ColumnData::I64(None),
-            ColumnData::Numeric(_) => ColumnData::Numeric(None),
-            ColumnData::SmallDateTime(_) => ColumnData::SmallDateTime(None),
-            ColumnData::String(_) => ColumnData::String(None),
-            ColumnData::Time(_) => ColumnData::Time(None),
-            ColumnData::U8(_) => ColumnData::U8(None),
-            ColumnData::Xml(_) => ColumnData::Xml(None),
-        }
-    }
 }
 
 impl<'a> tiberius::ToSql for Parameter<'a> {

@@ -3,33 +3,27 @@ use tiberius::ColumnData;
 
 pub trait ToSql: Send + Sync {
     fn to_sql(&self) -> ColumnData;
-    fn to_sql_null(&self) -> ColumnData<'static>;
 }
 
-impl<T: Sized + ToSql> ToSql for &T {
+pub trait ToSqlNull {
+    fn to_sql_null() -> ColumnData<'static>;
+}
+
+impl<T: ToSql> ToSql for &T {
     fn to_sql(&self) -> ColumnData {
         (**self).to_sql()
-    }
-
-    fn to_sql_null(&self) -> ColumnData<'static> {
-        (**self).to_sql_null()
     }
 }
 
 impl<T> ToSql for Option<T>
 where
-    T: Default + ToSql,
+    T: ToSql + ToSqlNull,
 {
     fn to_sql(&self) -> ColumnData {
         match self.as_ref() {
             Some(v) => v.to_sql(),
-            None => T::default().to_sql_null(),
+            None => T::to_sql_null(),
         }
-    }
-
-    #[inline]
-    fn to_sql_null(&self) -> ColumnData<'static> {
-        T::default().to_sql_null()
     }
 }
 
@@ -40,9 +34,11 @@ macro_rules! to_sql {
             fn to_sql(&self) -> ColumnData {
                 ColumnData::$n(Some(Cow::Borrowed(&self)))
             }
+        }
 
+        impl ToSqlNull for $t {
             #[inline]
-            fn to_sql_null(&self) -> ColumnData<'static> {
+            fn to_sql_null() -> ColumnData<'static> {
                 ColumnData::$n(None)
             }
         }
@@ -53,9 +49,11 @@ macro_rules! to_sql {
             fn to_sql(&self) -> ColumnData {
                 ColumnData::$n(Some(*self))
             }
+        }
 
+        impl ToSqlNull for $t {
             #[inline]
-            fn to_sql_null(&self) -> ColumnData<'static> {
+            fn to_sql_null() -> ColumnData<'static> {
                 ColumnData::$n(None)
             }
         }
@@ -66,10 +64,12 @@ macro_rules! to_sql {
             fn to_sql(&self) -> ColumnData {
                 tiberius::ToSql::to_sql(self)
             }
+        }
 
+        impl ToSqlNull for $t {
             #[inline]
-            fn to_sql_null(&self) -> ColumnData<'static> {
-                tiberius::ToSql::to_sql(&<Option<$t>>::None)
+            fn to_sql_null() -> ColumnData<'static> {
+                tiberius::ToSql::to_sql(&Option::<$t>::None)
             }
         }
     };
@@ -101,10 +101,5 @@ impl ToSql for dec19x5::Decimal {
     #[inline]
     fn to_sql(&self) -> ColumnData {
         tiberius::ToSql::to_sql(self)
-    }
-
-    #[inline]
-    fn to_sql_null(&self) -> ColumnData<'static> {
-        ColumnData::Numeric(None)
     }
 }

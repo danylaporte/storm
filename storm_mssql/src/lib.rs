@@ -7,8 +7,8 @@ mod mssql_provider;
 mod parameter;
 mod query_rows;
 mod save_entity_part;
-mod upsert_builder;
 mod to_sql;
+mod upsert_builder;
 
 pub use client_factory::ClientFactory;
 pub use execute::Execute;
@@ -20,8 +20,8 @@ pub use parameter::Parameter;
 pub use query_rows::QueryRows;
 pub use save_entity_part::SaveEntityPart;
 pub use storm::{Error, Result};
-pub use to_sql::ToSql;
 pub use tiberius;
+pub use to_sql::{ToSql, ToSqlNull};
 pub use upsert_builder::UpsertBuilder;
 
 pub type Client = tiberius::Client<tokio_util::compat::Compat<tokio::net::TcpStream>>;
