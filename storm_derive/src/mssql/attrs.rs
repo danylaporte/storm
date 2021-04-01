@@ -78,6 +78,9 @@ pub(super) struct TypeAttrs {
 
     #[darling(default)]
     pub translate_keys: SpannedValue<String>,
+
+    #[darling(default)]
+    pub where_clause: String,
 }
 
 impl TypeAttrs {

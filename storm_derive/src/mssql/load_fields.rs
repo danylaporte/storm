@@ -3,9 +3,9 @@ use super::{
     builders::SelectBuilder,
     read_row, read_row_with,
 };
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt as _};
-use syn::{Field, Ident};
+use syn::{Field, Ident, LitStr};
 
 pub(super) struct LoadFields<'a> {
     attrs: &'a TypeAttrs,
@@ -48,17 +48,25 @@ impl<'a> ToTokens for LoadFields<'a> {
         check_required(&self.attrs.table, &mut errors);
 
         let keys = add_keys(&self.attrs, &mut select, &mut errors);
-        let sql = select.to_sql_lit(&self.attrs.table);
+        let sql = select.to_sql_lit(&self.attrs.table, &self.attrs.where_clause);
 
         let entity = self.entity;
         let fields = &self.fields;
         let fields = quote!(#(#fields)*);
 
+        let filter_lit = LitStr::new(
+            match self.attrs.where_clause.is_empty() {
+                true => "{} WHERE {}",
+                false => "{} AND {}",
+            },
+            Span::call_site(),
+        );
+
         tokens.append_all(quote! {
             const SQL: &str = #sql;
 
             let load_sql = match sql.is_empty() {
-                false => format!("{} WHERE {}", SQL, sql),
+                false => format!(#filter_lit, SQL, sql),
                 true => SQL.to_string(),
             };
 

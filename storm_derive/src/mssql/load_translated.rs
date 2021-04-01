@@ -63,7 +63,7 @@ impl<'a> ToTokens for LoadTranslated<'a> {
 
             let keys = add_keys(&self.attrs, &mut conds, &mut select, &mut errors);
             let culture = read_row(select.add_field("Culture"));
-            let sql = select.to_sql_lit(&self.attrs.translate_table);
+            let sql = select.to_sql_lit(&self.attrs.translate_table, &self.attrs.where_clause);
 
             let joins = format!("{{}} {} ON {{}}", joins.to_sql());
             let joins = LitStr::new(&joins, Span::call_site());

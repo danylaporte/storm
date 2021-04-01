@@ -134,17 +134,27 @@ impl SelectBuilder {
         self.select.is_empty()
     }
 
-    fn to_sql(&self, table: &str) -> String {
+    fn to_sql(&self, table: &str, where_clause: &str) -> String {
+        let wc;
+
+        let where_clause = if where_clause.is_empty() {
+            where_clause
+        } else {
+            wc = format!(" WHERE {}", where_clause);
+            &wc
+        };
+
         format!(
-            "SELECT {} FROM {} {}",
+            "SELECT {} FROM {} {} {}",
             self.select,
             table,
-            self.alias.unwrap_or("")
+            self.alias.unwrap_or(""),
+            where_clause
         )
     }
 
-    pub fn to_sql_lit(&self, table: &str) -> LitStr {
-        LitStr::new(&self.to_sql(table), Span::call_site())
+    pub fn to_sql_lit(&self, table: &str, where_clause: &str) -> LitStr {
+        LitStr::new(&self.to_sql(table, where_clause), Span::call_site())
     }
 }
 
