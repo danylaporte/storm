@@ -15,69 +15,6 @@ impl<T: ToSql> ToSql for &T {
     }
 }
 
-impl<T> ToSql for Arc<T>
-where
-    T: ToSql,
-{
-    fn to_sql(&self) -> ColumnData {
-        (**self).to_sql()
-    }
-}
-
-impl<'a> ToSql for Arc<[u8]> {
-    fn to_sql(&self) -> ColumnData {
-        (**self).to_sql()
-    }
-}
-
-impl<'a> ToSql for Arc<str> {
-    fn to_sql(&self) -> ColumnData {
-        (**self).to_sql()
-    }
-}
-
-impl ToSql for Box<[u8]> {
-    fn to_sql(&self) -> ColumnData {
-        (**self).to_sql()
-    }
-}
-
-impl ToSql for Box<str> {
-    fn to_sql(&self) -> ColumnData {
-        (**self).to_sql()
-    }
-}
-
-impl<T> ToSql for Box<T>
-where
-    T: ToSql,
-{
-    fn to_sql(&self) -> ColumnData {
-        (**self).to_sql()
-    }
-}
-
-impl<'a> ToSql for std::borrow::Cow<'a, [u8]> {
-    fn to_sql(&self) -> ColumnData {
-        (**self).to_sql()
-    }
-}
-
-impl<'a> ToSql for std::borrow::Cow<'a, str> {
-    fn to_sql(&self) -> ColumnData {
-        (**self).to_sql()
-    }
-}
-
-impl<'a, T> ToSql for std::borrow::Cow<'a, T>
-where
-    T: Clone + ToSql + 'a,
-{
-    fn to_sql(&self) -> ColumnData {
-        (**self).to_sql()
-    }
-}
-
 impl<T> ToSql for Option<T>
 where
     T: ToSql + ToSqlNull,
@@ -121,6 +58,36 @@ macro_rules! to_sql {
             }
         }
     };
+    (deref<'a> $t:ty, $n:ident) => {
+        impl<'a> ToSql for $t {
+            #[inline]
+            fn to_sql(&self) -> ColumnData {
+                (**self).to_sql()
+            }
+        }
+
+        impl<'a> ToSqlNull for $t {
+            #[inline]
+            fn to_sql_null() -> ColumnData<'static> {
+                ColumnData::$n(None)
+            }
+        }
+    };
+    (deref $t:ty, $n:ident) => {
+        impl ToSql for $t {
+            #[inline]
+            fn to_sql(&self) -> ColumnData {
+                (**self).to_sql()
+            }
+        }
+
+        impl ToSqlNull for $t {
+            #[inline]
+            fn to_sql_null() -> ColumnData<'static> {
+                ColumnData::$n(None)
+            }
+        }
+    };
     (transform $t:ty) => {
         impl ToSql for $t {
             #[inline]
@@ -152,6 +119,13 @@ to_sql!(copied i16 => I16);
 to_sql!(copied i32 => I32);
 to_sql!(copied i64 => I64);
 to_sql!(copied u8 => U8);
+
+to_sql!(deref Arc<[u8]>, Binary);
+to_sql!(deref Arc<str>, String);
+to_sql!(deref Box<[u8]>, Binary);
+to_sql!(deref Box<str>, String);
+to_sql!(deref<'a> Cow<'a, [u8]>, Binary);
+to_sql!(deref<'a> Cow<'a, str>, String);
 
 to_sql!(transform chrono::DateTime<chrono::FixedOffset>);
 to_sql!(transform chrono::DateTime<chrono::Utc>);
