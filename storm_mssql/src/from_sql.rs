@@ -46,6 +46,8 @@ from_sql!(NaiveDateTime, NaiveDateTime);
 from_sql!(NaiveTime, NaiveTime);
 from_sql!(Uuid, Uuid);
 from_sql!(bool, bool);
+from_sql!(f32, f32);
+from_sql!(f64, f64);
 from_sql!(i16, i16);
 from_sql!(i32, i32);
 from_sql!(i64, i64);
