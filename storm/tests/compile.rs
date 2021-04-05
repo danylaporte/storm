@@ -4,7 +4,6 @@ use storm::{
     prelude::*, provider::ProviderContainer, AsyncOnceCell, Connected, Ctx, Entity, GetVersion,
     NoopDelete, NoopLoad, NoopSave, Result,
 };
-use vec_map::VecMap;
 
 fn create_ctx() -> QueueRwLock<Connected<Ctx>> {
     QueueRwLock::new(Connected {
@@ -43,12 +42,6 @@ async fn read() -> Result<()> {
     let _ = oc_vms.get(&0).is_none();
     let _ = oc_vms.iter();
 
-    // once_cell<Version<VecMap<_>>>
-    let oc_v_vms = ctx.oc_v_vms().await?;
-    let _ = oc_v_vms.get(&0).is_none();
-    let _ = oc_v_vms.get_version();
-    let _ = oc_v_vms.iter();
-
     // Cache<_>
     let cs = ctx.cs();
     let _ = cs.get(&0).is_none();
@@ -71,7 +64,7 @@ async fn transaction() -> Result<()> {
 
     let mut trx = ctx.transaction();
 
-    // once_cell<VecMap<_>>
+    // once_cell<VecTable<_>>
     let oc_vms = trx.oc_vms().await?;
     let _ = oc_vms.get(&0).is_none();
 
@@ -79,15 +72,6 @@ async fn transaction() -> Result<()> {
     let _ = oc_vms.get(&0).is_none();
     oc_vms.insert(1, OcVm::default()).await?;
     oc_vms.remove(2).await?;
-
-    // once_cell<Version<VecMap<_>>>
-    let oc_v_vms = trx.oc_v_vms().await?;
-    let _ = oc_v_vms.get(&0).is_none();
-
-    let mut oc_v_vms = trx.oc_v_vms_mut().await?;
-    let _ = oc_v_vms.get(&0).is_none();
-    oc_v_vms.insert(1, OcVVm::default()).await?;
-    oc_v_vms.remove(2).await?;
 
     // Cache<_>
     let cs = trx.cs();
@@ -120,7 +104,6 @@ async fn transaction() -> Result<()> {
     }
 
     actions_mut(trx.oc_vms_mut().await?).await?;
-    actions_mut(trx.oc_v_vms_mut().await?).await?;
     actions_mut(trx.cs_mut()).await?;
     actions_mut(trx.v_cs_mut()).await?;
 
@@ -129,8 +112,7 @@ async fn transaction() -> Result<()> {
 
 #[derive(Ctx, Default)]
 struct Ctx {
-    oc_vms: AsyncOnceCell<VecMap<usize, OcVm>>,
-    oc_v_vms: AsyncOnceCell<Version<VecMap<usize, OcVVm>>>,
+    oc_vms: AsyncOnceCell<VecTable<OcVm>>,
     cs: Cache<usize, C>,
     v_cs: Version<Cache<usize, VC>>,
 }
@@ -149,6 +131,5 @@ macro_rules! entity {
 }
 
 entity!(OcVm);
-entity!(OcVVm);
 entity!(C);
 entity!(VC);

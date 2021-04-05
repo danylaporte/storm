@@ -13,6 +13,7 @@ mod get_mut;
 mod get_or_load;
 mod get_or_load_async;
 mod get_version;
+mod hash_table;
 mod init;
 mod insert;
 mod map_transaction;
@@ -23,6 +24,7 @@ mod remove;
 mod state;
 mod transaction;
 mod trx_cell;
+mod vec_table;
 mod version;
 
 pub use apply_log::ApplyLog;
@@ -41,6 +43,7 @@ pub use get_mut::GetMut;
 pub use get_or_load::GetOrLoad;
 pub use get_or_load_async::GetOrLoadAsync;
 pub use get_version::{GetVersion, GetVersionOpt};
+pub use hash_table::HashTable;
 pub use init::Init;
 pub use insert::Insert;
 pub use map_transaction::MapTransaction;
@@ -52,10 +55,8 @@ pub use remove::Remove;
 use state::State;
 pub use transaction::Transaction;
 pub use trx_cell::TrxCell;
-#[cfg(feature = "vec-map")]
-pub use vec_map;
-#[cfg(feature = "vec-map")]
-pub use vec_map::VecMap;
+pub use vec_map::{self, VecMap};
+pub use vec_table::VecTable;
 pub use version::Version;
 
 type Log<E> = fxhash::FxHashMap<<E as Entity>::Key, State<E>>;

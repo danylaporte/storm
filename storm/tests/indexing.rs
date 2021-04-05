@@ -1,6 +1,5 @@
 use async_cell_lock::QueueRwLock;
 use storm::{indexing, prelude::*, AsyncOnceCell, Connected, Ctx, Entity, NoopLoad, Result};
-use vec_map::VecMap;
 
 fn create_ctx() -> QueueRwLock<Connected<Ctx>> {
     QueueRwLock::new(Connected {
@@ -19,7 +18,7 @@ async fn create_async() -> Result<()> {
 
 #[derive(Ctx, Default)]
 struct Ctx {
-    tbl: AsyncOnceCell<Version<VecMap<usize, User>>>,
+    tbl: AsyncOnceCell<VecTable<User>>,
 
     #[storm(index = true)]
     next_id: AsyncOnceCell<NextId>,

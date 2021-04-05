@@ -1,8 +1,5 @@
 use crate::Entity;
-use std::{
-    collections::HashMap,
-    hash::{BuildHasher, Hash},
-};
+use std::hash::{BuildHasher, Hash};
 
 pub trait Get<E: Entity> {
     fn get(&self, k: &E::Key) -> Option<&E>;
@@ -37,27 +34,5 @@ where
 {
     fn get(&self, k: &E::Key) -> Option<&E> {
         cache::Cache::get(self, k)
-    }
-}
-
-impl<E, S> Get<E> for HashMap<E::Key, E, S>
-where
-    E: Entity,
-    E::Key: Eq + Hash,
-    S: BuildHasher,
-{
-    fn get(&self, k: &E::Key) -> Option<&E> {
-        HashMap::get(self, k)
-    }
-}
-
-#[cfg(feature = "vec-map")]
-impl<E> Get<E> for vec_map::VecMap<E::Key, E>
-where
-    E: Entity,
-    E::Key: Clone + Into<usize>,
-{
-    fn get(&self, k: &E::Key) -> Option<&E> {
-        vec_map::VecMap::get(self, k)
     }
 }

@@ -1,7 +1,4 @@
 pub use crate::{
-    ApplyLog, AsyncOnceCell, Commit, Connected, Entity, Get, Insert, OnceCell, ProviderContainer,
-    QueueRwLock, Remove, Transaction, Version,
+    ApplyLog, AsyncOnceCell, Commit, Connected, Entity, Get, HashTable, Insert, OnceCell,
+    ProviderContainer, QueueRwLock, Remove, Transaction, VecTable, Version,
 };
-
-#[cfg(feature = "vec-map")]
-pub use vec_map::VecMap;

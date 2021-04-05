@@ -1,8 +1,5 @@
 use crate::{AsyncOnceCell, Entity, Log, State};
-use std::{
-    collections::HashMap,
-    hash::{BuildHasher, Hash},
-};
+use std::hash::{BuildHasher, Hash};
 
 pub trait ApplyLog {
     type Log: Sized;
@@ -38,27 +35,6 @@ where
     }
 }
 
-impl<E: Entity, S> ApplyLog for HashMap<E::Key, E, S>
-where
-    E::Key: Eq + Hash,
-    S: BuildHasher,
-{
-    type Log = Log<E>;
-
-    fn apply_log(&mut self, log: Self::Log) {
-        for (k, state) in log {
-            match state {
-                State::Inserted(v) => {
-                    self.insert(k, v);
-                }
-                State::Removed => {
-                    self.remove(&k);
-                }
-            }
-        }
-    }
-}
-
 impl<T> ApplyLog for AsyncOnceCell<T>
 where
     T: ApplyLog,
@@ -68,27 +44,6 @@ where
     fn apply_log(&mut self, log: Self::Log) {
         if let Some(t) = self.get_mut() {
             t.apply_log(log);
-        }
-    }
-}
-
-#[cfg(feature = "vec-map")]
-impl<E: Entity> ApplyLog for vec_map::VecMap<E::Key, E>
-where
-    E::Key: Clone + Into<usize>,
-{
-    type Log = Log<E>;
-
-    fn apply_log(&mut self, log: Self::Log) {
-        for (k, state) in log {
-            match state {
-                State::Inserted(v) => {
-                    self.insert(k, v);
-                }
-                State::Removed => {
-                    self.remove(&k);
-                }
-            }
         }
     }
 }

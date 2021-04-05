@@ -1,5 +1,5 @@
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
-use std::sync::Arc;
+use std::{borrow::Cow, sync::Arc};
 use storm::{Error, Result};
 use tiberius::Uuid;
 
@@ -104,6 +104,14 @@ impl<'a, T: FromSql<'a>> FromSql<'a> for Box<T> {
     }
 }
 
+impl<'a, T: Clone + FromSql<'a>> FromSql<'a> for Cow<'a, T> {
+    type Column = T::Column;
+
+    fn from_sql(col: Option<Self::Column>) -> Result<Self> {
+        T::from_sql(col).map(|v| Cow::Owned(v))
+    }
+}
+
 impl<'a> FromSql<'a> for Box<[u8]> {
     type Column = &'a [u8];
 
@@ -121,6 +129,28 @@ impl<'a> FromSql<'a> for Box<str> {
     fn from_sql(col: Option<Self::Column>) -> Result<Self> {
         match col {
             Some(col) => Ok(col.to_string().into_boxed_str()),
+            None => Err(Error::ColumnNull),
+        }
+    }
+}
+
+impl<'a, 'b> FromSql<'a> for Cow<'b, [u8]> {
+    type Column = &'a [u8];
+
+    fn from_sql(col: Option<Self::Column>) -> Result<Self> {
+        match col {
+            Some(col) => Ok(Cow::Owned(col.to_vec())),
+            None => Err(Error::ColumnNull),
+        }
+    }
+}
+
+impl<'a, 'b> FromSql<'a> for Cow<'b, str> {
+    type Column = &'a str;
+
+    fn from_sql(col: Option<Self::Column>) -> Result<Self> {
+        match col {
+            Some(col) => Ok(Cow::Owned(col.to_string())),
             None => Err(Error::ColumnNull),
         }
     }

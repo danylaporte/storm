@@ -3,7 +3,6 @@ use storm::{
     prelude::*, AsyncOnceCell, Connected, Ctx, Entity, NoopDelete, NoopLoad, NoopSave, QueueRwLock,
     Result,
 };
-use vec_map::VecMap;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -50,7 +49,7 @@ async fn main() -> Result<()> {
 #[derive(Ctx, Default)]
 struct Ctx {
     topic: Cache<usize, User>,
-    users: AsyncOnceCell<VecMap<usize, User>>,
+    users: AsyncOnceCell<VecTable<User>>,
 }
 
 #[derive(NoopDelete, NoopLoad, NoopSave)]

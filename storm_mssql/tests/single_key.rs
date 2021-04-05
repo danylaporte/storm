@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use storm::{
     prelude::*, provider::ProviderContainer, AsyncOnceCell, Connected, Ctx, Entity, MssqlDelete,
     MssqlLoad, MssqlSave, QueueRwLock, Result,
@@ -89,7 +88,7 @@ async fn crud() -> Result<()> {
 
 #[derive(Ctx, Default)]
 struct Ctx {
-    entities1: AsyncOnceCell<HashMap<i32, Entity1>>,
+    entities1: AsyncOnceCell<HashTable<Entity1>>,
 }
 
 #[derive(Clone, Debug, MssqlDelete, MssqlLoad, MssqlSave, PartialEq)]

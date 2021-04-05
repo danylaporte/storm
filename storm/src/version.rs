@@ -18,7 +18,7 @@ impl<T> Version<T> {
     pub fn new(val: T) -> Self {
         Self {
             val,
-            ver: COUNTER.fetch_add(1, Relaxed),
+            ver: version(),
         }
     }
 }
@@ -30,7 +30,7 @@ where
     type Log = T::Log;
 
     fn apply_log(&mut self, log: Self::Log) {
-        self.ver = COUNTER.fetch_add(1, Relaxed);
+        self.ver = version();
         self.val.apply_log(log);
     }
 }
@@ -45,7 +45,7 @@ impl<T: Default> Default for Version<T> {
     fn default() -> Self {
         Self {
             val: Default::default(),
-            ver: COUNTER.fetch_add(1, Relaxed),
+            ver: version(),
         }
     }
 }
@@ -60,7 +60,7 @@ impl<T> Deref for Version<T> {
 
 impl<T> DerefMut for Version<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.ver = COUNTER.fetch_add(1, Relaxed);
+        self.ver = version();
         &mut self.val
     }
 }
@@ -100,7 +100,7 @@ where
     async fn init(provider: &P) -> Result<Self> {
         Ok(Self {
             val: T::init(provider).await?,
-            ver: COUNTER.fetch_add(1, Relaxed),
+            ver: version(),
         })
     }
 }
@@ -147,4 +147,8 @@ impl<T: PartialOrd> PartialOrd for Version<T> {
     }
 }
 
-static COUNTER: AtomicU64 = AtomicU64::new(0);
+pub(crate) fn version() -> u64 {
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    COUNTER.fetch_add(1, Relaxed)
+}

@@ -5,7 +5,6 @@ use storm::{
 };
 use storm_mssql::{Execute, FromSql, MssqlFactory, MssqlProvider, ToSql, ToSqlNull};
 use tiberius::{AuthMethod, Config};
-use vec_map::VecMap;
 
 fn create_ctx() -> QueueRwLock<Connected<Ctx>> {
     QueueRwLock::new(Connected {
@@ -80,7 +79,7 @@ async fn translated_flow() -> storm::Result<()> {
 
 #[derive(Ctx, Default)]
 struct Ctx {
-    labels: AsyncOnceCell<VecMap<LabelId, Label>>,
+    labels: AsyncOnceCell<VecTable<Label>>,
 }
 
 #[derive(Clone, Debug, MssqlLoad, MssqlSave)]
