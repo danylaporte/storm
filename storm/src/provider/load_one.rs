@@ -26,6 +26,15 @@ impl<T> Extend<T> for LoadNothing {
     fn extend<I: IntoIterator<Item = T>>(&mut self, _iter: I) {}
 }
 
+impl<E: Entity> GetMut<E> for LoadNothing
+where
+    E::Key: PartialEq,
+{
+    fn get_mut(&mut self, _k: &E::Key) -> Option<&mut E> {
+        None
+    }
+}
+
 #[doc(hidden)]
 pub struct LoadOneInternal<E: Entity>(Option<(E::Key, E)>);
 

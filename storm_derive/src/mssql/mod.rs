@@ -11,6 +11,7 @@ use crate::{
 use attrs::{FieldAttrs, TypeAttrs};
 use darling::{FromDeriveInput, FromField};
 use delete::Delete;
+use inflector::Inflector;
 use load_fields::LoadFields;
 use load_translated::LoadTranslated;
 use proc_macro2::{Span, TokenStream};
@@ -49,6 +50,10 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let ident = &input.ident;
     let attrs = try_ts!(TypeAttrs::from_derive_input(input).map_err(|e| e.write_errors()));
     let rename_all = attrs.rename_all;
+    let load_test = Ident::new(
+        &format!("test_{}_load", ident.to_string().to_snake_case()),
+        ident.span(),
+    );
 
     let mut errors = Vec::new();
     let mut filter_sql = FilterSqlImpl::default();
@@ -113,6 +118,14 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
                 let v: storm::provider::LoadOneInternal<#ident> = storm::provider::LoadAll::load_all(self, &filter).await?;
                 Ok(v.into_inner())
             }
+        }
+
+        #[cfg(test)]
+        #[tokio::test]
+        async fn #load_test() -> storm::Result<()> {
+            let provider = storm_mssql::create_provider_container_from_env("DB", #provider)?;
+            storm::provider::LoadAll::<#ident, _, storm::provider::LoadNothing>::load_all(&provider, &()).await?;
+            Ok(())
         }
     }
 }

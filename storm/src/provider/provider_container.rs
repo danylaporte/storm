@@ -2,6 +2,7 @@ use super::{Provider, ProviderFactory, TransactionProvider};
 use crate::{Error, Result};
 use async_cell_lock::AsyncOnceCell;
 use async_trait::async_trait;
+use once_cell::sync::OnceCell;
 use std::{
     any::{Any, TypeId},
     marker::PhantomData,
@@ -191,3 +192,17 @@ impl Rec {
 fn rec_key(rec: &Rec) -> (TypeId, &str) {
     (rec.type_id, &rec.name)
 }
+
+#[track_caller]
+pub fn global_provider() -> &'static ProviderContainer {
+    GLOBAL_PROVIDER.get().expect("global_provider")
+}
+
+/// Set the global provider.
+pub fn set_global_provider(
+    provider: ProviderContainer,
+) -> std::result::Result<(), ProviderContainer> {
+    GLOBAL_PROVIDER.set(provider)
+}
+
+static GLOBAL_PROVIDER: OnceCell<ProviderContainer> = OnceCell::new();

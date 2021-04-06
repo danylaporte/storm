@@ -19,9 +19,22 @@ pub use mssql_provider::MssqlProvider;
 pub use parameter::Parameter;
 pub use query_rows::QueryRows;
 pub use save_entity_part::SaveEntityPart;
+use storm::ProviderContainer;
 pub use storm::{Error, Result};
 pub use tiberius;
+use tiberius::Config;
 pub use to_sql::{ToSql, ToSqlNull};
 pub use upsert_builder::UpsertBuilder;
 
 pub type Client = tiberius::Client<tokio_util::compat::Compat<tokio::net::TcpStream>>;
+
+pub fn create_provider_container_from_env(env_var: &str, name: &str) -> Result<ProviderContainer> {
+    let factory = MssqlFactory(Config::from_ado_string(
+        &std::env::var(env_var).map_err(Error::std)?,
+    )?);
+
+    let mut container = ProviderContainer::new();
+    container.register(name, factory);
+
+    Ok(container)
+}
