@@ -21,12 +21,11 @@ where
     }
 }
 
-impl<E, T> Get<E> for Connected<T>
+impl<K, V, T> Get<K, V> for Connected<T>
 where
-    E: Entity,
-    T: Get<E>,
+    T: Get<K, V>,
 {
-    fn get(&self, k: &E::Key) -> Option<&E> {
+    fn get(&self, k: &K) -> Option<&V> {
         self.ctx.get(k)
     }
 }
@@ -36,12 +35,11 @@ pub struct ConnectedRef<'a, T> {
     pub provider: &'a ProviderContainer,
 }
 
-impl<'a, E, T> Get<E> for ConnectedRef<'a, T>
+impl<'a, K, V, T> Get<K, V> for ConnectedRef<'a, T>
 where
-    E: Entity,
-    T: Get<E>,
+    T: Get<K, V>,
 {
-    fn get(&self, k: &E::Key) -> Option<&E> {
+    fn get(&self, k: &K) -> Option<&V> {
         self.ctx.get(k)
     }
 }
@@ -64,12 +62,11 @@ where
     }
 }
 
-impl<'a, E, T> Get<E> for ConnectedTrx<'a, T>
+impl<'a, K, V, T> Get<K, V> for ConnectedTrx<'a, T>
 where
-    E: Entity,
-    T: Get<E>,
+    T: Get<K, V>,
 {
-    fn get(&self, k: &E::Key) -> Option<&E> {
+    fn get(&self, k: &K) -> Option<&V> {
         self.trx.get(k)
     }
 }
@@ -88,12 +85,11 @@ impl<'a, T> ConnectedTrxRef<'a, T> {
     }
 }
 
-impl<'a, E, T> Get<E> for ConnectedTrxRef<'a, T>
+impl<'a, K, V, T> Get<K, V> for ConnectedTrxRef<'a, T>
 where
-    E: Entity,
-    T: Get<E>,
+    T: Get<K, V>,
 {
-    fn get(&self, k: &E::Key) -> Option<&E> {
+    fn get(&self, k: &K) -> Option<&V> {
         self.trx.get(k)
     }
 }

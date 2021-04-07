@@ -72,7 +72,7 @@ where
     }
 }
 
-impl<E: Entity> Get<E> for HashTable<E>
+impl<E: Entity> Get<E::Key, E> for HashTable<E>
 where
     E::Key: Eq + Hash,
 {

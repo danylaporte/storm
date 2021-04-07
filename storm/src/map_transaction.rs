@@ -25,7 +25,7 @@ where
 {
     pub fn get(&self, k: &E::Key) -> Option<&E>
     where
-        M: Get<E>,
+        M: Get<E::Key, E>,
     {
         match self.log.get(k) {
             Some(State::Inserted(v)) => Some(v),
@@ -53,10 +53,10 @@ where
     }
 }
 
-impl<E: Entity, M> Get<E> for MapTransaction<E, M>
+impl<E: Entity, M> Get<E::Key, E> for MapTransaction<E, M>
 where
     E::Key: Eq + Hash,
-    M: Get<E>,
+    M: Get<E::Key, E>,
 {
     fn get(&self, k: &E::Key) -> Option<&E> {
         Self::get(self, k)

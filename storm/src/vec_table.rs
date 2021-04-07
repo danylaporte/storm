@@ -72,7 +72,7 @@ where
     }
 }
 
-impl<E: Entity> Get<E> for VecTable<E>
+impl<E: Entity> Get<E::Key, E> for VecTable<E>
 where
     E::Key: Clone + Into<usize>,
 {

@@ -1,38 +1,58 @@
-use crate::Entity;
-use std::hash::{BuildHasher, Hash};
+use std::{
+    collections::HashMap,
+    hash::{BuildHasher, Hash},
+};
 
-pub trait Get<E: Entity> {
-    fn get(&self, k: &E::Key) -> Option<&E>;
+use vec_map::VecMap;
+
+pub trait Get<K, V> {
+    fn get(&self, k: &K) -> Option<&V>;
 }
 
-impl<E, T> Get<E> for &T
+impl<K, V, T> Get<K, V> for &T
 where
-    E: Entity,
-    T: Get<E>,
+    T: Get<K, V>,
 {
-    fn get(&self, k: &E::Key) -> Option<&E> {
+    fn get(&self, k: &K) -> Option<&V> {
         (*self).get(k)
     }
 }
 
-impl<E, T> Get<E> for &mut T
+impl<K, V, T> Get<K, V> for &mut T
 where
-    E: Entity,
-    T: Get<E>,
+    T: Get<K, V>,
 {
-    fn get(&self, k: &E::Key) -> Option<&E> {
+    fn get(&self, k: &K) -> Option<&V> {
         (**self).get(k)
     }
 }
 
 #[cfg(feature = "cache")]
-impl<E, S> Get<E> for cache::Cache<E::Key, E, S>
+impl<K, V, S> Get<K, V> for cache::Cache<K, V, S>
 where
-    E: Entity,
-    E::Key: Eq + Hash,
+    K: Eq + Hash,
     S: BuildHasher,
 {
-    fn get(&self, k: &E::Key) -> Option<&E> {
+    fn get(&self, k: &K) -> Option<&V> {
         cache::Cache::get(self, k)
+    }
+}
+
+impl<K, V, S> Get<K, V> for HashMap<K, V, S>
+where
+    K: Eq + Hash,
+    S: BuildHasher,
+{
+    fn get(&self, k: &K) -> Option<&V> {
+        HashMap::get(self, k)
+    }
+}
+
+impl<K, V> Get<K, V> for VecMap<K, V>
+where
+    K: Clone + Into<usize>,
+{
+    fn get(&self, k: &K) -> Option<&V> {
+        VecMap::get(self, k)
     }
 }
