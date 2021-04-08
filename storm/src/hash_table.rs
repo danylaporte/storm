@@ -4,7 +4,11 @@ use crate::{
 };
 use async_trait::async_trait;
 use fxhash::FxHashMap;
-use std::{hash::Hash, ops::Deref};
+use std::{
+    collections::hash_map::{Keys, Values},
+    hash::Hash,
+    ops::Deref,
+};
 
 pub struct HashTable<E: Entity> {
     map: FxHashMap<E::Key, E>,
@@ -17,6 +21,14 @@ impl<E: Entity> HashTable<E> {
             map: FxHashMap::default(),
             version: version(),
         }
+    }
+
+    pub fn keys(&self) -> Keys<E::Key, E> {
+        self.map.keys()
+    }
+
+    pub fn values(&self) -> Values<E::Key, E> {
+        self.map.values()
     }
 }
 

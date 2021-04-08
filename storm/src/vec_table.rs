@@ -4,7 +4,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use std::ops::Deref;
-use vec_map::VecMap;
+use vec_map::{Keys, Values, VecMap};
 
 pub struct VecTable<E: Entity> {
     map: VecMap<E::Key, E>,
@@ -17,6 +17,14 @@ impl<E: Entity> VecTable<E> {
             map: VecMap::new(),
             version: version(),
         }
+    }
+
+    pub fn keys(&self) -> Keys<E::Key, E> {
+        self.map.keys()
+    }
+
+    pub fn values(&self) -> Values<E::Key, E> {
+        self.map.values()
     }
 }
 
