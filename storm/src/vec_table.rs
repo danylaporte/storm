@@ -4,7 +4,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use std::ops::Deref;
-use vec_map::{Keys, Values, VecMap};
+use vec_map::{Iter, Keys, Values, VecMap};
 
 pub struct VecTable<E: Entity> {
     map: VecMap<E::Key, E>,
@@ -17,6 +17,10 @@ impl<E: Entity> VecTable<E> {
             map: VecMap::new(),
             version: version(),
         }
+    }
+
+    pub fn iter(&self) -> Iter<E::Key, E> {
+        self.map.iter()
     }
 
     pub fn keys(&self) -> Keys<E::Key, E> {
@@ -80,7 +84,7 @@ where
     }
 }
 
-impl<E: Entity> Get<E::Key, E> for VecTable<E>
+impl<E: Entity> Get<E> for VecTable<E>
 where
     E::Key: Clone + Into<usize>,
 {
@@ -119,6 +123,18 @@ where
 {
     async fn init(provider: &P) -> Result<Self> {
         provider.load_all(&()).await
+    }
+}
+
+impl<'a, E: Entity> IntoIterator for &'a VecTable<E>
+where
+    E::Key: From<usize>,
+{
+    type Item = (E::Key, &'a E);
+    type IntoIter = Iter<'a, E::Key, E>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.map.iter()
     }
 }
 

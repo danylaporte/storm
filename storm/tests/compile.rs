@@ -95,7 +95,7 @@ async fn transaction() -> Result<()> {
     async fn actions_mut<T, E>(mut t: T) -> Result<()>
     where
         E: Default + Entity<Key = usize>,
-        T: Get<E::Key, E> + Insert<E> + Remove<E>,
+        T: Get<E> + Insert<E> + Remove<E>,
     {
         let _ = t.get(&0).is_none();
         t.insert(1, E::default()).await?;

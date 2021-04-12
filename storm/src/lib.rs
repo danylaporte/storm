@@ -18,6 +18,7 @@ mod init;
 mod insert;
 mod map_transaction;
 pub mod mem;
+mod one_to_many;
 pub mod prelude;
 pub mod provider;
 mod remove;
@@ -50,6 +51,7 @@ pub use map_transaction::MapTransaction;
 #[cfg(feature = "metrics")]
 pub use metrics;
 pub use once_cell::sync::OnceCell;
+pub use one_to_many::OneToMany;
 pub use provider::ProviderContainer;
 pub use remove::Remove;
 use state::State;

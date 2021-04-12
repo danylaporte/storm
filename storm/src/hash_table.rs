@@ -5,7 +5,7 @@ use crate::{
 use async_trait::async_trait;
 use fxhash::FxHashMap;
 use std::{
-    collections::hash_map::{Keys, Values},
+    collections::hash_map::{Iter, Keys, Values},
     hash::Hash,
     ops::Deref,
 };
@@ -21,6 +21,10 @@ impl<E: Entity> HashTable<E> {
             map: FxHashMap::default(),
             version: version(),
         }
+    }
+
+    pub fn iter(&self) -> Iter<E::Key, E> {
+        self.map.iter()
     }
 
     pub fn keys(&self) -> Keys<E::Key, E> {
@@ -84,7 +88,7 @@ where
     }
 }
 
-impl<E: Entity> Get<E::Key, E> for HashTable<E>
+impl<E: Entity> Get<E> for HashTable<E>
 where
     E::Key: Eq + Hash,
 {
@@ -123,6 +127,15 @@ where
 {
     async fn init(provider: &P) -> Result<Self> {
         provider.load_all(&()).await
+    }
+}
+
+impl<'a, E: Entity> IntoIterator for &'a HashTable<E> {
+    type Item = (&'a E::Key, &'a E);
+    type IntoIter = Iter<'a, E::Key, E>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.map.iter()
     }
 }
 
