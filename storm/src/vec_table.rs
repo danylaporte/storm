@@ -19,14 +19,17 @@ impl<E: Entity> VecTable<E> {
         }
     }
 
+    #[inline]
     pub fn iter(&self) -> Iter<E::Key, E> {
         self.map.iter()
     }
 
+    #[inline]
     pub fn keys(&self) -> Keys<E::Key, E> {
         self.map.keys()
     }
 
+    #[inline]
     pub fn values(&self) -> Values<E::Key, E> {
         self.map.values()
     }
@@ -56,7 +59,15 @@ where
     }
 }
 
+impl<E: Entity> AsRef<Self> for VecTable<E> {
+    #[inline]
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
+
 impl<E: Entity> Default for VecTable<E> {
+    #[inline]
     fn default() -> Self {
         Self::new()
     }
@@ -65,6 +76,7 @@ impl<E: Entity> Default for VecTable<E> {
 impl<E: Entity> Deref for VecTable<E> {
     type Target = VecMap<E::Key, E>;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         &self.map
     }
@@ -88,6 +100,7 @@ impl<E: Entity> Get<E> for VecTable<E>
 where
     E::Key: Clone + Into<usize>,
 {
+    #[inline]
     fn get(&self, k: &E::Key) -> Option<&E> {
         self.map.get(k)
     }
@@ -97,18 +110,21 @@ impl<E: Entity> GetMut<E> for VecTable<E>
 where
     E::Key: Clone + Into<usize>,
 {
+    #[inline]
     fn get_mut(&mut self, k: &E::Key) -> Option<&mut E> {
         self.map.get_mut(k)
     }
 }
 
 impl<E: Entity> GetVersion for VecTable<E> {
+    #[inline]
     fn get_version(&self) -> u64 {
         self.version
     }
 }
 
 impl<E: Entity> GetVersionOpt for VecTable<E> {
+    #[inline]
     fn get_version_opt(&self) -> Option<u64> {
         Some(self.version)
     }
@@ -121,6 +137,7 @@ where
     E::Key: Into<usize> + Send,
     P: Sync + LoadAll<E, (), Self>,
 {
+    #[inline]
     async fn init(provider: &P) -> Result<Self> {
         provider.load_all(&()).await
     }
@@ -133,6 +150,7 @@ where
     type Item = (E::Key, &'a E);
     type IntoIter = Iter<'a, E::Key, E>;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.map.iter()
     }
@@ -144,6 +162,7 @@ where
 {
     type Transaction = MapTransaction<E, &'a Self>;
 
+    #[inline]
     fn transaction(&'a self) -> Self::Transaction {
         MapTransaction::new(self)
     }
