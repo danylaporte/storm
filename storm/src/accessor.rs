@@ -25,7 +25,7 @@ pub trait Accessor: Sized + 'static {
 }
 
 pub trait EntityAccessor: Sized + 'static {
-    type Coll;
+    type Coll: Send + Sync;
 
     fn entity_var() -> &'static TblVar<Self::Coll>;
 

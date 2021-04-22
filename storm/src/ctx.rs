@@ -3,8 +3,8 @@ use std::{hash::Hash, marker::PhantomData};
 
 use crate::{
     provider::{Delete, LoadAll, TransactionProvider, Upsert},
-    Accessor, ApplyLog, AsRefAsync, BoxFuture, Entity, EntityAccessor, Get, HashTable, Log,
-    LogAccessor, LogCtx, ProviderContainer, Result, State, Transaction, VarCtx, VecTable,
+    Accessor, ApplyLog, AsRefAsync, BoxFuture, Entity, EntityAccessor, Get, HashTable, Insert, Log,
+    LogAccessor, LogCtx, ProviderContainer, Remove, Result, State, Transaction, VarCtx, VecTable,
 };
 
 #[derive(Default)]
@@ -178,22 +178,20 @@ where
         }
     }
 
-    pub async fn insert(&mut self, k: E::Key, v: E) -> Result<()>
+    #[inline]
+    pub fn insert(&mut self, k: E::Key, v: E) -> BoxFuture<'_, Result<()>>
     where
-        TransactionProvider<'a>: Upsert<E>,
+        Self: Insert<E>,
     {
-        self.provider.upsert(&k, &v).await?;
-        self.log.insert(k, State::Inserted(v));
-        Ok(())
+        Insert::insert(self, k, v)
     }
 
-    pub async fn remove(&mut self, k: E::Key) -> Result<()>
+    #[inline]
+    pub fn remove(&mut self, k: E::Key) -> BoxFuture<'_, Result<()>>
     where
-        TransactionProvider<'a>: Delete<E>,
+        Self: Remove<E>,
     {
-        self.provider.delete(&k).await?;
-        self.log.insert(k, State::Removed);
-        Ok(())
+        Remove::<E>::remove(self, k)
     }
 }
 
@@ -206,6 +204,36 @@ where
     #[inline]
     fn get(&self, k: &E::Key) -> Option<&E> {
         self.get(k)
+    }
+}
+
+impl<'a, E> Insert<E> for TblTransaction<'a, E>
+where
+    for<'b> TransactionProvider<'b>: Upsert<E>,
+    E: Entity + EntityAccessor,
+    E::Key: Eq + Hash,
+{
+    fn insert(&mut self, k: E::Key, v: E) -> BoxFuture<'_, Result<()>> {
+        Box::pin(async move {
+            self.provider.upsert(&k, &v).await?;
+            self.log.insert(k, State::Inserted(v));
+            Ok(())
+        })
+    }
+}
+
+impl<'a, E> Remove<E> for TblTransaction<'a, E>
+where
+    for<'b> TransactionProvider<'b>: Delete<E>,
+    E: Entity + EntityAccessor,
+    E::Key: Eq + Hash,
+{
+    fn remove(&mut self, k: E::Key) -> BoxFuture<'_, Result<()>> {
+        Box::pin(async move {
+            self.provider.delete(&k).await?;
+            self.log.insert(k, State::Removed);
+            Ok(())
+        })
     }
 }
 
