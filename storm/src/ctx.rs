@@ -131,6 +131,10 @@ impl<'a> CtxTransaction<'a> {
         Ok(self.log_ctx)
     }
 
+    pub fn provider(&self) -> &TransactionProvider<'a> {
+        &self.provider
+    }
+
     pub async fn tbl_of<E>(&mut self) -> Result<TblTransaction<'_, E>>
     where
         E: Entity + EntityAccessor + LogAccessor,
