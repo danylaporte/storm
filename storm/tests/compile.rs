@@ -1,15 +1,7 @@
-use async_cell_lock::QueueRwLock;
-use cache::Cache;
-use storm::{
-    prelude::*, provider::ProviderContainer, AsyncOnceCell, Connected, Ctx, Entity, GetVersion,
-    NoopDelete, NoopLoad, NoopSave, Result,
-};
+use storm::{prelude::*, NoopDelete, NoopLoad, NoopSave, Result};
 
-fn create_ctx() -> QueueRwLock<Connected<Ctx>> {
-    QueueRwLock::new(Connected {
-        ctx: Ctx::default(),
-        provider: ProviderContainer::new(),
-    })
+fn create_ctx() -> QueueRwLock<Ctx> {
+    QueueRwLock::new(Default::default())
 }
 
 #[tokio::test]
@@ -37,21 +29,13 @@ async fn read() -> Result<()> {
 
     let ctx = ctx.read().await;
 
-    // once_cell<VecMap<_>>
-    let oc_vms = ctx.oc_vms().await?;
-    let _ = oc_vms.get(&0).is_none();
-    let _ = oc_vms.iter();
+    let entity1s = ctx.tbl_of::<Entity1>().await?;
+    let _ = entity1s.get(&0).is_none();
+    let _ = entity1s.iter();
 
-    // Cache<_>
-    let cs = ctx.cs();
-    let _ = cs.get(&0).is_none();
-    let _ = cs.iter();
-
-    // Version<Cache<_>>
-    let v_cs = ctx.v_cs();
-    let _ = v_cs.get(&0).is_none();
-    let _ = v_cs.get_version();
-    let _ = v_cs.iter();
+    let entity2s = ctx.tbl_of::<Entity2>().await?;
+    let _ = entity2s.get(&0).is_none();
+    let _ = entity2s.iter();
 
     Ok(())
 }
@@ -61,65 +45,24 @@ async fn transaction() -> Result<()> {
     let ctx = create_ctx();
 
     let ctx = ctx.read().await.queue().await;
-
     let mut trx = ctx.transaction();
 
-    // once_cell<VecTable<_>>
-    let oc_vms = trx.oc_vms().await?;
-    let _ = oc_vms.get(&0).is_none();
+    let mut entity1s = trx.tbl_of::<Entity1>().await?;
+    let _ = entity1s.get(&0).is_none();
+    entity1s.insert(1, Entity1::default()).await?;
+    entity1s.remove(2).await?;
 
-    let mut oc_vms = trx.oc_vms_mut().await?;
-    let _ = oc_vms.get(&0).is_none();
-    oc_vms.insert(1, OcVm::default()).await?;
-    oc_vms.remove(2).await?;
-
-    // Cache<_>
-    let cs = trx.cs();
-    let _ = cs.get(&0).is_none();
-
-    let mut cs = trx.cs_mut();
-    let _ = cs.get(&0).is_none();
-    cs.insert(1, C::default()).await?;
-    cs.remove(2).await?;
-
-    // Version<Cache<_>>
-    let v_cs = trx.v_cs();
-    let _ = v_cs.get(&0).is_none();
-
-    let mut v_cs = trx.v_cs_mut();
-    let _ = v_cs.get(&0).is_none();
-    v_cs.insert(1, VC::default()).await?;
-    v_cs.remove(2).await?;
-
-    // tests that all traits are correctly propagating.
-    async fn actions_mut<T, E>(mut t: T) -> Result<()>
-    where
-        E: Default + Entity<Key = usize>,
-        T: Get<E> + Insert<E> + Remove<E>,
-    {
-        let _ = t.get(&0).is_none();
-        t.insert(1, E::default()).await?;
-        t.remove(2).await?;
-        Ok(())
-    }
-
-    actions_mut(trx.oc_vms_mut().await?).await?;
-    actions_mut(trx.cs_mut()).await?;
-    actions_mut(trx.v_cs_mut()).await?;
+    let mut entity2s = trx.tbl_of::<Entity2>().await?;
+    let _ = entity2s.get(&0).is_none();
+    entity2s.insert(1, Entity2::default()).await?;
+    entity2s.remove(2).await?;
 
     Ok(())
 }
 
-#[derive(Ctx, Default)]
-struct Ctx {
-    oc_vms: AsyncOnceCell<VecTable<OcVm>>,
-    cs: Cache<usize, C>,
-    v_cs: Version<Cache<usize, VC>>,
-}
-
 macro_rules! entity {
     ($n:ident) => {
-        #[derive(Default, NoopDelete, NoopLoad, NoopSave)]
+        #[derive(Ctx, Default, NoopDelete, NoopLoad, NoopSave)]
         struct $n {
             pub name: String,
         }
@@ -130,6 +73,5 @@ macro_rules! entity {
     };
 }
 
-entity!(OcVm);
-entity!(C);
-entity!(VC);
+entity!(Entity1);
+entity!(Entity2);

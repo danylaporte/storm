@@ -1,19 +1,16 @@
-use crate::{Entity, Result};
-use async_trait::async_trait;
+use crate::{BoxFuture, Entity, Result};
 
-#[async_trait]
-pub trait Upsert<E: Entity> {
-    async fn upsert(&self, k: &E::Key, v: &E) -> Result<()>;
+pub trait Upsert<E: Entity>: Send + Sync {
+    fn upsert<'a>(&'a self, k: &'a E::Key, v: &'a E) -> BoxFuture<'a, Result<()>>;
 }
 
-#[async_trait]
 impl<E, T> Upsert<E> for &T
 where
     E: Entity + Sync,
     E::Key: Sync,
     T: Upsert<E> + Send + Sync,
 {
-    async fn upsert(&self, k: &E::Key, v: &E) -> Result<()> {
-        (**self).upsert(k, v).await
+    fn upsert<'a>(&'a self, k: &'a E::Key, v: &'a E) -> BoxFuture<'a, Result<()>> {
+        (**self).upsert(k, v)
     }
 }

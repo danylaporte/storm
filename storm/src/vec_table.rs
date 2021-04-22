@@ -1,21 +1,21 @@
 use crate::{
-    provider::LoadAll, state::State, version::version, ApplyLog, Entity, Get, GetMut, GetVersion,
-    GetVersionOpt, Init, Log, MapTransaction, Result, Transaction,
+    provider::LoadAll, state::State, Accessor, ApplyLog, BoxFuture, Deps, Entity, EntityAccessor,
+    Get, GetMut, Init, Log, Result, Tag, TblVar,
 };
-use async_trait::async_trait;
 use std::ops::Deref;
 use vec_map::{Iter, Keys, Values, VecMap};
+use version_tag::VersionTag;
 
 pub struct VecTable<E: Entity> {
     map: VecMap<E::Key, E>,
-    version: u64,
+    tag: VersionTag,
 }
 
 impl<E: Entity> VecTable<E> {
     pub fn new() -> Self {
         Self {
             map: VecMap::new(),
-            version: version(),
+            tag: VersionTag::new(),
         }
     }
 
@@ -35,15 +35,29 @@ impl<E: Entity> VecTable<E> {
     }
 }
 
-impl<E: Entity> ApplyLog for VecTable<E>
+impl<E> Accessor for VecTable<E>
 where
+    E: Entity + EntityAccessor<Coll = VecTable<E>>,
+{
+    #[inline]
+    fn var() -> &'static TblVar<Self> {
+        E::entity_var()
+    }
+
+    #[inline]
+    fn deps() -> &'static Deps {
+        E::entity_deps()
+    }
+}
+
+impl<E> ApplyLog<Log<E>> for VecTable<E>
+where
+    E: Entity,
     E::Key: Clone + Into<usize>,
 {
-    type Log = Log<E>;
-
-    fn apply_log(&mut self, log: Self::Log) {
-        if log.is_empty() {
-            self.version = version();
+    fn apply_log(&mut self, log: Log<E>) {
+        if !log.is_empty() {
+            self.tag.notify()
         }
 
         for (k, state) in log {
@@ -116,30 +130,15 @@ where
     }
 }
 
-impl<E: Entity> GetVersion for VecTable<E> {
-    #[inline]
-    fn get_version(&self) -> u64 {
-        self.version
-    }
-}
-
-impl<E: Entity> GetVersionOpt for VecTable<E> {
-    #[inline]
-    fn get_version_opt(&self) -> Option<u64> {
-        Some(self.version)
-    }
-}
-
-#[async_trait]
-impl<P, E> Init<P> for VecTable<E>
+impl<'a, P, E> Init<'a, P> for VecTable<E>
 where
     E: Entity + Send,
     E::Key: Into<usize> + Send,
     P: Sync + LoadAll<E, (), Self>,
 {
     #[inline]
-    async fn init(provider: &P) -> Result<Self> {
-        provider.load_all(&()).await
+    fn init(provider: &'a P) -> BoxFuture<'a, Result<Self>> {
+        provider.load_all(&())
     }
 }
 
@@ -156,14 +155,8 @@ where
     }
 }
 
-impl<'a, E: Entity> Transaction<'a> for VecTable<E>
-where
-    E: 'a,
-{
-    type Transaction = MapTransaction<E, &'a Self>;
-
-    #[inline]
-    fn transaction(&'a self) -> Self::Transaction {
-        MapTransaction::new(self)
+impl<E: Entity> Tag for VecTable<E> {
+    fn tag(&self) -> VersionTag {
+        self.tag
     }
 }

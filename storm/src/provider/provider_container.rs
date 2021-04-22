@@ -1,7 +1,6 @@
 use super::{Provider, ProviderFactory, TransactionProvider};
-use crate::{Error, Result};
+use crate::{BoxFuture, Error, Result};
 use async_cell_lock::AsyncOnceCell;
-use async_trait::async_trait;
 use once_cell::sync::OnceCell;
 use std::{
     any::{Any, TypeId},
@@ -13,9 +12,8 @@ use std::{
 type LRU = AtomicU64;
 
 /// A trait that wrap the ProviderFactory to be able to use it in a Box<Any> trait object context.
-#[async_trait]
 trait AnyFactory: Send + Sync + 'static {
-    async fn create(&self) -> Result<Box<dyn Any + Send + Sync>>;
+    fn create<'a>(&'a self) -> BoxFuture<'a, Result<Box<dyn Any + Send + Sync>>>;
 }
 
 /// Wrap a ProviderFactory trait to be able to use it in a Box<Any> trait object context.
@@ -34,14 +32,13 @@ impl<F, P> Factory<F, P> {
     }
 }
 
-#[async_trait]
 impl<F, P> AnyFactory for Factory<F, P>
 where
     F: ProviderFactory<Provider = P>,
     P: Provider,
 {
-    async fn create(&self) -> Result<Box<dyn Any + Send + Sync>> {
-        Ok(Box::new(self.factory.create_provider().await?))
+    fn create<'a>(&'a self) -> BoxFuture<'a, Result<Box<dyn Any + Send + Sync + 'static>>> {
+        Box::pin(async move { Ok(Box::new(self.factory.create_provider().await?) as _) })
     }
 }
 

@@ -29,18 +29,19 @@ pub(crate) fn delete(input: &DeriveInput) -> TokenStream {
     let (metrics_start, metrics_end) = metrics(&ident, "delete");
 
     quote! {
-        #[storm::async_trait::async_trait]
-        impl<'a> storm::provider::Delete<#ident> for storm::provider::TransactionProvider<'a> {
-            async fn delete(&self, k: &<#ident as storm::Entity>::Key) -> storm::Result<()> {
-                let provider: &storm_mssql::MssqlProvider = self.container().provide(#provider).await?;
+        impl storm::provider::Delete<#ident> for storm::provider::TransactionProvider<'_> {
+            fn delete<'a>(&'a self, k: &'a <#ident as storm::Entity>::Key) -> storm::BoxFuture<'a, storm::Result<()>> {
+                Box::pin(async move {
+                    let provider: &storm_mssql::MssqlProvider = self.container().provide(#provider).await?;
 
-                #metrics_start
+                    #metrics_start
 
-                #normal
-                #translate
+                    #normal
+                    #translate
 
-                #metrics_end
-                Ok(())
+                    #metrics_end
+                    Ok(())
+                })
             }
         }
     }
@@ -94,29 +95,31 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let (metrics_start, metrics_end) = metrics(&ident, "load");
 
     quote! {
-        #[storm::async_trait::async_trait]
         impl<C, FILTER> storm::provider::LoadAll<#ident, FILTER, C> for storm::provider::ProviderContainer
         where
             C: Default + Extend<(<#ident as storm::Entity>::Key, #ident)> #translated_where + Send + 'static,
             FILTER: storm_mssql::FilterSql,
         {
-            async fn load_all(&self, filter: &FILTER) -> storm::Result<C> {
-                let provider: &storm_mssql::MssqlProvider = self.provide(#provider).await?;
-                let (sql, params) = storm_mssql::FilterSql::filter_sql(filter, 0);
-                #metrics_start
-                #load
-                #translated
-                #metrics_end
-                Ok(map)
+            fn load_all<'a>(&'a self, filter: &'a FILTER) -> storm::BoxFuture<'a, storm::Result<C>> {
+                Box::pin(async move {
+                    let provider: &storm_mssql::MssqlProvider = self.provide(#provider).await?;
+                    let (sql, params) = storm_mssql::FilterSql::filter_sql(filter, 0);
+                    #metrics_start
+                    #load
+                    #translated
+                    #metrics_end
+                    Ok(map)
+                })
             }
         }
 
-        #[storm::async_trait::async_trait]
         impl storm::provider::LoadOne<#ident> for storm::provider::ProviderContainer {
-            async fn load_one(&self, k: &<#ident as Entity>::Key) -> storm::Result<Option<#ident>> {
-                let filter = #filter_sql;
-                let v: storm::provider::LoadOneInternal<#ident> = storm::provider::LoadAll::load_all(self, &filter).await?;
-                Ok(v.into_inner())
+            fn load_one<'a>(&'a self, k: &'a <#ident as Entity>::Key) -> storm::BoxFuture<'a, storm::Result<Option<#ident>>> {
+                Box::pin(async move {
+                    let filter = #filter_sql;
+                    let v: storm::provider::LoadOneInternal<#ident> = storm::provider::LoadAll::load_all(self, &filter).await?;
+                    Ok(v.into_inner())
+                })
             }
         }
 
@@ -208,24 +211,25 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let (metrics_start, metrics_end) = metrics(&ident, "upsert");
 
     quote! {
-        #[storm::async_trait::async_trait]
-        impl<'a> storm::provider::Upsert<#ident> for storm::provider::TransactionProvider<'a> {
-            async fn upsert(&self, k: &<#ident as storm::Entity>::Key, v: &#ident) -> storm::Result<()> {
-                let provider: &storm_mssql::MssqlProvider = self.container().provide(#provider).await?;
-                let mut builder = storm_mssql::UpsertBuilder::new(#table);
+        impl storm::provider::Upsert<#ident> for storm::provider::TransactionProvider<'_> {
+            fn upsert<'a>(&'a self, k: &'a <#ident as storm::Entity>::Key, v: &'a #ident) -> storm::BoxFuture<'a, storm::Result<()>> {
+                Box::pin(async move {
+                    let provider: &storm_mssql::MssqlProvider = self.container().provide(#provider).await?;
+                    let mut builder = storm_mssql::UpsertBuilder::new(#table);
 
-                #metrics_start
+                    #metrics_start
 
-                storm_mssql::SaveEntityPart::save_entity_part(v, k, &mut builder);
+                    storm_mssql::SaveEntityPart::save_entity_part(v, k, &mut builder);
 
-                #wheres
+                    #wheres
 
-                builder.execute(provider).await?;
+                    builder.execute(provider).await?;
 
-                #translated
+                    #translated
 
-                #metrics_end
-                Ok(())
+                    #metrics_end
+                    Ok(())
+                })
             }
         }
 

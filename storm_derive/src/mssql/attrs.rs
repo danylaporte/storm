@@ -81,6 +81,10 @@ pub(super) struct TypeAttrs {
 
     #[darling(default)]
     pub where_clause: String,
+
+    /// used by the ctx macro.
+    #[darling(default)]
+    collection: String,
 }
 
 impl TypeAttrs {

@@ -1,11 +1,13 @@
 use crate::ToSql;
-use async_trait::async_trait;
 use std::{borrow::Cow, fmt::Debug};
-use storm::Result;
+use storm::{BoxFuture, Result};
 
-#[async_trait]
 pub trait Execute {
-    async fn execute<'a, S>(&self, statement: S, params: &[&(dyn ToSql)]) -> Result<u64>
+    fn execute<'a, S>(
+        &'a self,
+        statement: S,
+        params: &'a [&'a (dyn ToSql)],
+    ) -> BoxFuture<'a, Result<u64>>
     where
-        S: ?Sized + Debug + Into<Cow<'a, str>> + Send;
+        S: ?Sized + Debug + Into<Cow<'a, str>> + Send + 'a;
 }

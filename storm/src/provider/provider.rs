@@ -1,9 +1,7 @@
-use crate::Result;
-use async_trait::async_trait;
+use crate::{BoxFuture, Result};
 use std::any::Any;
 
-#[async_trait]
 pub trait Provider: Any + Send + Sync {
     fn cancel(&self);
-    async fn commit(&self) -> Result<()>;
+    fn commit<'a>(&'a self) -> BoxFuture<'a, Result<()>>;
 }

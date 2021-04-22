@@ -3,7 +3,6 @@ extern crate proc_macro;
 #[macro_use]
 mod macros;
 
-//mod attrs_ext;
 mod ctx;
 mod derive_input_ext;
 #[cfg(any(feature = "postgres", feature = "mssql"))]

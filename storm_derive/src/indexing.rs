@@ -16,6 +16,9 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
     let name = &f.sig.ident;
     let index_name = Ident::new(&name.to_string().to_pascal_case(), name.span());
 
+    let screaming_snake = name.to_string().to_screaming_snake_case();
+    let static_var = Ident::new(&format!("{}_VAR", screaming_snake), name.span());
+
     let ty = match &f.sig.output {
         ReturnType::Type(_, t) => t,
         ReturnType::Default => {
@@ -42,100 +45,95 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         .fold(None, |acc, v| {
             Some(match acc {
                 Some(acc) => quote!(#acc + #v),
-                None => quote!(where C: #v),
+                None => quote!(where Self: #v),
             })
-        });
-
-    let as_ref_opt_wheres_for_ctx = args
-        .iter()
-        .map(|a| unref(&a.ty))
-        .map(|t| quote!(storm::AsRefOpt<#t>))
-        .fold(None, |acc, v| {
-            Some(match acc {
-                Some(acc) => quote!(#acc + #v),
-                None => quote!(where C: #v),
-            })
-        });
+        })
+        .ts();
 
     let as_ref_async_wheres = args
         .iter()
         .map(|a| unref(&a.ty))
-        .map(|t| quote!(+ for<'v> storm::AsRefAsync<'v, #t>))
-        .ts();
-
-    let as_refs = args
-        .iter()
-        .map(|_| quote!(storm::GetVersion::max(ctx.as_ref(), &mut version),))
-        .ts();
-
-    let as_ref_asyncs = args
-        .iter()
-        .map(|_| {
-            quote!(storm::GetVersion::max(
-                storm::AsRefAsync::as_ref_async(ctx).await?,
-                &mut version
-            ),)
+        .map(|t| quote!(storm::AsRefAsync<#t>))
+        .fold(None, |acc, v| {
+            Some(match acc {
+                Some(acc) => quote!(#acc + #v),
+                None => quote!(where Ctx: #v),
+            })
         })
         .ts();
 
-    let is_version_obsolete = args
+    let as_refs = args.iter().map(|_| quote!(self.as_ref(),)).ts();
+
+    let mut as_ref_decl = Vec::new();
+    let mut as_ref_args = Vec::new();
+
+    for (index, arg) in args.iter().enumerate() {
+        let ident = Ident::new(&format!("var{}", index), arg.span());
+        as_ref_decl.push(quote!(let #ident = self.as_ref_async().await?;));
+        as_ref_args.push(ident);
+    }
+
+    let as_ref_decl = quote!(#(#as_ref_decl)*);
+    let as_ref_args = quote!(#(#as_ref_args,)*);
+
+    let deps = args
         .iter()
         .map(|t| unref(&t.ty))
-        .map(|t| quote!(storm::GetVersionOpt::get_version_opt(&storm::AsRefOpt::<#t>::as_ref_opt(ctx)).unwrap_or(0)))
-        .fold(None, |acc, v| {
-            Some(match acc {
-                Some(acc) => quote!(std::cmp::max(#acc, #v)),
-                None => v,
-            })
-        });
+        .map(|t| quote!(<#t as storm::Accessor>::register_deps(<#index_name as storm::Accessor>::clear);));
+
+    let deps = quote!(#(#deps)*);
 
     quote! {
-        #vis struct #index_name(#ty, u64);
+        #[static_init::dynamic]
+        static #static_var: (storm::TblVar<#index_name>, storm::Deps) = {
+            #deps
+            Default::default()
+        };
 
-        impl #index_name {
-            pub fn is_version_obsolete<C>(&self, ctx: &C) -> bool
-            #as_ref_opt_wheres_for_ctx
-            {
-                self.1 != #is_version_obsolete
+        #vis struct #index_name(#ty);
+
+        impl storm::Accessor for #index_name {
+            #[inline]
+            fn var() -> &'static storm::TblVar<Self> {
+                &#static_var.0
+            }
+
+            #[inline]
+            fn deps() -> &'static storm::Deps {
+                &#static_var.1
             }
         }
 
         impl std::ops::Deref for #index_name {
             type Target = #ty;
 
+            #[inline]
             fn deref(&self) -> &Self::Target {
                 &self.0
             }
         }
 
-        impl<C> storm::GetOrLoad<#index_name, C> for storm::AsyncOnceCell<#index_name> #as_ref_wheres
-        {
-            fn get_or_load(&self, ctx: &C) -> &#index_name {
-                let mut version = 0;
-                self.get_or_init_sync(|| #index_name(#name(#as_refs), version))
+        impl<'a, L> AsRef<#index_name> for storm::CtxLocks<'a, L> #as_ref_wheres {
+            fn as_ref(&self) -> &#index_name {
+                let ctx = &self.ctx.var_ctx();
+                <#index_name as storm::Accessor>::var().get_or_init(ctx, move || #index_name(#name(#as_refs)))
             }
         }
 
-        #[storm::async_trait::async_trait]
-        impl<C> storm::Init<C> for #index_name
-        where
-            C: Send + Sync #as_ref_async_wheres
-        {
-            async fn init(ctx: &C) -> storm::Result<#index_name> {
-                let mut version = 0;
-                Ok(#index_name(#name(#as_ref_asyncs), version))
-            }
-        }
+        impl storm::AsRefAsync<#index_name> for Ctx #as_ref_async_wheres {
+            fn as_ref_async(&self) -> storm::BoxFuture<'_, Result<&'_ #index_name>> {
+                let var = <#index_name as storm::Accessor>::var();
 
-        impl storm::GetVersion for #index_name {
-            fn get_version(&self) -> u64 {
-                self.1
-            }
-        }
+                Box::pin(async move {
+                    let ctx = self.var_ctx();
 
-        impl storm::GetVersionOpt for #index_name {
-            fn get_version_opt(&self) -> Option<u64> {
-                Some(self.1)
+                    if let Some(v) = var.get(ctx) {
+                        return Ok(v);
+                    }
+
+                    #as_ref_decl
+                    Ok(var.get_or_init(ctx, || #index_name(#name(#as_ref_args))))
+                })
             }
         }
 

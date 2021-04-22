@@ -1,5 +1,4 @@
 use crate::{Client, ClientFactory, Execute, Parameter, QueryRows, ToSql};
-use async_trait::async_trait;
 use futures_util::TryStreamExt;
 use std::{
     borrow::Cow,
@@ -7,7 +6,7 @@ use std::{
     mem::replace,
     sync::atomic::{AtomicBool, Ordering::Relaxed},
 };
-use storm::{provider, Error, Result};
+use storm::{provider, BoxFuture, Error, Result};
 use tiberius::Row;
 use tokio::sync::{Mutex, MutexGuard};
 use tracing::instrument;
@@ -51,30 +50,35 @@ impl MssqlProvider {
     }
 }
 
-#[async_trait]
 impl Execute for MssqlProvider {
     #[instrument(name = "MssqlProvider::execute", skip(self, params), err)]
-    async fn execute<'a, S>(&self, statement: S, params: &[&(dyn ToSql)]) -> Result<u64>
+    fn execute<'a, S>(
+        &'a self,
+        statement: S,
+        params: &'a [&'a (dyn ToSql)],
+    ) -> BoxFuture<'a, Result<u64>>
     where
-        S: ?Sized + Debug + Into<Cow<'a, str>> + Send,
+        S: ?Sized + Debug + Into<Cow<'a, str>> + Send + 'a,
     {
-        let (mut guard, mut state) = self.client().await?;
-        let mut intermediate = Vec::new();
-        let mut output = Vec::new();
+        Box::pin(async move {
+            let (mut guard, mut state) = self.client().await?;
+            let mut intermediate = Vec::new();
+            let mut output = Vec::new();
 
-        adapt_params(params, &mut intermediate, &mut output);
+            adapt_params(params, &mut intermediate, &mut output);
 
-        state.transaction().await?;
+            state.transaction().await?;
 
-        let count = state
-            .client
-            .execute(statement, &output)
-            .await
-            .map_err(Error::std)?
-            .total();
+            let count = state
+                .client
+                .execute(statement, &output)
+                .await
+                .map_err(Error::std)?
+                .total();
 
-        *guard = Some(state);
-        Ok(count)
+            *guard = Some(state);
+            Ok(count)
+        })
     }
 }
 
@@ -88,71 +92,74 @@ impl From<Box<dyn ClientFactory>> for MssqlProvider {
     }
 }
 
-#[async_trait]
 impl provider::Provider for MssqlProvider {
     fn cancel(&self) {
         self.cancel_transaction.store(true, Relaxed);
     }
 
-    async fn commit(&self) -> Result<()> {
-        let mut guard = self.state().await?;
+    fn commit<'a>(&'a self) -> BoxFuture<'a, Result<()>> {
+        Box::pin(async move {
+            let mut guard = self.state().await?;
 
-        if let Some(mut state) = guard.take() {
-            state.commit().await?;
-            *guard = Some(state);
-        }
+            if let Some(mut state) = guard.take() {
+                state.commit().await?;
+                *guard = Some(state);
+            }
 
-        Ok(())
+            Ok(())
+        })
     }
 }
 
-#[async_trait]
 impl QueryRows for MssqlProvider {
     #[instrument(name = "MssqlProvider::query_rows", skip(self, mapper, params), err)]
-    async fn query_rows<S, M, R, C>(
-        &self,
+    fn query_rows<'a, S, M, R, C>(
+        &'a self,
         statement: S,
-        params: &[&(dyn ToSql)],
+        params: &'a [&'a (dyn ToSql)],
         mut mapper: M,
-    ) -> Result<C>
+    ) -> BoxFuture<'a, Result<C>>
     where
         C: Default + Extend<R> + Send,
-        M: FnMut(Row) -> Result<R> + Send,
+        M: FnMut(Row) -> Result<R> + Send + 'a,
         R: Send,
-        S: ?Sized + Debug + for<'a> Into<Cow<'a, str>> + Send,
+        S: ?Sized + Debug + for<'b> Into<Cow<'b, str>> + Send + 'a,
     {
-        let (mut guard, mut state) = self.client().await?;
-        let mut intermediate = Vec::new();
-        let mut output = Vec::new();
+        Box::pin(async move {
+            let mut intermediate = Vec::new();
+            let mut output = Vec::new();
 
-        adapt_params(params, &mut intermediate, &mut output);
+            adapt_params(params, &mut intermediate, &mut output);
 
-        let mut results = state
-            .client
-            .query(statement, &output)
-            .await
-            .map_err(Error::std)?;
+            let (mut guard, mut state) = self.client().await?;
 
-        let mut coll = C::default();
-        let mut vec = Vec::with_capacity(10);
+            let mut results = state
+                .client
+                .query(statement, &output)
+                .await
+                .map_err(Error::std)?;
 
-        while let Some(row) = results.try_next().await.map_err(Error::std)? {
-            vec.push(mapper(row)?);
+            let mut coll = C::default();
+            let mut vec = Vec::with_capacity(10);
 
-            if vec.len() == 10 {
-                coll.extend(vec.drain(..));
+            while let Some(row) = results.try_next().await.map_err(Error::std)? {
+                vec.push(mapper(row)?);
+
+                if vec.len() == 10 {
+                    coll.extend(vec.drain(..));
+                }
             }
-        }
 
-        if !vec.is_empty() {
-            coll.extend(vec);
-        }
+            if !vec.is_empty() {
+                coll.extend(vec);
+            }
 
-        // complete the work (making sure the client can take another query).
-        results.into_results().await.map_err(Error::std)?;
+            // complete the work (making sure the client can take another query).
+            results.into_results().await.map_err(Error::std)?;
 
-        *guard = Some(state);
-        Ok(coll)
+            *guard = Some(state);
+            Ok(coll)
+        })
     }
 }
 

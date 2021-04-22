@@ -1,29 +1,18 @@
-use cache::Cache;
-use storm::{
-    prelude::*, AsyncOnceCell, Connected, Ctx, Entity, NoopDelete, NoopLoad, NoopSave, QueueRwLock,
-    Result,
-};
+use storm::{prelude::*, NoopDelete, NoopLoad, NoopSave, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let lock = QueueRwLock::new(Connected {
-        ctx: Ctx::default(),
-        provider: Default::default(),
-    });
+    let lock = QueueRwLock::new(Ctx::default());
 
-    let ctx_provider = lock.read().await;
+    let ctx = lock.read().await;
+    let _topics = ctx.tbl_of::<Topic>().await?;
+    let _users = ctx.tbl_of::<User>().await?;
 
-    let _topic = ctx_provider.topic();
-    let _users = ctx_provider.users().await?;
+    let ctx = ctx.queue().await;
+    let mut trx = ctx.transaction();
+    let mut users = trx.tbl_of::<User>().await?;
 
-    let ctx_provider = ctx_provider.queue().await;
-
-    let mut trx = ctx_provider.transaction();
-
-    let _users = trx.users().await?;
-    let mut users_mut = trx.users_mut().await?;
-
-    users_mut
+    users
         .insert(
             1,
             User {
@@ -32,27 +21,27 @@ async fn main() -> Result<()> {
         )
         .await?;
 
-    users_mut.remove(1).await?;
+    users.remove(1).await?;
 
-    let _topic = trx.topic();
-    let _topic_mut = trx.topic_mut();
-
+    let _topic = trx.tbl_of::<Topic>().await?;
     let log = trx.commit().await?;
 
-    let mut ctx_provider = ctx_provider.write().await;
-
-    ctx_provider.apply_log(log);
+    let mut ctx = ctx.write().await;
+    ctx.apply_log(log);
 
     Ok(())
 }
 
-#[derive(Ctx, Default)]
-struct Ctx {
-    topic: Cache<usize, User>,
-    users: AsyncOnceCell<VecTable<User>>,
+#[derive(NoopDelete, NoopLoad, NoopSave, Ctx)]
+struct Topic {
+    pub title: String,
 }
 
-#[derive(NoopDelete, NoopLoad, NoopSave)]
+impl Entity for Topic {
+    type Key = usize;
+}
+
+#[derive(NoopDelete, NoopLoad, NoopSave, Ctx)]
 struct User {
     pub name: String,
 }

@@ -1,4 +1,4 @@
 pub use crate::{
-    ApplyLog, AsyncOnceCell, Commit, Connected, Entity, Get, HashTable, Insert, OnceCell,
-    ProviderContainer, QueueRwLock, Remove, Transaction, VecTable, Version,
+    indexing, ApplyLog, AsyncOnceCell, Ctx, Entity, Get, HashTable, Insert, OnceCell,
+    ProviderContainer, QueueRwLock, Remove, Tag, Transaction, VecTable,
 };

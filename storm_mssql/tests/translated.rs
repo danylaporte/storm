@@ -1,16 +1,10 @@
 use std::{borrow::Cow, ops::Index};
-use storm::{
-    prelude::*, provider::ProviderContainer, AsyncOnceCell, Connected, Ctx, Entity, Error,
-    MssqlLoad, MssqlSave, QueueRwLock, Result,
-};
+use storm::{prelude::*, Error, MssqlLoad, MssqlSave, Result};
 use storm_mssql::{Execute, FromSql, MssqlFactory, MssqlProvider, ToSql, ToSqlNull};
 use tiberius::{AuthMethod, Config};
 
-fn create_ctx() -> QueueRwLock<Connected<Ctx>> {
-    QueueRwLock::new(Connected {
-        ctx: Ctx::default(),
-        provider: provider(),
-    })
+fn create_ctx() -> QueueRwLock<Ctx> {
+    QueueRwLock::new(provider().into())
 }
 fn provider() -> ProviderContainer {
     let mut config = Config::default();
@@ -30,7 +24,7 @@ async fn translated_flow() -> storm::Result<()> {
     let ctx = create_ctx();
     let ctx = ctx.read().await;
 
-    let provider = ctx.provider.provide::<MssqlProvider>("").await?;
+    let provider = ctx.provider().provide::<MssqlProvider>("").await?;
 
     provider
         .execute("CREATE TABLE ##Labels (Id Int PRIMARY KEY NOT NULL);", &[])
@@ -43,10 +37,9 @@ async fn translated_flow() -> storm::Result<()> {
     .await?;
 
     let ctx = ctx.queue().await;
-
     let mut trx = ctx.transaction();
 
-    let mut labels = trx.labels_mut().await?;
+    let mut labels = trx.tbl_of::<Label>().await?;
     let id = LabelId(2);
 
     labels
@@ -68,21 +61,13 @@ async fn translated_flow() -> storm::Result<()> {
     ctx.apply_log(log);
 
     let ctx = ctx.read().await;
+    let v = ctx.tbl_of::<Label>().await?.get(&id);
 
-    let v = ctx.labels().await?.get(&id);
     println!("{:?}", v);
-
-    //let _labels = ctx.labels().await?;
-
     Ok(())
 }
 
-#[derive(Ctx, Default)]
-struct Ctx {
-    labels: AsyncOnceCell<VecTable<Label>>,
-}
-
-#[derive(Clone, Debug, MssqlLoad, MssqlSave)]
+#[derive(Clone, Ctx, Debug, MssqlLoad, MssqlSave)]
 #[storm(
     table = "##Labels",
     keys = "Id",

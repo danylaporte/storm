@@ -1,25 +1,25 @@
 use crate::{
-    provider::LoadAll, state::State, version::version, ApplyLog, Entity, Get, GetMut, GetVersion,
-    GetVersionOpt, Init, Log, MapTransaction, Result, Transaction,
+    provider::LoadAll, state::State, Accessor, ApplyLog, BoxFuture, Deps, Entity, EntityAccessor,
+    Get, GetMut, Init, Log, Result, Tag, TblVar,
 };
-use async_trait::async_trait;
 use fxhash::FxHashMap;
 use std::{
     collections::hash_map::{Iter, Keys, Values},
     hash::Hash,
     ops::Deref,
 };
+use version_tag::VersionTag;
 
 pub struct HashTable<E: Entity> {
     map: FxHashMap<E::Key, E>,
-    version: u64,
+    tag: VersionTag,
 }
 
 impl<E: Entity> HashTable<E> {
     pub fn new() -> Self {
         Self {
             map: FxHashMap::default(),
-            version: version(),
+            tag: VersionTag::new(),
         }
     }
 
@@ -39,15 +39,29 @@ impl<E: Entity> HashTable<E> {
     }
 }
 
-impl<E: Entity> ApplyLog for HashTable<E>
+impl<E> Accessor for HashTable<E>
 where
+    E: Entity + EntityAccessor<Coll = HashTable<E>>,
+{
+    #[inline]
+    fn var() -> &'static TblVar<Self> {
+        E::entity_var()
+    }
+
+    #[inline]
+    fn deps() -> &'static Deps {
+        E::entity_deps()
+    }
+}
+
+impl<E> ApplyLog<Log<E>> for HashTable<E>
+where
+    E: Entity,
     E::Key: Eq + Hash,
 {
-    type Log = Log<E>;
-
-    fn apply_log(&mut self, log: Self::Log) {
-        if log.is_empty() {
-            self.version = version();
+    fn apply_log(&mut self, log: Log<E>) {
+        if !log.is_empty() {
+            self.tag.notify();
         }
 
         for (k, state) in log {
@@ -120,30 +134,15 @@ where
     }
 }
 
-impl<E: Entity> GetVersion for HashTable<E> {
-    #[inline]
-    fn get_version(&self) -> u64 {
-        self.version
-    }
-}
-
-impl<E: Entity> GetVersionOpt for HashTable<E> {
-    #[inline]
-    fn get_version_opt(&self) -> Option<u64> {
-        Some(self.version)
-    }
-}
-
-#[async_trait]
-impl<P, E> Init<P> for HashTable<E>
+impl<'a, P, E> Init<'a, P> for HashTable<E>
 where
     E: Entity + Send,
     E::Key: Eq + Hash + Send,
     P: Sync + LoadAll<E, (), Self>,
 {
     #[inline]
-    async fn init(provider: &P) -> Result<Self> {
-        provider.load_all(&()).await
+    fn init(provider: &'a P) -> BoxFuture<'a, Result<Self>> {
+        provider.load_all(&())
     }
 }
 
@@ -157,14 +156,8 @@ impl<'a, E: Entity> IntoIterator for &'a HashTable<E> {
     }
 }
 
-impl<'a, E: Entity> Transaction<'a> for HashTable<E>
-where
-    E: 'a,
-{
-    type Transaction = MapTransaction<E, &'a Self>;
-
-    #[inline]
-    fn transaction(&'a self) -> Self::Transaction {
-        MapTransaction::new(self)
+impl<E: Entity> Tag for HashTable<E> {
+    fn tag(&self) -> VersionTag {
+        self.tag
     }
 }

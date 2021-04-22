@@ -1,7 +1,5 @@
-use crate::Result;
-use async_trait::async_trait;
+use crate::{BoxFuture, Result};
 
-#[async_trait]
-pub trait Init<P>: Sized {
-    async fn init(provider: &P) -> Result<Self>;
+pub trait Init<'a, P>: Sized + Send + Sync {
+    fn init(provider: &'a P) -> BoxFuture<'a, Result<Self>>;
 }

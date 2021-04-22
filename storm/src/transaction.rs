@@ -1,21 +1,6 @@
-use crate::{Entity, MapTransaction};
+use crate::CtxTransaction;
 
-pub trait Transaction<'a> {
-    type Transaction: Send;
-
+pub trait Transaction {
     #[must_use]
-    fn transaction(&'a self) -> Self::Transaction;
-}
-
-#[cfg(feature = "cache")]
-impl<'a, E: Entity, S> Transaction<'a> for cache::Cache<E::Key, E, S>
-where
-    E: 'a,
-    S: Sync + 'a,
-{
-    type Transaction = MapTransaction<E, &'a Self>;
-
-    fn transaction(&'a self) -> Self::Transaction {
-        MapTransaction::new(self)
-    }
+    fn transaction<'a>(&'a self) -> CtxTransaction<'a>;
 }

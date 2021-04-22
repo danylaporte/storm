@@ -1,41 +1,38 @@
 use crate::ToSql;
-use async_trait::async_trait;
 use std::{borrow::Cow, fmt::Debug};
-use storm::Result;
+use storm::{BoxFuture, Result};
 use tiberius::Row;
 
-#[async_trait]
 pub trait QueryRows {
-    async fn query_rows<S, M, R, C>(
-        &self,
+    fn query_rows<'a, S, M, R, C>(
+        &'a self,
         statement: S,
-        params: &[&(dyn ToSql)],
-        mut mapper: M,
-    ) -> Result<C>
+        params: &'a [&'a (dyn ToSql)],
+        mapper: M,
+    ) -> BoxFuture<'a, Result<C>>
     where
         C: Default + Extend<R> + Send,
-        M: FnMut(Row) -> Result<R> + Send,
+        M: FnMut(Row) -> Result<R> + Send + 'a,
         R: Send,
-        S: ?Sized + Debug + for<'a> Into<Cow<'a, str>> + Send;
+        S: ?Sized + Debug + for<'b> Into<Cow<'b, str>> + Send + 'a;
 }
 
-#[async_trait]
 impl<P> QueryRows for &P
 where
     P: QueryRows + Send + Sync,
 {
-    async fn query_rows<S, M, R, C>(
-        &self,
+    fn query_rows<'a, S, M, R, C>(
+        &'a self,
         statement: S,
-        params: &[&(dyn ToSql)],
+        params: &'a [&'a (dyn ToSql)],
         mapper: M,
-    ) -> Result<C>
+    ) -> BoxFuture<'a, Result<C>>
     where
         C: Default + Extend<R> + Send,
-        M: FnMut(Row) -> Result<R> + Send,
+        M: FnMut(Row) -> Result<R> + Send + 'a,
         R: Send,
-        S: ?Sized + Debug + for<'a> Into<Cow<'a, str>> + Send,
+        S: ?Sized + Debug + for<'b> Into<Cow<'b, str>> + Send + 'a,
     {
-        (**self).query_rows(statement, params, mapper).await
+        (**self).query_rows(statement, params, mapper)
     }
 }

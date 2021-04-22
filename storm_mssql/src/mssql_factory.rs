@@ -1,15 +1,13 @@
 use crate::MssqlProvider;
-use async_trait::async_trait;
-use storm::provider::ProviderFactory;
+use storm::{provider::ProviderFactory, BoxFuture, Result};
 use tiberius::Config;
 
 pub struct MssqlFactory(pub Config);
 
-#[async_trait]
 impl ProviderFactory for MssqlFactory {
     type Provider = MssqlProvider;
 
-    async fn create_provider(&self) -> storm::Result<Self::Provider> {
-        Ok(MssqlProvider::new(self.0.clone()))
+    fn create_provider<'a>(&'a self) -> BoxFuture<'a, Result<Self::Provider>> {
+        Box::pin(async move { Ok(MssqlProvider::new(self.0.clone())) })
     }
 }

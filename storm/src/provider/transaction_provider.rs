@@ -1,6 +1,5 @@
 use super::{LoadAll, ProviderContainer};
-use crate::{Entity, Result};
-use async_trait::async_trait;
+use crate::{BoxFuture, Entity, Result};
 use std::ops::Deref;
 
 pub struct TransactionProvider<'a>(pub(super) &'a ProviderContainer);
@@ -46,15 +45,14 @@ impl<'a> Drop for TransactionProvider<'a> {
     }
 }
 
-#[async_trait]
-impl<'a, C, E, FILTER> LoadAll<E, FILTER, C> for TransactionProvider<'a>
+impl<C, E, FILTER> LoadAll<E, FILTER, C> for TransactionProvider<'_>
 where
     C: Default + Extend<(E::Key, E)> + Send + 'static,
     E: Entity + 'static,
     FILTER: Send + Sync,
     ProviderContainer: LoadAll<E, FILTER, C>,
 {
-    async fn load_all(&self, filter: &FILTER) -> Result<C> {
-        self.0.load_all(filter).await
+    fn load_all<'a>(&'a self, filter: &'a FILTER) -> BoxFuture<'a, Result<C>> {
+        self.0.load_all(filter)
     }
 }

@@ -1,30 +1,18 @@
-use async_cell_lock::QueueRwLock;
-use storm::{indexing, prelude::*, AsyncOnceCell, Connected, Ctx, Entity, NoopLoad, Result};
+use storm::{prelude::*, NoopLoad, Result};
 
-fn create_ctx() -> QueueRwLock<Connected<Ctx>> {
-    QueueRwLock::new(Connected {
-        ctx: Ctx::default(),
-        provider: Default::default(),
-    })
+fn create_ctx() -> QueueRwLock<Ctx> {
+    QueueRwLock::new(Default::default())
 }
 
 #[tokio::test]
 async fn create_async() -> Result<()> {
     let ctx = create_ctx();
     let ctx = ctx.read().await;
-    let _id: &usize = ctx.next_id().await?;
+    let _id: &usize = ctx.ref_as::<NextId>().await?;
     Ok(())
 }
 
-#[derive(Ctx, Default)]
-struct Ctx {
-    tbl: AsyncOnceCell<VecTable<User>>,
-
-    #[storm(index = true)]
-    next_id: AsyncOnceCell<NextId>,
-}
-
-#[derive(Default, NoopLoad)]
+#[derive(Ctx, Default, NoopLoad)]
 struct User {
     pub name: String,
 }
@@ -34,11 +22,11 @@ impl Entity for User {
 }
 
 #[indexing]
-fn next_id(tbl: &Tbl) -> usize {
+fn next_id(tbl: &Users) -> usize {
     tbl.iter().map(|t| t.0).max().unwrap_or_default()
 }
 
 #[indexing]
-fn next_id2(_tbl: &Tbl, next_id: &NextId) -> usize {
+fn next_id2(_tbl: &Users, next_id: &NextId) -> usize {
     **next_id
 }

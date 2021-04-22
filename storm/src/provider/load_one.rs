@@ -1,12 +1,10 @@
-use crate::{Entity, Error, GetMut, Result};
-use async_trait::async_trait;
+use crate::{BoxFuture, Entity, Error, GetMut, Result};
 
-#[async_trait]
-pub trait LoadOne<E: Entity> {
-    async fn load_one(&self, k: &E::Key) -> Result<Option<E>>;
+pub trait LoadOne<E: Entity>: Send + Sync {
+    fn load_one<'a>(&'a self, k: &'a E::Key) -> BoxFuture<'a, Result<Option<E>>>;
 
-    async fn load_one_ok(&self, k: &E::Key) -> Result<E> {
-        self.load_one(k).await?.ok_or(Error::EntityNotFound)
+    fn load_one_ok<'a>(&'a self, k: &'a E::Key) -> BoxFuture<'a, Result<E>> {
+        Box::pin(async move { self.load_one(k).await?.ok_or(Error::EntityNotFound) })
     }
 }
 

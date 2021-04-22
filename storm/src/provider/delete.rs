@@ -1,19 +1,16 @@
-use crate::{Entity, Result};
-use async_trait::async_trait;
+use crate::{BoxFuture, Entity, Result};
 
-#[async_trait]
-pub trait Delete<E: Entity> {
-    async fn delete(&self, k: &E::Key) -> Result<()>;
+pub trait Delete<E: Entity>: Send + Sync {
+    fn delete<'a>(&'a self, k: &'a E::Key) -> BoxFuture<'a, Result<()>>;
 }
 
-#[async_trait]
-impl<'a, E, T> Delete<E> for &'a T
+impl<E, T> Delete<E> for &T
 where
-    E: Entity + 'a,
+    E: Entity,
     E::Key: Sync,
-    T: Delete<E> + Send + Sync,
+    T: Delete<E>,
 {
-    async fn delete(&self, k: &E::Key) -> Result<()> {
-        (**self).delete(k).await
+    fn delete<'a>(&'a self, k: &'a E::Key) -> BoxFuture<'a, Result<()>> {
+        (**self).delete(k)
     }
 }

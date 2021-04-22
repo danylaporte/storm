@@ -1,15 +1,11 @@
-use storm::{
-    prelude::*, provider::ProviderContainer, AsyncOnceCell, Connected, Ctx, Entity, MssqlDelete,
-    MssqlLoad, MssqlSave, QueueRwLock, Result,
-};
+use storm::{prelude::*, MssqlDelete, MssqlLoad, MssqlSave, Result};
 use storm_mssql::{Execute, MssqlFactory, MssqlProvider};
 use tiberius::{AuthMethod, Config};
-fn create_ctx() -> QueueRwLock<Connected<Ctx>> {
-    QueueRwLock::new(Connected {
-        ctx: Ctx::default(),
-        provider: provider(),
-    })
+
+fn create_ctx() -> QueueRwLock<Ctx> {
+    QueueRwLock::new(provider().into())
 }
+
 fn provider() -> ProviderContainer {
     let mut config = Config::default();
     config.database("master");
@@ -26,7 +22,7 @@ fn provider() -> ProviderContainer {
 async fn crud() -> Result<()> {
     let ctx = create_ctx();
     let ctx = ctx.read().await;
-    let provider = ctx.provider.provide::<MssqlProvider>("").await?;
+    let provider = ctx.provider().provide::<MssqlProvider>("").await?;
 
     provider
         .execute(
@@ -37,8 +33,7 @@ async fn crud() -> Result<()> {
 
     let ctx = ctx.queue().await;
     let mut trx = ctx.transaction();
-
-    let mut entities1 = trx.entities1_mut().await?;
+    let mut entities1 = trx.tbl_of::<Entity1>().await?;
 
     let e1 = Entity1 {
         name: "E1".to_string(),
@@ -71,7 +66,7 @@ async fn crud() -> Result<()> {
     ctx.apply_log(log);
 
     let ctx = ctx.read().await;
-    let entities1 = ctx.entities1().await?;
+    let entities1 = ctx.tbl_of::<Entity1>().await?;
 
     assert_eq!(
         entities1.get(&1).unwrap().clone(),
@@ -86,13 +81,8 @@ async fn crud() -> Result<()> {
     Ok(())
 }
 
-#[derive(Ctx, Default)]
-struct Ctx {
-    entities1: AsyncOnceCell<HashTable<Entity1>>,
-}
-
-#[derive(Clone, Debug, MssqlDelete, MssqlLoad, MssqlSave, PartialEq)]
-#[storm(table = "##Tbl", keys = "Id")]
+#[derive(Clone, Ctx, Debug, MssqlDelete, MssqlLoad, MssqlSave, PartialEq)]
+#[storm(table = "##Tbl", keys = "Id", collection = "hash_table")]
 struct Entity1 {
     name: String,
 
