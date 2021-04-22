@@ -1,4 +1,3 @@
-use crate::TokenStreamExt;
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -38,49 +37,41 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         };
     }
 
-    let as_ref_wheres = args
-        .iter()
-        .map(|a| unref(&a.ty))
-        .map(|t| quote!(AsRef<#t>))
-        .fold(None, |acc, v| {
-            Some(match acc {
-                Some(acc) => quote!(#acc + #v),
-                None => quote!(where Self: #v),
-            })
-        })
-        .ts();
-
-    let as_ref_async_wheres = args
-        .iter()
-        .map(|a| unref(&a.ty))
-        .map(|t| quote!(storm::AsRefAsync<#t>))
-        .fold(None, |acc, v| {
-            Some(match acc {
-                Some(acc) => quote!(#acc + #v),
-                None => quote!(where Ctx: #v),
-            })
-        })
-        .ts();
-
-    let as_refs = args.iter().map(|_| quote!(self.as_ref(),)).ts();
-
     let mut as_ref_decl = Vec::new();
+    let mut as_ref_decl_async = Vec::new();
     let mut as_ref_args = Vec::new();
+    let mut as_ref_tag = Vec::new();
+    let mut as_ref_async_wheres = quote!();
+    let mut as_ref_wheres = quote!();
+    let mut deps = Vec::new();
 
     for (index, arg) in args.iter().enumerate() {
+        let ty = unref(&arg.ty);
         let ident = Ident::new(&format!("var{}", index), arg.span());
-        as_ref_decl.push(quote!(let #ident = self.as_ref_async().await?;));
+
+        as_ref_decl.push(quote!(let #ident = self.as_ref();));
+        as_ref_decl_async.push(quote!(let #ident = self.as_ref_async().await?;));
+        as_ref_tag.push(quote!(#ident.tag()));
         as_ref_args.push(ident);
+        deps.push(quote!(<#ty as storm::Accessor>::register_deps(<#index_name as storm::Accessor>::clear);));
+
+        let ref_async = quote!(storm::AsRefAsync<#ty>);
+        let ref_sync = quote!(AsRef<#ty>);
+
+        if index == 0 {
+            as_ref_async_wheres = quote!(where Self: #ref_async);
+            as_ref_wheres = quote!(where Self: #ref_sync);
+        } else {
+            as_ref_async_wheres = quote!(#as_ref_async_wheres + #ref_async);
+            as_ref_wheres = quote!(#as_ref_wheres + #ref_sync);
+        };
     }
 
-    let as_ref_decl = quote!(#(#as_ref_decl)*);
     let as_ref_args = quote!(#(#as_ref_args,)*);
-
-    let deps = args
-        .iter()
-        .map(|t| unref(&t.ty))
-        .map(|t| quote!(<#t as storm::Accessor>::register_deps(<#index_name as storm::Accessor>::clear);));
-
+    let as_ref_decl = quote!(#(#as_ref_decl)*);
+    let as_ref_decl_async = quote!(#(#as_ref_decl_async)*);
+    let as_ref_tag = quote!(storm::version_tag::combine(&[#(#as_ref_tag,)*]));
+    let get_or_init = quote!(#index_name(#name(#as_ref_args), #as_ref_tag));
     let deps = quote!(#(#deps)*);
 
     quote! {
@@ -90,7 +81,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
             Default::default()
         };
 
-        #vis struct #index_name(#ty);
+        #vis struct #index_name(#ty, storm::VersionTag);
 
         impl storm::Accessor for #index_name {
             #[inline]
@@ -116,7 +107,8 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         impl<'a, L> AsRef<#index_name> for storm::CtxLocks<'a, L> #as_ref_wheres {
             fn as_ref(&self) -> &#index_name {
                 let ctx = &self.ctx.var_ctx();
-                <#index_name as storm::Accessor>::var().get_or_init(ctx, move || #index_name(#name(#as_refs)))
+                #as_ref_decl
+                <#index_name as storm::Accessor>::var().get_or_init(ctx, move || #get_or_init)
             }
         }
 
@@ -131,9 +123,16 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
                         return Ok(v);
                     }
 
-                    #as_ref_decl
-                    Ok(var.get_or_init(ctx, || #index_name(#name(#as_ref_args))))
+                    #as_ref_decl_async
+                    Ok(var.get_or_init(ctx, || #get_or_init))
                 })
+            }
+        }
+
+        impl storm::Tag for #index_name {
+            #[inline]
+            fn tag(&self) -> storm::VersionTag {
+                self.1
             }
         }
 
