@@ -2,7 +2,7 @@ use parking_lot::RwLock;
 use std::{hash::Hash, marker::PhantomData};
 
 use crate::{
-    provider::{Delete, LoadAll, TransactionProvider, Upsert},
+    provider::{Delete, LoadAll, LoadOne, TransactionProvider, Upsert},
     Accessor, ApplyLog, AsRefAsync, BoxFuture, Entity, EntityAccessor, Get, HashTable, Insert, Log,
     LogAccessor, LogCtx, ProviderContainer, Remove, Result, State, Transaction, VarCtx, VecTable,
 };
@@ -78,6 +78,30 @@ impl From<ProviderContainer> for Ctx {
     }
 }
 
+impl<E, F, C> LoadAll<E, F, C> for Ctx
+where
+    E: Entity,
+    C: Default + Extend<(E::Key, E)> + Send,
+    F: Send + Sync,
+    ProviderContainer: LoadAll<E, F, C>,
+{
+    #[inline]
+    fn load_all<'a>(&'a self, filter: &'a F) -> BoxFuture<'a, Result<C>> {
+        self.provider.load_all(filter)
+    }
+}
+
+impl<E: Entity> LoadOne<E> for Ctx
+where
+    E: Entity,
+    ProviderContainer: LoadOne<E>,
+{
+    #[inline]
+    fn load_one<'a>(&'a self, k: &'a E::Key) -> BoxFuture<'a, Result<Option<E>>> {
+        self.provider.load_one(k)
+    }
+}
+
 pub struct CtxLocks<'a, L> {
     pub ctx: &'a Ctx,
     pub locks: L,
@@ -117,6 +141,32 @@ where
     #[inline]
     fn as_ref(&self) -> &VecTable<E> {
         self.locks.as_ref()
+    }
+}
+
+impl<'a, E, F, C, L> LoadAll<E, F, C> for CtxLocks<'a, L>
+where
+    E: Entity,
+    C: Default + Extend<(E::Key, E)> + Send,
+    F: Send + Sync,
+    L: Send + Sync,
+    ProviderContainer: LoadAll<E, F, C>,
+{
+    #[inline]
+    fn load_all<'b>(&'b self, filter: &'b F) -> BoxFuture<'b, Result<C>> {
+        self.ctx.load_all(filter)
+    }
+}
+
+impl<'a, E, L> LoadOne<E> for CtxLocks<'a, L>
+where
+    E: Entity,
+    L: Send + Sync,
+    ProviderContainer: LoadOne<E>,
+{
+    #[inline]
+    fn load_one<'b>(&'b self, k: &'b E::Key) -> BoxFuture<'b, Result<Option<E>>> {
+        self.ctx.load_one(k)
     }
 }
 
