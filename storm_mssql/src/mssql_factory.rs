@@ -1,8 +1,20 @@
 use crate::MssqlProvider;
-use storm::{provider::ProviderFactory, BoxFuture, Result};
+use std::{env::var, ffi::OsStr};
+use storm::{provider::ProviderFactory, BoxFuture, Error, Result};
 use tiberius::Config;
 
 pub struct MssqlFactory(pub Config);
+
+impl MssqlFactory {
+    pub fn from_env<K>(var_name: K) -> Result<Self>
+    where
+        K: AsRef<OsStr>,
+    {
+        Ok(Self(Config::from_ado_string(
+            &var(var_name).map_err(Error::std)?,
+        )?))
+    }
+}
 
 impl ProviderFactory for MssqlFactory {
     type Provider = MssqlProvider;
