@@ -21,6 +21,13 @@ impl Ctx {
         }
     }
 
+    pub fn clear_tbl_of<E>(&mut self)
+    where
+        E: Entity + EntityAccessor,
+    {
+        self.var_ctx.clear(E::entity_var());
+    }
+
     #[inline]
     pub fn provider(&self) -> &ProviderContainer {
         &self.provider
