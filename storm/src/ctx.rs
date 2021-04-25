@@ -53,6 +53,14 @@ impl Ctx {
         self.as_ref_async()
     }
 
+    pub fn tbl_of_opt<E>(&self) -> Option<&E::Coll>
+    where
+        E: Entity + EntityAccessor,
+        E::Coll: Accessor,
+    {
+        self.var_ctx.get(<E::Coll as Accessor>::var())
+    }
+
     pub fn tbl_of_mut<E>(&mut self) -> Option<&mut E::Coll>
     where
         E: Entity + EntityAccessor,
