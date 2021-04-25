@@ -193,7 +193,7 @@ impl<'a> CtxTransaction<'a> {
         Ok(TblTransaction {
             coll: self.ctx.as_ref_async().await?,
             provider: &self.provider,
-            log: E::log_var().get_or_init_mut(&mut self.log_ctx, Default::default),
+            log: self.log_ctx.get_or_init_mut(E::log_var(), Default::default),
         })
     }
 }
@@ -315,13 +315,13 @@ where
 {
     let var = T::var();
 
-    if let Some(v) = var.get(ctx) {
+    if let Some(v) = ctx.get(var) {
         return Box::pin(async move { Result::Ok(v) });
     }
 
     Box::pin(async move {
         let v = provider.load_all(&()).await?;
-        Ok(var.get_or_init(ctx, || v))
+        Ok(ctx.get_or_init(var, || v))
     })
 }
 
@@ -335,8 +335,8 @@ where
     E::Coll: ApplyLog<Log<E>>,
 {
     fn apply(&self, var_ctx: &mut VarCtx, log_ctx: &mut LogCtx) {
-        if let Some(log) = E::log_var().take(log_ctx) {
-            if let Some(tbl) = E::entity_var().get_mut(var_ctx) {
+        if let Some(log) = log_ctx.replace(E::log_var(), None) {
+            if let Some(tbl) = var_ctx.get_mut(E::entity_var()) {
                 tbl.apply_log(log)
             }
         }

@@ -11,7 +11,7 @@ pub trait Accessor: Sized + 'static {
     fn deps() -> &'static Deps;
 
     fn clear(ctx: &mut VarCtx) {
-        Self::var().take(ctx);
+        ctx.clear(Self::var());
         Self::clear_deps(ctx);
     }
 

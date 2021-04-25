@@ -108,7 +108,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
             fn as_ref(&self) -> &#index_name {
                 let ctx = &self.ctx.var_ctx();
                 #as_ref_decl
-                <#index_name as storm::Accessor>::var().get_or_init(ctx, move || #get_or_init)
+                ctx.get_or_init(<#index_name as storm::Accessor>::var(), move || #get_or_init)
             }
         }
 
@@ -119,12 +119,12 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
                 Box::pin(async move {
                     let ctx = self.var_ctx();
 
-                    if let Some(v) = var.get(ctx) {
+                    if let Some(v) = ctx.get(var) {
                         return Ok(v);
                     }
 
                     #as_ref_decl_async
-                    Ok(var.get_or_init(ctx, || #get_or_init))
+                    Ok(ctx.get_or_init(var, || #get_or_init))
                 })
             }
         }
