@@ -1,6 +1,6 @@
 use crate::{
     provider::LoadAll, state::State, Accessor, ApplyLog, BoxFuture, Deps, Entity, EntityAccessor,
-    Get, GetMut, Init, Log, Result, Tag, TblVar,
+    Get, GetMut, Init, Log, NotifyTag, Result, Tag, TblVar,
 };
 use fxhash::FxHashMap;
 use std::{
@@ -56,12 +56,12 @@ where
 
 impl<E> ApplyLog<Log<E>> for HashTable<E>
 where
-    E: Entity,
+    E: Entity + EntityAccessor<Coll = Self>,
     E::Key: Eq + Hash,
 {
-    fn apply_log(&mut self, log: Log<E>) {
-        if !log.is_empty() {
-            self.tag.notify();
+    fn apply_log(&mut self, log: Log<E>) -> bool {
+        if log.is_empty() {
+            return false;
         }
 
         for (k, state) in log {
@@ -74,6 +74,9 @@ where
                 }
             }
         }
+
+        self.tag.notify();
+        true
     }
 }
 
@@ -153,6 +156,12 @@ impl<'a, E: Entity> IntoIterator for &'a HashTable<E> {
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.map.iter()
+    }
+}
+
+impl<E: Entity> NotifyTag for HashTable<E> {
+    fn notify_tag(&mut self) {
+        self.tag.notify()
     }
 }
 

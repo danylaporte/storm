@@ -9,3 +9,7 @@ impl<T: Tag> Tag for &T {
         (**self).tag()
     }
 }
+
+pub trait NotifyTag {
+    fn notify_tag(&mut self);
+}

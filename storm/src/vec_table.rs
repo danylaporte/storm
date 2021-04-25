@@ -1,6 +1,6 @@
 use crate::{
     provider::LoadAll, state::State, Accessor, ApplyLog, BoxFuture, Deps, Entity, EntityAccessor,
-    Get, GetMut, Init, Log, Result, Tag, TblVar,
+    Get, GetMut, Init, Log, NotifyTag, Result, Tag, TblVar,
 };
 use std::ops::Deref;
 use vec_map::{Iter, Keys, Values, VecMap};
@@ -55,9 +55,9 @@ where
     E: Entity,
     E::Key: Clone + Into<usize>,
 {
-    fn apply_log(&mut self, log: Log<E>) {
-        if !log.is_empty() {
-            self.tag.notify()
+    fn apply_log(&mut self, log: Log<E>) -> bool {
+        if log.is_empty() {
+            return false;
         }
 
         for (k, state) in log {
@@ -70,6 +70,9 @@ where
                 }
             }
         }
+
+        self.tag.notify();
+        true
     }
 }
 
@@ -152,6 +155,12 @@ where
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.map.iter()
+    }
+}
+
+impl<E: Entity> NotifyTag for VecTable<E> {
+    fn notify_tag(&mut self) {
+        self.tag.notify()
     }
 }
 

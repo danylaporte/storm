@@ -4,7 +4,8 @@ use std::{hash::Hash, marker::PhantomData};
 use crate::{
     provider::{Delete, LoadAll, LoadOne, TransactionProvider, Upsert},
     Accessor, ApplyLog, AsRefAsync, BoxFuture, Entity, EntityAccessor, Get, HashTable, Insert, Log,
-    LogAccessor, LogCtx, ProviderContainer, Remove, Result, State, Transaction, VarCtx, VecTable,
+    LogAccessor, LogCtx, NotifyTag, ProviderContainer, Remove, Result, State, Transaction, VarCtx,
+    VecTable,
 };
 
 #[derive(Default)]
@@ -24,7 +25,9 @@ impl Ctx {
     pub fn clear_tbl_of<E>(&mut self)
     where
         E: Entity + EntityAccessor,
+        E::Coll: Accessor,
     {
+        <E::Coll as Accessor>::clear_deps(&mut self.var_ctx);
         self.var_ctx.clear(E::entity_var());
     }
 
@@ -48,6 +51,22 @@ impl Ctx {
         Self: AsRefAsync<E::Coll>,
     {
         self.as_ref_async()
+    }
+
+    pub fn tbl_of_mut<E>(&mut self) -> Option<&mut E::Coll>
+    where
+        E: Entity + EntityAccessor,
+        E::Coll: Accessor + NotifyTag,
+    {
+        <E::Coll as Accessor>::clear_deps(&mut self.var_ctx);
+
+        let mut ret = self.var_ctx.get_mut(E::entity_var());
+
+        if let Some(ret) = ret.as_mut() {
+            ret.notify_tag();
+        }
+
+        ret
     }
 
     pub fn var_ctx(&self) -> &VarCtx {
@@ -284,6 +303,7 @@ where
     for<'b> TransactionProvider<'b>: Delete<E>,
     E: Entity + EntityAccessor,
     E::Key: Eq + Hash,
+    E::Coll: Accessor,
 {
     fn remove(&mut self, k: E::Key) -> BoxFuture<'_, Result<()>> {
         Box::pin(async move {
@@ -295,12 +315,15 @@ where
 }
 
 impl<'a> ApplyLog<LogCtx> for async_cell_lock::QueueRwLockWriteGuard<'a, Ctx> {
-    fn apply_log(&mut self, mut log: LogCtx) {
+    fn apply_log(&mut self, mut log: LogCtx) -> bool {
         let appliers = LOG_APPLIERS.read();
+        let mut changed = false;
 
         for applier in &*appliers {
-            applier.apply(&mut self.var_ctx, &mut log);
+            changed = applier.apply(&mut self.var_ctx, &mut log) || changed;
         }
+
+        changed
     }
 }
 
@@ -333,20 +356,25 @@ where
 }
 
 trait LogApplier: Send + Sync {
-    fn apply(&self, var_ctx: &mut VarCtx, log_ctx: &mut LogCtx);
+    fn apply(&self, var_ctx: &mut VarCtx, log_ctx: &mut LogCtx) -> bool;
 }
 
 impl<E> LogApplier for EntityLogApplier<E>
 where
     E: Entity + EntityAccessor + LogAccessor,
-    E::Coll: ApplyLog<Log<E>>,
+    E::Coll: Accessor + ApplyLog<Log<E>>,
 {
-    fn apply(&self, var_ctx: &mut VarCtx, log_ctx: &mut LogCtx) {
+    fn apply(&self, var_ctx: &mut VarCtx, log_ctx: &mut LogCtx) -> bool {
         if let Some(log) = log_ctx.replace(E::log_var(), None) {
             if let Some(tbl) = var_ctx.get_mut(E::entity_var()) {
-                tbl.apply_log(log)
+                if tbl.apply_log(log) {
+                    <E::Coll as Accessor>::clear_deps(var_ctx);
+                    return true;
+                }
             }
         }
+
+        false
     }
 }
 
@@ -355,7 +383,7 @@ struct EntityLogApplier<E: Entity + EntityAccessor + LogAccessor>(PhantomData<E>
 pub fn register_apply_log<E>()
 where
     E: Entity + EntityAccessor + LogAccessor,
-    E::Coll: ApplyLog<Log<E>>,
+    E::Coll: Accessor + ApplyLog<Log<E>>,
 {
     LOG_APPLIERS
         .write()

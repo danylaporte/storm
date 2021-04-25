@@ -47,7 +47,7 @@ pub use parking_lot;
 pub use provider::ProviderContainer;
 pub use remove::Remove;
 use state::State;
-pub use tag::Tag;
+pub use tag::{NotifyTag, Tag};
 pub use tokio;
 pub use transaction::Transaction;
 pub use vec_map::{self, VecMap};
