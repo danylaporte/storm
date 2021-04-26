@@ -1,6 +1,6 @@
 use crate::{
-    provider::LoadAll, state::State, Accessor, ApplyLog, BoxFuture, Deps, Entity, EntityAccessor,
-    EntityOf, Get, GetMut, Init, Log, NotifyTag, Result, Tag, TblVar,
+    provider::LoadAll, Accessor, ApplyLog, BoxFuture, Deps, Entity, EntityAccessor, EntityOf, Get,
+    GetMut, Init, Log, LogState, NotifyTag, Result, Tag, TblVar,
 };
 use fxhash::FxHashMap;
 use std::{
@@ -66,10 +66,10 @@ where
 
         for (k, state) in log {
             match state {
-                State::Inserted(v) => {
+                LogState::Inserted(v) => {
                     self.map.insert(k, v);
                 }
-                State::Removed => {
+                LogState::Removed => {
                     self.map.remove(&k);
                 }
             }

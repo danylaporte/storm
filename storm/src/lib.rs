@@ -48,7 +48,7 @@ pub use one_to_many::OneToMany;
 pub use parking_lot;
 pub use provider::ProviderContainer;
 pub use remove::Remove;
-use state::State;
+pub use state::LogState;
 pub use tag::{NotifyTag, Tag};
 pub use tokio;
 pub use transaction::Transaction;
@@ -57,7 +57,7 @@ pub use vec_table::VecTable;
 pub use version_tag::{self, VersionTag};
 
 pub type BoxFuture<'a, T> = std::pin::Pin<Box<dyn std::future::Future<Output = T> + 'a + Send>>;
-pub type Log<E> = fxhash::FxHashMap<<E as Entity>::Key, State<E>>;
+pub type Log<E> = fxhash::FxHashMap<<E as Entity>::Key, LogState<E>>;
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[cfg(feature = "derive")]

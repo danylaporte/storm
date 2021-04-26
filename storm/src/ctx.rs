@@ -4,8 +4,8 @@ use std::{hash::Hash, marker::PhantomData};
 use crate::{
     provider::{Delete, LoadAll, LoadOne, TransactionProvider, Upsert},
     Accessor, ApplyLog, AsRefAsync, BoxFuture, Entity, EntityAccessor, Get, HashTable, Insert, Log,
-    LogAccessor, LogCtx, NotifyTag, ProviderContainer, Remove, Result, State, Transaction, VarCtx,
-    VecTable,
+    LogAccessor, LogCtx, LogState, NotifyTag, ProviderContainer, Remove, Result, Transaction,
+    VarCtx, VecTable,
 };
 
 #[derive(Default)]
@@ -256,8 +256,8 @@ where
 {
     pub fn get(&self, k: &E::Key) -> Option<&E> {
         match self.log.get(k) {
-            Some(State::Inserted(v)) => Some(v),
-            Some(State::Removed) => None,
+            Some(LogState::Inserted(v)) => Some(v),
+            Some(LogState::Removed) => None,
             None => self.coll.get(k),
         }
     }
@@ -300,7 +300,7 @@ where
     fn insert(&mut self, k: E::Key, v: E) -> BoxFuture<'_, Result<()>> {
         Box::pin(async move {
             self.provider.upsert(&k, &v).await?;
-            self.log.insert(k, State::Inserted(v));
+            self.log.insert(k, LogState::Inserted(v));
             Ok(())
         })
     }
@@ -316,7 +316,7 @@ where
     fn remove(&mut self, k: E::Key) -> BoxFuture<'_, Result<()>> {
         Box::pin(async move {
             self.provider.delete(&k).await?;
-            self.log.insert(k, State::Removed);
+            self.log.insert(k, LogState::Removed);
             Ok(())
         })
     }

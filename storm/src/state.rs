@@ -1,4 +1,4 @@
-pub enum State<T> {
+pub enum LogState<T> {
     Inserted(T),
     Removed,
 }
