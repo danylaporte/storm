@@ -50,8 +50,8 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         let ident = Ident::new(&format!("var{}", index), arg.span());
 
         as_ref_decl.push(quote!(let #ident = self.as_ref();));
-        as_ref_decl_async.push(quote!(let #ident = self.as_ref_async().await?;));
-        as_ref_tag.push(quote!(#ident.tag()));
+        as_ref_decl_async.push(quote!(let #ident = storm::AsRefAsync::as_ref_async(self).await?;));
+        as_ref_tag.push(quote!(storm::Tag::tag(#ident)));
         as_ref_args.push(ident);
         deps.push(quote!(<#ty as storm::Accessor>::register_deps(<#index_name as storm::Accessor>::clear);));
 
