@@ -1,6 +1,6 @@
 use crate::{
     provider::LoadAll, state::State, Accessor, ApplyLog, BoxFuture, Deps, Entity, EntityAccessor,
-    Get, GetMut, Init, Log, NotifyTag, Result, Tag, TblVar,
+    EntityOf, Get, GetMut, Init, Log, NotifyTag, Result, Tag, TblVar,
 };
 use fxhash::FxHashMap;
 use std::{
@@ -101,6 +101,10 @@ impl<E: Entity> Deref for HashTable<E> {
     fn deref(&self) -> &Self::Target {
         &self.map
     }
+}
+
+impl<E: Entity> EntityOf for HashTable<E> {
+    type Entity = E;
 }
 
 impl<E: Entity> Extend<(E::Key, E)> for HashTable<E>

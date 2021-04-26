@@ -1,6 +1,6 @@
 use crate::{
     provider::LoadAll, state::State, Accessor, ApplyLog, BoxFuture, Deps, Entity, EntityAccessor,
-    Get, GetMut, Init, Log, NotifyTag, Result, Tag, TblVar,
+    EntityOf, Get, GetMut, Init, Log, NotifyTag, Result, Tag, TblVar,
 };
 use std::ops::Deref;
 use vec_map::{Iter, Keys, Values, VecMap};
@@ -97,6 +97,10 @@ impl<E: Entity> Deref for VecTable<E> {
     fn deref(&self) -> &Self::Target {
         &self.map
     }
+}
+
+impl<E: Entity> EntityOf for VecTable<E> {
+    type Entity = E;
 }
 
 impl<E: Entity> Extend<(E::Key, E)> for VecTable<E>
