@@ -112,7 +112,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
             }
         }
 
-        impl storm::AsRefAsync<#index_name> for Ctx #as_ref_async_wheres {
+        impl storm::AsRefAsync<#index_name> for storm::Ctx #as_ref_async_wheres {
             fn as_ref_async(&self) -> storm::BoxFuture<'_, Result<&'_ #index_name>> {
                 let var = <#index_name as storm::Accessor>::var();
 
