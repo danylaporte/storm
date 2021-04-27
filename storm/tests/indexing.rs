@@ -30,3 +30,8 @@ fn next_id(tbl: &Users) -> usize {
 fn next_id2(_tbl: &Users, next_id: &NextId) -> usize {
     **next_id
 }
+
+#[indexing]
+fn index_with_ctx(_ctx: &Ctx, tbl: &Users) -> usize {
+    tbl.len()
+}

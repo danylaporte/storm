@@ -1,7 +1,10 @@
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{spanned::Spanned, Error, FnArg, Ident, Item, ItemFn, ReturnType, Type};
+use syn::{
+    spanned::Spanned, Error, FnArg, Ident, Item, ItemFn, PathArguments, PathSegment, ReturnType,
+    Type,
+};
 
 pub(crate) fn indexing(item: Item) -> TokenStream {
     match &item {
@@ -49,22 +52,29 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         let ty = unref(&arg.ty);
         let ident = Ident::new(&format!("var{}", index), arg.span());
 
-        as_ref_decl.push(quote!(let #ident = self.as_ref();));
-        as_ref_decl_async.push(quote!(let #ident = storm::AsRefAsync::as_ref_async(self).await?;));
-        as_ref_tag.push(quote!(storm::Tag::tag(#ident)));
-        as_ref_args.push(ident);
-        deps.push(quote!(<#ty as storm::Accessor>::register_deps(<#index_name as storm::Accessor>::clear);));
-
-        let ref_async = quote!(storm::AsRefAsync<#ty>);
-        let ref_sync = quote!(AsRef<#ty>);
-
-        if index == 0 {
-            as_ref_async_wheres = quote!(where Self: #ref_async);
-            as_ref_wheres = quote!(where Self: #ref_sync);
+        if is_storm_ctx(ty) {
+            as_ref_decl.push(quote!(let #ident = self.ctx;));
+            as_ref_decl_async.push(quote!(let #ident = self;));
+            as_ref_args.push(ident);
         } else {
-            as_ref_async_wheres = quote!(#as_ref_async_wheres + #ref_async);
-            as_ref_wheres = quote!(#as_ref_wheres + #ref_sync);
-        };
+            as_ref_decl.push(quote!(let #ident = self.as_ref();));
+            as_ref_decl_async
+                .push(quote!(let #ident = storm::AsRefAsync::as_ref_async(self).await?;));
+            as_ref_tag.push(quote!(storm::Tag::tag(#ident)));
+            as_ref_args.push(ident);
+            deps.push(quote!(<#ty as storm::Accessor>::register_deps(<#index_name as storm::Accessor>::clear);));
+
+            let ref_async = quote!(storm::AsRefAsync<#ty>);
+            let ref_sync = quote!(AsRef<#ty>);
+
+            if as_ref_wheres.is_empty() {
+                as_ref_async_wheres = quote!(where Self: #ref_async);
+                as_ref_wheres = quote!(where Self: #ref_sync);
+            } else {
+                as_ref_async_wheres = quote!(#as_ref_async_wheres + #ref_async);
+                as_ref_wheres = quote!(#as_ref_wheres + #ref_sync);
+            };
+        }
     }
 
     let as_ref_args = quote!(#(#as_ref_args,)*);
@@ -106,9 +116,8 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
 
         impl<'a, L> AsRef<#index_name> for storm::CtxLocks<'a, L> #as_ref_wheres {
             fn as_ref(&self) -> &#index_name {
-                let ctx = &self.ctx.var_ctx();
                 #as_ref_decl
-                ctx.get_or_init(<#index_name as storm::Accessor>::var(), move || #get_or_init)
+                self.ctx.var_ctx().get_or_init(<#index_name as storm::Accessor>::var(), move || #get_or_init)
             }
         }
 
@@ -145,4 +154,23 @@ fn unref(t: &Type) -> &Type {
         Type::Reference(r) => unref(&*r.elem),
         _ => t,
     }
+}
+
+fn is_storm_ctx(t: &Type) -> bool {
+    match t {
+        Type::Path(p) => check_path_segment(&p.path.segments, &["storm", "Ctx"]),
+        _ => false,
+    }
+}
+
+fn check_path_segment<'a, SEGS>(segments: SEGS, idents: &[&str]) -> bool
+where
+    SEGS: IntoIterator<Item = &'a PathSegment>,
+    SEGS::IntoIter: DoubleEndedIterator,
+{
+    segments
+        .into_iter()
+        .rev()
+        .zip(idents.into_iter().rev())
+        .all(|(a, b)| a.ident == b && a.arguments == PathArguments::None)
 }
