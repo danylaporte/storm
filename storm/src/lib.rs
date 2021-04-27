@@ -5,6 +5,7 @@ mod accessor;
 mod apply_log;
 mod as_ref_async;
 mod as_ref_opt;
+mod async_try_from;
 mod ctx;
 mod entity;
 mod entity_of;
@@ -29,6 +30,7 @@ pub use apply_log::ApplyLog;
 pub use as_ref_async::AsRefAsync;
 pub use as_ref_opt::AsRefOpt;
 pub use async_cell_lock::{self, AsyncOnceCell, QueueRwLock};
+pub use async_try_from::AsyncTryFrom;
 pub use attached;
 #[cfg(feature = "cache")]
 pub use cache;

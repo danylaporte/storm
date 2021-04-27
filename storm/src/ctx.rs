@@ -1,11 +1,12 @@
 use parking_lot::RwLock;
 use std::{hash::Hash, marker::PhantomData};
+use version_tag::VersionTag;
 
 use crate::{
     provider::{Delete, LoadAll, LoadOne, TransactionProvider, Upsert},
-    Accessor, ApplyLog, AsRefAsync, BoxFuture, Entity, EntityAccessor, Get, HashTable, Insert, Log,
-    LogAccessor, LogCtx, LogState, NotifyTag, ProviderContainer, Remove, Result, Transaction,
-    VarCtx, VecTable,
+    Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, Entity, EntityAccessor, Get,
+    HashTable, Insert, Log, LogAccessor, LogCtx, LogState, NotifyTag, ProviderContainer, Remove,
+    Result, Tag, Transaction, VarCtx, VecTable,
 };
 
 #[derive(Default)]
@@ -155,6 +156,31 @@ impl<'a, L> CtxLocks<'a, L> {
         Self: AsRefAsync<T>,
     {
         self.as_ref_async()
+    }
+}
+
+impl<'a, L> Tag for CtxLocks<'a, L>
+where
+    L: Tag,
+{
+    #[inline]
+    fn tag(&self) -> VersionTag {
+        self.locks.tag()
+    }
+}
+
+impl<'a, L> AsyncTryFrom<'a, &'a Ctx> for CtxLocks<'a, L>
+where
+    L: AsyncTryFrom<'a, &'a Ctx>,
+{
+    #[inline]
+    fn async_try_from(ctx: &'a Ctx) -> BoxFuture<'a, Result<Self>> {
+        Box::pin(async move {
+            Ok(CtxLocks {
+                ctx,
+                locks: L::async_try_from(ctx).await?,
+            })
+        })
     }
 }
 

@@ -7,6 +7,7 @@ pub(crate) fn locks_await(input: &DeriveInput) -> TokenStream {
     let type_ident = &input.ident;
     let mut init_fields = Vec::new();
     let mut as_refs = Vec::new();
+    let mut tags = Vec::new();
 
     for field in try_ts!(input.fields()) {
         let f_ident = &field.ident;
@@ -22,20 +23,37 @@ pub(crate) fn locks_await(input: &DeriveInput) -> TokenStream {
                 }
             }
         });
+
+        tags.push(quote!(storm::Tag::tag(&self.#f_ident)));
     }
 
     let as_refs = quote!(#(#as_refs)*);
     let init_fields = quote!(#(#init_fields)*);
+    let tags = quote!(storm::version_tag::combine(&[#(#tags,)*]));
 
     quote! {
+        impl<'a> storm::AsyncTryFrom<'a, &'a storm::Ctx> for #type_ident<'a> {
+            fn async_try_from(ctx: &'a storm::Ctx) -> storm::BoxFuture<'a, storm::Result<#type_ident<'a>>> {
+                Box::pin(async move {
+                    Ok(#type_ident {
+                        #init_fields
+                    })
+                })
+            }
+        }
+
         impl<'a> #type_ident<'a> {
             pub async fn from_ctx(ctx: &'a storm::Ctx) -> storm::Result<storm::CtxLocks<'a, #type_ident<'a>>> {
-                Ok(storm::CtxLocks{
+                Ok(storm::CtxLocks {
                     ctx,
-                    locks: Self {
-                        #init_fields
-                    }
+                    locks: storm::AsyncTryFrom::async_try_from(ctx).await?,
                 })
+            }
+        }
+
+        impl<'a> storm::Tag for #type_ident<'a> {
+            fn tag(&self) -> storm::VersionTag {
+                #tags
             }
         }
 
