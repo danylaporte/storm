@@ -241,8 +241,33 @@ impl<'a> CtxTransaction<'a> {
         Ok(self.log_ctx)
     }
 
+    #[inline]
     pub fn provider(&self) -> &TransactionProvider<'a> {
         &self.provider
+    }
+
+    pub async fn insert_all<E, I>(&mut self, iter: I) -> Result<()>
+    where
+        Ctx: AsRefAsync<E::Coll>,
+        E: Entity + EntityAccessor + LogAccessor,
+        I: IntoIterator<Item = (E::Key, E)> + Send,
+        I::IntoIter: Send,
+        for<'b> TblTransaction<'b, E>: Insert<E>,
+    {
+        self.tbl_of::<E>().await?.insert_all(iter).await?;
+        Ok(())
+    }
+
+    pub async fn remove_all<E, I>(&mut self, iter: I) -> Result<()>
+    where
+        Ctx: AsRefAsync<E::Coll>,
+        E: Entity + EntityAccessor + LogAccessor,
+        I: IntoIterator<Item = E::Key> + Send,
+        I::IntoIter: Send,
+        for<'b> TblTransaction<'b, E>: Remove<E>,
+    {
+        self.tbl_of::<E>().await?.remove_all(iter).await?;
+        Ok(())
     }
 
     pub async fn tbl_of<E>(&mut self) -> Result<TblTransaction<'_, E>>
@@ -294,6 +319,16 @@ where
         Self: Insert<E>,
     {
         Insert::insert(self, k, v)
+    }
+
+    #[inline]
+    pub fn insert_all<'b, I>(&'b mut self, iter: I) -> BoxFuture<'b, Result<()>>
+    where
+        I: IntoIterator<Item = (E::Key, E)> + Send + 'a,
+        I::IntoIter: Send,
+        Self: Insert<E>,
+    {
+        Insert::<E>::insert_all(self, iter)
     }
 
     #[inline]
