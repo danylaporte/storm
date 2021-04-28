@@ -303,6 +303,16 @@ where
     {
         Remove::<E>::remove(self, k)
     }
+
+    #[inline]
+    pub fn remove_all<'b, K>(&'b mut self, keys: K) -> BoxFuture<'_, Result<()>>
+    where
+        Self: Remove<E>,
+        K: IntoIterator<Item = E::Key> + Send + 'b,
+        K::IntoIter: Send,
+    {
+        Remove::<E>::remove_all(self, keys)
+    }
 }
 
 impl<'a, E> Get<E> for TblTransaction<'a, E>
