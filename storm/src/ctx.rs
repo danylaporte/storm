@@ -258,6 +258,14 @@ impl<'a> CtxTransaction<'a> {
         Ok(())
     }
 
+    #[inline]
+    pub fn ref_as<T>(&self) -> BoxFuture<'_, Result<&'_ T>>
+    where
+        Self: AsRefAsync<T>,
+    {
+        self.as_ref_async()
+    }
+
     pub async fn remove_all<E, I>(&mut self, iter: I) -> Result<()>
     where
         Ctx: AsRefAsync<E::Coll>,
