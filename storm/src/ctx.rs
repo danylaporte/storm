@@ -233,7 +233,7 @@ where
 pub struct CtxTransaction<'a> {
     log_ctx: LogCtx,
     provider: TransactionProvider<'a>,
-    ctx: &'a Ctx,
+    pub ctx: &'a Ctx,
 }
 
 impl<'a> CtxTransaction<'a> {
