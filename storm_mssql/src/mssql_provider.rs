@@ -51,7 +51,12 @@ impl MssqlProvider {
 }
 
 impl Execute for MssqlProvider {
-    #[instrument(name = "MssqlProvider::execute", skip(self, params), err)]
+    #[instrument(
+        level = "debug",
+        name = "MssqlProvider::execute",
+        skip(self, params),
+        err
+    )]
     fn execute<'a, S>(
         &'a self,
         statement: S,
@@ -112,7 +117,12 @@ impl provider::Provider for MssqlProvider {
 }
 
 impl QueryRows for MssqlProvider {
-    #[instrument(name = "MssqlProvider::query_rows", skip(self, mapper, params), err)]
+    #[instrument(
+        level = "debug",
+        name = "MssqlProvider::query_rows",
+        skip(self, mapper, params),
+        err
+    )]
     fn query_rows<'a, S, M, R, C>(
         &'a self,
         statement: S,
