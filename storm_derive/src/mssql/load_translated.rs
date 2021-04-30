@@ -32,8 +32,10 @@ impl<'a> LoadTranslated<'a> {
         let read = read_row(index);
 
         self.fields.push(quote! {
-            let v: &str = #read;
-            val.#ident.set(culture, v);
+            let v: Option<&str> = #read;
+            if let Some(v) = v {
+                val.#ident.set(culture, v);
+            }
         });
     }
 
