@@ -91,7 +91,7 @@ where
 {
     #[inline]
     fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ E::Coll>> {
-        table_as_ref_async::<E, _, _>(&self.var_ctx, &self.provider)
+        table_as_ref_async::<E, _>(&self.var_ctx, &self.provider)
     }
 }
 
@@ -103,7 +103,7 @@ where
 {
     #[inline]
     fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ E::Coll>> {
-        table_as_ref_async::<E, _, _>(&self.var_ctx, &self.provider)
+        table_as_ref_async::<E, _>(&self.var_ctx, &self.provider)
     }
 }
 
@@ -424,19 +424,32 @@ impl<'a> Transaction for async_cell_lock::QueueRwLockQueueGuard<'a, Ctx> {
     }
 }
 
-fn table_as_ref_async<'a, E, T, P>(ctx: &'a VarCtx, provider: &'a P) -> BoxFuture<'a, Result<&'a T>>
+fn table_as_ref_async<'a, E, T>(
+    ctx: &'a VarCtx,
+    provider: &'a ProviderContainer,
+) -> BoxFuture<'a, Result<&'a T>>
 where
     T: Accessor + Default + Extend<(E::Key, E)> + Send + Sync,
     E: Entity + EntityAccessor<Coll = T>,
-    P: LoadAll<E, (), T>,
+    ProviderContainer: LoadAll<E, (), T>,
 {
-    let var = T::var();
-
-    if let Some(v) = ctx.get(var) {
-        return Box::pin(async move { Result::Ok(v) });
-    }
-
     Box::pin(async move {
+        let var = T::var();
+
+        // get the table if already initialized.
+        if let Some(v) = ctx.get(var) {
+            return Ok(v);
+        }
+
+        // lock the provider to load the table.
+        let _gate = provider.gate().await;
+
+        // if the table is already loaded when we gain access to the provider.
+        if let Some(v) = ctx.get(var) {
+            return Ok(v);
+        }
+
+        // load the table
         let v = provider.load_all(&()).await?;
         Ok(ctx.get_or_init(var, || v))
     })

@@ -7,6 +7,7 @@ use std::{
     marker::PhantomData,
     sync::atomic::{AtomicBool, AtomicU64, Ordering::Relaxed},
 };
+use tokio::sync::{Mutex, MutexGuard};
 
 /// Last recent use counter
 type LRU = AtomicU64;
@@ -47,6 +48,7 @@ where
 /// A database provider can be named and have a type.
 pub struct ProviderContainer {
     last_gc: u64,
+    lock: Mutex<()>,
     lru: LRU,
     records: Vec<Rec>,
 }
@@ -65,6 +67,10 @@ impl ProviderContainer {
             Ok(index) => Ok(&self.records[index]),
             Err(_) => return Err(Error::ProviderNotFound),
         }
+    }
+
+    pub(crate) async fn gate(&self) -> MutexGuard<'_, ()> {
+        self.lock.lock().await
     }
 
     /// A method to garbage collect all unused provider. This is intended to close database
@@ -125,6 +131,7 @@ impl Default for ProviderContainer {
     fn default() -> Self {
         Self {
             last_gc: 0,
+            lock: Mutex::new(()),
             lru: AtomicU64::new(1), // starting at 1 because the garbage collector start at 0.
             records: Vec::new(),
         }
