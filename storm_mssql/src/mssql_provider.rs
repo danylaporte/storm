@@ -3,7 +3,6 @@ use futures_util::TryStreamExt;
 use std::{
     borrow::Cow,
     fmt::Debug,
-    mem::replace,
     sync::atomic::{AtomicBool, Ordering::Relaxed},
 };
 use storm::{provider, BoxFuture, Error, Result};
@@ -13,8 +12,7 @@ use tracing::instrument;
 
 pub struct MssqlProvider {
     cancel_transaction: AtomicBool,
-    client_factory: Box<dyn ClientFactory>,
-    state: Mutex<Option<State>>,
+    state: Mutex<State>,
 }
 
 impl MssqlProvider {
@@ -22,31 +20,14 @@ impl MssqlProvider {
         (Box::new(client_factory) as Box<dyn ClientFactory>).into()
     }
 
-    async fn client(&self) -> Result<(MutexGuard<'_, Option<State>>, State)> {
-        let mut guard = self.state().await?;
-
-        let state = match guard.take() {
-            Some(state) => state,
-            None => State {
-                client: self.client_factory.create_client().await?,
-                in_transaction: false,
-            },
-        };
-
-        Ok((guard, state))
-    }
-
-    async fn state(&self) -> Result<MutexGuard<'_, Option<State>>> {
+    async fn state(&self) -> MutexGuard<'_, State> {
         let mut guard = self.state.lock().await;
 
         if self.cancel_transaction.swap(false, Relaxed) {
-            if let Some(mut state) = guard.take() {
-                state.cancel().await?;
-                *guard = Some(state);
-            }
+            let _ = guard.cancel().await;
         }
 
-        Ok(guard)
+        guard
     }
 }
 
@@ -66,33 +47,31 @@ impl Execute for MssqlProvider {
         S: ?Sized + Debug + Into<Cow<'a, str>> + Send + 'a,
     {
         Box::pin(async move {
-            let (mut guard, mut state) = self.client().await?;
             let mut intermediate = Vec::new();
             let mut output = Vec::new();
 
             adapt_params(params, &mut intermediate, &mut output);
 
-            state.transaction().await?;
+            let mut guard = self.state().await;
+            let mut transaction = guard.transaction().await?;
 
-            let count = state
-                .client
+            let count = transaction
                 .execute(statement, &output)
                 .await
                 .map_err(Error::std)?
                 .total();
 
-            *guard = Some(state);
+            guard.transaction = Some(transaction);
             Ok(count)
         })
     }
 }
 
 impl From<Box<dyn ClientFactory>> for MssqlProvider {
-    fn from(client_factory: Box<dyn ClientFactory>) -> Self {
+    fn from(factory: Box<dyn ClientFactory>) -> Self {
         Self {
             cancel_transaction: Default::default(),
-            client_factory,
-            state: Default::default(),
+            state: Mutex::new(State::new(factory)),
         }
     }
 }
@@ -103,16 +82,7 @@ impl provider::Provider for MssqlProvider {
     }
 
     fn commit<'a>(&'a self) -> BoxFuture<'a, Result<()>> {
-        Box::pin(async move {
-            let mut guard = self.state().await?;
-
-            if let Some(mut state) = guard.take() {
-                state.commit().await?;
-                *guard = Some(state);
-            }
-
-            Ok(())
-        })
+        Box::pin(async move { self.state().await.commit().await })
     }
 }
 
@@ -128,6 +98,7 @@ impl QueryRows for MssqlProvider {
         statement: S,
         params: &'a [&'a (dyn ToSql)],
         mut mapper: M,
+        force_transaction: bool,
     ) -> BoxFuture<'a, Result<C>>
     where
         C: Default + Extend<R> + Send,
@@ -141,16 +112,16 @@ impl QueryRows for MssqlProvider {
 
             adapt_params(params, &mut intermediate, &mut output);
 
-            let (mut guard, mut state) = self.client().await?;
-
-            let mut results = state
-                .client
-                .query(statement, &output)
-                .await
-                .map_err(Error::std)?;
-
             let mut coll = C::default();
             let mut vec = Vec::with_capacity(10);
+            let mut guard = self.state().await;
+
+            let mut client = match force_transaction {
+                true => guard.transaction().await,
+                false => guard.client().await,
+            }?;
+
+            let mut results = client.query(statement, &output).await.map_err(Error::std)?;
 
             while let Some(row) = results.try_next().await.map_err(Error::std)? {
                 vec.push(mapper(row)?);
@@ -167,48 +138,72 @@ impl QueryRows for MssqlProvider {
             // complete the work (making sure the client can take another query).
             results.into_results().await.map_err(Error::std)?;
 
-            *guard = Some(state);
+            match force_transaction {
+                true => guard.transaction = Some(client),
+                false => guard.client = Some(client),
+            }
+
             Ok(coll)
         })
     }
 }
 
 struct State {
-    client: Client,
-    in_transaction: bool,
+    client: Option<Client>,
+    factory: Box<dyn ClientFactory>,
+    transaction: Option<Client>,
 }
 
 impl State {
-    async fn cancel(&mut self) -> Result<()> {
-        if replace(&mut self.in_transaction, false) {
-            self.client
-                .simple_query("ROLLBACK")
-                .await
-                .map_err(Error::Mssql)?;
+    fn new(factory: Box<dyn ClientFactory>) -> Self {
+        Self {
+            client: None,
+            factory,
+            transaction: None,
         }
+    }
+
+    async fn cancel(&mut self) -> Result<()> {
+        self.cancel_or_commit("ROLLBACK").await
+    }
+
+    async fn cancel_or_commit(&mut self, statement: &'static str) -> Result<()> {
+        if let Some(mut client) = self.transaction.take() {
+            client.simple_query(statement).await.map_err(Error::Mssql)?;
+
+            if self.client.is_none() {
+                self.client = Some(client);
+            }
+        }
+
         Ok(())
+    }
+
+    async fn client(&mut self) -> Result<Client> {
+        match self.client.take() {
+            Some(c) => Ok(c),
+            None => self.factory.create_client().await,
+        }
     }
 
     async fn commit(&mut self) -> Result<()> {
-        if replace(&mut self.in_transaction, false) {
-            self.client
-                .simple_query("COMMIT")
-                .await
-                .map_err(Error::Mssql)?;
-        }
-
-        Ok(())
+        self.cancel_or_commit("COMMIT").await
     }
 
-    async fn transaction(&mut self) -> Result<()> {
-        if !self.in_transaction {
-            self.client
-                .simple_query("BEGIN TRAN")
-                .await
-                .map_err(Error::Mssql)?;
-        }
+    async fn transaction(&mut self) -> Result<Client> {
+        match self.transaction.take() {
+            Some(t) => Ok(t),
+            None => {
+                let mut client = self.client().await?;
 
-        Ok(())
+                client
+                    .simple_query("BEGIN TRAN")
+                    .await
+                    .map_err(Error::Mssql)?;
+
+                Ok(client)
+            }
+        }
     }
 }
 

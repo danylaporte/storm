@@ -90,7 +90,7 @@ impl<'a> ToTokens for LoadTranslated<'a> {
                     }
 
                     Ok(())
-                }).await?;
+                }, /*force_transaction*/ true).await?;
             });
         }
 

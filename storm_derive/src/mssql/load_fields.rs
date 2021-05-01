@@ -75,7 +75,7 @@ impl<'a> ToTokens for LoadFields<'a> {
                     #keys,
                     #entity { #fields }
                 ))
-            }).await?;
+            }, /*force_transaction*/ true).await?;
         });
 
         tokens.append_all(quote!(#(#errors)*));
