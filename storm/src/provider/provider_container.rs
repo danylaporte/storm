@@ -99,12 +99,14 @@ impl ProviderContainer {
 
     /// Gets or creates a database provider that have been previously registered with
     /// the `register` method.
-    pub async fn provide<'a, P: Provider>(&'a self, name: &str) -> Result<&'a P> {
-        let type_id = TypeId::of::<P>();
-        let rec = self.find_record(type_id, name)?;
-        let provider = rec.get_or_init(&self.lru).await?;
+    pub fn provide<'a, P: Provider>(&'a self, name: &'a str) -> BoxFuture<'a, Result<&'a P>> {
+        Box::pin(async move {
+            let type_id = TypeId::of::<P>();
+            let rec = self.find_record(type_id, name)?;
+            let provider = rec.get_or_init(&self.lru).await?;
 
-        Ok(provider.downcast_ref().expect("provider"))
+            Ok(provider.downcast_ref().expect("provider"))
+        })
     }
 
     /// Register a provider factory that creates provider on demand. A provider can be named.

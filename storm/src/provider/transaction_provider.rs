@@ -5,23 +5,25 @@ use std::ops::Deref;
 pub struct TransactionProvider<'a>(pub(super) &'a ProviderContainer);
 
 impl<'a> TransactionProvider<'a> {
-    pub async fn commit(&self) -> Result<()> {
-        let mut error = None;
+    pub fn commit(&self) -> BoxFuture<'_, Result<()>> {
+        Box::pin(async move {
+            let mut error = None;
 
-        for provider in self.0.iter_transaction() {
-            if error.is_none() {
-                if let Err(e) = provider.commit().await {
-                    error = Some(e);
+            for provider in self.0.iter_transaction() {
+                if error.is_none() {
+                    if let Err(e) = provider.commit().await {
+                        error = Some(e);
+                    }
+                } else {
+                    provider.cancel();
                 }
-            } else {
-                provider.cancel();
             }
-        }
 
-        match error {
-            Some(err) => Err(err),
-            None => Ok(()),
-        }
+            match error {
+                Some(err) => Err(err),
+                None => Ok(()),
+            }
+        })
     }
 
     pub fn container(&self) -> &'a ProviderContainer {

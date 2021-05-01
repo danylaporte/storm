@@ -237,8 +237,11 @@ pub struct CtxTransaction<'a> {
 }
 
 impl<'a> CtxTransaction<'a> {
-    pub async fn commit(self) -> Result<LogCtx> {
-        Ok(self.log_ctx)
+    pub fn commit(self) -> BoxFuture<'a, Result<LogCtx>> {
+        Box::pin(async move {
+            self.provider().commit().await?;
+            Ok(self.log_ctx)
+        })
     }
 
     #[inline]
