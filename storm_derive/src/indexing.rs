@@ -2,8 +2,8 @@ use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
-    spanned::Spanned, Error, FnArg, Ident, Item, ItemFn, PathArguments, PathSegment, ReturnType,
-    Type,
+    spanned::Spanned, Error, FnArg, Ident, Item, ItemFn, LitStr, PathArguments, PathSegment,
+    ReturnType, Type,
 };
 
 pub(crate) fn indexing(item: Item) -> TokenStream {
@@ -16,7 +16,9 @@ pub(crate) fn indexing(item: Item) -> TokenStream {
 fn indexing_fn(f: &ItemFn) -> TokenStream {
     let vis = &f.vis;
     let name = &f.sig.ident;
-    let index_name = Ident::new(&name.to_string().to_pascal_case(), name.span());
+    let name_str = &name.to_string().to_pascal_case();
+    let index_name = Ident::new(&name_str, name.span());
+    let index_name_lit = LitStr::new(&name_str, name.span());
 
     let screaming_snake = name.to_string().to_screaming_snake_case();
     let static_var = Ident::new(&format!("{}_VAR", screaming_snake), name.span());
@@ -81,7 +83,10 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
     let as_ref_decl = quote!(#(#as_ref_decl)*);
     let as_ref_decl_async = quote!(#(#as_ref_decl_async)*);
     let as_ref_tag = quote!(storm::version_tag::combine(&[#(#as_ref_tag,)*]));
-    let get_or_init = quote!(#index_name(#name(#as_ref_args), #as_ref_tag));
+    let get_or_init = quote!({
+        let _ = tracing::span!(tracing::Level::DEBUG, #index_name_lit, obj = "index", ev = "create").entered();
+        #index_name(#name(#as_ref_args), #as_ref_tag)
+    });
     let deps = quote!(#(#deps)*);
 
     quote! {
