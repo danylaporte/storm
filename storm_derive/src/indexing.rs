@@ -122,7 +122,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         impl<'a, L> AsRef<#index_name> for storm::CtxLocks<'a, L> #as_ref_wheres {
             fn as_ref(&self) -> &#index_name {
                 #as_ref_decl
-                self.ctx.var_ctx().get_or_init(<#index_name as storm::Accessor>::var(), move || #get_or_init)
+                self.ctx.vars().get_or_init(<#index_name as storm::Accessor>::var(), move || #get_or_init)
             }
         }
 
@@ -131,7 +131,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
                 let var = <#index_name as storm::Accessor>::var();
 
                 Box::pin(async move {
-                    let ctx = self.var_ctx();
+                    let ctx = self.vars();
 
                     if let Some(v) = ctx.get(var) {
                         return Ok(v);

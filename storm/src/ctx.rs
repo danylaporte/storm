@@ -5,21 +5,21 @@ use version_tag::VersionTag;
 use crate::{
     provider::{Delete, LoadAll, LoadOne, TransactionProvider, Upsert},
     Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, Entity, EntityAccessor, Get,
-    HashTable, Insert, Log, LogAccessor, LogCtx, LogState, NotifyTag, ProviderContainer, Remove,
-    Result, Tag, Transaction, VarCtx, VecTable,
+    HashTable, Insert, Log, LogAccessor, LogState, Logs, NotifyTag, ProviderContainer, Remove,
+    Result, Tag, Transaction, Vars, VecTable,
 };
 
 #[derive(Default)]
 pub struct Ctx {
     provider: ProviderContainer,
-    var_ctx: VarCtx,
+    vars: Vars,
 }
 
 impl Ctx {
     pub fn new(provider: ProviderContainer) -> Self {
         Ctx {
             provider,
-            var_ctx: VarCtx::new(),
+            vars: Vars::new(),
         }
     }
 
@@ -28,8 +28,8 @@ impl Ctx {
         E: Entity + EntityAccessor,
         E::Coll: Accessor,
     {
-        <E::Coll as Accessor>::clear_deps(&mut self.var_ctx);
-        self.var_ctx.clear(E::entity_var());
+        <E::Coll as Accessor>::clear_deps(&mut self.vars);
+        self.vars.clear(E::entity_var());
     }
 
     #[inline]
@@ -59,7 +59,7 @@ impl Ctx {
         E: Entity + EntityAccessor,
         E::Coll: Accessor,
     {
-        self.var_ctx.get(<E::Coll as Accessor>::var())
+        self.vars.get(<E::Coll as Accessor>::var())
     }
 
     pub fn tbl_of_mut<E>(&mut self) -> Option<&mut E::Coll>
@@ -67,9 +67,9 @@ impl Ctx {
         E: Entity + EntityAccessor,
         E::Coll: Accessor + NotifyTag,
     {
-        <E::Coll as Accessor>::clear_deps(&mut self.var_ctx);
+        <E::Coll as Accessor>::clear_deps(&mut self.vars);
 
-        let mut ret = self.var_ctx.get_mut(E::entity_var());
+        let mut ret = self.vars.get_mut(E::entity_var());
 
         if let Some(ret) = ret.as_mut() {
             ret.notify_tag();
@@ -78,8 +78,8 @@ impl Ctx {
         ret
     }
 
-    pub fn var_ctx(&self) -> &VarCtx {
-        &self.var_ctx
+    pub fn vars(&self) -> &Vars {
+        &self.vars
     }
 }
 
@@ -91,7 +91,7 @@ where
 {
     #[inline]
     fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ E::Coll>> {
-        table_as_ref_async::<E, _>(&self.var_ctx, &self.provider)
+        table_as_ref_async::<E, _>(&self.vars, &self.provider)
     }
 }
 
@@ -103,7 +103,7 @@ where
 {
     #[inline]
     fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ E::Coll>> {
-        table_as_ref_async::<E, _>(&self.var_ctx, &self.provider)
+        table_as_ref_async::<E, _>(&self.vars, &self.provider)
     }
 }
 
@@ -231,13 +231,13 @@ where
 }
 
 pub struct CtxTransaction<'a> {
-    log_ctx: LogCtx,
+    log_ctx: Logs,
     provider: TransactionProvider<'a>,
     pub ctx: &'a Ctx,
 }
 
 impl<'a> CtxTransaction<'a> {
-    pub fn commit(self) -> BoxFuture<'a, Result<LogCtx>> {
+    pub fn commit(self) -> BoxFuture<'a, Result<Logs>> {
         Box::pin(async move {
             self.provider().commit().await?;
             Ok(self.log_ctx)
@@ -404,13 +404,13 @@ where
     }
 }
 
-impl<'a> ApplyLog<LogCtx> for async_cell_lock::QueueRwLockWriteGuard<'a, Ctx> {
-    fn apply_log(&mut self, mut log: LogCtx) -> bool {
+impl<'a> ApplyLog<Logs> for async_cell_lock::QueueRwLockWriteGuard<'a, Ctx> {
+    fn apply_log(&mut self, mut log: Logs) -> bool {
         let appliers = LOG_APPLIERS.read();
         let mut changed = false;
 
         for applier in &*appliers {
-            changed = applier.apply(&mut self.var_ctx, &mut log) || changed;
+            changed = applier.apply(&mut self.vars, &mut log) || changed;
         }
 
         changed
@@ -428,7 +428,7 @@ impl<'a> Transaction for async_cell_lock::QueueRwLockQueueGuard<'a, Ctx> {
 }
 
 fn table_as_ref_async<'a, E, T>(
-    ctx: &'a VarCtx,
+    ctx: &'a Vars,
     provider: &'a ProviderContainer,
 ) -> BoxFuture<'a, Result<&'a T>>
 where
@@ -459,7 +459,7 @@ where
 }
 
 trait LogApplier: Send + Sync {
-    fn apply(&self, var_ctx: &mut VarCtx, log_ctx: &mut LogCtx) -> bool;
+    fn apply(&self, vars: &mut Vars, log_ctx: &mut Logs) -> bool;
 }
 
 impl<E> LogApplier for EntityLogApplier<E>
@@ -467,11 +467,11 @@ where
     E: Entity + EntityAccessor + LogAccessor,
     E::Coll: Accessor + ApplyLog<Log<E>>,
 {
-    fn apply(&self, var_ctx: &mut VarCtx, log_ctx: &mut LogCtx) -> bool {
+    fn apply(&self, vars: &mut Vars, log_ctx: &mut Logs) -> bool {
         if let Some(log) = log_ctx.replace(E::log_var(), None) {
-            if let Some(tbl) = var_ctx.get_mut(E::entity_var()) {
+            if let Some(tbl) = vars.get_mut(E::entity_var()) {
                 if tbl.apply_log(log) {
-                    <E::Coll as Accessor>::clear_deps(var_ctx);
+                    <E::Coll as Accessor>::clear_deps(vars);
                     return true;
                 }
             }
