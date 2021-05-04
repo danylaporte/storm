@@ -1,3 +1,4 @@
+mod cast_provider;
 mod delete;
 mod load_all;
 mod load_one;
@@ -7,6 +8,7 @@ mod provider_factory;
 mod transaction_provider;
 mod upsert;
 
+use cast_provider::CastProvider;
 pub use delete::Delete;
 pub use load_all::*;
 pub use load_one::*;

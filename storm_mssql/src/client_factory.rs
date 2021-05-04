@@ -10,7 +10,12 @@ pub trait ClientFactory: Send + Sync + 'static {
 }
 
 impl ClientFactory for Config {
-    #[instrument(name = "ClientFactory::create_client", skip(self), err)]
+    #[instrument(
+        level = "debug",
+        name = "ClientFactory::create_client",
+        skip(self),
+        err
+    )]
     fn create_client<'a>(&'a self) -> BoxFuture<'a, Result<Client>> {
         Box::pin(async move {
             // named instance only available in windows.

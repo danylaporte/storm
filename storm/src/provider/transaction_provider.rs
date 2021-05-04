@@ -9,7 +9,7 @@ impl<'a> TransactionProvider<'a> {
         Box::pin(async move {
             let mut error = None;
 
-            for provider in self.0.iter_transaction() {
+            for provider in self.0.providers() {
                 if error.is_none() {
                     if let Err(e) = provider.commit().await {
                         error = Some(e);
@@ -41,7 +41,7 @@ impl<'a> Deref for TransactionProvider<'a> {
 
 impl<'a> Drop for TransactionProvider<'a> {
     fn drop(&mut self) {
-        for provider in self.0.iter_transaction() {
+        for provider in self.0.providers() {
             provider.cancel();
         }
     }

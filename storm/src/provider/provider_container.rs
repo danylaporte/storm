@@ -1,11 +1,11 @@
-use super::{Provider, ProviderFactory, TransactionProvider};
+use super::{CastProvider, Provider, ProviderFactory, TransactionProvider};
 use crate::{BoxFuture, Error, Result};
 use async_cell_lock::AsyncOnceCell;
 use once_cell::sync::OnceCell;
 use std::{
-    any::{Any, TypeId},
+    any::TypeId,
     marker::PhantomData,
-    sync::atomic::{AtomicBool, AtomicU64, Ordering::Relaxed},
+    sync::atomic::{AtomicU64, Ordering::Relaxed},
 };
 use tokio::sync::{Mutex, MutexGuard};
 use tracing::instrument;
@@ -15,7 +15,7 @@ type LRU = AtomicU64;
 
 /// A trait that wrap the ProviderFactory to be able to use it in a Box<Any> trait object context.
 trait AnyFactory: Send + Sync + 'static {
-    fn create<'a>(&'a self) -> BoxFuture<'a, Result<Box<dyn Any + Send + Sync>>>;
+    fn create<'a>(&'a self) -> BoxFuture<'a, Result<CastProvider>>;
 }
 
 /// Wrap a ProviderFactory trait to be able to use it in a Box<Any> trait object context.
@@ -39,8 +39,8 @@ where
     F: ProviderFactory<Provider = P>,
     P: Provider,
 {
-    fn create<'a>(&'a self) -> BoxFuture<'a, Result<Box<dyn Any + Send + Sync + 'static>>> {
-        Box::pin(async move { Ok(Box::new(self.factory.create_provider().await?) as _) })
+    fn create<'a>(&'a self) -> BoxFuture<'a, Result<CastProvider>> {
+        Box::pin(async move { Ok(CastProvider::new(self.factory.create_provider().await?)) })
     }
 }
 
@@ -76,7 +76,7 @@ impl ProviderContainer {
 
     /// A method to garbage collect all unused provider. This is intended to close database
     /// connections and release resources.
-    #[instrument(skip(self))]
+    #[instrument(level = "debug", skip(self))]
     pub fn gc(&mut self) {
         let last_gc = self.last_gc;
         let new_gc = *self.lru.get_mut();
@@ -95,20 +95,22 @@ impl ProviderContainer {
         }
     }
 
-    pub(super) fn iter_transaction(&self) -> impl Iterator<Item = &'_ dyn Provider> {
-        self.records.iter().filter_map(|r| r.for_commit())
-    }
-
     /// Gets or creates a database provider that have been previously registered with
     /// the `register` method.
     pub fn provide<'a, P: Provider>(&'a self, name: &'a str) -> BoxFuture<'a, Result<&'a P>> {
         Box::pin(async move {
             let type_id = TypeId::of::<P>();
             let rec = self.find_record(type_id, name)?;
-            let provider = rec.get_or_init(&self.lru).await?;
+            let castable = rec.get_or_init(&self.lru).await?;
 
-            Ok(provider.downcast_ref().expect("provider"))
+            Ok(castable.downcast().expect("provider"))
         })
+    }
+
+    pub(super) fn providers(&self) -> impl Iterator<Item = &'_ dyn Provider> {
+        self.records
+            .iter()
+            .filter_map(|r| Some(r.get()?.provider()))
     }
 
     /// Register a provider factory that creates provider on demand. A provider can be named.
@@ -143,30 +145,15 @@ impl Default for ProviderContainer {
 }
 
 struct ProviderRec {
-    in_transaction: AtomicBool,
     lru: LRU,
-    provider: Box<dyn Any + Send + Sync>,
+    cast_provider: CastProvider,
 }
 
 impl ProviderRec {
-    fn new(provider: Box<dyn Any + Send + Sync>) -> Self {
+    fn new(cast_provider: CastProvider) -> Self {
         Self {
-            in_transaction: Default::default(),
             lru: Default::default(),
-            provider,
-        }
-    }
-
-    fn for_commit(&self) -> Option<&dyn Provider> {
-        if self.in_transaction.swap(false, Relaxed) {
-            Some(
-                *self
-                    .provider
-                    .downcast_ref::<&dyn Provider>()
-                    .expect("commit"),
-            )
-        } else {
-            None
+            cast_provider,
         }
     }
 }
@@ -179,11 +166,11 @@ struct Rec {
 }
 
 impl Rec {
-    fn for_commit(&self) -> Option<&dyn Provider> {
-        self.provider.get()?.for_commit()
+    fn get(&self) -> Option<&CastProvider> {
+        Some(&self.provider.get()?.cast_provider)
     }
 
-    async fn get_or_init(&self, lru: &LRU) -> Result<&Box<dyn Any + Send + Sync>> {
+    async fn get_or_init(&self, lru: &LRU) -> Result<&CastProvider> {
         let provider_rec = self
             .provider
             .get_or_try_init::<_, Error>(async {
@@ -193,7 +180,7 @@ impl Rec {
 
         provider_rec.lru.store(lru.fetch_add(1, Relaxed), Relaxed);
 
-        Ok(&provider_rec.provider)
+        Ok(&provider_rec.cast_provider)
     }
 }
 

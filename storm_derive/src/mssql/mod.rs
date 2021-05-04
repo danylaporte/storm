@@ -36,8 +36,8 @@ pub(crate) fn delete(input: &DeriveInput) -> TokenStream {
 
                     #metrics_start
 
-                    #normal
                     #translate
+                    #normal
 
                     #metrics_end
                     Ok(())
@@ -176,7 +176,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
         }
 
         let ident = continue_ts!(field.ident(), errors);
-        let name = LitStr::new(&column, ident.span());
+        let name = LitStr::new(&format!("[{}]", column), ident.span());
 
         save_part.push(if attrs.part {
             quote!(storm_mssql::SaveEntityPart::save_entity_part(&self.#ident, k, builder);)
@@ -189,7 +189,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     }
 
     for (index, key) in keys.iter().enumerate() {
-        let name = LitStr::new(key, ident.span());
+        let name = LitStr::new(&format!("[{}]", key), ident.span());
 
         let k = match keys.len() > 1 {
             true => {
