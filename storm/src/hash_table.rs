@@ -1,6 +1,6 @@
 use crate::{
-    provider::LoadAll, Accessor, ApplyLog, BoxFuture, Deps, Entity, EntityAccessor, EntityOf, Get,
-    GetMut, Init, Log, LogState, NotifyTag, Result, Tag, TblVar,
+    provider::LoadAll, Accessor, ApplyLog, BoxFuture, Deps, Entity, EntityAccessor, EntityOf, Gc,
+    GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag, Result, Tag, TblVar,
 };
 use fxhash::FxHashMap;
 use std::{
@@ -118,6 +118,16 @@ where
         for (k, v) in iter {
             self.map.insert(k, v);
         }
+    }
+}
+
+impl<E> Gc for HashTable<E>
+where
+    E: Entity + Gc,
+    E::Key: Eq + Hash,
+{
+    fn gc(&mut self, ctx: &mut GcCtx) {
+        self.map.values_mut().for_each(|v| v.gc(ctx));
     }
 }
 

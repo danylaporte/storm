@@ -4,20 +4,22 @@ use version_tag::VersionTag;
 
 use crate::{
     provider::{Delete, LoadAll, LoadOne, TransactionProvider, Upsert},
-    Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, Entity, EntityAccessor, Get,
+    Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, Entity, EntityAccessor, GcCtx, Get,
     HashTable, Insert, Log, LogAccessor, LogState, Logs, NotifyTag, ProviderContainer, Remove,
     Result, Tag, Transaction, Vars, VecTable,
 };
 
 #[derive(Default)]
 pub struct Ctx {
-    provider: ProviderContainer,
+    pub(crate) gc: GcCtx,
+    pub(crate) provider: ProviderContainer,
     vars: Vars,
 }
 
 impl Ctx {
     pub fn new(provider: ProviderContainer) -> Self {
         Ctx {
+            gc: Default::default(),
             provider,
             vars: Vars::new(),
         }
@@ -80,6 +82,10 @@ impl Ctx {
 
     pub fn vars(&self) -> &Vars {
         &self.vars
+    }
+
+    pub fn vars_mut(&mut self) -> &Vars {
+        &mut self.vars
     }
 }
 

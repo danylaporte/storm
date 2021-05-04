@@ -1,6 +1,6 @@
 use crate::{
-    provider::LoadAll, Accessor, ApplyLog, BoxFuture, Deps, Entity, EntityAccessor, EntityOf, Get,
-    GetMut, Init, Log, LogState, NotifyTag, Result, Tag, TblVar,
+    provider::LoadAll, Accessor, ApplyLog, BoxFuture, Deps, Entity, EntityAccessor, EntityOf, Gc,
+    GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag, Result, Tag, TblVar,
 };
 use std::ops::Deref;
 use vec_map::{Iter, Keys, Values, VecMap};
@@ -114,6 +114,16 @@ where
         for (k, v) in iter {
             self.map.insert(k, v);
         }
+    }
+}
+
+impl<E> Gc for VecTable<E>
+where
+    E: Entity + Gc,
+    E::Key: From<usize>,
+{
+    fn gc(&mut self, ctx: &mut GcCtx) {
+        self.map.values_mut().for_each(|v| v.gc(ctx));
     }
 }
 
