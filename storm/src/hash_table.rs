@@ -41,7 +41,7 @@ impl<E: Entity> HashTable<E> {
 
 impl<E> Accessor for HashTable<E>
 where
-    E: Entity + EntityAccessor<Coll = HashTable<E>>,
+    E: Entity + EntityAccessor<Tbl = HashTable<E>>,
 {
     #[inline]
     fn var() -> &'static TblVar<Self> {
@@ -56,7 +56,7 @@ where
 
 impl<E> ApplyLog<Log<E>> for HashTable<E>
 where
-    E: Entity + EntityAccessor<Coll = Self>,
+    E: Entity + EntityAccessor<Tbl = Self>,
     E::Key: Eq + Hash,
 {
     fn apply_log(&mut self, log: Log<E>) -> bool {

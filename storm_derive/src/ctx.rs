@@ -39,10 +39,10 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         };
 
         impl storm::EntityAccessor for #entity {
-            type Coll = #table_alias;
+            type Tbl = #table_alias;
 
             #[inline]
-            fn entity_var() -> &'static storm::TblVar<Self::Coll> {
+            fn entity_var() -> &'static storm::TblVar<Self::Tbl> {
                 &#tbl_var.0
             }
 

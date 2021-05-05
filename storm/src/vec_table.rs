@@ -37,7 +37,7 @@ impl<E: Entity> VecTable<E> {
 
 impl<E> Accessor for VecTable<E>
 where
-    E: Entity + EntityAccessor<Coll = VecTable<E>>,
+    E: Entity + EntityAccessor<Tbl = VecTable<E>>,
 {
     #[inline]
     fn var() -> &'static TblVar<Self> {

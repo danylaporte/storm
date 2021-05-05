@@ -28,9 +28,9 @@ impl Ctx {
     pub fn clear_tbl_of<E>(&mut self)
     where
         E: Entity + EntityAccessor,
-        E::Coll: Accessor,
+        E::Tbl: Accessor,
     {
-        <E::Coll as Accessor>::clear_deps(&mut self.vars);
+        <E::Tbl as Accessor>::clear_deps(&mut self.vars);
         self.vars.clear(E::entity_var());
     }
 
@@ -48,28 +48,28 @@ impl Ctx {
     }
 
     #[inline]
-    pub fn tbl_of<E>(&self) -> BoxFuture<'_, Result<&'_ E::Coll>>
+    pub fn tbl_of<E>(&self) -> BoxFuture<'_, Result<&'_ E::Tbl>>
     where
         E: Entity + EntityAccessor,
-        Self: AsRefAsync<E::Coll>,
+        Self: AsRefAsync<E::Tbl>,
     {
         self.as_ref_async()
     }
 
-    pub fn tbl_of_opt<E>(&self) -> Option<&E::Coll>
+    pub fn tbl_of_opt<E>(&self) -> Option<&E::Tbl>
     where
         E: Entity + EntityAccessor,
-        E::Coll: Accessor,
+        E::Tbl: Accessor,
     {
-        self.vars.get(<E::Coll as Accessor>::var())
+        self.vars.get(<E::Tbl as Accessor>::var())
     }
 
-    pub fn tbl_of_mut<E>(&mut self) -> Option<&mut E::Coll>
+    pub fn tbl_of_mut<E>(&mut self) -> Option<&mut E::Tbl>
     where
         E: Entity + EntityAccessor,
-        E::Coll: Accessor + NotifyTag,
+        E::Tbl: Accessor + NotifyTag,
     {
-        <E::Coll as Accessor>::clear_deps(&mut self.vars);
+        <E::Tbl as Accessor>::clear_deps(&mut self.vars);
 
         let mut ret = self.vars.get_mut(E::entity_var());
 
@@ -91,24 +91,24 @@ impl Ctx {
 
 impl<E> AsRefAsync<HashTable<E>> for Ctx
 where
-    E: Entity + EntityAccessor<Coll = HashTable<E>>,
+    E: Entity + EntityAccessor<Tbl = HashTable<E>>,
     E::Key: Eq + Hash,
-    ProviderContainer: LoadAll<E, (), E::Coll>,
+    ProviderContainer: LoadAll<E, (), E::Tbl>,
 {
     #[inline]
-    fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ E::Coll>> {
+    fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ E::Tbl>> {
         table_as_ref_async::<E, _>(&self.vars, &self.provider)
     }
 }
 
 impl<E> AsRefAsync<VecTable<E>> for Ctx
 where
-    E: Entity + EntityAccessor<Coll = VecTable<E>>,
+    E: Entity + EntityAccessor<Tbl = VecTable<E>>,
     E::Key: Into<usize>,
-    ProviderContainer: LoadAll<E, (), E::Coll>,
+    ProviderContainer: LoadAll<E, (), E::Tbl>,
 {
     #[inline]
-    fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ E::Coll>> {
+    fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ E::Tbl>> {
         table_as_ref_async::<E, _>(&self.vars, &self.provider)
     }
 }
@@ -257,7 +257,7 @@ impl<'a> CtxTransaction<'a> {
 
     pub async fn insert_all<E, I>(&mut self, iter: I) -> Result<()>
     where
-        Ctx: AsRefAsync<E::Coll>,
+        Ctx: AsRefAsync<E::Tbl>,
         E: Entity + EntityAccessor + LogAccessor,
         I: IntoIterator<Item = (E::Key, E)> + Send,
         I::IntoIter: Send,
@@ -277,7 +277,7 @@ impl<'a> CtxTransaction<'a> {
 
     pub async fn remove_all<E, I>(&mut self, iter: I) -> Result<()>
     where
-        Ctx: AsRefAsync<E::Coll>,
+        Ctx: AsRefAsync<E::Tbl>,
         E: Entity + EntityAccessor + LogAccessor,
         I: IntoIterator<Item = E::Key> + Send,
         I::IntoIter: Send,
@@ -290,12 +290,12 @@ impl<'a> CtxTransaction<'a> {
     pub async fn tbl_of<E>(&mut self) -> Result<TblTransaction<'_, E>>
     where
         E: Entity + EntityAccessor + LogAccessor,
-        Ctx: AsRefAsync<E::Coll>,
+        Ctx: AsRefAsync<E::Tbl>,
     {
         Ok(TblTransaction {
-            coll: self.ctx.as_ref_async().await?,
             provider: &self.provider,
             log: self.log_ctx.get_or_init_mut(E::log_var(), Default::default),
+            tbl: self.ctx.as_ref_async().await?,
         })
     }
 }
@@ -311,22 +311,22 @@ where
 }
 
 pub struct TblTransaction<'a, E: Entity + EntityAccessor> {
-    coll: &'a E::Coll,
     log: &'a mut Log<E>,
     provider: &'a TransactionProvider<'a>,
+    tbl: &'a E::Tbl,
 }
 
 impl<'a, E> TblTransaction<'a, E>
 where
     E: Entity + EntityAccessor,
     E::Key: Eq + Hash,
-    E::Coll: Get<E>,
+    E::Tbl: Get<E>,
 {
     pub fn get(&self, k: &E::Key) -> Option<&E> {
         match self.log.get(k) {
             Some(LogState::Inserted(v)) => Some(v),
             Some(LogState::Removed) => None,
-            None => self.coll.get(k),
+            None => self.tbl.get(k),
         }
     }
 
@@ -365,13 +365,17 @@ where
     {
         Remove::<E>::remove_all(self, keys)
     }
+
+    pub fn tbl(&self) -> &'a E::Tbl {
+        self.tbl
+    }
 }
 
 impl<'a, E> Get<E> for TblTransaction<'a, E>
 where
     E: Entity + EntityAccessor,
-    E::Coll: Get<E>,
     E::Key: Eq + Hash,
+    E::Tbl: Get<E>,
 {
     #[inline]
     fn get(&self, k: &E::Key) -> Option<&E> {
@@ -399,7 +403,7 @@ where
     for<'b> TransactionProvider<'b>: Delete<E>,
     E: Entity + EntityAccessor,
     E::Key: Eq + Hash,
-    E::Coll: Accessor,
+    E::Tbl: Accessor,
 {
     fn remove(&mut self, k: E::Key) -> BoxFuture<'_, Result<()>> {
         Box::pin(async move {
@@ -439,7 +443,7 @@ fn table_as_ref_async<'a, E, T>(
 ) -> BoxFuture<'a, Result<&'a T>>
 where
     T: Accessor + Default + Extend<(E::Key, E)> + Send + Sync,
-    E: Entity + EntityAccessor<Coll = T>,
+    E: Entity + EntityAccessor<Tbl = T>,
     ProviderContainer: LoadAll<E, (), T>,
 {
     Box::pin(async move {
@@ -471,13 +475,13 @@ trait LogApplier: Send + Sync {
 impl<E> LogApplier for EntityLogApplier<E>
 where
     E: Entity + EntityAccessor + LogAccessor,
-    E::Coll: Accessor + ApplyLog<Log<E>>,
+    E::Tbl: Accessor + ApplyLog<Log<E>>,
 {
     fn apply(&self, vars: &mut Vars, log_ctx: &mut Logs) -> bool {
         if let Some(log) = log_ctx.replace(E::log_var(), None) {
             if let Some(tbl) = vars.get_mut(E::entity_var()) {
                 if tbl.apply_log(log) {
-                    <E::Coll as Accessor>::clear_deps(vars);
+                    <E::Tbl as Accessor>::clear_deps(vars);
                     return true;
                 }
             }
@@ -492,7 +496,7 @@ struct EntityLogApplier<E: Entity + EntityAccessor + LogAccessor>(PhantomData<E>
 pub fn register_apply_log<E>()
 where
     E: Entity + EntityAccessor + LogAccessor,
-    E::Coll: Accessor + ApplyLog<Log<E>>,
+    E::Tbl: Accessor + ApplyLog<Log<E>>,
 {
     LOG_APPLIERS
         .write()
