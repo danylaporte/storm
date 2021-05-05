@@ -88,7 +88,7 @@ impl<'a> UpsertBuilder<'a> {
             String::new()
         } else {
             format!(
-                "IF ERROR_NUMBER() IN (2601, 2627) UPDATE {} SET {} WHERE {};",
+                "IF ERROR_NUMBER() IN (2601, 2627) UPDATE {} SET {} WHERE {} ELSE THROW;",
                 self.table, self.update_setters, self.update_wheres,
             )
         };
