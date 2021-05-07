@@ -11,11 +11,11 @@ use tokio::sync::{Mutex, MutexGuard};
 use tracing::instrument;
 
 /// Last recent use counter
-type LRU = AtomicU64;
+type Lru = AtomicU64;
 
 /// A trait that wrap the ProviderFactory to be able to use it in a Box<Any> trait object context.
 trait AnyFactory: Send + Sync + 'static {
-    fn create<'a>(&'a self) -> BoxFuture<'a, Result<CastProvider>>;
+    fn create(&self) -> BoxFuture<'_, Result<CastProvider>>;
 }
 
 /// Wrap a ProviderFactory trait to be able to use it in a Box<Any> trait object context.
@@ -39,7 +39,7 @@ where
     F: ProviderFactory<Provider = P>,
     P: Provider,
 {
-    fn create<'a>(&'a self) -> BoxFuture<'a, Result<CastProvider>> {
+    fn create(&self) -> BoxFuture<'_, Result<CastProvider>> {
         Box::pin(async move { Ok(CastProvider::new(self.factory.create_provider().await?)) })
     }
 }
@@ -50,7 +50,7 @@ where
 pub struct ProviderContainer {
     last_gc: u64,
     lock: Mutex<()>,
-    lru: LRU,
+    lru: Lru,
     records: Vec<Rec>,
 }
 
@@ -66,7 +66,7 @@ impl ProviderContainer {
     fn find_record<'a>(&'a self, type_id: TypeId, name: &str) -> Result<&'a Rec> {
         match self.find_index(type_id, name) {
             Ok(index) => Ok(&self.records[index]),
-            Err(_) => return Err(Error::ProviderNotFound),
+            Err(_) => Err(Error::ProviderNotFound),
         }
     }
 
@@ -114,7 +114,7 @@ impl ProviderContainer {
     }
 
     /// Register a provider factory that creates provider on demand. A provider can be named.
-    pub fn register<'a, F: ProviderFactory>(&mut self, name: impl Into<Box<str>>, factory: F) {
+    pub fn register<F: ProviderFactory>(&mut self, name: impl Into<Box<str>>, factory: F) {
         let rec = Rec {
             factory: Box::new(Factory::new(factory)),
             name: name.into(),
@@ -145,7 +145,7 @@ impl Default for ProviderContainer {
 }
 
 struct ProviderRec {
-    lru: LRU,
+    lru: Lru,
     cast_provider: CastProvider,
 }
 
@@ -170,7 +170,7 @@ impl Rec {
         Some(&self.provider.get()?.cast_provider)
     }
 
-    async fn get_or_init(&self, lru: &LRU) -> Result<&CastProvider> {
+    async fn get_or_init(&self, lru: &Lru) -> Result<&CastProvider> {
         let provider_rec = self
             .provider
             .get_or_try_init::<_, Error>(async {

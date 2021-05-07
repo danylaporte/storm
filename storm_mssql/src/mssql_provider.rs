@@ -81,7 +81,7 @@ impl provider::Provider for MssqlProvider {
         self.cancel_transaction.store(true, Relaxed);
     }
 
-    fn commit<'a>(&'a self) -> BoxFuture<'a, Result<()>> {
+    fn commit(&self) -> BoxFuture<'_, Result<()>> {
         Box::pin(async move { self.state().await.commit().await })
     }
 }
@@ -212,6 +212,6 @@ fn adapt_params<'a>(
     intermediate: &'a mut Vec<Parameter<'a>>,
     output: &mut Vec<&'a dyn tiberius::ToSql>,
 ) {
-    intermediate.extend(input.into_iter().map(|p| Parameter(p.to_sql())));
+    intermediate.extend(input.iter().map(|p| Parameter(p.to_sql())));
     output.extend(intermediate.iter().map(|p| p as &dyn tiberius::ToSql));
 }

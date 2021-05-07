@@ -19,7 +19,7 @@ impl MssqlFactory {
 impl ProviderFactory for MssqlFactory {
     type Provider = MssqlProvider;
 
-    fn create_provider<'a>(&'a self) -> BoxFuture<'a, Result<Self::Provider>> {
+    fn create_provider(&self) -> BoxFuture<'_, Result<Self::Provider>> {
         Box::pin(async move { Ok(MssqlProvider::new(self.0.clone())) })
     }
 }

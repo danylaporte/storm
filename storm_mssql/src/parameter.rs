@@ -56,13 +56,10 @@ impl<'a> tiberius::ToSql for Parameter<'a> {
         }
 
         fn cow<'a, T: ?Sized + ToOwned>(o: &'a Option<Cow<'a, T>>) -> Option<Cow<'a, T>> {
-            match o.as_ref() {
-                Some(v) => Some(match v {
-                    Cow::Borrowed(v) => Cow::Borrowed(*v),
-                    Cow::Owned(v) => Cow::Borrowed(v.borrow()),
-                }),
-                None => None,
-            }
+            o.as_ref().map(|v| match v {
+                Cow::Borrowed(v) => Cow::Borrowed(*v),
+                Cow::Owned(v) => Cow::Borrowed(v.borrow()),
+            })
         }
 
         match &self.0 {

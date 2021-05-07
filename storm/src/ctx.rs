@@ -157,7 +157,7 @@ impl<'a, L> CtxLocks<'a, L> {
         self.as_ref()
     }
 
-    pub fn ref_as_async<'b, T>(&'b self) -> BoxFuture<'b, Result<&'b T>>
+    pub fn ref_as_async<T>(&self) -> BoxFuture<'_, Result<&'_ T>>
     where
         Self: AsRefAsync<T>,
     {

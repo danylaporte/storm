@@ -62,7 +62,7 @@ impl<'a> ToTokens for SaveTranslated<'a> {
 }
 
 #[cold]
-fn add_key_many(keys: &Vec<&str>, params: &mut ParamsBuilder, builder: &mut UpsertBuilder) {
+fn add_key_many(keys: &[&str], params: &mut ParamsBuilder, builder: &mut UpsertBuilder) {
     for (index, column) in keys.iter().enumerate() {
         let i = LitInt::new(&index.to_string(), Span::call_site());
         add_key_single(column, quote!(&k.#i as _), params, builder);
@@ -79,7 +79,7 @@ fn add_key_single(
     builder.add_key(column, &i.to_string());
 }
 
-fn add_keys(keys: &Vec<&str>, params: &mut ParamsBuilder, builder: &mut UpsertBuilder) {
+fn add_keys(keys: &[&str], params: &mut ParamsBuilder, builder: &mut UpsertBuilder) {
     if keys.len() == 1 {
         add_key_single(&keys[0], quote!(k as _), params, builder);
     } else {

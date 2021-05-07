@@ -28,6 +28,7 @@ impl<E> Gc for cache::CacheIsland<E> {
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub mod collectables {
     use crate::Ctx;
     use parking_lot::RwLock;

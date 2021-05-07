@@ -92,7 +92,7 @@ impl<'a, T: FromSql<'a>> FromSql<'a> for Arc<T> {
     type Column = T::Column;
 
     fn from_sql(col: Option<Self::Column>) -> Result<Self> {
-        T::from_sql(col).map(|v| Arc::new(v))
+        T::from_sql(col).map(Arc::new)
     }
 }
 
@@ -100,7 +100,7 @@ impl<'a, T: FromSql<'a>> FromSql<'a> for Box<T> {
     type Column = T::Column;
 
     fn from_sql(col: Option<Self::Column>) -> Result<Self> {
-        T::from_sql(col).map(|v| Box::new(v))
+        T::from_sql(col).map(Box::new)
     }
 }
 
@@ -108,7 +108,7 @@ impl<'a, T: Clone + FromSql<'a>> FromSql<'a> for Cow<'a, T> {
     type Column = T::Column;
 
     fn from_sql(col: Option<Self::Column>) -> Result<Self> {
-        T::from_sql(col).map(|v| Cow::Owned(v))
+        T::from_sql(col).map(Cow::Owned)
     }
 }
 

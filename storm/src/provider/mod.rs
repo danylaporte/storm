@@ -2,6 +2,7 @@ mod cast_provider;
 mod delete;
 mod load_all;
 mod load_one;
+#[allow(clippy::module_inception)]
 mod provider;
 mod provider_container;
 mod provider_factory;

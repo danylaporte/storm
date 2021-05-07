@@ -3,6 +3,7 @@ use inflector::Inflector;
 use proc_macro2::TokenStream;
 use syn::{spanned::Spanned, Field};
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Clone, Copy, Debug, Eq, FromMeta, PartialEq)]
 pub(crate) enum RenameAll {
     #[darling(rename = "camelCase")]

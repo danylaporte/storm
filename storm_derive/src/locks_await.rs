@@ -46,8 +46,8 @@ pub(crate) fn locks_await(input: &DeriveInput) -> TokenStream {
             pub fn from_ctx(ctx: &'a storm::Ctx) -> storm::BoxFuture<'a, storm::Result<storm::CtxLocks<'a, #type_ident<'a>>>> {
                 Box::pin(async move {
                     Ok(storm::CtxLocks {
-                        ctx,
                         locks: storm::AsyncTryFrom::async_try_from(ctx).await?,
+                        ctx,
                     })
                 })
             }

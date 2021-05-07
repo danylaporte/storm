@@ -6,7 +6,7 @@ use tokio_util::compat::TokioAsyncWriteCompatExt;
 use tracing::instrument;
 
 pub trait ClientFactory: Send + Sync + 'static {
-    fn create_client<'a>(&'a self) -> BoxFuture<'a, Result<Client>>;
+    fn create_client(&self) -> BoxFuture<'_, Result<Client>>;
 }
 
 impl ClientFactory for Config {

@@ -9,7 +9,7 @@ use syn::{
 pub(crate) fn indexing(item: Item) -> TokenStream {
     match &item {
         Item::Fn(f) => indexing_fn(f),
-        _ => return Error::new(item.span(), "Only function is supported.").to_compile_error(),
+        _ => Error::new(item.span(), "Only function is supported.").to_compile_error(),
     }
 }
 
@@ -176,6 +176,6 @@ where
     segments
         .into_iter()
         .rev()
-        .zip(idents.into_iter().rev())
+        .zip(idents.iter().rev())
         .all(|(a, b)| a.ident == b && a.arguments == PathArguments::None)
 }
