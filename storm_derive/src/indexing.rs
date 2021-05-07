@@ -1,10 +1,8 @@
+use crate::TypeExt;
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{
-    spanned::Spanned, Error, FnArg, Ident, Item, ItemFn, LitStr, PathArguments, PathSegment,
-    ReturnType, Type,
-};
+use syn::{spanned::Spanned, Error, FnArg, Ident, Item, ItemFn, LitStr, ReturnType, Type};
 
 pub(crate) fn indexing(item: Item) -> TokenStream {
     match &item {
@@ -54,7 +52,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         let ty = unref(&arg.ty);
         let ident = Ident::new(&format!("var{}", index), arg.span());
 
-        if is_storm_ctx(ty) {
+        if ty.is_storm_ctx() {
             as_ref_decl.push(quote!(let #ident = self.ctx;));
             as_ref_decl_async.push(quote!(let #ident = self;));
             as_ref_args.push(ident);
@@ -159,23 +157,4 @@ fn unref(t: &Type) -> &Type {
         Type::Reference(r) => unref(&*r.elem),
         _ => t,
     }
-}
-
-fn is_storm_ctx(t: &Type) -> bool {
-    match t {
-        Type::Path(p) => check_path_segment(&p.path.segments, &["storm", "Ctx"]),
-        _ => false,
-    }
-}
-
-fn check_path_segment<'a, SEGS>(segments: SEGS, idents: &[&str]) -> bool
-where
-    SEGS: IntoIterator<Item = &'a PathSegment>,
-    SEGS::IntoIter: DoubleEndedIterator,
-{
-    segments
-        .into_iter()
-        .rev()
-        .zip(idents.iter().rev())
-        .all(|(a, b)| a.ident == b && a.arguments == PathArguments::None)
 }

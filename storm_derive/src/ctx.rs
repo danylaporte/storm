@@ -4,6 +4,8 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{DeriveInput, Ident};
 
+use crate::{derive_input_ext::DeriveInputExt, type_ext::TypeExt};
+
 pub fn generate(input: &DeriveInput) -> TokenStream {
     let implement = try_ts!(implement(input));
 
@@ -25,12 +27,16 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let tbl_var = Ident::new(&format!("{}_TBL", screaming_snake_case), input.ident.span());
     let log_var = Ident::new(&format!("{}_TRX", screaming_snake_case), input.ident.span());
     let coll_ty = args.collection.ty(entity);
+    let (gc, gc_collect) = gc(input)?;
 
     Ok(quote! {
         #vis type #table_alias = #coll_ty;
 
         #[static_init::dynamic]
-        static #tbl_var: (storm::TblVar<#table_alias>, storm::Deps) = Default::default();
+        static #tbl_var: (storm::TblVar<#table_alias>, storm::Deps) = {
+            #gc_collect
+            Default::default()
+        };
 
         #[static_init::dynamic]
         static #log_var: storm::LogVar<storm::Log<#entity>> = {
@@ -58,6 +64,38 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                 &#log_var
             }
         }
+
+        #gc
+    })
+}
+
+fn gc(input: &DeriveInput) -> Result<(TokenStream, TokenStream), TokenStream> {
+    let fields = input.fields()?;
+    let ident = &input.ident;
+    let mut vec = Vec::new();
+
+    for field in fields {
+        if field.ty.is_cache_island() {
+            let ident = &field.ident;
+            vec.push(quote!(ret = storm::Gc::gc(&mut self.#ident, ctx) || ret;));
+        }
+    }
+
+    Ok(if vec.is_empty() {
+        (quote!(), quote!())
+    } else {
+        (
+            quote! {
+                impl storm::Gc for #ident {
+                    fn gc(&mut self, ctx: &storm::GcCtx) -> bool {
+                        let mut ret = false;
+                        #(#vec)*
+                        ret
+                    }
+                }
+            },
+            quote!(storm::gc::collectables::register(|ctx| ctx.tbl_gc::<#ident>());),
+        )
     })
 }
 

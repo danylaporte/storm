@@ -16,14 +16,16 @@ impl Ctx {
 }
 
 pub trait Gc {
-    fn gc(&mut self, ctx: &mut GcCtx);
+    fn gc(&mut self, ctx: &GcCtx) -> bool;
 }
 
 #[cfg(feature = "cache")]
 impl<E> Gc for cache::CacheIsland<E> {
-    fn gc(&mut self, ctx: &mut GcCtx) {
+    fn gc(&mut self, ctx: &GcCtx) -> bool {
         if let Some(age) = ctx.island {
-            self.clear_if_untouched_since(age);
+            self.clear_if_untouched_since(age)
+        } else {
+            false
         }
     }
 }

@@ -126,8 +126,12 @@ where
     E: Entity + Gc,
     E::Key: Eq + Hash,
 {
-    fn gc(&mut self, ctx: &mut GcCtx) {
-        self.map.values_mut().for_each(|v| v.gc(ctx));
+    fn gc(&mut self, ctx: &GcCtx) -> bool {
+        let mut ret = false;
+        for v in self.map.values_mut() {
+            ret = v.gc(ctx) || ret;
+        }
+        ret
     }
 }
 

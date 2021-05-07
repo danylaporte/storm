@@ -1,3 +1,4 @@
+use cache::CacheIsland;
 use storm::{prelude::*, NoopDelete, NoopLoad, NoopSave, Result};
 
 #[tokio::main]
@@ -35,6 +36,7 @@ async fn main() -> Result<()> {
 #[derive(NoopDelete, NoopLoad, NoopSave, Ctx)]
 struct Topic {
     pub title: String,
+    pub comment: CacheIsland<String>,
 }
 
 impl Entity for Topic {

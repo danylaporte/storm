@@ -4,8 +4,8 @@ use version_tag::VersionTag;
 
 use crate::{
     provider::{Delete, LoadAll, LoadOne, TransactionProvider, Upsert},
-    Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, Entity, EntityAccessor, GcCtx, Get,
-    HashTable, Insert, Log, LogAccessor, LogState, Logs, NotifyTag, ProviderContainer, Remove,
+    Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, Entity, EntityAccessor, Gc, GcCtx,
+    Get, HashTable, Insert, Log, LogAccessor, LogState, Logs, NotifyTag, ProviderContainer, Remove,
     Result, Tag, Transaction, Vars, VecTable,
 };
 
@@ -71,13 +71,33 @@ impl Ctx {
     {
         <E::Tbl as Accessor>::clear_deps(&mut self.vars);
 
-        let mut ret = self.vars.get_mut(E::entity_var());
+        match self.vars.get_mut(E::entity_var()) {
+            Some(ret) => {
+                ret.notify_tag();
+                Some(ret)
+            }
+            None => None,
+        }
+    }
 
-        if let Some(ret) = ret.as_mut() {
-            ret.notify_tag();
+    #[doc(hidden)]
+    pub fn tbl_gc<E>(&mut self)
+    where
+        E: Entity + EntityAccessor,
+        E::Tbl: Accessor + NotifyTag + Gc,
+    {
+        let mut changed = false;
+
+        if let Some(tbl) = self.vars.get_mut(E::entity_var()) {
+            if tbl.gc(&self.gc) {
+                tbl.notify_tag();
+                changed = true;
+            }
         }
 
-        ret
+        if changed {
+            <E::Tbl as Accessor>::clear_deps(&mut self.vars);
+        }
     }
 
     pub fn vars(&self) -> &Vars {

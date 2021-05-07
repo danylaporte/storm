@@ -17,6 +17,7 @@ mod rename_all;
 #[cfg(any(feature = "postgres", feature = "mssql"))]
 mod string_ext;
 mod token_stream_ext;
+mod type_ext;
 
 use derive_input_ext::DeriveInputExt;
 #[cfg(any(feature = "postgres", feature = "mssql"))]
@@ -28,6 +29,7 @@ use rename_all::RenameAll;
 #[cfg(any(feature = "postgres", feature = "mssql"))]
 use string_ext::StringExt;
 use syn::{parse_macro_input, DeriveInput, Item};
+use type_ext::TypeExt;
 
 #[proc_macro_derive(Ctx, attributes(storm))]
 pub fn ctx(input: TokenStream) -> TokenStream {

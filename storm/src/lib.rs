@@ -10,7 +10,7 @@ mod ctx;
 mod entity;
 mod entity_of;
 mod error;
-mod gc;
+pub mod gc;
 mod get;
 mod get_mut;
 mod hash_table;
