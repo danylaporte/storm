@@ -33,6 +33,7 @@ pub(crate) fn locks_await(input: &DeriveInput) -> TokenStream {
 
     quote! {
         impl<'a> storm::AsyncTryFrom<'a, &'a storm::Ctx> for #type_ident<'a> {
+            #[allow(clippy::eval_order_dependence)]
             fn async_try_from(ctx: &'a storm::Ctx) -> storm::BoxFuture<'a, storm::Result<#type_ident<'a>>> {
                 Box::pin(async move {
                     Ok(#type_ident {
@@ -45,9 +46,10 @@ pub(crate) fn locks_await(input: &DeriveInput) -> TokenStream {
         impl<'a> #type_ident<'a> {
             pub fn from_ctx(ctx: &'a storm::Ctx) -> storm::BoxFuture<'a, storm::Result<storm::CtxLocks<'a, #type_ident<'a>>>> {
                 Box::pin(async move {
+                    let locks = storm::AsyncTryFrom::async_try_from(ctx).await?;
                     Ok(storm::CtxLocks {
-                        locks: storm::AsyncTryFrom::async_try_from(ctx).await?,
                         ctx,
+                        locks,
                     })
                 })
             }
