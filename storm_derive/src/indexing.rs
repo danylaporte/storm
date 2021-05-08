@@ -77,20 +77,15 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         }
     }
 
-    let as_ref_args = quote!(#(#as_ref_args,)*);
-    let as_ref_decl = quote!(#(#as_ref_decl)*);
-    let as_ref_decl_async = quote!(#(#as_ref_decl_async)*);
-    let as_ref_tag = quote!(storm::version_tag::combine(&[#(#as_ref_tag,)*]));
     let get_or_init = quote!({
-        let _ = tracing::span!(tracing::Level::DEBUG, #index_name_lit, obj = "index", ev = "create").entered();
-        #index_name(#name(#as_ref_args), #as_ref_tag)
+        let _ = tracing::span!(tracing::Level::DEBUG, <#index_name as storm::CtxTypeInfo>::NAME, obj = storm::OBJ_INDEX, ev = storm::EV_CREATED).entered();
+        #index_name(#name(#(#as_ref_args,)*), storm::version_tag::combine(&[#(#as_ref_tag,)*]))
     });
-    let deps = quote!(#(#deps)*);
 
     quote! {
         #[static_init::dynamic]
         static #static_var: (storm::TblVar<#index_name>, storm::Deps) = {
-            #deps
+            #(#deps)*
             Default::default()
         };
 
@@ -119,7 +114,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
 
         impl<'a, L> AsRef<#index_name> for storm::CtxLocks<'a, L> #as_ref_wheres {
             fn as_ref(&self) -> &#index_name {
-                #as_ref_decl
+                #(#as_ref_decl)*
                 self.ctx.vars().get_or_init(<#index_name as storm::Accessor>::var(), move || #get_or_init)
             }
         }
@@ -135,7 +130,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
                         return Ok(v);
                     }
 
-                    #as_ref_decl_async
+                    #(#as_ref_decl_async)*
                     Ok(ctx.get_or_init(var, || #get_or_init))
                 })
             }
@@ -146,6 +141,10 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
             fn tag(&self) -> storm::VersionTag {
                 self.1
             }
+        }
+
+        impl storm::CtxTypeInfo for #index_name {
+            const NAME: &'static str = #index_name_lit;
         }
 
         #f

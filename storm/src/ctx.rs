@@ -1,12 +1,13 @@
 use parking_lot::RwLock;
 use std::{hash::Hash, marker::PhantomData};
+use tracing::instrument;
 use version_tag::VersionTag;
 
 use crate::{
     provider::{Delete, LoadAll, LoadOne, TransactionProvider, Upsert},
-    Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, Entity, EntityAccessor, Gc, GcCtx,
-    Get, HashTable, Insert, Log, LogAccessor, LogState, Logs, NotifyTag, ProviderContainer, Remove,
-    Result, Tag, Transaction, Vars, VecTable,
+    Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity, EntityAccessor,
+    Gc, GcCtx, Get, HashTable, Insert, Log, LogAccessor, LogState, Logs, NotifyTag,
+    ProviderContainer, Remove, Result, Tag, Transaction, Vars, VecTable,
 };
 
 #[derive(Default)]
@@ -81,22 +82,14 @@ impl Ctx {
     }
 
     #[doc(hidden)]
+    #[instrument(level = "debug", fields(name = <E as CtxTypeInfo>::NAME, obj = crate::OBJ_TABLE), skip(self))]
     pub fn tbl_gc<E>(&mut self)
     where
-        E: Entity + EntityAccessor,
+        E: CtxTypeInfo + Entity + EntityAccessor,
         E::Tbl: Accessor + NotifyTag + Gc,
     {
-        let mut changed = false;
-
         if let Some(tbl) = self.vars.get_mut(E::entity_var()) {
-            if tbl.gc(&self.gc) {
-                tbl.notify_tag();
-                changed = true;
-            }
-        }
-
-        if changed {
-            <E::Tbl as Accessor>::clear_deps(&mut self.vars);
+            tbl.gc(&self.gc);
         }
     }
 

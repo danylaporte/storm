@@ -2,7 +2,7 @@ use darling::{FromDeriveInput, FromMeta};
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{DeriveInput, Ident};
+use syn::{DeriveInput, Ident, LitStr};
 
 use crate::{derive_input_ext::DeriveInputExt, type_ext::TypeExt};
 
@@ -21,6 +21,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
     let entity_name = entity.to_string();
     let table_name = entity_name.to_plural();
+    let table_name_lit = LitStr::new(&entity_name, entity.span());
     let table_alias = Ident::new(&table_name, entity.span());
 
     let screaming_snake_case = entity_name.to_screaming_snake_case();
@@ -63,6 +64,10 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             fn log_var() -> &'static storm::LogVar<storm::Log<Self>> {
                 &#log_var
             }
+        }
+
+        impl storm::CtxTypeInfo for #entity {
+            const NAME: &'static str = #table_name_lit;
         }
 
         #gc

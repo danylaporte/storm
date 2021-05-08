@@ -7,6 +7,7 @@ mod as_ref_async;
 mod as_ref_opt;
 mod async_try_from;
 mod ctx;
+mod ctx_type_info;
 mod entity;
 mod entity_of;
 mod error;
@@ -36,6 +37,7 @@ pub use attached;
 #[cfg(feature = "cache")]
 pub use cache;
 pub use ctx::*;
+pub use ctx_type_info::CtxTypeInfo;
 pub use entity::Entity;
 pub use entity_of::EntityOf;
 pub use error::Error;
@@ -63,6 +65,10 @@ pub use version_tag::{self, VersionTag};
 pub type BoxFuture<'a, T> = std::pin::Pin<Box<dyn std::future::Future<Output = T> + 'a + Send>>;
 pub type Log<E> = fxhash::FxHashMap<<E as Entity>::Key, LogState<E>>;
 pub type Result<T> = std::result::Result<T, Error>;
+
+pub const EV_CREATED: &'static str = "created";
+pub const OBJ_INDEX: &'static str = "index";
+pub const OBJ_TABLE: &'static str = "index";
 
 #[cfg(feature = "derive")]
 pub use storm_derive::{indexing, Ctx, LocksAwait, NoopDelete, NoopLoad, NoopSave};
