@@ -1,3 +1,5 @@
+[![CI](https://github.com/danylaporte/storm/actions/workflows/ci.yml/badge.svg)](https://github.com/danylaporte/storm/actions/workflows/ci.yml)
+
 # storm
 
 An in memory, database agnostic ORM written in rust.
