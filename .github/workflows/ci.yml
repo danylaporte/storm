@@ -75,7 +75,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --no-default-features --features cache,derive,metrics_0_14,mssql
+          args: --no-run --no-default-features --features cache,derive,metrics_0_14,mssql
 
       - name: Clippy warnings
         uses: actions-rs/cargo@v1

@@ -9,6 +9,7 @@ fn create_ctx() -> QueueRwLock<Ctx> {
 fn provider() -> ProviderContainer {
     let mut config = Config::default();
     config.database("master");
+    #[cfg(target_os = "windows")]
     config.authentication(AuthMethod::Integrated);
     config.trust_cert();
 
