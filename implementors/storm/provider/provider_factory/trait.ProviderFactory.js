@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["storm_mssql"] = [{"text":"impl <a class=\"trait\" href=\"storm/provider/provider_factory/trait.ProviderFactory.html\" title=\"trait storm::provider::provider_factory::ProviderFactory\">ProviderFactory</a> for <a class=\"struct\" href=\"storm_mssql/struct.MssqlFactory.html\" title=\"struct storm_mssql::MssqlFactory\">MssqlFactory</a>","synthetic":false,"types":["storm_mssql::mssql_factory::MssqlFactory"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

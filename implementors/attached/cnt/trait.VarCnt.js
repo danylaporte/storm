@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["storm"] = [{"text":"impl VarCnt for <a class=\"struct\" href=\"storm/vars/struct.Tbl.html\" title=\"struct storm::vars::Tbl\">Tbl</a>","synthetic":false,"types":["storm::accessor::vars::Tbl"]},{"text":"impl VarCnt for <a class=\"struct\" href=\"storm/vars/struct.Log.html\" title=\"struct storm::vars::Log\">Log</a>","synthetic":false,"types":["storm::accessor::vars::Log"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
