@@ -1,4 +1,4 @@
-#[cfg(any(feature = "postgres", feature = "mssql"))]
+#[cfg(feature = "mssql")]
 macro_rules! continue_ts {
     ($v:expr, $errors:ident) => {
         match $v {

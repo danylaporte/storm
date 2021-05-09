@@ -5,7 +5,7 @@ mod macros;
 
 mod ctx;
 mod derive_input_ext;
-#[cfg(any(feature = "postgres", feature = "mssql"))]
+#[cfg(feature = "mssql")]
 mod errors;
 mod field_ext;
 mod indexing;
@@ -14,19 +14,19 @@ mod locks_await;
 mod mssql;
 mod noop;
 mod rename_all;
-#[cfg(any(feature = "postgres", feature = "mssql"))]
+#[cfg(feature = "mssql")]
 mod string_ext;
 mod token_stream_ext;
 mod type_ext;
 
 use derive_input_ext::DeriveInputExt;
-#[cfg(any(feature = "postgres", feature = "mssql"))]
+#[cfg(feature = "mssql")]
 use errors::Errors;
 use field_ext::FieldExt;
 use proc_macro::TokenStream;
 #[cfg(feature = "mssql")]
 use rename_all::RenameAll;
-#[cfg(any(feature = "postgres", feature = "mssql"))]
+#[cfg(feature = "mssql")]
 use string_ext::StringExt;
 use syn::{parse_macro_input, DeriveInput, Item};
 use type_ext::TypeExt;
