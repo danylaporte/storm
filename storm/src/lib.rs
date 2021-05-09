@@ -66,9 +66,9 @@ pub type BoxFuture<'a, T> = std::pin::Pin<Box<dyn std::future::Future<Output = T
 pub type Log<E> = fxhash::FxHashMap<<E as Entity>::Key, LogState<E>>;
 pub type Result<T> = std::result::Result<T, Error>;
 
-pub const EV_CREATED: &'static str = "created";
-pub const OBJ_INDEX: &'static str = "index";
-pub const OBJ_TABLE: &'static str = "index";
+pub const EV_CREATED: &str = "created";
+pub const OBJ_INDEX: &str = "index";
+pub const OBJ_TABLE: &str = "table";
 
 #[cfg(feature = "derive")]
 pub use storm_derive::{indexing, Ctx, LocksAwait, NoopDelete, NoopLoad, NoopSave};

@@ -1,6 +1,6 @@
 use storm::{prelude::*, MssqlDelete, MssqlLoad, MssqlSave, Result};
 use storm_mssql::{Execute, MssqlFactory, MssqlProvider};
-use tiberius::{AuthMethod, Config};
+use tiberius::Config;
 
 fn create_ctx() -> QueueRwLock<Ctx> {
     QueueRwLock::new(provider().into())
@@ -10,7 +10,7 @@ fn provider() -> ProviderContainer {
     let mut config = Config::default();
     config.database("master");
     #[cfg(target_os = "windows")]
-    config.authentication(AuthMethod::Integrated);
+    config.authentication(tiberius::AuthMethod::Integrated);
     config.trust_cert();
 
     let mut provider = ProviderContainer::new();
