@@ -49,7 +49,10 @@ impl InsertBuilder {
 }
 
 #[must_use]
-pub(super) struct JoinConditions<'a>(&'a mut String);
+pub(super) struct JoinConditions<'a> {
+    s: &'a mut String,
+    is_first: bool,
+}
 
 impl<'a> JoinConditions<'a> {
     pub fn add(
@@ -57,10 +60,17 @@ impl<'a> JoinConditions<'a> {
         (alias_left, left): (Option<&str>, &str),
         (alias_right, right): (Option<&str>, &str),
     ) {
-        self.0.add_sep_str(" AND ");
-        add_alias_field(&mut self.0, (alias_left, left));
-        self.0.add('=');
-        add_alias_field(&mut self.0, (alias_right, right));
+        let jointer = if self.is_first {
+            self.is_first = false;
+            " ON "
+        } else {
+            " AND "
+        };
+
+        self.s.add_sep_str(jointer);
+        add_alias_field(&mut self.s, (alias_left, left));
+        self.s.add('=');
+        add_alias_field(&mut self.s, (alias_right, right));
     }
 }
 
@@ -75,7 +85,10 @@ impl JoinBuilder {
             self.0.add(' ').add_str(alias);
         }
 
-        JoinConditions(&mut self.0)
+        JoinConditions {
+            s: &mut self.0,
+            is_first: true,
+        }
     }
 
     pub fn to_sql(&self) -> &str {
