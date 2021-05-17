@@ -50,7 +50,7 @@ pub use insert::Insert;
 #[cfg(feature = "metrics")]
 pub use metrics;
 pub use once_cell::sync::OnceCell;
-pub use one_to_many::OneToMany;
+pub use one_to_many::{OneToMany, OneToManyFromIter};
 pub use parking_lot;
 pub use provider::ProviderContainer;
 pub use remove::Remove;
