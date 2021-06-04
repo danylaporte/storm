@@ -66,9 +66,18 @@ pub(super) struct TypeAttrs {
     pub table: SpannedValue<String>,
     pub keys: SpannedValue<String>,
 
+    /// The name of the provider in the ProviderContainer.
+    ///
+    /// Provider can be named to accommodate multiple database
+    /// of the same vendor, for example multiple MS SQL database.
+    ///
+    /// When the provider type is different, PostgreSQL and MS Sql, there is
+    /// no need to provide a name.
     #[darling(default)]
-    /// The name of the provider in the ProviderContainer
     pub provider: String,
+
+    #[darling(default)]
+    reload_on_upsert: bool,
 
     #[darling(default)]
     pub rename_all: Option<RenameAll>,
@@ -85,6 +94,9 @@ pub(super) struct TypeAttrs {
     /// used by the ctx macro.
     #[darling(default)]
     collection: String,
+
+    #[darling(default)]
+    pub identity: SpannedValue<String>,
 }
 
 impl TypeAttrs {
@@ -97,7 +109,25 @@ impl TypeAttrs {
             );
         }
 
+        if vec.len() > 1 && self.is_identity_key() {
+            errors.push(
+                Error::new(
+                    self.keys.span(),
+                    "Only one key is possible when identity is specified.",
+                )
+                .to_compile_error(),
+            );
+        }
+
         vec
+    }
+
+    pub fn is_identity_key(&self) -> bool {
+        !self.identity.is_empty()
+            && self
+                .keys_internal()
+                .iter()
+                .any(|v| v.to_lowercase() == self.identity.to_lowercase())
     }
 
     pub fn keys_internal(&self) -> Vec<&str> {
@@ -106,6 +136,14 @@ impl TypeAttrs {
 
     pub fn provider(&self) -> LitStr {
         LitStr::new(&self.provider, Span::call_site())
+    }
+
+    pub fn reload_on_upsert(&self) -> bool {
+        self.reload_on_upsert || (!self.identity.is_empty() && !self.is_identity_key())
+    }
+
+    pub fn reload_on_upsert_or_identity(&self) -> bool {
+        self.reload_on_upsert || !self.identity.is_empty()
     }
 
     pub fn translate_keys(&self, errors: &mut Vec<TokenStream>) -> Vec<&str> {

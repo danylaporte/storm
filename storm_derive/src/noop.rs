@@ -23,13 +23,13 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             _C: Default + Extend<(<#ident as storm::Entity>::Key, #ident)> + Send + 'static,
             FILTER: Send + Sync,
         {
-            fn load_all<'a>(&'a self, filter: &'a FILTER) -> storm::BoxFuture<'a, storm::Result<_C>> {
+            fn load_all_with_args<'a>(&'a self, filter: &'a FILTER, args: storm::provider::LoadArgs) -> storm::BoxFuture<'a, storm::Result<_C>> {
                 Box::pin(async { Ok(_C::default()) })
             }
         }
 
         impl storm::provider::LoadOne<#ident> for storm::provider::ProviderContainer {
-            fn load_one<'a>(&'a self, k: &'a <#ident as storm::Entity>::Key) -> storm::BoxFuture<'a, storm::Result<Option<#ident>>> {
+            fn load_one_with_args<'a>(&'a self, k: &'a <#ident as storm::Entity>::Key, args: storm::provider::LoadArgs) -> storm::BoxFuture<'a, storm::Result<Option<#ident>>> {
                 Box::pin(async { Ok(None) })
             }
         }

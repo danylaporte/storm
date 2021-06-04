@@ -100,7 +100,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             C: Default + Extend<(<#ident as storm::Entity>::Key, #ident)> #translated_where + Send + 'static,
             FILTER: storm_mssql::FilterSql,
         {
-            fn load_all<'a>(&'a self, filter: &'a FILTER) -> storm::BoxFuture<'a, storm::Result<C>> {
+            fn load_all_with_args<'a>(&'a self, filter: &'a FILTER, args: storm::provider::LoadArgs) -> storm::BoxFuture<'a, storm::Result<C>> {
                 Box::pin(async move {
                     let provider: &storm_mssql::MssqlProvider = self.provide(#provider).await?;
                     let (sql, params) = storm_mssql::FilterSql::filter_sql(filter, 0);
@@ -114,10 +114,10 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
         }
 
         impl storm::provider::LoadOne<#ident> for storm::provider::ProviderContainer {
-            fn load_one<'a>(&'a self, k: &'a <#ident as Entity>::Key) -> storm::BoxFuture<'a, storm::Result<Option<#ident>>> {
+            fn load_one_with_args<'a>(&'a self, k: &'a <#ident as Entity>::Key, args: storm::provider::LoadArgs) -> storm::BoxFuture<'a, storm::Result<Option<#ident>>> {
                 Box::pin(async move {
                     let filter = #filter_sql;
-                    let v: storm::provider::LoadOneInternal<#ident> = storm::provider::LoadAll::load_all(self, &filter).await?;
+                    let v: storm::provider::LoadOneInternal<#ident> = storm::provider::LoadAll::load_all_with_args(self, &filter, args).await?;
                     Ok(v.into_inner())
                 })
             }
@@ -142,8 +142,11 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let mut save_part = Vec::new();
     let mut wheres = Vec::new();
     let mut translated = SaveTranslated::new(&attrs);
+    let is_identity_key = attrs.is_identity_key();
+    let identity_col = attrs.identity.to_lowercase();
 
     let keys = attrs.keys(&mut errors);
+    let mut identity_found = is_identity_key;
 
     for field in try_ts!(input.fields()) {
         let attrs: FieldAttrs = continue_ts!(
@@ -158,6 +161,12 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
         }
 
         let column = &continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
+        let is_identity = !identity_col.is_empty() && identity_col == column.to_lowercase();
+
+        if is_identity {
+            identity_found = true;
+            continue;
+        }
 
         // keys are processed at the end.
         if keys.contains(&column.as_str()) {
@@ -188,6 +197,18 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
         });
     }
 
+    if !attrs.identity.is_empty() && !identity_found {
+        errors.push(
+            Error::new(attrs.identity.span(), "Identity field not found.").to_compile_error(),
+        );
+    }
+
+    let add_key_or_identity = if is_identity_key {
+        quote!(add_key_identity)
+    } else {
+        quote!(add_key_ref)
+    };
+
     for (index, key) in keys.iter().enumerate() {
         let name = LitStr::new(&format!("[{}]", key), ident.span());
 
@@ -196,13 +217,42 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
                 let n = LitInt::new(&index.to_string(), ident.span());
                 quote! { &k.#n }
             }
+            false if is_identity_key => quote! { *k },
             false => quote! { k },
         };
 
-        wheres.push(quote!(builder.add_key_ref(#name, #k);));
+        wheres.push(quote!(builder.#add_key_or_identity(#name, #k);));
     }
 
     try_ts!(errors.result());
+
+    let upsert_trait;
+    let upsert_sig;
+    let builder_invoke;
+    let entity_part_key;
+    let reload_entity;
+
+    if attrs.reload_on_upsert_or_identity() {
+        upsert_trait = quote!(storm::provider::UpsertMut<#ident>);
+        upsert_sig = quote!(fn upsert_mut<'a>(&'a self, k: &'a mut <#ident as storm::Entity>::Key, v: &'a mut #ident) -> storm::BoxFuture<'a, storm::Result<()>>);
+        entity_part_key = quote!(&k.clone());
+    } else {
+        upsert_trait = quote!(storm::provider::Upsert<#ident>);
+        upsert_sig = quote!(fn upsert<'a>(&'a self, k: &'a <#ident as storm::Entity>::Key, v: &'a #ident) -> storm::BoxFuture<'a, storm::Result<()>>);
+        entity_part_key = quote!(k);
+    }
+
+    if attrs.reload_on_upsert() {
+        reload_entity = quote!(*v = storm::provider::LoadOne::<#ident>::load_one_with_args(self.container(), &k, storm::provider::LoadArgs { use_transaction: true }).await?.ok_or(storm::Error::EntityNotFound)?;);
+    } else {
+        reload_entity = quote!();
+    }
+
+    if is_identity_key {
+        builder_invoke = quote!(builder.execute_identity(provider, k).await?;);
+    } else {
+        builder_invoke = quote!(builder.execute(provider).await?;);
+    }
 
     let save_part = save_part.ts();
     let wheres = wheres.ts();
@@ -211,20 +261,20 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let (metrics_start, metrics_end) = metrics(&ident, "upsert");
 
     quote! {
-        impl storm::provider::Upsert<#ident> for storm::provider::TransactionProvider<'_> {
-            fn upsert<'a>(&'a self, k: &'a <#ident as storm::Entity>::Key, v: &'a #ident) -> storm::BoxFuture<'a, storm::Result<()>> {
+        impl #upsert_trait for storm::provider::TransactionProvider<'_> {
+            #upsert_sig {
                 Box::pin(async move {
                     let provider: &storm_mssql::MssqlProvider = self.container().provide(#provider).await?;
                     let mut builder = storm_mssql::UpsertBuilder::new(#table);
 
                     #metrics_start
 
-                    storm_mssql::SaveEntityPart::save_entity_part(v, k, &mut builder);
+                    let entity_part_key = #entity_part_key;
+                    storm_mssql::SaveEntityPart::save_entity_part(v, entity_part_key, &mut builder);
 
                     #wheres
-
-                    builder.execute(provider).await?;
-
+                    #builder_invoke
+                    #reload_entity
                     #translated
 
                     #metrics_end

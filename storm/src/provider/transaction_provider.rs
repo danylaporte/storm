@@ -1,4 +1,4 @@
-use super::{LoadAll, ProviderContainer};
+use super::{LoadAll, LoadArgs, ProviderContainer};
 use crate::{BoxFuture, Entity, Result};
 use std::ops::Deref;
 
@@ -54,7 +54,11 @@ where
     FILTER: Send + Sync,
     ProviderContainer: LoadAll<E, FILTER, C>,
 {
-    fn load_all<'a>(&'a self, filter: &'a FILTER) -> BoxFuture<'a, Result<C>> {
-        self.0.load_all(filter)
+    fn load_all_with_args<'a>(
+        &'a self,
+        filter: &'a FILTER,
+        args: LoadArgs,
+    ) -> BoxFuture<'a, Result<C>> {
+        self.0.load_all_with_args(filter, args)
     }
 }

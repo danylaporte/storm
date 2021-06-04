@@ -20,14 +20,14 @@ fn provider() -> ProviderContainer {
 }
 
 #[tokio::test]
-async fn crud() -> Result<()> {
+async fn identity_key_crud() -> Result<()> {
     let ctx = create_ctx();
     let ctx = ctx.read().await;
     let provider = ctx.provider().provide::<MssqlProvider>("").await?;
 
     provider
         .execute_with_args(
-            "CREATE TABLE ##Tbl (Id INT NOT NULL, Name NVARCHAR(100) NOT NULL, Other INT NULL);",
+            "CREATE TABLE ##Tbl (Id INT NOT NULL IDENTITY, Name NVARCHAR(100) NOT NULL, Other INT NULL);",
             &[],
             ExecuteArgs {
                 use_transaction: false,
@@ -45,23 +45,28 @@ async fn crud() -> Result<()> {
     };
 
     // insert
-    entities1.insert(1, e1).await?;
+    let i1 = entities1.insert_mut(0, e1).await?;
 
-    let mut e1 = entities1.get(&1).unwrap().clone();
+    assert_eq!(i1, 1);
+
+    let mut e1 = entities1.get(&i1).unwrap().clone();
 
     e1.o = Some(5);
 
     // update
-    entities1.insert(1, e1).await?;
+    entities1.insert_mut(i1, e1).await?;
 
     let e2 = Entity1 {
         name: "E2".to_string(),
         o: None,
     };
-    entities1.insert(2, e2).await?;
+
+    let i2 = entities1.insert_mut(0, e2).await?;
+
+    assert_eq!(i2, 2);
 
     // delete
-    entities1.remove(2).await?;
+    entities1.remove(i2).await?;
 
     let log = trx.commit().await?;
 
@@ -86,7 +91,12 @@ async fn crud() -> Result<()> {
 }
 
 #[derive(Clone, Ctx, Debug, MssqlDelete, MssqlLoad, MssqlSave, PartialEq)]
-#[storm(table = "##Tbl", keys = "Id", collection = "hash_table")]
+#[storm(
+    table = "##Tbl",
+    keys = "Id",
+    collection = "hash_table",
+    identity = "id"
+)]
 struct Entity1 {
     name: String,
 

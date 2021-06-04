@@ -1,7 +1,16 @@
+use super::LoadArgs;
 use crate::{BoxFuture, Entity, Error, GetMut, Result};
 
 pub trait LoadOne<E: Entity>: Send + Sync {
-    fn load_one<'a>(&'a self, k: &'a E::Key) -> BoxFuture<'a, Result<Option<E>>>;
+    fn load_one_with_args<'a>(
+        &'a self,
+        k: &'a E::Key,
+        args: LoadArgs,
+    ) -> BoxFuture<'a, Result<Option<E>>>;
+
+    fn load_one<'a>(&'a self, k: &'a E::Key) -> BoxFuture<'a, Result<Option<E>>> {
+        self.load_one_with_args(k, LoadArgs::default())
+    }
 
     fn load_one_ok<'a>(&'a self, k: &'a E::Key) -> BoxFuture<'a, Result<E>> {
         Box::pin(async move { self.load_one(k).await?.ok_or(Error::EntityNotFound) })

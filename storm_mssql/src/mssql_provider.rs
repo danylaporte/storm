@@ -1,4 +1,4 @@
-use crate::{Client, ClientFactory, Execute, Parameter, QueryRows, ToSql};
+use crate::{execute::ExecuteArgs, Client, ClientFactory, Execute, Parameter, QueryRows, ToSql};
 use futures_util::TryStreamExt;
 use std::{
     borrow::Cow,
@@ -38,10 +38,11 @@ impl Execute for MssqlProvider {
         skip(self, params),
         err
     )]
-    fn execute<'a, S>(
+    fn execute_with_args<'a, S>(
         &'a self,
         statement: S,
         params: &'a [&'a (dyn ToSql)],
+        args: ExecuteArgs,
     ) -> BoxFuture<'a, Result<u64>>
     where
         S: ?Sized + Debug + Into<Cow<'a, str>> + Send + 'a,
@@ -52,16 +53,25 @@ impl Execute for MssqlProvider {
 
             adapt_params(params, &mut intermediate, &mut output);
 
+            let mut client;
+            let client_ref;
             let mut guard = self.state().await;
-            let mut transaction = guard.transaction().await?;
 
-            let count = transaction
+            if args.use_transaction {
+                client = guard.transaction().await?;
+                client_ref = &mut guard.transaction;
+            } else {
+                client = guard.client().await?;
+                client_ref = &mut guard.client;
+            };
+
+            let count = client
                 .execute(statement, &output)
                 .await
                 .map_err(Error::std)?
                 .total();
 
-            guard.transaction = Some(transaction);
+            *client_ref = Some(client);
             Ok(count)
         })
     }
@@ -98,7 +108,7 @@ impl QueryRows for MssqlProvider {
         statement: S,
         params: &'a [&'a (dyn ToSql)],
         mut mapper: M,
-        force_transaction: bool,
+        use_transaction: bool,
     ) -> BoxFuture<'a, Result<C>>
     where
         C: Default + Extend<R> + Send,
@@ -116,7 +126,7 @@ impl QueryRows for MssqlProvider {
             let mut vec = Vec::with_capacity(10);
             let mut guard = self.state().await;
 
-            let mut client = match force_transaction {
+            let mut client = match use_transaction {
                 true => guard.transaction().await,
                 false => guard.client().await,
             }?;
@@ -138,7 +148,7 @@ impl QueryRows for MssqlProvider {
             // complete the work (making sure the client can take another query).
             results.into_results().await.map_err(Error::std)?;
 
-            match force_transaction {
+            match use_transaction {
                 true => guard.transaction = Some(client),
                 false => guard.client = Some(client),
             }

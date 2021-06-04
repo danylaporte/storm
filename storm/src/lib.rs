@@ -17,6 +17,7 @@ mod get_mut;
 mod hash_table;
 mod init;
 mod insert;
+mod is_defined;
 pub mod mem;
 mod one_to_many;
 pub mod prelude;
@@ -46,7 +47,8 @@ pub use get::Get;
 pub use get_mut::GetMut;
 pub use hash_table::HashTable;
 pub use init::Init;
-pub use insert::Insert;
+pub use insert::*;
+pub use is_defined::IsDefined;
 #[cfg(feature = "metrics")]
 pub use metrics;
 pub use once_cell::sync::OnceCell;

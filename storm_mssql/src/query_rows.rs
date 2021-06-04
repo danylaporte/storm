@@ -7,7 +7,7 @@ pub trait QueryRows {
     /// Execute a query on the sql server and returns the row.
     ///
     /// ## Parameters
-    /// - force_transaction: make sure the query is run inside a transaction.
+    /// - use_transaction: make sure the query is run inside a transaction.
     /// This is useful when loading we need to execute a query and then load the result
     /// from sql from the same transaction.
     fn query_rows<'a, S, M, R, C>(
@@ -15,7 +15,7 @@ pub trait QueryRows {
         statement: S,
         params: &'a [&'a (dyn ToSql)],
         mapper: M,
-        force_transaction: bool,
+        use_transaction: bool,
     ) -> BoxFuture<'a, Result<C>>
     where
         C: Default + Extend<R> + Send,
@@ -33,7 +33,7 @@ where
         statement: S,
         params: &'a [&'a (dyn ToSql)],
         mapper: M,
-        force_transaction: bool,
+        use_transaction: bool,
     ) -> BoxFuture<'a, Result<C>>
     where
         C: Default + Extend<R> + Send,
@@ -41,6 +41,6 @@ where
         R: Send,
         S: ?Sized + Debug + for<'b> Into<Cow<'b, str>> + Send + 'a,
     {
-        (**self).query_rows(statement, params, mapper, force_transaction)
+        (**self).query_rows(statement, params, mapper, use_transaction)
     }
 }

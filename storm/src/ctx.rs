@@ -1,14 +1,13 @@
+use crate::{
+    provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
+    Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity, EntityAccessor,
+    Gc, GcCtx, Get, HashTable, Insert, InsertMut, Log, LogAccessor, LogState, Logs, NotifyTag,
+    ProviderContainer, Remove, Result, Tag, Transaction, Vars, VecTable,
+};
 use parking_lot::RwLock;
 use std::{hash::Hash, marker::PhantomData};
 use tracing::instrument;
 use version_tag::VersionTag;
-
-use crate::{
-    provider::{Delete, LoadAll, LoadOne, TransactionProvider, Upsert},
-    Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity, EntityAccessor,
-    Gc, GcCtx, Get, HashTable, Insert, Log, LogAccessor, LogState, Logs, NotifyTag,
-    ProviderContainer, Remove, Result, Tag, Transaction, Vars, VecTable,
-};
 
 #[derive(Default)]
 pub struct Ctx {
@@ -140,8 +139,8 @@ where
     ProviderContainer: LoadAll<E, F, C>,
 {
     #[inline]
-    fn load_all<'a>(&'a self, filter: &'a F) -> BoxFuture<'a, Result<C>> {
-        self.provider.load_all(filter)
+    fn load_all_with_args<'a>(&'a self, filter: &'a F, args: LoadArgs) -> BoxFuture<'a, Result<C>> {
+        self.provider.load_all_with_args(filter, args)
     }
 }
 
@@ -151,8 +150,12 @@ where
     ProviderContainer: LoadOne<E>,
 {
     #[inline]
-    fn load_one<'a>(&'a self, k: &'a E::Key) -> BoxFuture<'a, Result<Option<E>>> {
-        self.provider.load_one(k)
+    fn load_one_with_args<'a>(
+        &'a self,
+        k: &'a E::Key,
+        args: LoadArgs,
+    ) -> BoxFuture<'a, Result<Option<E>>> {
+        self.provider.load_one_with_args(k, args)
     }
 }
 
@@ -232,8 +235,8 @@ where
     ProviderContainer: LoadAll<E, F, C>,
 {
     #[inline]
-    fn load_all<'b>(&'b self, filter: &'b F) -> BoxFuture<'b, Result<C>> {
-        self.ctx.load_all(filter)
+    fn load_all_with_args<'b>(&'b self, filter: &'b F, args: LoadArgs) -> BoxFuture<'b, Result<C>> {
+        self.ctx.load_all_with_args(filter, args)
     }
 }
 
@@ -244,8 +247,12 @@ where
     ProviderContainer: LoadOne<E>,
 {
     #[inline]
-    fn load_one<'b>(&'b self, k: &'b E::Key) -> BoxFuture<'b, Result<Option<E>>> {
-        self.ctx.load_one(k)
+    fn load_one_with_args<'b>(
+        &'b self,
+        k: &'b E::Key,
+        args: LoadArgs,
+    ) -> BoxFuture<'b, Result<Option<E>>> {
+        self.ctx.load_one_with_args(k, args)
     }
 }
 
@@ -277,6 +284,18 @@ impl<'a> CtxTransaction<'a> {
         for<'b> TblTransaction<'b, E>: Insert<E>,
     {
         self.tbl_of::<E>().await?.insert_all(iter).await?;
+        Ok(())
+    }
+
+    pub async fn insert_mut_all<E, I>(&mut self, iter: I) -> Result<()>
+    where
+        Ctx: AsRefAsync<E::Tbl>,
+        E: Entity + EntityAccessor + LogAccessor,
+        I: IntoIterator<Item = (E::Key, E)> + Send,
+        I::IntoIter: Send,
+        for<'b> TblTransaction<'b, E>: InsertMut<E>,
+    {
+        self.tbl_of::<E>().await?.insert_mut_all(iter).await?;
         Ok(())
     }
 
@@ -362,6 +381,24 @@ where
     }
 
     #[inline]
+    pub fn insert_mut(&mut self, k: E::Key, v: E) -> BoxFuture<'_, Result<E::Key>>
+    where
+        Self: InsertMut<E>,
+    {
+        InsertMut::insert_mut(self, k, v)
+    }
+
+    #[inline]
+    pub fn insert_mut_all<'b, I>(&'b mut self, iter: I) -> BoxFuture<'b, Result<()>>
+    where
+        I: IntoIterator<Item = (E::Key, E)> + Send + 'a,
+        I::IntoIter: Send,
+        Self: InsertMut<E>,
+    {
+        InsertMut::<E>::insert_mut_all(self, iter)
+    }
+
+    #[inline]
     pub fn remove(&mut self, k: E::Key) -> BoxFuture<'_, Result<()>>
     where
         Self: Remove<E>,
@@ -407,6 +444,21 @@ where
             self.provider.upsert(&k, &v).await?;
             self.log.insert(k, LogState::Inserted(v));
             Ok(())
+        })
+    }
+}
+
+impl<'a, E> InsertMut<E> for TblTransaction<'a, E>
+where
+    for<'b> TransactionProvider<'b>: UpsertMut<E>,
+    E: Entity + EntityAccessor,
+    E::Key: Eq + Hash + Clone,
+{
+    fn insert_mut(&mut self, mut k: E::Key, mut v: E) -> BoxFuture<'_, Result<E::Key>> {
+        Box::pin(async move {
+            self.provider.upsert_mut(&mut k, &mut v).await?;
+            self.log.insert(k.clone(), LogState::Inserted(v));
+            Ok(k)
         })
     }
 }

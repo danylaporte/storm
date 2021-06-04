@@ -17,4 +17,4 @@ pub use provider::Provider;
 pub use provider_container::{global_provider, set_global_provider, ProviderContainer};
 pub use provider_factory::ProviderFactory;
 pub use transaction_provider::TransactionProvider;
-pub use upsert::Upsert;
+pub use upsert::*;
