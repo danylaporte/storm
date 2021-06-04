@@ -20,14 +20,14 @@ fn provider() -> ProviderContainer {
 }
 
 #[tokio::test]
-async fn identity_field_crud() -> Result<()> {
+async fn no_fields() -> Result<()> {
     let ctx = create_ctx();
     let ctx = ctx.read().await;
     let provider = ctx.provider().provide::<MssqlProvider>("").await?;
 
     provider
         .execute_with_args(
-            "CREATE TABLE ##Tbl (Id INT NOT NULL, Name NVARCHAR(100) NOT NULL, Number INT IDENTITY NOT NULL, Other INT NULL);",
+            "CREATE TABLE ##Tbl (Id INT NOT NULL);",
             &[],
             ExecuteArgs {
                 use_transaction: false,
@@ -39,34 +39,16 @@ async fn identity_field_crud() -> Result<()> {
     let mut trx = ctx.transaction();
     let mut entities1 = trx.tbl_of::<Entity1>().await?;
 
-    let e1 = Entity1 {
-        name: "E1".to_string(),
-        number: 0,
-        o: None,
-    };
-
     // insert
-    entities1.insert_mut(1, e1).await?;
+    entities1.insert(1, Entity1).await?;
 
-    let mut e1 = entities1.get(&1).unwrap().clone();
-
-    assert_eq!(e1.number, 1);
-    e1.o = Some(5);
+    assert!(entities1.get(&1).is_some());
 
     // update
-    entities1.insert_mut(1, e1).await?;
+    entities1.insert(1, Entity1).await?;
 
-    let e2 = Entity1 {
-        name: "E2".to_string(),
-        number: 0,
-        o: None,
-    };
-
-    entities1.insert_mut(2, e2).await?;
-
-    let e2 = entities1.get(&2).unwrap();
-
-    assert_eq!(e2.number, 2);
+    // insert
+    entities1.insert(2, Entity1).await?;
 
     // delete
     entities1.remove(2).await?;
@@ -80,15 +62,7 @@ async fn identity_field_crud() -> Result<()> {
     let ctx = ctx.read().await;
     let entities1 = ctx.tbl_of::<Entity1>().await?;
 
-    assert_eq!(
-        entities1.get(&1).unwrap().clone(),
-        Entity1 {
-            name: "E1".to_string(),
-            number: 1,
-            o: Some(5),
-        }
-    );
-
+    assert!(entities1.get(&1).is_some(),);
     assert!(entities1.get(&2).is_none());
 
     Ok(())
@@ -99,16 +73,9 @@ async fn identity_field_crud() -> Result<()> {
     table = "##Tbl",
     keys = "Id",
     collection = "hash_table",
-    identity = "number",
     no_test = true
 )]
-struct Entity1 {
-    name: String,
-    number: i32,
-
-    #[storm(column = "Other")]
-    o: Option<i32>,
-}
+struct Entity1;
 
 impl Entity for Entity1 {
     type Key = i32;

@@ -93,6 +93,21 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let translated_where = translated.to_where_clause();
     let provider = attrs.provider();
     let (metrics_start, metrics_end) = metrics(&ident, "load");
+    let test;
+
+    if attrs.no_test {
+        test = quote!();
+    } else {
+        test = quote! {
+            #[cfg(test)]
+            #[tokio::test]
+            async fn #load_test() -> storm::Result<()> {
+                let provider = storm_mssql::create_provider_container_from_env("DB", #provider)?;
+                storm::provider::LoadAll::<#ident, _, storm::provider::LoadNothing>::load_all(&provider, &()).await?;
+                Ok(())
+            }
+        };
+    }
 
     quote! {
         impl<C, FILTER> storm::provider::LoadAll<#ident, FILTER, C> for storm::provider::ProviderContainer
@@ -123,13 +138,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             }
         }
 
-        #[cfg(test)]
-        #[tokio::test]
-        async fn #load_test() -> storm::Result<()> {
-            let provider = storm_mssql::create_provider_container_from_env("DB", #provider)?;
-            storm::provider::LoadAll::<#ident, _, storm::provider::LoadNothing>::load_all(&provider, &()).await?;
-            Ok(())
-        }
+        #test
     }
 }
 

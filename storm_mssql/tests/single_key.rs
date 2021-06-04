@@ -86,7 +86,12 @@ async fn crud() -> Result<()> {
 }
 
 #[derive(Clone, Ctx, Debug, MssqlDelete, MssqlLoad, MssqlSave, PartialEq)]
-#[storm(table = "##Tbl", keys = "Id", collection = "hash_table")]
+#[storm(
+    table = "##Tbl",
+    keys = "Id",
+    collection = "hash_table",
+    no_test = true
+)]
 struct Entity1 {
     name: String,
 

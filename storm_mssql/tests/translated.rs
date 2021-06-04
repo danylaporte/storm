@@ -1,6 +1,6 @@
 use std::{borrow::Cow, ops::Index};
 use storm::{prelude::*, Error, MssqlLoad, MssqlSave, Result};
-use storm_mssql::{Execute, FromSql, MssqlFactory, MssqlProvider, ToSql, ToSqlNull};
+use storm_mssql::{Execute, ExecuteArgs, FromSql, MssqlFactory, MssqlProvider, ToSql, ToSqlNull};
 use tiberius::Config;
 
 fn create_ctx() -> QueueRwLock<Ctx> {
@@ -26,14 +26,22 @@ async fn translated_flow() -> storm::Result<()> {
     let ctx = ctx.read().await;
 
     let provider = ctx.provider().provide::<MssqlProvider>("").await?;
+    let no_transaction = ExecuteArgs {
+        use_transaction: false,
+    };
 
     provider
-        .execute("CREATE TABLE ##Labels (Id Int PRIMARY KEY NOT NULL);", &[])
+        .execute_with_args(
+            "CREATE TABLE ##Labels (Id Int PRIMARY KEY NOT NULL);",
+            &[],
+            no_transaction,
+        )
         .await?;
 
-    provider.execute(
+    provider.execute_with_args(
         "CREATE TABLE ##LabelsTranslatedValues (Id2 Int NOT NULL, Culture Int NOT NULL, Name NVARCHAR(50) NOT NULL);",
         &[],
+        no_transaction,
     )
     .await?;
 
@@ -73,7 +81,8 @@ async fn translated_flow() -> storm::Result<()> {
     table = "##Labels",
     keys = "Id",
     translate_table = "##LabelsTranslatedValues",
-    translate_keys = "Id2"
+    translate_keys = "Id2",
+    no_test = true
 )]
 struct Label {
     name: Translated,

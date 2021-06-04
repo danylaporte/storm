@@ -38,7 +38,7 @@ impl Entity for EntityWithPart {
 }
 
 #[derive(MssqlSave)]
-#[storm(table = "t", keys = "id")]
+#[storm(table = "t", keys = "id", no_test = true)]
 pub struct EntityPart {
     pub i: i32,
 }

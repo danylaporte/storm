@@ -66,6 +66,9 @@ pub(super) struct TypeAttrs {
     pub table: SpannedValue<String>,
     pub keys: SpannedValue<String>,
 
+    #[darling(default)]
+    pub no_test: bool,
+
     /// The name of the provider in the ProviderContainer.
     ///
     /// Provider can be named to accommodate multiple database

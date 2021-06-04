@@ -95,7 +95,8 @@ async fn identity_key_crud() -> Result<()> {
     table = "##Tbl",
     keys = "Id",
     collection = "hash_table",
-    identity = "id"
+    identity = "id",
+    no_test = true
 )]
 struct Entity1 {
     name: String,

@@ -165,25 +165,22 @@ impl<'a> UpsertBuilder<'a> {
             UpsertMode::InsertThanUpdate => {
                 let update = self.update_sql();
                 let insert = self.insert_sql();
-                
+
                 if update.is_empty() {
-                    format!("
+                    format!(
+                        "
                         BEGIN TRY
                         {}
                         END TRY
                         BEGIN CATCH
-                            IF ERROR_NUMBER() IN (2601, 2627)
-                            BEGIN
-                            END
-                            ELSE
-                            THROW;
+                            IF ERROR_NUMBER() NOT IN (2601, 2627) THROW;
                         END CATCH
                         ",
                         insert
                     )
                 } else {
-                format!(
-                    "
+                    format!(
+                        "
                         {update}
                         IF @@ROWCOUNT = 0
                         BEGIN
@@ -196,15 +193,15 @@ impl<'a> UpsertBuilder<'a> {
                                 {update}
                                 END
                                 ELSE
-                                THROW;
+                                    THROW;
                             END CATCH
                         END
                     ",
-                    insert = insert,
-                    update = update,
-                )
+                        insert = insert,
+                        update = update,
+                    )
+                }
             }
-        },
             UpsertMode::Update => self.update_sql(),
         }
     }
