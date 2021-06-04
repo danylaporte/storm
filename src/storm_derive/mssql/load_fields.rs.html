@@ -186,7 +186,7 @@
                     #<span class="ident">keys</span>,
                     #<span class="ident">entity</span> { #<span class="ident">fields</span> }
                 ))
-            }, <span class="comment">/*force_transaction*/</span> <span class="bool-val">true</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+            }, <span class="ident">args</span>.<span class="ident">use_transaction</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         });
 
         <span class="ident">tokens</span>.<span class="ident">append_all</span>(<span class="macro">quote</span><span class="macro">!</span>(#(#<span class="ident">errors</span>)<span class="kw-2">*</span>));
