@@ -162,27 +162,49 @@ impl<'a> UpsertBuilder<'a> {
     pub fn sql(&self) -> String {
         match self.upsert_mode {
             UpsertMode::Insert => self.insert_sql(),
-            UpsertMode::InsertThanUpdate => format!(
-                "
-                    {update}
-                    IF @@ROWCOUNT = 0
-                    BEGIN
+            UpsertMode::InsertThanUpdate => {
+                let update = self.update_sql();
+                let insert = self.insert_sql();
+                
+                if update.is_empty() {
+                    format!("
                         BEGIN TRY
-                        {insert}
+                        {}
                         END TRY
                         BEGIN CATCH
                             IF ERROR_NUMBER() IN (2601, 2627)
                             BEGIN
-                            {update}
                             END
                             ELSE
                             THROW;
                         END CATCH
-                    END
-                ",
-                insert = self.insert_sql(),
-                update = self.update_sql(),
-            ),
+                        ",
+                        insert
+                    )
+                } else {
+                format!(
+                    "
+                        {update}
+                        IF @@ROWCOUNT = 0
+                        BEGIN
+                            BEGIN TRY
+                            {insert}
+                            END TRY
+                            BEGIN CATCH
+                                IF ERROR_NUMBER() IN (2601, 2627)
+                                BEGIN
+                                {update}
+                                END
+                                ELSE
+                                THROW;
+                            END CATCH
+                        END
+                    ",
+                    insert = insert,
+                    update = update,
+                )
+            }
+        },
             UpsertMode::Update => self.update_sql(),
         }
     }
