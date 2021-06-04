@@ -243,6 +243,9 @@
 <span id="240">240</span>
 <span id="241">241</span>
 <span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">rename_all</span>::<span class="ident">RenameAll</span>;
 <span class="kw">use</span> <span class="ident">darling</span>::{<span class="ident">util</span>::<span class="ident">SpannedValue</span>, <span class="ident">FromDeriveInput</span>, <span class="ident">FromField</span>};
@@ -311,6 +314,9 @@
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct</span> <span class="ident">TypeAttrs</span> {
     <span class="kw">pub</span> <span class="ident">table</span>: <span class="ident">SpannedValue</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">keys</span>: <span class="ident">SpannedValue</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+
+    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">no_test</span>: <span class="ident">bool</span>,
 
     <span class="doccomment">/// The name of the provider in the ProviderContainer.</span>
     <span class="doccomment">///</span>
