@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm/src/ctx.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>ctx.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
 <link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
-<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../storm/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" height="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
+<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../storm/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" height="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
                 <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" height="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
@@ -580,10 +580,10 @@
     <span class="ident">Gc</span>, <span class="ident">GcCtx</span>, <span class="ident">Get</span>, <span class="ident">HashTable</span>, <span class="ident">Insert</span>, <span class="ident">InsertMut</span>, <span class="ident">Log</span>, <span class="ident">LogAccessor</span>, <span class="ident">LogState</span>, <span class="ident">Logs</span>, <span class="ident">NotifyTag</span>,
     <span class="ident">ProviderContainer</span>, <span class="ident">Remove</span>, <span class="prelude-ty">Result</span>, <span class="ident">Tag</span>, <span class="ident">Transaction</span>, <span class="ident">Vars</span>, <span class="ident">VecTable</span>,
 };
-<span class="kw">use</span> <span class="ident">parking_lot</span>::<span class="ident">RwLock</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">hash</span>::<span class="ident">Hash</span>, <span class="ident">marker</span>::<span class="ident">PhantomData</span>};
-<span class="kw">use</span> <span class="ident">tracing</span>::<span class="ident">instrument</span>;
-<span class="kw">use</span> <span class="ident">version_tag</span>::<span class="ident">VersionTag</span>;
+<span class="kw">use</span> <span class="ident">parking_lot::RwLock</span>;
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">hash::Hash</span>, <span class="ident">marker::PhantomData</span>};
+<span class="kw">use</span> <span class="ident">tracing::instrument</span>;
+<span class="kw">use</span> <span class="ident">version_tag::VersionTag</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Ctx</span> {
@@ -595,19 +595,19 @@
 <span class="kw">impl</span> <span class="ident">Ctx</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">provider</span>: <span class="ident">ProviderContainer</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">Ctx</span> {
-            <span class="ident">gc</span>: <span class="ident">Default</span>::<span class="ident">default</span>(),
+            <span class="ident">gc</span>: <span class="ident">Default::default</span>(),
             <span class="ident">provider</span>,
-            <span class="ident">vars</span>: <span class="ident">Vars</span>::<span class="ident">new</span>(),
+            <span class="ident">vars</span>: <span class="ident">Vars::new</span>(),
         }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">clear_tbl_of</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>)
     <span class="kw">where</span>
         <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span>,
-        <span class="ident">E</span>::<span class="ident">Tbl</span>: <span class="ident">Accessor</span>,
+        <span class="ident">E::Tbl</span>: <span class="ident">Accessor</span>,
     {
-        <span class="op">&lt;</span><span class="ident">E</span>::<span class="ident">Tbl</span> <span class="kw">as</span> <span class="ident">Accessor</span><span class="op">&gt;</span>::<span class="ident">clear_deps</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">vars</span>);
-        <span class="self">self</span>.<span class="ident">vars</span>.<span class="ident">clear</span>(<span class="ident">E</span>::<span class="ident">entity_var</span>());
+        <span class="op">&lt;</span><span class="ident">E::Tbl</span> <span class="kw">as</span> <span class="ident">Accessor</span><span class="op">&gt;</span><span class="ident">::clear_deps</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">vars</span>);
+        <span class="self">self</span>.<span class="ident">vars</span>.<span class="ident">clear</span>(<span class="ident">E::entity_var</span>());
     }
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
@@ -624,30 +624,30 @@
     }
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tbl_of</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;_</span> <span class="ident">E</span>::<span class="ident">Tbl</span><span class="op">&gt;</span><span class="op">&gt;</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tbl_of</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;_</span> <span class="ident">E::Tbl</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span>,
-        <span class="self">Self</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E</span>::<span class="ident">Tbl</span><span class="op">&gt;</span>,
+        <span class="self">Self</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
     {
         <span class="self">self</span>.<span class="ident">as_ref_async</span>()
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tbl_of_opt</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">E</span>::<span class="ident">Tbl</span><span class="op">&gt;</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tbl_of_opt</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span>,
-        <span class="ident">E</span>::<span class="ident">Tbl</span>: <span class="ident">Accessor</span>,
+        <span class="ident">E::Tbl</span>: <span class="ident">Accessor</span>,
     {
-        <span class="self">self</span>.<span class="ident">vars</span>.<span class="ident">get</span>(<span class="op">&lt;</span><span class="ident">E</span>::<span class="ident">Tbl</span> <span class="kw">as</span> <span class="ident">Accessor</span><span class="op">&gt;</span>::<span class="ident">var</span>())
+        <span class="self">self</span>.<span class="ident">vars</span>.<span class="ident">get</span>(<span class="op">&lt;</span><span class="ident">E::Tbl</span> <span class="kw">as</span> <span class="ident">Accessor</span><span class="op">&gt;</span><span class="ident">::var</span>())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tbl_of_mut</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">E</span>::<span class="ident">Tbl</span><span class="op">&gt;</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tbl_of_mut</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">E::Tbl</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span>,
-        <span class="ident">E</span>::<span class="ident">Tbl</span>: <span class="ident">Accessor</span> <span class="op">+</span> <span class="ident">NotifyTag</span>,
+        <span class="ident">E::Tbl</span>: <span class="ident">Accessor</span> <span class="op">+</span> <span class="ident">NotifyTag</span>,
     {
-        <span class="op">&lt;</span><span class="ident">E</span>::<span class="ident">Tbl</span> <span class="kw">as</span> <span class="ident">Accessor</span><span class="op">&gt;</span>::<span class="ident">clear_deps</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">vars</span>);
+        <span class="op">&lt;</span><span class="ident">E::Tbl</span> <span class="kw">as</span> <span class="ident">Accessor</span><span class="op">&gt;</span><span class="ident">::clear_deps</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">vars</span>);
 
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">vars</span>.<span class="ident">get_mut</span>(<span class="ident">E</span>::<span class="ident">entity_var</span>()) {
+        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">vars</span>.<span class="ident">get_mut</span>(<span class="ident">E::entity_var</span>()) {
             <span class="prelude-val">Some</span>(<span class="ident">ret</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">ret</span>.<span class="ident">notify_tag</span>();
                 <span class="prelude-val">Some</span>(<span class="ident">ret</span>)
@@ -657,13 +657,13 @@
     }
 
     <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
-    <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">fields</span>(<span class="ident">name</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">E</span> <span class="kw">as</span> <span class="ident">CtxTypeInfo</span><span class="op">&gt;</span>::<span class="ident">NAME</span>, <span class="ident">obj</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">OBJ_TABLE</span>), <span class="ident">skip</span>(<span class="self">self</span>))]</span>
+    <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">fields</span>(<span class="ident">name</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">E</span> <span class="kw">as</span> <span class="ident">CtxTypeInfo</span><span class="op">&gt;</span><span class="ident">::NAME</span>, <span class="ident">obj</span> <span class="op">=</span> <span class="kw">crate</span><span class="ident">::OBJ_TABLE</span>), <span class="ident">skip</span>(<span class="self">self</span>))]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tbl_gc</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>)
     <span class="kw">where</span>
         <span class="ident">E</span>: <span class="ident">CtxTypeInfo</span> <span class="op">+</span> <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span>,
-        <span class="ident">E</span>::<span class="ident">Tbl</span>: <span class="ident">Accessor</span> <span class="op">+</span> <span class="ident">NotifyTag</span> <span class="op">+</span> <span class="ident">Gc</span>,
+        <span class="ident">E::Tbl</span>: <span class="ident">Accessor</span> <span class="op">+</span> <span class="ident">NotifyTag</span> <span class="op">+</span> <span class="ident">Gc</span>,
     {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tbl</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">vars</span>.<span class="ident">get_mut</span>(<span class="ident">E</span>::<span class="ident">entity_var</span>()) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tbl</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">vars</span>.<span class="ident">get_mut</span>(<span class="ident">E::entity_var</span>()) {
             <span class="ident">tbl</span>.<span class="ident">gc</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">gc</span>);
         }
     }
@@ -680,11 +680,11 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">HashTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Ctx</span>
 <span class="kw">where</span>
     <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span><span class="op">&lt;</span><span class="ident">Tbl</span> <span class="op">=</span> <span class="ident">HashTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">E</span>::<span class="ident">Key</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
-    <span class="ident">ProviderContainer</span>: <span class="ident">LoadAll</span><span class="op">&lt;</span><span class="ident">E</span>, (), <span class="ident">E</span>::<span class="ident">Tbl</span><span class="op">&gt;</span>,
+    <span class="ident">E::Key</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
+    <span class="ident">ProviderContainer</span>: <span class="ident">LoadAll</span><span class="op">&lt;</span><span class="ident">E</span>, (), <span class="ident">E::Tbl</span><span class="op">&gt;</span>,
 {
     <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">fn</span> <span class="ident">as_ref_async</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;_</span> <span class="ident">E</span>::<span class="ident">Tbl</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">as_ref_async</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;_</span> <span class="ident">E::Tbl</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="ident">table_as_ref_async</span>::<span class="op">&lt;</span><span class="ident">E</span>, <span class="kw">_</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">vars</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">provider</span>)
     }
 }
@@ -692,25 +692,25 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Ctx</span>
 <span class="kw">where</span>
     <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span><span class="op">&lt;</span><span class="ident">Tbl</span> <span class="op">=</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">E</span>::<span class="ident">Key</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
-    <span class="ident">ProviderContainer</span>: <span class="ident">LoadAll</span><span class="op">&lt;</span><span class="ident">E</span>, (), <span class="ident">E</span>::<span class="ident">Tbl</span><span class="op">&gt;</span>,
+    <span class="ident">E::Key</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+    <span class="ident">ProviderContainer</span>: <span class="ident">LoadAll</span><span class="op">&lt;</span><span class="ident">E</span>, (), <span class="ident">E::Tbl</span><span class="op">&gt;</span>,
 {
     <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">fn</span> <span class="ident">as_ref_async</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;_</span> <span class="ident">E</span>::<span class="ident">Tbl</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">as_ref_async</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;_</span> <span class="ident">E::Tbl</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="ident">table_as_ref_async</span>::<span class="op">&lt;</span><span class="ident">E</span>, <span class="kw">_</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">vars</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">provider</span>)
     }
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ProviderContainer</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Ctx</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">provider</span>: <span class="ident">ProviderContainer</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span>::<span class="ident">new</span>(<span class="ident">provider</span>)
+        <span class="self">Self</span><span class="ident">::new</span>(<span class="ident">provider</span>)
     }
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">F</span>, <span class="ident">C</span><span class="op">&gt;</span> <span class="ident">LoadAll</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">F</span>, <span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Ctx</span>
 <span class="kw">where</span>
     <span class="ident">E</span>: <span class="ident">Entity</span>,
-    <span class="ident">C</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Extend</span><span class="op">&lt;</span>(<span class="ident">E</span>::<span class="ident">Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span>,
+    <span class="ident">C</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Extend</span><span class="op">&lt;</span>(<span class="ident">E::Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span>,
     <span class="ident">F</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span>,
     <span class="ident">ProviderContainer</span>: <span class="ident">LoadAll</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">F</span>, <span class="ident">C</span><span class="op">&gt;</span>,
 {
@@ -728,7 +728,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">fn</span> <span class="ident">load_one_with_args</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>,
-        <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">E</span>::<span class="ident">Key</span>,
+        <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">E::Key</span>,
         <span class="ident">args</span>: <span class="ident">LoadArgs</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">provider</span>.<span class="ident">load_one_with_args</span>(<span class="ident">k</span>, <span class="ident">args</span>)
@@ -773,10 +773,10 @@
 {
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">fn</span> <span class="ident">async_try_from</span>(<span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Ctx</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
+        <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
             <span class="prelude-val">Ok</span>(<span class="ident">CtxLocks</span> {
                 <span class="ident">ctx</span>,
-                <span class="ident">locks</span>: <span class="ident">L</span>::<span class="ident">async_try_from</span>(<span class="ident">ctx</span>).<span class="kw">await</span><span class="question-mark">?</span>,
+                <span class="ident">locks</span>: <span class="ident">L::async_try_from</span>(<span class="ident">ctx</span>).<span class="kw">await</span><span class="question-mark">?</span>,
             })
         })
     }
@@ -805,7 +805,7 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">E</span>, <span class="ident">F</span>, <span class="ident">C</span>, <span class="ident">L</span><span class="op">&gt;</span> <span class="ident">LoadAll</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">F</span>, <span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">CtxLocks</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">L</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">E</span>: <span class="ident">Entity</span>,
-    <span class="ident">C</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Extend</span><span class="op">&lt;</span>(<span class="ident">E</span>::<span class="ident">Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span>,
+    <span class="ident">C</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Extend</span><span class="op">&lt;</span>(<span class="ident">E::Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span>,
     <span class="ident">F</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span>,
     <span class="ident">L</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span>,
     <span class="ident">ProviderContainer</span>: <span class="ident">LoadAll</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">F</span>, <span class="ident">C</span><span class="op">&gt;</span>,
@@ -825,7 +825,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">fn</span> <span class="ident">load_one_with_args</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="self">self</span>,
-        <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="ident">E</span>::<span class="ident">Key</span>,
+        <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="ident">E::Key</span>,
         <span class="ident">args</span>: <span class="ident">LoadArgs</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">ctx</span>.<span class="ident">load_one_with_args</span>(<span class="ident">k</span>, <span class="ident">args</span>)
@@ -840,7 +840,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">CtxTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">commit</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Logs</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
+        <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
             <span class="self">self</span>.<span class="ident">provider</span>.<span class="ident">commit</span>().<span class="kw">await</span><span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">log_ctx</span>)
         })
@@ -853,10 +853,10 @@
 
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">insert_all</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">I</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">I</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E</span>::<span class="ident">Tbl</span><span class="op">&gt;</span>,
+        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
         <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
-        <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E</span>::<span class="ident">Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span>,
-        <span class="ident">I</span>::<span class="ident">IntoIter</span>: <span class="ident">Send</span>,
+        <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E::Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span>,
+        <span class="ident">I::IntoIter</span>: <span class="ident">Send</span>,
         <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">Insert</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
     {
         <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">insert_all</span>(<span class="ident">iter</span>).<span class="kw">await</span><span class="question-mark">?</span>;
@@ -865,10 +865,10 @@
 
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">insert_mut_all</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">I</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">I</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E</span>::<span class="ident">Tbl</span><span class="op">&gt;</span>,
+        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
         <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
-        <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E</span>::<span class="ident">Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span>,
-        <span class="ident">I</span>::<span class="ident">IntoIter</span>: <span class="ident">Send</span>,
+        <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E::Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span>,
+        <span class="ident">I::IntoIter</span>: <span class="ident">Send</span>,
         <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">InsertMut</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
     {
         <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">insert_mut_all</span>(<span class="ident">iter</span>).<span class="kw">await</span><span class="question-mark">?</span>;
@@ -885,10 +885,10 @@
 
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">remove_all</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">I</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">I</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E</span>::<span class="ident">Tbl</span><span class="op">&gt;</span>,
+        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
         <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
-        <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">E</span>::<span class="ident">Key</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span>,
-        <span class="ident">I</span>::<span class="ident">IntoIter</span>: <span class="ident">Send</span>,
+        <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">E::Key</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span>,
+        <span class="ident">I::IntoIter</span>: <span class="ident">Send</span>,
         <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">Remove</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
     {
         <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">remove_all</span>(<span class="ident">iter</span>).<span class="kw">await</span><span class="question-mark">?</span>;
@@ -898,11 +898,11 @@
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">tbl_of</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
-        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E</span>::<span class="ident">Tbl</span><span class="op">&gt;</span>,
+        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
     {
         <span class="prelude-val">Ok</span>(<span class="ident">TblTransaction</span> {
             <span class="ident">provider</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">provider</span>,
-            <span class="ident">log</span>: <span class="self">self</span>.<span class="ident">log_ctx</span>.<span class="ident">get_or_init_mut</span>(<span class="ident">E</span>::<span class="ident">log_var</span>(), <span class="ident">Default</span>::<span class="ident">default</span>),
+            <span class="ident">log</span>: <span class="self">self</span>.<span class="ident">log_ctx</span>.<span class="ident">get_or_init_mut</span>(<span class="ident">E::log_var</span>(), <span class="ident">Default::default</span>),
             <span class="ident">tbl</span>: <span class="self">self</span>.<span class="ident">ctx</span>.<span class="ident">as_ref_async</span>().<span class="kw">await</span><span class="question-mark">?</span>,
         })
     }
@@ -921,78 +921,78 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span><span class="op">&gt;</span> {
     <span class="ident">log</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">Log</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
     <span class="ident">provider</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">TransactionProvider</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>,
-    <span class="ident">tbl</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">E</span>::<span class="ident">Tbl</span>,
+    <span class="ident">tbl</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">E::Tbl</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">E</span><span class="op">&gt;</span> <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">E</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span>,
-    <span class="ident">E</span>::<span class="ident">Key</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
-    <span class="ident">E</span>::<span class="ident">Tbl</span>: <span class="ident">Get</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
+    <span class="ident">E::Key</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
+    <span class="ident">E::Tbl</span>: <span class="ident">Get</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
 {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="ident">E</span>::<span class="ident">Key</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">E</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="ident">E::Key</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">E</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">log</span>.<span class="ident">get</span>(<span class="ident">k</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">LogState</span>::<span class="ident">Inserted</span>(<span class="ident">v</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">v</span>),
-            <span class="prelude-val">Some</span>(<span class="ident">LogState</span>::<span class="ident">Removed</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="prelude-val">Some</span>(<span class="ident">LogState::Inserted</span>(<span class="ident">v</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">v</span>),
+            <span class="prelude-val">Some</span>(<span class="ident">LogState::Removed</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">tbl</span>.<span class="ident">get</span>(<span class="ident">k</span>),
         }
     }
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="ident">E</span>::<span class="ident">Key</span>, <span class="ident">v</span>: <span class="ident">E</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="ident">E::Key</span>, <span class="ident">v</span>: <span class="ident">E</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="self">Self</span>: <span class="ident">Insert</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
     {
-        <span class="ident">Insert</span>::<span class="ident">insert</span>(<span class="self">self</span>, <span class="ident">k</span>, <span class="ident">v</span>)
+        <span class="ident">Insert::insert</span>(<span class="self">self</span>, <span class="ident">k</span>, <span class="ident">v</span>)
     }
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_all</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">I</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">I</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E</span>::<span class="ident">Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-        <span class="ident">I</span>::<span class="ident">IntoIter</span>: <span class="ident">Send</span>,
+        <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E::Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
+        <span class="ident">I::IntoIter</span>: <span class="ident">Send</span>,
         <span class="self">Self</span>: <span class="ident">Insert</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
     {
-        <span class="ident">Insert</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>::<span class="ident">insert_all</span>(<span class="self">self</span>, <span class="ident">iter</span>)
+        <span class="ident">Insert</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="ident">::insert_all</span>(<span class="self">self</span>, <span class="ident">iter</span>)
     }
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="ident">E</span>::<span class="ident">Key</span>, <span class="ident">v</span>: <span class="ident">E</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">E</span>::<span class="ident">Key</span><span class="op">&gt;</span><span class="op">&gt;</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="ident">E::Key</span>, <span class="ident">v</span>: <span class="ident">E</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">E::Key</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="self">Self</span>: <span class="ident">InsertMut</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
     {
-        <span class="ident">InsertMut</span>::<span class="ident">insert_mut</span>(<span class="self">self</span>, <span class="ident">k</span>, <span class="ident">v</span>)
+        <span class="ident">InsertMut::insert_mut</span>(<span class="self">self</span>, <span class="ident">k</span>, <span class="ident">v</span>)
     }
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_mut_all</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">I</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">I</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E</span>::<span class="ident">Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-        <span class="ident">I</span>::<span class="ident">IntoIter</span>: <span class="ident">Send</span>,
+        <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E::Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
+        <span class="ident">I::IntoIter</span>: <span class="ident">Send</span>,
         <span class="self">Self</span>: <span class="ident">InsertMut</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
     {
-        <span class="ident">InsertMut</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>::<span class="ident">insert_mut_all</span>(<span class="self">self</span>, <span class="ident">iter</span>)
+        <span class="ident">InsertMut</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="ident">::insert_mut_all</span>(<span class="self">self</span>, <span class="ident">iter</span>)
     }
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="ident">E</span>::<span class="ident">Key</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="ident">E::Key</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="self">Self</span>: <span class="ident">Remove</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
     {
-        <span class="ident">Remove</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>::<span class="ident">remove</span>(<span class="self">self</span>, <span class="ident">k</span>)
+        <span class="ident">Remove</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="ident">::remove</span>(<span class="self">self</span>, <span class="ident">k</span>)
     }
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">remove_all</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">K</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">keys</span>: <span class="ident">K</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="self">Self</span>: <span class="ident">Remove</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
-        <span class="ident">K</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">E</span>::<span class="ident">Key</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;b</span>,
-        <span class="ident">K</span>::<span class="ident">IntoIter</span>: <span class="ident">Send</span>,
+        <span class="ident">K</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">E::Key</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;b</span>,
+        <span class="ident">K::IntoIter</span>: <span class="ident">Send</span>,
     {
-        <span class="ident">Remove</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>::<span class="ident">remove_all</span>(<span class="self">self</span>, <span class="ident">keys</span>)
+        <span class="ident">Remove</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="ident">::remove_all</span>(<span class="self">self</span>, <span class="ident">keys</span>)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tbl</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">E</span>::<span class="ident">Tbl</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tbl</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">E::Tbl</span> {
         <span class="self">self</span>.<span class="ident">tbl</span>
     }
 }
@@ -1000,11 +1000,11 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">E</span><span class="op">&gt;</span> <span class="ident">Get</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">E</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span>,
-    <span class="ident">E</span>::<span class="ident">Key</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
-    <span class="ident">E</span>::<span class="ident">Tbl</span>: <span class="ident">Get</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
+    <span class="ident">E::Key</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
+    <span class="ident">E::Tbl</span>: <span class="ident">Get</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
 {
     <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="ident">E</span>::<span class="ident">Key</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">E</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="ident">E::Key</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">E</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">get</span>(<span class="ident">k</span>)
     }
 }
@@ -1013,12 +1013,12 @@
 <span class="kw">where</span>
     <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> <span class="ident">TransactionProvider</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>: <span class="ident">Upsert</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
     <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span>,
-    <span class="ident">E</span>::<span class="ident">Key</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
+    <span class="ident">E::Key</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
 {
-    <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="ident">E</span>::<span class="ident">Key</span>, <span class="ident">v</span>: <span class="ident">E</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
+    <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="ident">E::Key</span>, <span class="ident">v</span>: <span class="ident">E</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
             <span class="self">self</span>.<span class="ident">provider</span>.<span class="ident">upsert</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>, <span class="kw-2">&amp;</span><span class="ident">v</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="self">self</span>.<span class="ident">log</span>.<span class="ident">insert</span>(<span class="ident">k</span>, <span class="ident">LogState</span>::<span class="ident">Inserted</span>(<span class="ident">v</span>));
+            <span class="self">self</span>.<span class="ident">log</span>.<span class="ident">insert</span>(<span class="ident">k</span>, <span class="ident">LogState::Inserted</span>(<span class="ident">v</span>));
             <span class="prelude-val">Ok</span>(())
         })
     }
@@ -1028,12 +1028,12 @@
 <span class="kw">where</span>
     <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> <span class="ident">TransactionProvider</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>: <span class="ident">UpsertMut</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
     <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span>,
-    <span class="ident">E</span>::<span class="ident">Key</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span> <span class="op">+</span> <span class="ident">Clone</span>,
+    <span class="ident">E::Key</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span> <span class="op">+</span> <span class="ident">Clone</span>,
 {
-    <span class="kw">fn</span> <span class="ident">insert_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">k</span>: <span class="ident">E</span>::<span class="ident">Key</span>, <span class="kw-2">mut</span> <span class="ident">v</span>: <span class="ident">E</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">E</span>::<span class="ident">Key</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
+    <span class="kw">fn</span> <span class="ident">insert_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">k</span>: <span class="ident">E::Key</span>, <span class="kw-2">mut</span> <span class="ident">v</span>: <span class="ident">E</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">E::Key</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
             <span class="self">self</span>.<span class="ident">provider</span>.<span class="ident">upsert_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">k</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">v</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="self">self</span>.<span class="ident">log</span>.<span class="ident">insert</span>(<span class="ident">k</span>.<span class="ident">clone</span>(), <span class="ident">LogState</span>::<span class="ident">Inserted</span>(<span class="ident">v</span>));
+            <span class="self">self</span>.<span class="ident">log</span>.<span class="ident">insert</span>(<span class="ident">k</span>.<span class="ident">clone</span>(), <span class="ident">LogState::Inserted</span>(<span class="ident">v</span>));
             <span class="prelude-val">Ok</span>(<span class="ident">k</span>)
         })
     }
@@ -1043,19 +1043,19 @@
 <span class="kw">where</span>
     <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> <span class="ident">TransactionProvider</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>: <span class="ident">Delete</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
     <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span>,
-    <span class="ident">E</span>::<span class="ident">Key</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
-    <span class="ident">E</span>::<span class="ident">Tbl</span>: <span class="ident">Accessor</span>,
+    <span class="ident">E::Key</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
+    <span class="ident">E::Tbl</span>: <span class="ident">Accessor</span>,
 {
-    <span class="kw">fn</span> <span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="ident">E</span>::<span class="ident">Key</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
+    <span class="kw">fn</span> <span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="ident">E::Key</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
             <span class="self">self</span>.<span class="ident">provider</span>.<span class="ident">delete</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="self">self</span>.<span class="ident">log</span>.<span class="ident">insert</span>(<span class="ident">k</span>, <span class="ident">LogState</span>::<span class="ident">Removed</span>);
+            <span class="self">self</span>.<span class="ident">log</span>.<span class="ident">insert</span>(<span class="ident">k</span>, <span class="ident">LogState::Removed</span>);
             <span class="prelude-val">Ok</span>(())
         })
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">ApplyLog</span><span class="op">&lt;</span><span class="ident">Logs</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">async_cell_lock</span>::<span class="ident">QueueRwLockWriteGuard</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Ctx</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">ApplyLog</span><span class="op">&lt;</span><span class="ident">Logs</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">async_cell_lock::QueueRwLockWriteGuard</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Ctx</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">apply_log</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">log</span>: <span class="ident">Logs</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="kw">let</span> <span class="ident">appliers</span> <span class="op">=</span> <span class="ident">LOG_APPLIERS</span>.<span class="ident">read</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">changed</span> <span class="op">=</span> <span class="bool-val">false</span>;
@@ -1068,11 +1068,11 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">Transaction</span> <span class="kw">for</span> <span class="ident">async_cell_lock</span>::<span class="ident">QueueRwLockQueueGuard</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Ctx</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">Transaction</span> <span class="kw">for</span> <span class="ident">async_cell_lock::QueueRwLockQueueGuard</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">Ctx</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">transaction</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">CtxTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span> {
         <span class="ident">CtxTransaction</span> {
             <span class="ident">ctx</span>: <span class="self">self</span>,
-            <span class="ident">log_ctx</span>: <span class="ident">Default</span>::<span class="ident">default</span>(),
+            <span class="ident">log_ctx</span>: <span class="ident">Default::default</span>(),
             <span class="ident">provider</span>: <span class="self">self</span>.<span class="ident">provider</span>.<span class="ident">transaction</span>(),
         }
     }
@@ -1083,12 +1083,12 @@
     <span class="ident">provider</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">ProviderContainer</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">Accessor</span> <span class="op">+</span> <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Extend</span><span class="op">&lt;</span>(<span class="ident">E</span>::<span class="ident">Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span>,
+    <span class="ident">T</span>: <span class="ident">Accessor</span> <span class="op">+</span> <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Extend</span><span class="op">&lt;</span>(<span class="ident">E::Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span>,
     <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span><span class="op">&lt;</span><span class="ident">Tbl</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span>,
     <span class="ident">ProviderContainer</span>: <span class="ident">LoadAll</span><span class="op">&lt;</span><span class="ident">E</span>, (), <span class="ident">T</span><span class="op">&gt;</span>,
 {
-    <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
-        <span class="kw">let</span> <span class="ident">var</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">var</span>();
+    <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
+        <span class="kw">let</span> <span class="ident">var</span> <span class="op">=</span> <span class="ident">T::var</span>();
 
         <span class="comment">// get the table if already initialized.</span>
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">v</span>) <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">get</span>(<span class="ident">var</span>) {
@@ -1116,13 +1116,13 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> <span class="ident">LogApplier</span> <span class="kw">for</span> <span class="ident">EntityLogApplier</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
-    <span class="ident">E</span>::<span class="ident">Tbl</span>: <span class="ident">Accessor</span> <span class="op">+</span> <span class="ident">ApplyLog</span><span class="op">&lt;</span><span class="ident">Log</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">E::Tbl</span>: <span class="ident">Accessor</span> <span class="op">+</span> <span class="ident">ApplyLog</span><span class="op">&lt;</span><span class="ident">Log</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
     <span class="kw">fn</span> <span class="ident">apply</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">vars</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vars</span>, <span class="ident">log_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Logs</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">log</span>) <span class="op">=</span> <span class="ident">log_ctx</span>.<span class="ident">replace</span>(<span class="ident">E</span>::<span class="ident">log_var</span>(), <span class="prelude-val">None</span>) {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tbl</span>) <span class="op">=</span> <span class="ident">vars</span>.<span class="ident">get_mut</span>(<span class="ident">E</span>::<span class="ident">entity_var</span>()) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">log</span>) <span class="op">=</span> <span class="ident">log_ctx</span>.<span class="ident">replace</span>(<span class="ident">E::log_var</span>(), <span class="prelude-val">None</span>) {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tbl</span>) <span class="op">=</span> <span class="ident">vars</span>.<span class="ident">get_mut</span>(<span class="ident">E::entity_var</span>()) {
                 <span class="kw">if</span> <span class="ident">tbl</span>.<span class="ident">apply_log</span>(<span class="ident">log</span>) {
-                    <span class="op">&lt;</span><span class="ident">E</span>::<span class="ident">Tbl</span> <span class="kw">as</span> <span class="ident">Accessor</span><span class="op">&gt;</span>::<span class="ident">clear_deps</span>(<span class="ident">vars</span>);
+                    <span class="op">&lt;</span><span class="ident">E::Tbl</span> <span class="kw">as</span> <span class="ident">Accessor</span><span class="op">&gt;</span><span class="ident">::clear_deps</span>(<span class="ident">vars</span>);
                     <span class="kw">return</span> <span class="bool-val">true</span>;
                 }
             }
@@ -1137,15 +1137,15 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">register_apply_log</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>()
 <span class="kw">where</span>
     <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
-    <span class="ident">E</span>::<span class="ident">Tbl</span>: <span class="ident">Accessor</span> <span class="op">+</span> <span class="ident">ApplyLog</span><span class="op">&lt;</span><span class="ident">Log</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">E::Tbl</span>: <span class="ident">Accessor</span> <span class="op">+</span> <span class="ident">ApplyLog</span><span class="op">&lt;</span><span class="ident">Log</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
     <span class="ident">LOG_APPLIERS</span>
         .<span class="ident">write</span>()
-        .<span class="ident">push</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">EntityLogApplier</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="ident">PhantomData</span>)));
+        .<span class="ident">push</span>(<span class="ident">Box::new</span>(<span class="ident">EntityLogApplier</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="ident">PhantomData</span>)));
 }
 
-<span class="attribute">#[<span class="ident">static_init</span>::<span class="ident">dynamic</span>]</span>
-<span class="kw">static</span> <span class="ident">LOG_APPLIERS</span>: <span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">LogApplier</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Default</span>::<span class="ident">default</span>();
+<span class="attribute">#[<span class="ident">static_init::dynamic</span>]</span>
+<span class="kw">static</span> <span class="ident">LOG_APPLIERS</span>: <span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">LogApplier</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Default::default</span>();
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-search-js="../../search-index.js"></div>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
     <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script></body></html>
