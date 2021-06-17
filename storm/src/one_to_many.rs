@@ -48,10 +48,7 @@ where
 
         Self(
             map.into_iter()
-                .map(|(one, many)| {
-                    let many = many.into_iter().collect::<Vec<_>>();
-                    (one, many.into_boxed_slice())
-                })
+                .map(|(one, many)| (one, many.into_boxed_slice()))
                 .collect(),
         )
     }
@@ -107,8 +104,6 @@ where
             map.into_iter()
                 .map(|(one, mut many)| {
                     many.sort_unstable_by(&cmp);
-
-                    let many = many.into_iter().collect::<Vec<_>>();
                     (one, many.into_boxed_slice())
                 })
                 .collect(),
@@ -148,8 +143,6 @@ where
                 .map(|(one, mut many)| {
                     many.sort_unstable_by(&cmp);
                     many.dedup_by(|a, b| cmp(a, b) == Ordering::Equal);
-
-                    let many = many.into_iter().collect::<Vec<_>>();
                     (one, many.into_boxed_slice())
                 })
                 .collect(),
