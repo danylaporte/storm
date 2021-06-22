@@ -24,12 +24,14 @@ pub(crate) fn delete(input: &DeriveInput) -> TokenStream {
     let attrs = try_ts!(TypeAttrs::from_derive_input(input).map_err(|e| e.write_errors()));
     let normal = Delete::<delete::selectors::Normal>::new(&attrs);
     let translate = Delete::<delete::selectors::Translate>::new(&attrs);
+    let table_name = LitStr::new(&attrs.table, attrs.table.span());
 
     let provider = attrs.provider();
     let (metrics_start, metrics_end) = metrics(&ident, "delete");
 
     quote! {
         impl storm::provider::Delete<#ident> for storm::provider::TransactionProvider<'_> {
+            #[tracing::instrument(name = "delete", level = "debug", skip(self, k), fields(table = #table_name))]
             fn delete<'a>(&'a self, k: &'a <#ident as storm::Entity>::Key) -> storm::BoxFuture<'a, storm::Result<()>> {
                 Box::pin(async move {
                     let provider: &storm_mssql::MssqlProvider = self.container().provide(#provider).await?;
@@ -51,6 +53,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let ident = &input.ident;
     let attrs = try_ts!(TypeAttrs::from_derive_input(input).map_err(|e| e.write_errors()));
     let rename_all = attrs.rename_all;
+
     let load_test = Ident::new(
         &format!("test_{}_load", ident.to_string().to_snake_case()),
         ident.span(),
@@ -60,6 +63,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let mut filter_sql = FilterSqlImpl::default();
     let mut load = LoadFields::new(ident, &attrs);
     let mut translated = LoadTranslated::new(ident, &attrs);
+    let table_name = LitStr::new(&attrs.table, attrs.table.span());
 
     for key in attrs.keys(&mut errors) {
         filter_sql.add_filter(key);
@@ -115,6 +119,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             C: Default + Extend<(<#ident as storm::Entity>::Key, #ident)> #translated_where + Send + 'static,
             FILTER: storm_mssql::FilterSql,
         {
+            #[tracing::instrument(name = "load_all", level = "debug", skip(self, filter), fields(table = #table_name))]
             fn load_all_with_args<'a>(&'a self, filter: &'a FILTER, args: storm::provider::LoadArgs) -> storm::BoxFuture<'a, storm::Result<C>> {
                 Box::pin(async move {
                     let provider: &storm_mssql::MssqlProvider = self.provide(#provider).await?;
@@ -129,6 +134,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
         }
 
         impl storm::provider::LoadOne<#ident> for storm::provider::ProviderContainer {
+            #[tracing::instrument(name = "load_one", level = "debug", skip(self, k), fields(table = #table_name))]
             fn load_one_with_args<'a>(&'a self, k: &'a <#ident as Entity>::Key, args: storm::provider::LoadArgs) -> storm::BoxFuture<'a, storm::Result<Option<#ident>>> {
                 Box::pin(async move {
                     let filter = #filter_sql;
@@ -153,6 +159,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let mut translated = SaveTranslated::new(&attrs);
     let is_identity_key = attrs.is_identity_key();
     let identity_col = attrs.identity.to_lowercase();
+    let table_name = LitStr::new(&attrs.table, attrs.table.span());
 
     let keys = attrs.keys(&mut errors);
     let mut identity_found = is_identity_key;
@@ -271,6 +278,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
 
     quote! {
         impl #upsert_trait for storm::provider::TransactionProvider<'_> {
+            #[tracing::instrument(name = "upsert", level = "debug", skip(self, k, v), fields(table = #table_name))]
             #upsert_sig {
                 Box::pin(async move {
                     let provider: &storm_mssql::MssqlProvider = self.container().provide(#provider).await?;

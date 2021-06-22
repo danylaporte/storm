@@ -263,6 +263,7 @@ pub struct CtxTransaction<'a> {
 }
 
 impl<'a> CtxTransaction<'a> {
+    #[instrument(skip(self), err)]
     pub fn commit(self) -> BoxFuture<'a, Result<Logs>> {
         Box::pin(async move {
             self.provider.commit().await?;
@@ -275,6 +276,7 @@ impl<'a> CtxTransaction<'a> {
         &self.provider
     }
 
+    #[instrument(level = "debug", skip(self, iter), err)]
     pub async fn insert_all<E, I>(&mut self, iter: I) -> Result<()>
     where
         Ctx: AsRefAsync<E::Tbl>,
@@ -287,6 +289,7 @@ impl<'a> CtxTransaction<'a> {
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self, iter), err)]
     pub async fn insert_mut_all<E, I>(&mut self, iter: I) -> Result<()>
     where
         Ctx: AsRefAsync<E::Tbl>,
@@ -307,6 +310,7 @@ impl<'a> CtxTransaction<'a> {
         self.as_ref_async()
     }
 
+    #[instrument(level = "debug", skip(self, iter), err)]
     pub async fn remove_all<E, I>(&mut self, iter: I) -> Result<()>
     where
         Ctx: AsRefAsync<E::Tbl>,
@@ -439,6 +443,7 @@ where
     E: Entity + EntityAccessor,
     E::Key: Eq + Hash,
 {
+    #[instrument(level = "debug", skip(self, k, v), err)]
     fn insert(&mut self, k: E::Key, v: E) -> BoxFuture<'_, Result<()>> {
         Box::pin(async move {
             self.provider.upsert(&k, &v).await?;
@@ -454,6 +459,7 @@ where
     E: Entity + EntityAccessor,
     E::Key: Eq + Hash + Clone,
 {
+    #[instrument(level = "debug", skip(self, k, v), err)]
     fn insert_mut(&mut self, mut k: E::Key, mut v: E) -> BoxFuture<'_, Result<E::Key>> {
         Box::pin(async move {
             self.provider.upsert_mut(&mut k, &mut v).await?;
@@ -470,6 +476,7 @@ where
     E::Key: Eq + Hash,
     E::Tbl: Accessor,
 {
+    #[instrument(skip(self, k), err)]
     fn remove(&mut self, k: E::Key) -> BoxFuture<'_, Result<()>> {
         Box::pin(async move {
             self.provider.delete(&k).await?;

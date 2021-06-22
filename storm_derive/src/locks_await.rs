@@ -1,10 +1,12 @@
 use crate::DeriveInputExt;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{DeriveInput, Type};
+use syn::{DeriveInput, LitStr, Type};
 
 pub(crate) fn locks_await(input: &DeriveInput) -> TokenStream {
     let type_ident = &input.ident;
+    let from_ctx = LitStr::new(&format!("{}::from_ctx", &type_ident), type_ident.span());
+
     let mut init_fields = Vec::new();
     let mut as_refs = Vec::new();
     let mut tags = Vec::new();
@@ -44,6 +46,7 @@ pub(crate) fn locks_await(input: &DeriveInput) -> TokenStream {
         }
 
         impl<'a> #type_ident<'a> {
+            #[tracing::instrument(name = #from_ctx, level = "debug", skip(ctx), err)]
             pub fn from_ctx(ctx: &'a storm::Ctx) -> storm::BoxFuture<'a, storm::Result<storm::CtxLocks<'a, #type_ident<'a>>>> {
                 Box::pin(async move {
                     let locks = storm::AsyncTryFrom::async_try_from(ctx).await?;

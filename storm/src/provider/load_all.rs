@@ -1,6 +1,6 @@
 use crate::{BoxFuture, Entity, Result};
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct LoadArgs {
     pub use_transaction: bool,
 }
