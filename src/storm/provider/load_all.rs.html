@@ -61,7 +61,7 @@
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">BoxFuture</span>, <span class="ident">Entity</span>, <span class="prelude-ty">Result</span>};
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LoadArgs</span> {
     <span class="kw">pub</span> <span class="ident">use_transaction</span>: <span class="ident">bool</span>,
 }
