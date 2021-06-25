@@ -2,6 +2,7 @@ use std::fmt::{self, Debug, Display};
 
 pub enum Error {
     AlreadyInTransaction,
+    AsyncCellLock(async_cell_lock::Error),
     ClientInError,
     ColumnNull,
     ConvertFailed(String),
@@ -23,6 +24,7 @@ impl Error {
 impl Debug for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::AsyncCellLock(e) => Debug::fmt(e, f),
             Self::Std(e) => Debug::fmt(e, f),
 
             #[cfg(feature = "mssql")]
@@ -37,6 +39,7 @@ impl Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::AlreadyInTransaction => f.write_str("Already in transaction."),
+            Self::AsyncCellLock(e) => Display::fmt(e, f),
             Self::ColumnNull => f.write_str("Column is null."),
             Self::ConvertFailed(s) => f.write_str(&format!("Convert failed: `{}`", s)),
             Self::ClientInError => f.write_str("Client in error state."),
@@ -53,6 +56,12 @@ impl Display for Error {
 }
 
 impl std::error::Error for Error {}
+
+impl From<async_cell_lock::Error> for Error {
+    fn from(e: async_cell_lock::Error) -> Self {
+        Error::AsyncCellLock(e)
+    }
+}
 
 impl From<Box<dyn std::error::Error + Send + Sync>> for Error {
     fn from(b: Box<dyn std::error::Error + Send + Sync>) -> Self {

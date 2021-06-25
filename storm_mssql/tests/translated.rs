@@ -22,58 +22,61 @@ fn provider() -> ProviderContainer {
 #[tokio::test]
 
 async fn translated_flow() -> storm::Result<()> {
-    let ctx = create_ctx();
-    let ctx = ctx.read().await;
+    async_cell_lock::with_deadlock_check(async move {
+        let ctx = create_ctx();
+        let ctx = ctx.read().await?;
 
-    let provider = ctx.provider().provide::<MssqlProvider>("").await?;
-    let no_transaction = ExecuteArgs {
-        use_transaction: false,
-    };
+        let provider = ctx.provider().provide::<MssqlProvider>("").await?;
+        let no_transaction = ExecuteArgs {
+            use_transaction: false,
+        };
 
-    provider
-        .execute_with_args(
-            "CREATE TABLE ##Labels (Id Int PRIMARY KEY NOT NULL);",
+        provider
+            .execute_with_args(
+                "CREATE TABLE ##Labels (Id Int PRIMARY KEY NOT NULL);",
+                &[],
+                no_transaction,
+            )
+            .await?;
+
+        provider.execute_with_args(
+            "CREATE TABLE ##LabelsTranslatedValues (Id2 Int NOT NULL, Culture Int NOT NULL, Name NVARCHAR(50) NOT NULL);",
             &[],
             no_transaction,
         )
         .await?;
 
-    provider.execute_with_args(
-        "CREATE TABLE ##LabelsTranslatedValues (Id2 Int NOT NULL, Culture Int NOT NULL, Name NVARCHAR(50) NOT NULL);",
-        &[],
-        no_transaction,
-    )
-    .await?;
+        let ctx = ctx.queue().await?;
+        let mut trx = ctx.transaction();
 
-    let ctx = ctx.queue().await;
-    let mut trx = ctx.transaction();
+        let mut labels = trx.tbl_of::<Label>().await?;
+        let id = LabelId(2);
 
-    let mut labels = trx.tbl_of::<Label>().await?;
-    let id = LabelId(2);
-
-    labels
-        .insert(
-            id,
-            Label {
-                name: Translated {
-                    en: "english".to_owned(),
-                    fr: "french".to_owned(),
+        labels
+            .insert(
+                id,
+                Label {
+                    name: Translated {
+                        en: "english".to_owned(),
+                        fr: "french".to_owned(),
+                    },
                 },
-            },
-        )
-        .await?;
+            )
+            .await?;
 
-    let log = trx.commit().await?;
+        let log = trx.commit().await?;
 
-    let mut ctx = ctx.write().await;
+        let mut ctx = ctx.write().await?;
 
-    ctx.apply_log(log);
+        ctx.apply_log(log);
 
-    let ctx = ctx.read().await;
-    let v = ctx.tbl_of::<Label>().await?.get(&id);
+        let ctx = ctx.read().await?;
+        let v = ctx.tbl_of::<Label>().await?.get(&id);
 
-    println!("{:?}", v);
-    Ok(())
+        println!("{:?}", v);
+        Ok(())
+    })
+    .await
 }
 
 #[derive(Clone, Ctx, Debug, MssqlLoad, MssqlSave)]

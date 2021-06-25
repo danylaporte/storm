@@ -21,51 +21,54 @@ fn provider() -> ProviderContainer {
 
 #[tokio::test]
 async fn no_fields() -> Result<()> {
-    let ctx = create_ctx();
-    let ctx = ctx.read().await;
-    let provider = ctx.provider().provide::<MssqlProvider>("").await?;
+    async_cell_lock::with_deadlock_check(async move {
+        let ctx = create_ctx();
+        let ctx = ctx.read().await?;
+        let provider = ctx.provider().provide::<MssqlProvider>("").await?;
 
-    provider
-        .execute_with_args(
-            "CREATE TABLE ##Tbl (Id INT NOT NULL);",
-            &[],
-            ExecuteArgs {
-                use_transaction: false,
-            },
-        )
-        .await?;
+        provider
+            .execute_with_args(
+                "CREATE TABLE ##Tbl (Id INT NOT NULL);",
+                &[],
+                ExecuteArgs {
+                    use_transaction: false,
+                },
+            )
+            .await?;
 
-    let ctx = ctx.queue().await;
-    let mut trx = ctx.transaction();
-    let mut entities1 = trx.tbl_of::<Entity1>().await?;
+        let ctx = ctx.queue().await?;
+        let mut trx = ctx.transaction();
+        let mut entities1 = trx.tbl_of::<Entity1>().await?;
 
-    // insert
-    entities1.insert(1, Entity1).await?;
+        // insert
+        entities1.insert(1, Entity1).await?;
 
-    assert!(entities1.get(&1).is_some());
+        assert!(entities1.get(&1).is_some());
 
-    // update
-    entities1.insert(1, Entity1).await?;
+        // update
+        entities1.insert(1, Entity1).await?;
 
-    // insert
-    entities1.insert(2, Entity1).await?;
+        // insert
+        entities1.insert(2, Entity1).await?;
 
-    // delete
-    entities1.remove(2).await?;
+        // delete
+        entities1.remove(2).await?;
 
-    let log = trx.commit().await?;
+        let log = trx.commit().await?;
 
-    let mut ctx = ctx.write().await;
+        let mut ctx = ctx.write().await?;
 
-    ctx.apply_log(log);
+        ctx.apply_log(log);
 
-    let ctx = ctx.read().await;
-    let entities1 = ctx.tbl_of::<Entity1>().await?;
+        let ctx = ctx.read().await?;
+        let entities1 = ctx.tbl_of::<Entity1>().await?;
 
-    assert!(entities1.get(&1).is_some(),);
-    assert!(entities1.get(&2).is_none());
+        assert!(entities1.get(&1).is_some(),);
+        assert!(entities1.get(&2).is_none());
 
-    Ok(())
+        Ok(())
+    })
+    .await
 }
 
 #[derive(Clone, Ctx, Debug, MssqlDelete, MssqlLoad, MssqlSave, PartialEq)]
