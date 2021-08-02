@@ -263,7 +263,7 @@ pub struct CtxTransaction<'a> {
 }
 
 impl<'a> CtxTransaction<'a> {
-    #[instrument(skip(self), err)]
+    #[instrument(level = "debug", skip(self), err)]
     pub fn commit(self) -> BoxFuture<'a, Result<Logs>> {
         Box::pin(async move {
             self.provider.commit().await?;
@@ -476,7 +476,7 @@ where
     E::Key: Eq + Hash,
     E::Tbl: Accessor,
 {
-    #[instrument(skip(self, k), err)]
+    #[instrument(level = "debug", skip(self, k), err)]
     fn remove(&mut self, k: E::Key) -> BoxFuture<'_, Result<()>> {
         Box::pin(async move {
             self.provider.delete(&k).await?;
