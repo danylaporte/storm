@@ -38,6 +38,7 @@ async fn main() -> Result<()> {
 
 #[derive(NoopDelete, NoopLoad, NoopSave, Ctx)]
 struct Topic {
+    #[allow(dead_code)]
     pub title: String,
     pub comment: CacheIsland<String>,
 }
@@ -48,6 +49,7 @@ impl Entity for Topic {
 
 #[derive(NoopDelete, NoopLoad, NoopSave, Ctx)]
 struct User {
+    #[allow(dead_code)]
     pub name: String,
 }
 

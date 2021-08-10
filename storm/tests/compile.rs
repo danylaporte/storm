@@ -73,6 +73,7 @@ macro_rules! entity {
     ($n:ident) => {
         #[derive(Ctx, Default, NoopDelete, NoopLoad, NoopSave)]
         struct $n {
+            #[allow(dead_code)]
             pub name: String,
         }
 

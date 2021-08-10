@@ -2,8 +2,12 @@ use crate::{
     provider::LoadAll, Accessor, ApplyLog, BoxFuture, Deps, Entity, EntityAccessor, EntityOf, Gc,
     GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag, Result, Tag, TblVar,
 };
-use std::ops::Deref;
-use vec_map::{Iter, Keys, Values, VecMap};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use std::{
+    ops::Deref,
+    sync::atomic::{AtomicBool, Ordering::Relaxed},
+};
+use vec_map::{Iter, Keys, ParIter, Values, VecMap};
 use version_tag::VersionTag;
 
 pub struct VecTable<E: Entity> {
@@ -123,11 +127,13 @@ where
     E::Key: From<usize>,
 {
     fn gc(&mut self, ctx: &GcCtx) -> bool {
-        let mut ret = false;
-        for v in self.map.values_mut() {
-            ret = v.gc(ctx) || ret;
-        }
-        ret
+        let ret = AtomicBool::new(false);
+
+        self.map
+            .par_iter_mut()
+            .for_each(|(_, v)| ret.store(v.gc(ctx), Relaxed));
+
+        ret.load(Relaxed)
     }
 }
 
@@ -173,6 +179,19 @@ where
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.map.iter()
+    }
+}
+
+impl<'a, E: Entity> IntoParallelIterator for &'a VecTable<E>
+where
+    E::Key: From<usize>,
+{
+    type Item = (E::Key, &'a E);
+    type Iter = ParIter<'a, E::Key, E>;
+
+    #[inline]
+    fn into_par_iter(self) -> Self::Iter {
+        self.map.par_iter()
     }
 }
 

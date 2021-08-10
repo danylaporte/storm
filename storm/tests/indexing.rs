@@ -17,6 +17,7 @@ async fn create_async() -> Result<()> {
 
 #[derive(Ctx, Default, NoopLoad)]
 struct User {
+    #[allow(dead_code)]
     pub name: String,
 }
 

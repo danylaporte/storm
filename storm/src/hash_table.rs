@@ -3,10 +3,17 @@ use crate::{
     GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag, Result, Tag, TblVar,
 };
 use fxhash::FxHashMap;
+use rayon::{
+    collections::hash_map::Iter as ParIter,
+    iter::{
+        IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
+    },
+};
 use std::{
     collections::hash_map::{Iter, Keys, Values},
     hash::Hash,
     ops::Deref,
+    sync::atomic::{AtomicBool, Ordering::Relaxed},
 };
 use version_tag::VersionTag;
 
@@ -127,11 +134,11 @@ where
     E::Key: Eq + Hash,
 {
     fn gc(&mut self, ctx: &GcCtx) -> bool {
-        let mut ret = false;
-        for v in self.map.values_mut() {
-            ret = v.gc(ctx) || ret;
-        }
-        ret
+        let ret = AtomicBool::new(false);
+        self.map
+            .par_iter_mut()
+            .for_each(|(_, v)| ret.store(v.gc(ctx), Relaxed));
+        ret.load(Relaxed)
     }
 }
 
@@ -174,6 +181,19 @@ impl<'a, E: Entity> IntoIterator for &'a HashTable<E> {
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.map.iter()
+    }
+}
+
+impl<'a, E> IntoParallelIterator for &'a HashTable<E>
+where
+    E: Entity,
+    E::Key: Eq + Hash,
+{
+    type Item = (&'a E::Key, &'a E);
+    type Iter = ParIter<'a, E::Key, E>;
+
+    fn into_par_iter(self) -> Self::Iter {
+        self.par_iter()
     }
 }
 
