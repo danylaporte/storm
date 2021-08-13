@@ -157,6 +157,8 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let mut save_part = Vec::new();
     let mut wheres = Vec::new();
     let mut translated = SaveTranslated::new(&attrs);
+    let mut translated_backup = Vec::new();
+    let mut translated_restore = Vec::new();
     let is_identity_key = attrs.is_identity_key();
     let identity_col = attrs.identity.to_lowercase();
     let table_name = LitStr::new(&attrs.table, attrs.table.span());
@@ -195,12 +197,16 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
             continue;
         }
 
+        let ident = continue_ts!(field.ident(), errors);
+
         if is_translated(&field.ty) {
             translated.add_field(field, column);
+            let name = LitStr::new(&ident.to_string(), Span::call_site());
+            translated_backup.push(quote! { translated_map.insert(#name, v.#ident); });
+            translated_restore.push(quote! { v.#ident = translated_map.remove(#name).unwrap(); });
             continue;
         }
 
-        let ident = continue_ts!(field.ident(), errors);
         let name = LitStr::new(&format!("[{}]", column), ident.span());
 
         save_part.push(if attrs.part {
@@ -259,7 +265,24 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     }
 
     if attrs.reload_on_upsert() {
-        reload_entity = quote!(*v = storm::provider::LoadOne::<#ident>::load_one_with_args(self.container(), &k, storm::provider::LoadArgs { use_transaction: true }).await?.ok_or(storm::Error::EntityNotFound)?;);
+        let mut backup = quote!();
+        let mut restore = quote!();
+
+        if !translated_backup.is_empty() {
+            backup = quote! {
+                let mut translated_map = std::map::HashMap::new();
+                #(#translated_backup)*
+            };
+            restore = quote! {
+                #(#translated_restore)*
+            }
+        }
+
+        reload_entity = quote! {
+            #backup
+            *v = storm::provider::LoadOne::<#ident>::load_one_with_args(self.container(), &k, storm::provider::LoadArgs { use_transaction: true }).await?.ok_or(storm::Error::EntityNotFound)?;
+            #restore
+        };
     } else {
         reload_entity = quote!();
     }
