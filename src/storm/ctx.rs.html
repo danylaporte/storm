@@ -579,6 +579,39 @@
 <span id="577">577</span>
 <span id="578">578</span>
 <span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">provider</span>::{<span class="ident">Delete</span>, <span class="ident">LoadAll</span>, <span class="ident">LoadArgs</span>, <span class="ident">LoadOne</span>, <span class="ident">TransactionProvider</span>, <span class="ident">Upsert</span>, <span class="ident">UpsertMut</span>},
@@ -858,6 +891,17 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">provider</span>
     }
 
+    <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">k</span>, <span class="ident">v</span>), <span class="ident">err</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">insert</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="ident">E::Key</span>, <span class="ident">v</span>: <span class="ident">E</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>
+    <span class="kw">where</span>
+        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
+        <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
+        <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">Insert</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
+    {
+        <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">insert</span>(<span class="ident">k</span>, <span class="ident">v</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
+    }
+
     <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">iter</span>), <span class="ident">err</span>)]</span>
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">insert_all</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">I</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">I</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>
     <span class="kw">where</span>
@@ -868,6 +912,17 @@
         <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">Insert</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
     {
         <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">insert_all</span>(<span class="ident">iter</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">k</span>, <span class="ident">v</span>), <span class="ident">err</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">insert_mut</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="ident">E::Key</span>, <span class="ident">v</span>: <span class="ident">E</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>
+    <span class="kw">where</span>
+        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
+        <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
+        <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">InsertMut</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
+    {
+        <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">insert_mut</span>(<span class="ident">k</span>, <span class="ident">v</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -890,6 +945,17 @@
         <span class="self">Self</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
     {
         <span class="self">self</span>.<span class="ident">as_ref_async</span>()
+    }
+
+    <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">k</span>), <span class="ident">err</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">remove</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="ident">E::Key</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>
+    <span class="kw">where</span>
+        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
+        <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
+        <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">Remove</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
+    {
+        <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">remove</span>(<span class="ident">k</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">iter</span>), <span class="ident">err</span>)]</span>
