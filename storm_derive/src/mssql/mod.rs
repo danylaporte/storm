@@ -201,9 +201,9 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
 
         if is_translated(&field.ty) {
             translated.add_field(field, column);
-            let name = LitStr::new(&ident.to_string(), Span::call_site());
-            translated_backup.push(quote! { translated_map.insert(#name, v.#ident); });
-            translated_restore.push(quote! { v.#ident = translated_map.remove(#name).unwrap(); });
+            let name_bk = Ident::new(&format!("{}_bk", ident), Span::call_site());
+            translated_backup.push(quote! { let #name_bk = v.#ident; });
+            translated_restore.push(quote! { v.#ident = #name_bk; });
             continue;
         }
 
@@ -265,18 +265,8 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     }
 
     if attrs.reload_on_upsert() {
-        let mut backup = quote!();
-        let mut restore = quote!();
-
-        if !translated_backup.is_empty() {
-            backup = quote! {
-                let mut translated_map = std::map::HashMap::new();
-                #(#translated_backup)*
-            };
-            restore = quote! {
-                #(#translated_restore)*
-            }
-        }
+        let backup = quote!(#(#translated_backup)*);
+        let restore = quote!(#(#translated_restore)*);
 
         reload_entity = quote! {
             #backup
