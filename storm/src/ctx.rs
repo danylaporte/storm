@@ -276,6 +276,17 @@ impl<'a> CtxTransaction<'a> {
         &self.provider
     }
 
+    #[instrument(level = "debug", skip(self, k, v), err)]
+    pub async fn insert<E>(&mut self, k: E::Key, v: E) -> Result<()>
+    where
+        Ctx: AsRefAsync<E::Tbl>,
+        E: Entity + EntityAccessor + LogAccessor,
+        for<'b> TblTransaction<'b, E>: Insert<E>,
+    {
+        self.tbl_of::<E>().await?.insert(k, v).await?;
+        Ok(())
+    }
+
     #[instrument(level = "debug", skip(self, iter), err)]
     pub async fn insert_all<E, I>(&mut self, iter: I) -> Result<()>
     where
@@ -286,6 +297,17 @@ impl<'a> CtxTransaction<'a> {
         for<'b> TblTransaction<'b, E>: Insert<E>,
     {
         self.tbl_of::<E>().await?.insert_all(iter).await?;
+        Ok(())
+    }
+
+    #[instrument(level = "debug", skip(self, k, v), err)]
+    pub async fn insert_mut<E>(&mut self, k: E::Key, v: E) -> Result<()>
+    where
+        Ctx: AsRefAsync<E::Tbl>,
+        E: Entity + EntityAccessor + LogAccessor,
+        for<'b> TblTransaction<'b, E>: InsertMut<E>,
+    {
+        self.tbl_of::<E>().await?.insert_mut(k, v).await?;
         Ok(())
     }
 
@@ -308,6 +330,17 @@ impl<'a> CtxTransaction<'a> {
         Self: AsRefAsync<T>,
     {
         self.as_ref_async()
+    }
+
+    #[instrument(level = "debug", skip(self, k), err)]
+    pub async fn remove<E>(&mut self, k: E::Key) -> Result<()>
+    where
+        Ctx: AsRefAsync<E::Tbl>,
+        E: Entity + EntityAccessor + LogAccessor,
+        for<'b> TblTransaction<'b, E>: Remove<E>,
+    {
+        self.tbl_of::<E>().await?.remove(k).await?;
+        Ok(())
     }
 
     #[instrument(level = "debug", skip(self, iter), err)]
