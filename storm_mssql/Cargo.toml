@@ -1,6 +1,6 @@
 [package]
 name = "storm_mssql"
-version = "0.5.1"
+version = "0.5.2-alpha.0"
 authors = ["Dany Laporte <dany_laporte@hotmail.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
