@@ -81,7 +81,7 @@ fn add_key_single(
 
 fn add_keys(keys: &[&str], params: &mut ParamsBuilder, builder: &mut UpsertBuilder) {
     if keys.len() == 1 {
-        add_key_single(&keys[0], quote!(k as _), params, builder);
+        add_key_single(keys[0], quote!(k as _), params, builder);
     } else {
         add_key_many(keys, params, builder);
     }

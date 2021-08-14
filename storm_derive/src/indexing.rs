@@ -15,8 +15,8 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
     let vis = &f.vis;
     let name = &f.sig.ident;
     let name_str = &name.to_string().to_pascal_case();
-    let index_name = Ident::new(&name_str, name.span());
-    let index_name_lit = LitStr::new(&name_str, name.span());
+    let index_name = Ident::new(name_str, name.span());
+    let index_name_lit = LitStr::new(name_str, name.span());
 
     let screaming_snake = name.to_string().to_screaming_snake_case();
     let static_var = Ident::new(&format!("{}_VAR", screaming_snake), name.span());

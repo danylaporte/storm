@@ -27,7 +27,7 @@ pub(crate) fn delete(input: &DeriveInput) -> TokenStream {
     let table_name = LitStr::new(&attrs.table, attrs.table.span());
 
     let provider = attrs.provider();
-    let (metrics_start, metrics_end) = metrics(&ident, "delete");
+    let (metrics_start, metrics_end) = metrics(ident, "delete");
 
     quote! {
         impl storm::provider::Delete<#ident> for storm::provider::TransactionProvider<'_> {
@@ -96,7 +96,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
 
     let translated_where = translated.to_where_clause();
     let provider = attrs.provider();
-    let (metrics_start, metrics_end) = metrics(&ident, "load");
+    let (metrics_start, metrics_end) = metrics(ident, "load");
     let test;
 
     if attrs.no_test {
@@ -202,7 +202,9 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
         if is_translated(&field.ty) {
             translated.add_field(field, column);
             let name_bk = Ident::new(&format!("{}_bk", ident), Span::call_site());
-            translated_backup.push(quote! { let #name_bk = v.#ident; });
+            translated_backup.push(
+                quote! { let #name_bk = std::mem::replace(&mut v.#ident, Default::default()); },
+            );
             translated_restore.push(quote! { v.#ident = #name_bk; });
             continue;
         }
@@ -287,7 +289,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let wheres = wheres.ts();
     let table = LitStr::new(&attrs.table, ident.span());
     let provider = attrs.provider();
-    let (metrics_start, metrics_end) = metrics(&ident, "upsert");
+    let (metrics_start, metrics_end) = metrics(ident, "upsert");
 
     quote! {
         impl #upsert_trait for storm::provider::TransactionProvider<'_> {

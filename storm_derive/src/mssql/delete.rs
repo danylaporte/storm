@@ -27,7 +27,7 @@ where
     S: AttrsSelector,
 {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let table = S::table(&self.attrs);
+        let table = S::table(self.attrs);
 
         if table.is_empty() {
             return;
@@ -37,11 +37,11 @@ where
         let mut params = ParamsBuilder::default();
         let mut delete = DeleteBuilder::default();
 
-        let keys = S::keys(&self.attrs, &mut errors);
+        let keys = S::keys(self.attrs, &mut errors);
 
         add_keys(&keys, &mut params, &mut delete);
 
-        let sql = delete.to_sql_lit(&table);
+        let sql = delete.to_sql_lit(table);
 
         tokens.append_all(quote! {
             storm_mssql::Execute::execute(provider, #sql, #params).await?;
@@ -70,7 +70,7 @@ fn add_key_single(
 
 fn add_keys(keys: &[&str], params: &mut ParamsBuilder, builder: &mut DeleteBuilder) {
     if keys.len() == 1 {
-        add_key_single(&keys[0], quote!(k as _), params, builder);
+        add_key_single(keys[0], quote!(k as _), params, builder);
     } else {
         add_key_many(keys, params, builder);
     }

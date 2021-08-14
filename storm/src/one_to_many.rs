@@ -86,7 +86,7 @@ where
     where
         MANY: Ord,
     {
-        self.collect_sort_by(|a, b| a.cmp(&b))
+        self.collect_sort_by(|a, b| a.cmp(b))
     }
 
     /// Collect the items and sort them by the cmp function specified.
@@ -123,7 +123,7 @@ where
     where
         MANY: Ord,
     {
-        self.collect_sort_dedup_by(|a, b| a.cmp(&b))
+        self.collect_sort_dedup_by(|a, b| a.cmp(b))
     }
 
     /// Collect the items and sort them by the cmp function specified.

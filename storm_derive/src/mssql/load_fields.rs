@@ -47,7 +47,7 @@ impl<'a> ToTokens for LoadFields<'a> {
 
         check_required(&self.attrs.table, &mut errors);
 
-        let keys = add_keys(&self.attrs, &mut select, &mut errors);
+        let keys = add_keys(self.attrs, &mut select, &mut errors);
         let sql = select.to_sql_lit(&self.attrs.table, &self.attrs.where_clause);
 
         let entity = self.entity;
