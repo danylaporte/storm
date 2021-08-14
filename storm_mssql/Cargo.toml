@@ -14,7 +14,7 @@ chrono = "0.4"
 dec19x5 = { git = "https://github.com/danylaporte/dec19x5.git", features = ["tiberius"], optional = true }
 futures-util = "0.3"
 storm = { path = "../storm", features = ["mssql"] }
-tiberius = { version = "0.5", features = ["chrono", "sql-browser-tokio"] }
+tiberius = { version = "0.6", features = ["chrono", "sql-browser-tokio"] }
 tokio = { version = "1", features = ["io-std", "io-util", "net", "parking_lot", "rt-multi-thread", "sync", "time"] }
 tokio-util = { version = "0.6", features = ["compat"] }
 tracing = "0.1"

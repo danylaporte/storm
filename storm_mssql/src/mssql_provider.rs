@@ -6,7 +6,7 @@ use std::{
     sync::atomic::{AtomicBool, Ordering::Relaxed},
 };
 use storm::{provider, BoxFuture, Error, Result};
-use tiberius::Row;
+use tiberius::{QueryItem, Row};
 use tokio::sync::{Mutex, MutexGuard};
 use tracing::instrument;
 
@@ -133,7 +133,12 @@ impl QueryRows for MssqlProvider {
 
             let mut results = client.query(statement, &output).await.map_err(Error::std)?;
 
-            while let Some(row) = results.try_next().await.map_err(Error::std)? {
+            while let Some(item) = results.try_next().await.map_err(Error::std)? {
+                let row = match item {
+                    QueryItem::Metadata(_) => continue,
+                    QueryItem::Row(row) => row,
+                };
+
                 vec.push(mapper(row)?);
 
                 if vec.len() == 10 {
