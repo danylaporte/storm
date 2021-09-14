@@ -1,5 +1,8 @@
 mod client_factory;
+mod common;
+mod entity_diff;
 mod execute;
+mod field_diff;
 mod filter_sql;
 mod from_sql;
 mod mssql_factory;
@@ -11,7 +14,10 @@ mod to_sql;
 mod upsert_builder;
 
 pub use client_factory::ClientFactory;
+use common::*;
+pub use entity_diff::*;
 pub use execute::*;
+pub use field_diff::*;
 pub use filter_sql::*;
 pub use from_sql::FromSql;
 pub use mssql_factory::MssqlFactory;
@@ -19,6 +25,7 @@ pub use mssql_provider::MssqlProvider;
 pub use parameter::Parameter;
 pub use query_rows::QueryRows;
 pub use save_entity_part::SaveEntityPart;
+pub use serde_json;
 use storm::ProviderContainer;
 pub use storm::{Error, Result};
 pub use tiberius;

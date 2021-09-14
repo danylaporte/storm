@@ -59,6 +59,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
         ident.span(),
     );
 
+    let mut diff = attrs.diff.then(Vec::new);
     let mut errors = Vec::new();
     let mut filter_sql = FilterSqlImpl::default();
     let mut load = LoadFields::new(ident, &attrs);
@@ -70,7 +71,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     }
 
     for field in try_ts!(input.fields()) {
-        continue_ts!(field.ident(), errors);
+        let field_ident = continue_ts!(field.ident(), errors);
 
         let attrs = continue_ts!(
             FieldAttrs::from_field(field).map_err(|e| e.write_errors()),
@@ -89,6 +90,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
         } else {
             let column = continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
             load.add_field(field, &attrs, &column);
+            load_diff_field(&mut diff, field_ident, &attrs, &column);
         }
     }
 
@@ -97,6 +99,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let translated_where = translated.to_where_clause();
     let provider = attrs.provider();
     let (metrics_start, metrics_end) = metrics(ident, "load");
+    let diff = apply_entity_diff(diff, ident);
     let test;
 
     if attrs.no_test {
@@ -144,6 +147,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             }
         }
 
+        #diff
         #test
     }
 }
@@ -153,6 +157,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let attrs = try_ts!(TypeAttrs::from_derive_input(input).map_err(|e| e.write_errors()));
     let rename_all = attrs.rename_all;
 
+    let mut diff = attrs.diff.then(Vec::new);
     let mut errors = Vec::new();
     let mut save_part = Vec::new();
     let mut wheres = Vec::new();
@@ -179,7 +184,9 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
         }
 
         let column = &continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
-        let is_identity = !identity_col.is_empty() && identity_col == column.to_lowercase();
+        let col_lc = column.to_lowercase();
+        let col_lit = LitStr::new(&col_lc, Span::call_site());
+        let is_identity = !identity_col.is_empty() && identity_col == col_lc;
 
         if is_identity {
             identity_found = true;
@@ -211,14 +218,42 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
 
         let name = LitStr::new(&format!("[{}]", column), ident.span());
 
-        save_part.push(if attrs.part {
-            quote!(storm_mssql::SaveEntityPart::save_entity_part(&self.#ident, k, builder);)
+        if attrs.part {
+            save_part.push(
+                quote!(storm_mssql::SaveEntityPart::save_entity_part(&self.#ident, k, builder);),
+            );
+
+            if let Some(diff) = diff.as_mut() {
+                diff.push(
+                    quote! { storm_mssql::EntityDiff::entity_diff(&self.#ident, &old.#ident, map);},
+                );
+            }
         } else {
             match attrs.save_with.as_ref() {
-                Some(f) => quote!(builder.add_field_owned(#name, #f(k, self));),
-                None => quote!(builder.add_field_ref(#name, &self.#ident);),
+                Some(f) => {
+                    save_part.push(quote!(builder.add_field_owned(#name, #f(k, self));));
+
+                    if let Some(diff) = diff.as_mut() {
+                        diff.push(quote! {
+                            if let Some(diff) = storm_mssql::FieldDiff::field_diff(&#f(k, self), &#f(k, old)) {
+                                map.insert(#col_lit, diff);
+                            }
+                        });
+                    }
+                }
+                None => {
+                    save_part.push(quote!(builder.add_field_ref(#name, &self.#ident);));
+
+                    if let Some(diff) = diff.as_mut() {
+                        diff.push(quote! {
+                            if let Some(diff) = storm_mssql::FieldDiff::field_diff(&self.#ident, &old.#ident) {
+                                map.insert(#col_lit, diff);
+                            }
+                        });
+                    }
+                }
             }
-        });
+        };
     }
 
     if !attrs.identity.is_empty() && !identity_found {
@@ -290,6 +325,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let table = LitStr::new(&attrs.table, ident.span());
     let provider = attrs.provider();
     let (metrics_start, metrics_end) = metrics(ident, "upsert");
+    let diff = entity_diff(ident, diff);
 
     quote! {
         impl #upsert_trait for storm::provider::TransactionProvider<'_> {
@@ -314,6 +350,8 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
                 })
             }
         }
+
+        #diff
 
         impl storm_mssql::SaveEntityPart for #ident {
             fn save_entity_part<'a>(&'a self, k: &'a Self::Key, builder: &mut storm_mssql::UpsertBuilder<'a>) {
@@ -391,6 +429,54 @@ impl ToTokens for FilterSqlImpl {
 
         let sql = LitStr::new(&self.sql, Span::call_site());
         tokens.append_all(quote!((#sql, &[#params][..])));
+    }
+}
+
+fn apply_entity_diff(diff: Option<Vec<TokenStream>>, ident: &Ident) -> TokenStream {
+    if let Some(diff) = diff {
+        quote! {
+            impl storm_mssql::ApplyEntityDiff for #ident {
+                fn apply_entity_diff<S: std::hash::BuildHasher>(&mut self, diff: &mut std::collections::HashMap<String, Value, S>) -> storm_mssql::Result<()> {
+                    #(#diff)*
+                    Ok(())
+                }
+            }
+        }
+    } else {
+        quote! {}
+    }
+}
+
+fn entity_diff(ident: &Ident, diff: Option<Vec<TokenStream>>) -> TokenStream {
+    if let Some(diff) = diff {
+        quote! {
+            impl storm_mssql::EntityDiff for #ident {
+                fn entity_diff<S: std::hash::BuildHasher>(&self, old: &Self, map: &mut std::collections::HashMap<&'static str, storm_mssql::serde_json::Value, S>) {
+                    #(#diff)*
+                }
+            }
+        }
+    } else {
+        quote!()
+    }
+}
+
+fn load_diff_field(
+    diff: &mut Option<Vec<TokenStream>>,
+    field: &Ident,
+    attrs: &FieldAttrs,
+    column: &str,
+) {
+    if let Some(diff) = diff.as_mut() {
+        if attrs.load_with.is_none() {
+            let lit = LitStr::new(&column.to_lowercase(), Span::call_site());
+
+            diff.push(quote! {
+                if let Some(val) = map.get(#lit) {
+                    self.#field = storm_mssql::FieldDiffFrom::field_diff_from(val.clone())?;
+                }
+            });
+        }
     }
 }
 

@@ -41,18 +41,18 @@ async fn no_fields() -> Result<()> {
         let mut entities1 = trx.tbl_of::<Entity1>().await?;
 
         // insert
-        entities1.insert(1, Entity1).await?;
+        entities1.insert(1, Entity1, &()).await?;
 
         assert!(entities1.get(&1).is_some());
 
         // update
-        entities1.insert(1, Entity1).await?;
+        entities1.insert(1, Entity1, &()).await?;
 
         // insert
-        entities1.insert(2, Entity1).await?;
+        entities1.insert(2, Entity1, &()).await?;
 
         // delete
-        entities1.remove(2).await?;
+        entities1.remove(2, &()).await?;
 
         let log = trx.commit().await?;
 
@@ -82,4 +82,5 @@ struct Entity1;
 
 impl Entity for Entity1 {
     type Key = i32;
+    type TrackCtx = ();
 }

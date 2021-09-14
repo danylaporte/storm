@@ -10,16 +10,19 @@ publish = false
 [dependencies]
 async-cell-lock = { git = "https://github.com/danylaporte/async-cell-lock.git" }
 cache_crate = { package = "cache", git = "https://github.com/danylaporte/cache.git", optional = true }
-chrono = "0.4"
-dec19x5 = { git = "https://github.com/danylaporte/dec19x5.git", features = ["tiberius"], optional = true }
+chrono = { version = "0.4", features = ["serde"] }
+dec19x5 = { git = "https://github.com/danylaporte/dec19x5.git", features = ["serde", "tiberius"], optional = true }
 futures-util = "0.3"
+fxhash = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 storm = { path = "../storm", features = ["mssql"] }
-tiberius = { version = "0.6", features = ["chrono", "sql-browser-tokio"] }
+tiberius = { version = "0.6.4", features = ["chrono", "sql-browser-tokio"] }
 tokio = { version = "1", features = ["io-std", "io-util", "net", "parking_lot", "rt-multi-thread", "sync", "time"] }
 tokio-util = { version = "0.6", features = ["compat"] }
 tracing = "0.1"
 tracing-futures = "0.2"
-uuid = { version = "0.8", features = ["v5"] }
+uuid = { version = "0.8", features = ["v5", "serde"] }
 
 [dev-dependencies]
 once_cell = "1.4"

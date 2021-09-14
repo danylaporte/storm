@@ -100,6 +100,10 @@ pub(super) struct TypeAttrs {
 
     #[darling(default)]
     pub identity: SpannedValue<String>,
+
+    /// impl ApplyEntityDiff and impl EntityDiff
+    #[darling(default)]
+    pub diff: bool,
 }
 
 impl TypeAttrs {

@@ -1,7 +1,7 @@
 use storm::{Entity, MssqlSave};
 
 #[derive(MssqlSave)]
-#[storm(table = "t", keys = "id")]
+#[storm(table = "t", keys = "id", diff = true)]
 pub struct EntityWithDuplicateKey {
     pub name: String,
     pub id: i32,
