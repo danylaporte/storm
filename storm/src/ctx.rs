@@ -283,62 +283,72 @@ impl<'a> CtxTransaction<'a> {
         Ctx: AsRefAsync<E::Tbl>,
         E: Entity + EntityAccessor + LogAccessor,
         TblTransaction<'a, 'b, E>: Insert<E>,
+        'a: 'b,
     {
         self.tbl_of::<E>().await?.insert(k, v, track).await?;
         Ok(())
     }
 
     #[instrument(level = "debug", skip(self, iter), err)]
-    pub async fn insert_all<'b: 'a, E, I>(
+    pub fn insert_all<'b, E, I>(
         &'b mut self,
         iter: I,
         track: &'b E::TrackCtx,
-    ) -> Result<()>
+    ) -> BoxFuture<'b, Result<()>>
     where
         Ctx: AsRefAsync<E::Tbl>,
         E: Entity + EntityAccessor + LogAccessor,
-        I: IntoIterator<Item = (E::Key, E)> + Send,
+        I: IntoIterator<Item = (E::Key, E)> + Send + 'b,
         I::IntoIter: Send,
         TblTransaction<'a, 'b, E>: Insert<E>,
+        'a: 'b,
     {
-        self.tbl_of::<E>().await?.insert_all(iter, track).await?;
-        Ok(())
+        Box::pin(async move {
+            self.tbl_of::<E>().await?.insert_all(iter, track).await?;
+            Ok(())
+        })
     }
 
     #[instrument(level = "debug", skip(self, k, v), err)]
-    pub async fn insert_mut<'b, E>(
+    pub fn insert_mut<'b, E>(
         &'b mut self,
         k: E::Key,
         v: E,
         track: &'b E::TrackCtx,
-    ) -> Result<()>
+    ) -> BoxFuture<'b, Result<()>>
     where
         Ctx: AsRefAsync<E::Tbl>,
         E: Entity + EntityAccessor + LogAccessor,
         TblTransaction<'a, 'b, E>: InsertMut<E>,
+        'a: 'b,
     {
-        self.tbl_of::<E>().await?.insert_mut(k, v, track).await?;
-        Ok(())
+        Box::pin(async move {
+            self.tbl_of::<E>().await?.insert_mut(k, v, track).await?;
+            Ok(())
+        })
     }
 
     #[instrument(level = "debug", skip(self, iter,), err)]
-    pub async fn insert_mut_all<'b, E, I>(
+    pub fn insert_mut_all<'b, E, I>(
         &'b mut self,
         iter: I,
         track: &'b E::TrackCtx,
-    ) -> Result<()>
+    ) -> BoxFuture<'b, Result<()>>
     where
         Ctx: AsRefAsync<E::Tbl>,
         E: Entity + EntityAccessor + LogAccessor,
-        I: IntoIterator<Item = (E::Key, E)> + Send,
+        I: IntoIterator<Item = (E::Key, E)> + Send + 'b,
         I::IntoIter: Send,
         TblTransaction<'a, 'b, E>: InsertMut<E>,
+        'a: 'b,
     {
-        self.tbl_of::<E>()
-            .await?
-            .insert_mut_all(iter, track)
-            .await?;
-        Ok(())
+        Box::pin(async move {
+            self.tbl_of::<E>()
+                .await?
+                .insert_mut_all(iter, track)
+                .await?;
+            Ok(())
+        })
     }
 
     #[inline]
@@ -350,11 +360,12 @@ impl<'a> CtxTransaction<'a> {
     }
 
     #[instrument(level = "debug", skip(self, k), err)]
-    pub async fn remove<'b: 'a, E>(&'b mut self, k: E::Key, track: &'b E::TrackCtx) -> Result<()>
+    pub async fn remove<'b, E>(&'b mut self, k: E::Key, track: &'b E::TrackCtx) -> Result<()>
     where
         Ctx: AsRefAsync<E::Tbl>,
         E: Entity + EntityAccessor + LogAccessor,
         TblTransaction<'a, 'b, E>: Remove<E>,
+        'a: 'b,
     {
         self.tbl_of::<E>().await?.remove(k, track).await?;
         Ok(())
