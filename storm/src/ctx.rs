@@ -361,20 +361,23 @@ impl<'a> CtxTransaction<'a> {
     }
 
     #[instrument(level = "debug", skip(self, iter), err)]
-    pub async fn remove_all<'b: 'a, E, I>(
+    pub fn remove_all<'b, E, I>(
         &'b mut self,
         iter: I,
         track: &'b E::TrackCtx,
-    ) -> Result<()>
+    ) -> BoxFuture<'b, Result<()>>
     where
         Ctx: AsRefAsync<E::Tbl>,
         E: Entity + EntityAccessor + LogAccessor,
-        I: IntoIterator<Item = E::Key> + Send,
+        I: IntoIterator<Item = E::Key> + Send + 'b,
         I::IntoIter: Send,
         TblTransaction<'a, 'b, E>: Remove<E>,
+        'a: 'b,
     {
-        self.tbl_of::<E>().await?.remove_all(iter, track).await?;
-        Ok(())
+        Box::pin(async move {
+            self.tbl_of::<E>().await?.remove_all(iter, track).await?;
+            Ok(())
+        })
     }
 
     pub fn tbl_of<'b, E>(&'b mut self) -> BoxFuture<'b, Result<TblTransaction<'a, 'b, E>>>
