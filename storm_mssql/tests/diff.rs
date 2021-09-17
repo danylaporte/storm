@@ -1,52 +1,93 @@
-use storm::{Entity, MssqlSave};
+use std::future::ready;
 
-#[derive(MssqlSave)]
-#[storm(table = "t", keys = "id", diff = true)]
-pub struct EntityWithDuplicateKey {
-    pub name: String,
-    pub id: i32,
+use storm::{prelude::*, MssqlLoad, MssqlSave, Result};
+use storm_mssql::{Execute, ExecuteArgs, MssqlFactory, MssqlProvider};
+use tiberius::Config;
+
+fn create_ctx() -> QueueRwLock<Ctx> {
+    QueueRwLock::new(provider().into())
 }
 
-impl Entity for EntityWithDuplicateKey {
+fn provider() -> ProviderContainer {
+    let mut config = Config::default();
+    config.database("master");
+    #[cfg(target_os = "windows")]
+    config.authentication(tiberius::AuthMethod::Integrated);
+    config.trust_cert();
+
+    let mut provider = ProviderContainer::new();
+    provider.register("", MssqlFactory(config));
+
+    provider
+}
+
+#[derive(Ctx, MssqlLoad, MssqlSave)]
+#[storm(
+    table = "##Tbl",
+    keys = "id",
+    diff = true,
+    collection = "hash_table",
+    no_test = true
+)]
+pub struct Entity1 {
+    pub v: i32,
+}
+
+impl Entity for Entity1 {
     type Key = i32;
     type TrackCtx = ();
+
+    fn track_insert<'a>(
+        &'a self,
+        _key: &'a Self::Key,
+        old: Option<&'a Self>,
+        _ctx: &'a mut storm::CtxTransaction,
+        _tracker: &'a Self::TrackCtx,
+    ) -> storm::BoxFuture<'a, Result<()>> {
+        println!("current: {}, old: {:?}", self.v, old.map(|e| e.v));
+        Box::pin(ready(Ok(())))
+    }
 }
 
-#[derive(MssqlSave)]
-#[storm(table = "t", keys = "id")]
-pub struct EntitySaveWith {
-    #[storm(save_with = "buffer_save_with")]
-    pub buffer: String,
-}
+#[tokio::test]
+async fn diff_insert() -> Result<()> {
+    async_cell_lock::with_deadlock_check(async move {
+        let lock = create_ctx();
+        let ctx = lock.read().await?;
+        let provider = ctx.provider().provide::<MssqlProvider>("").await?;
 
-impl Entity for EntitySaveWith {
-    type Key = i32;
-    type TrackCtx = ();
-}
+        provider
+            .execute_with_args(
+                "CREATE TABLE ##Tbl (Id INT NOT NULL, V Int NOT NULL);",
+                &[],
+                ExecuteArgs {
+                    use_transaction: false,
+                },
+            )
+            .await?;
 
-fn buffer_save_with(_key: &i32, value: &EntitySaveWith) -> Vec<u8> {
-    value.buffer.as_bytes().to_vec()
-}
+        let ctx = ctx.queue().await?;
+        let mut trx = ctx.transaction();
+        let mut entities1 = trx.tbl_of::<Entity1>().await?;
 
-#[derive(MssqlSave)]
-#[storm(table = "t", keys = "id")]
-pub struct EntityWithPart {
-    #[storm(part = true)]
-    part: Option<EntityPart>,
-}
+        let e1 = Entity1 { v: 1 };
 
-impl Entity for EntityWithPart {
-    type Key = i32;
-    type TrackCtx = ();
-}
+        // insert
+        entities1.insert(1, e1, &()).await?;
 
-#[derive(MssqlSave)]
-#[storm(table = "t", keys = "id", no_test = true)]
-pub struct EntityPart {
-    pub i: i32,
-}
+        let log = trx.commit().await?;
+        ctx.write().await?.apply_log(log);
 
-impl Entity for EntityPart {
-    type Key = i32;
-    type TrackCtx = ();
+        let ctx = lock.queue().await?;
+
+        let mut trx = ctx.transaction();
+        let mut entities1 = trx.tbl_of::<Entity1>().await?;
+
+        let e1 = Entity1 { v: 2 };
+
+        entities1.insert(1, e1, &()).await?;
+
+        Ok(())
+    })
+    .await
 }
