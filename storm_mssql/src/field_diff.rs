@@ -32,8 +32,6 @@ where
     for<'a> <T as FromSql<'a>>::Column: DeserializeOwned,
 {
     fn field_diff_from(value: Value) -> Result<T> {
-        T::from_sql(
-            serde_json::from_value::<Option<T::Column>>(value).map_err(|e| Error::Std(e.into()))?,
-        )
+        T::from_sql(serde_json::from_value::<Option<T::Column>>(value).map_err(Error::std)?)
     }
 }

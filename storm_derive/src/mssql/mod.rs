@@ -436,7 +436,7 @@ fn apply_entity_diff(diff: Option<Vec<TokenStream>>, ident: &Ident) -> TokenStre
     if let Some(diff) = diff {
         quote! {
             impl storm_mssql::ApplyEntityDiff for #ident {
-                fn apply_entity_diff<S: std::hash::BuildHasher>(&mut self, diff: &mut std::collections::HashMap<String, Value, S>) -> storm_mssql::Result<()> {
+                fn apply_entity_diff<S: std::hash::BuildHasher>(&mut self, diff: &std::collections::HashMap<String, storm_mssql::serde_json::Value, S>) -> storm_mssql::Result<()> {
                     #(#diff)*
                     Ok(())
                 }
@@ -472,7 +472,7 @@ fn load_diff_field(
             let lit = LitStr::new(&column.to_lowercase(), Span::call_site());
 
             diff.push(quote! {
-                if let Some(val) = map.get(#lit) {
+                if let Some(val) = diff.get(#lit) {
                     self.#field = storm_mssql::FieldDiffFrom::field_diff_from(val.clone())?;
                 }
             });
