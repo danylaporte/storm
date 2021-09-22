@@ -220,6 +220,15 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
                 quote! { let #name_bk = std::mem::replace(&mut v.#ident, Default::default()); },
             );
             translated_restore.push(quote! { v.#ident = #name_bk; });
+
+            if let Some(diff) = diff.as_mut().filter(|_| !attrs.skip_diff()) {
+                diff.push(quote! {
+                    if let Some(diff) = storm_mssql::FieldDiff::field_diff(&self.#ident, &old.#ident) {
+                        map.insert(#col_lit, diff);
+                    }
+                });
+            }
+
             continue;
         }
 
