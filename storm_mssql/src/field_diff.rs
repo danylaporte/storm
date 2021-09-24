@@ -2,7 +2,11 @@ use crate::{Error, Result};
 use chrono::{FixedOffset, Local, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{collections::HashMap, hash::BuildHasher};
+use std::{
+    collections::HashMap,
+    hash::{BuildHasher, Hash},
+};
+use storm::FieldsOrStr;
 
 /// Create the field from the diff value.
 pub trait FromFieldDiff: Sized {
@@ -40,12 +44,12 @@ pub fn field_diff_impl<T: PartialEq + Serialize>(new: &T, old: &T) -> Option<Val
 }
 
 #[doc(hidden)]
-pub fn _replace_field_diff<T: ApplyFieldDiff, S: BuildHasher>(
+pub fn _replace_field_diff<K: Eq + Hash, T: ApplyFieldDiff, S: BuildHasher>(
     field: &mut T,
-    name: &'static str,
-    map: &mut HashMap<String, Value, S>,
+    name: K,
+    map: &mut HashMap<FieldsOrStr<K>, Value, S>,
 ) -> Result<()> {
-    if let Some((key, old)) = map.remove_entry(name) {
+    if let Some((key, old)) = map.remove_entry(&FieldsOrStr::Fields(name)) {
         let new = field.apply_field_diff(old)?;
         map.insert(key, new);
     }
