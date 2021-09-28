@@ -61,6 +61,7 @@ async fn translated_flow() -> storm::Result<()> {
                         fr: "french".to_owned(),
                     },
                 },
+                &()
             )
             .await?;
 
@@ -93,6 +94,7 @@ struct Label {
 
 impl Entity for Label {
     type Key = LabelId;
+    type TrackCtx = ();
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]

@@ -61,6 +61,7 @@ async fn identity_translate_key() -> storm::Result<()> {
                         fr: "french".to_owned(),
                     },
                 },
+                &()
             )
             .await?;
 
@@ -97,6 +98,7 @@ struct Label {
 
 impl Entity for Label {
     type Key = i32;
+    type TrackCtx = ();
 }
 
 #[derive(Clone, Default, Debug)]

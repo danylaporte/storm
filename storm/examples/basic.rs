@@ -20,10 +20,11 @@ async fn main() -> Result<()> {
                 User {
                     name: "Test2".to_string(),
                 },
+                &(),
             )
             .await?;
 
-        users.remove(1).await?;
+        users.remove(1, &()).await?;
 
         let _topic = trx.tbl_of::<Topic>().await?;
         let log = trx.commit().await?;
@@ -45,6 +46,7 @@ struct Topic {
 
 impl Entity for Topic {
     type Key = usize;
+    type TrackCtx = ();
 }
 
 #[derive(NoopDelete, NoopLoad, NoopSave, Ctx)]
@@ -55,4 +57,5 @@ struct User {
 
 impl Entity for User {
     type Key = usize;
+    type TrackCtx = ();
 }

@@ -23,6 +23,7 @@ struct User {
 
 impl Entity for User {
     type Key = usize;
+    type TrackCtx = ();
 }
 
 #[indexing]

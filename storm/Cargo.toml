@@ -16,6 +16,7 @@ metrics = { version = "0.17", optional = true }
 once_cell = "1"
 parking_lot = "0.11"
 rayon = "1"
+serde = { version = "1", features = ["derive"] }
 static_init = "1"
 storm_derive = { path = "../storm_derive", optional = true }
 tiberius = { version = "0.6", optional = true }

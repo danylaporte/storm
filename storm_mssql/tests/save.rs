@@ -9,6 +9,7 @@ pub struct EntityWithDuplicateKey {
 
 impl Entity for EntityWithDuplicateKey {
     type Key = i32;
+    type TrackCtx = ();
 }
 
 #[derive(MssqlSave)]
@@ -20,6 +21,7 @@ pub struct EntitySaveWith {
 
 impl Entity for EntitySaveWith {
     type Key = i32;
+    type TrackCtx = ();
 }
 
 fn buffer_save_with(_key: &i32, value: &EntitySaveWith) -> Vec<u8> {
@@ -35,6 +37,7 @@ pub struct EntityWithPart {
 
 impl Entity for EntityWithPart {
     type Key = i32;
+    type TrackCtx = ();
 }
 
 #[derive(MssqlSave)]
@@ -45,4 +48,5 @@ pub struct EntityPart {
 
 impl Entity for EntityPart {
     type Key = i32;
+    type TrackCtx = ();
 }

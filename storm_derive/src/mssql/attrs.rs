@@ -26,9 +26,16 @@ pub(super) struct FieldAttrs {
 
     #[darling(default)]
     skip_save: SpannedValue<Option<bool>>,
+
+    #[darling(default)]
+    skip_diff: bool,
 }
 
 impl FieldAttrs {
+    pub fn skip_diff(&self) -> bool {
+        self.skip_diff
+    }
+
     pub fn skip_load(&self) -> bool {
         self.skip_load.unwrap_or_default() || self.skip.unwrap_or_default()
     }
@@ -100,6 +107,10 @@ pub(super) struct TypeAttrs {
 
     #[darling(default)]
     pub identity: SpannedValue<String>,
+
+    /// impl ApplyEntityDiff and impl EntityDiff
+    #[darling(default)]
+    pub diff: bool,
 }
 
 impl TypeAttrs {

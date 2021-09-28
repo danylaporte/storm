@@ -17,7 +17,7 @@ use load_translated::LoadTranslated;
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt as _};
 use save_translated::SaveTranslated;
-use syn::{DeriveInput, Error, Ident, LitInt, LitStr, Type};
+use syn::{DeriveInput, Error, Ident, LitInt, LitStr, Type, Visibility};
 
 pub(crate) fn delete(input: &DeriveInput) -> TokenStream {
     let ident = &input.ident;
@@ -59,18 +59,20 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
         ident.span(),
     );
 
+    let mut diff = attrs.diff.then(Vec::new);
     let mut errors = Vec::new();
     let mut filter_sql = FilterSqlImpl::default();
     let mut load = LoadFields::new(ident, &attrs);
     let mut translated = LoadTranslated::new(ident, &attrs);
     let table_name = LitStr::new(&attrs.table, attrs.table.span());
+    let enum_fields_ident = Ident::new(&format!("{}Fields", ident), ident.span());
 
     for key in attrs.keys(&mut errors) {
         filter_sql.add_filter(key);
     }
 
     for field in try_ts!(input.fields()) {
-        continue_ts!(field.ident(), errors);
+        let field_ident = continue_ts!(field.ident(), errors);
 
         let attrs = continue_ts!(
             FieldAttrs::from_field(field).map_err(|e| e.write_errors()),
@@ -84,11 +86,19 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
 
             load.skip_field(field, &attrs, &mut errors);
             translated.add_field(field, &column);
+
+            if !attrs.skip_diff() {
+                load_diff_field(&mut diff, field_ident, &enum_fields_ident);
+            }
         } else if attrs.skip_load() {
             load.skip_field(field, &attrs, &mut errors);
         } else {
             let column = continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
             load.add_field(field, &attrs, &column);
+
+            if !attrs.skip_diff() {
+                load_diff_field(&mut diff, field_ident, &enum_fields_ident);
+            }
         }
     }
 
@@ -97,6 +107,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let translated_where = translated.to_where_clause();
     let provider = attrs.provider();
     let (metrics_start, metrics_end) = metrics(ident, "load");
+    let diff = apply_entity_diff(diff, ident);
     let test;
 
     if attrs.no_test {
@@ -144,6 +155,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             }
         }
 
+        #diff
         #test
     }
 }
@@ -153,6 +165,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let attrs = try_ts!(TypeAttrs::from_derive_input(input).map_err(|e| e.write_errors()));
     let rename_all = attrs.rename_all;
 
+    let mut diff = attrs.diff.then(Vec::new);
     let mut errors = Vec::new();
     let mut save_part = Vec::new();
     let mut wheres = Vec::new();
@@ -162,6 +175,9 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let is_identity_key = attrs.is_identity_key();
     let identity_col = attrs.identity.to_lowercase();
     let table_name = LitStr::new(&attrs.table, attrs.table.span());
+    let mut enum_fields = Vec::new();
+    let enum_fields_ident = Ident::new(&format!("{}Fields", ident), ident.span());
+    let vis = &input.vis;
 
     let keys = attrs.keys(&mut errors);
     let mut identity_found = is_identity_key;
@@ -179,7 +195,8 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
         }
 
         let column = &continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
-        let is_identity = !identity_col.is_empty() && identity_col == column.to_lowercase();
+        let col_lc = column.to_lowercase();
+        let is_identity = !identity_col.is_empty() && identity_col == col_lc;
 
         if is_identity {
             identity_found = true;
@@ -198,6 +215,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
         }
 
         let ident = continue_ts!(field.ident(), errors);
+        let field_pascal_ident = Ident::new(&ident.to_string().to_pascal_case(), ident.span());
 
         if is_translated(&field.ty) {
             translated.add_field(field, column);
@@ -206,19 +224,65 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
                 quote! { let #name_bk = std::mem::replace(&mut v.#ident, Default::default()); },
             );
             translated_restore.push(quote! { v.#ident = #name_bk; });
+
+            if let Some(diff) = diff.as_mut().filter(|_| !attrs.skip_diff()) {
+                diff.push(quote! {
+                    if let Some(diff) = storm_mssql::FieldDiff::field_diff(&self.#ident, &old.#ident) {
+                        map.insert(#enum_fields_ident::#field_pascal_ident, diff);
+                    }
+                });
+
+                enum_fields.push(quote!(#field_pascal_ident));
+            }
+
             continue;
         }
 
         let name = LitStr::new(&format!("[{}]", column), ident.span());
 
-        save_part.push(if attrs.part {
-            quote!(storm_mssql::SaveEntityPart::save_entity_part(&self.#ident, k, builder);)
+        if attrs.part {
+            save_part.push(
+                quote!(storm_mssql::SaveEntityPart::save_entity_part(&self.#ident, k, builder);),
+            );
+
+            if let Some(diff) = diff.as_mut().filter(|_| !attrs.skip_diff()) {
+                diff.push(
+                    quote! { storm_mssql::EntityDiff::entity_diff(&self.#ident, &old.#ident, map);},
+                );
+
+                // Ignored for now.
+                // enum_fields.push(quote!(#ident()));
+            }
         } else {
             match attrs.save_with.as_ref() {
-                Some(f) => quote!(builder.add_field_owned(#name, #f(k, self));),
-                None => quote!(builder.add_field_ref(#name, &self.#ident);),
+                Some(f) => {
+                    save_part.push(quote!(builder.add_field_owned(#name, #f(k, self));));
+
+                    if let Some(diff) = diff.as_mut().filter(|_| !attrs.skip_diff()) {
+                        diff.push(quote! {
+                            if let Some(diff) = storm_mssql::FieldDiff::field_diff(&#f(k, self), &#f(k, old)) {
+                                map.insert(#enum_fields_ident::#field_pascal_ident, diff);
+                            }
+                        });
+
+                        enum_fields.push(quote!(#field_pascal_ident));
+                    }
+                }
+                None => {
+                    save_part.push(quote!(builder.add_field_ref(#name, &self.#ident);));
+
+                    if let Some(diff) = diff.as_mut().filter(|_| !attrs.skip_diff()) {
+                        diff.push(quote! {
+                            if let Some(diff) = storm_mssql::FieldDiff::field_diff(&self.#ident, &old.#ident) {
+                                map.insert(#enum_fields_ident::#field_pascal_ident, diff);
+                            }
+                        });
+
+                        enum_fields.push(quote!(#field_pascal_ident));
+                    }
+                }
             }
-        });
+        };
     }
 
     if !attrs.identity.is_empty() && !identity_found {
@@ -290,6 +354,8 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let table = LitStr::new(&attrs.table, ident.span());
     let provider = attrs.provider();
     let (metrics_start, metrics_end) = metrics(ident, "upsert");
+    let diff = entity_diff(ident, diff);
+    let enum_fields = enum_fields_impl(vis, ident, enum_fields, &enum_fields_ident, attrs.diff);
 
     quote! {
         impl #upsert_trait for storm::provider::TransactionProvider<'_> {
@@ -314,6 +380,9 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
                 })
             }
         }
+
+        #diff
+        #enum_fields
 
         impl storm_mssql::SaveEntityPart for #ident {
             fn save_entity_part<'a>(&'a self, k: &'a Self::Key, builder: &mut storm_mssql::UpsertBuilder<'a>) {
@@ -394,6 +463,42 @@ impl ToTokens for FilterSqlImpl {
     }
 }
 
+fn apply_entity_diff(diff: Option<Vec<TokenStream>>, ident: &Ident) -> TokenStream {
+    if let Some(diff) = diff {
+        quote! {
+            impl storm_mssql::ApplyEntityDiff for #ident {
+                fn apply_entity_diff<S: std::hash::BuildHasher>(&mut self, diff: &mut std::collections::HashMap<storm::FieldsOrStr<<Self as storm::EntityFields>::Fields>, storm_mssql::serde_json::Value, S>) -> storm_mssql::Result<()> {
+                    #(#diff)*
+                    Ok(())
+                }
+            }
+        }
+    } else {
+        quote! {}
+    }
+}
+
+fn entity_diff(ident: &Ident, diff: Option<Vec<TokenStream>>) -> TokenStream {
+    if let Some(diff) = diff {
+        quote! {
+            impl storm_mssql::EntityDiff for #ident {
+                fn entity_diff<S: std::hash::BuildHasher>(&self, old: &Self, map: &mut std::collections::HashMap<<Self as storm::EntityFields>::Fields, storm_mssql::serde_json::Value, S>) {
+                    #(#diff)*
+                }
+            }
+        }
+    } else {
+        quote!()
+    }
+}
+
+fn load_diff_field(diff: &mut Option<Vec<TokenStream>>, field: &Ident, enum_fields_ident: &Ident) {
+    if let Some(diff) = diff.as_mut() {
+        let name = Ident::new(&field.to_string().to_pascal_case(), field.span());
+        diff.push(quote! {storm_mssql::_replace_field_diff(&mut self.#field, #enum_fields_ident::#name, diff)?;});
+    }
+}
+
 fn read_row(column_index: usize) -> TokenStream {
     let l = LitInt::new(&column_index.to_string(), Span::call_site());
     quote!(storm_mssql::FromSql::from_sql(row.try_get(#l).map_err(storm::Error::Mssql)?)?)
@@ -403,5 +508,29 @@ fn read_row_with(column_index: usize, attrs: &FieldAttrs) -> TokenStream {
     match attrs.load_with.as_ref() {
         Some(f) => quote!(#f(&row)?),
         None => read_row(column_index),
+    }
+}
+
+fn enum_fields_impl(
+    vis: &Visibility,
+    ident: &Ident,
+    items: Vec<TokenStream>,
+    enum_ident: &Ident,
+    is_diff: bool,
+) -> TokenStream {
+    if is_diff {
+        quote! {
+            #[derive(Clone, Copy, Eq, Hash, PartialEq, serde::Deserialize, serde::Serialize)]
+            #[serde(rename_all = "camelCase")]
+            #vis enum #enum_ident {
+                #(#items,)*
+            }
+
+            impl storm::EntityFields for #ident {
+                type Fields = #enum_ident;
+            }
+        }
+    } else {
+        quote!()
     }
 }

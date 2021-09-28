@@ -9,4 +9,5 @@ pub struct EntityWithDuplicateKey {
 
 impl Entity for EntityWithDuplicateKey {
     type Key = i32;
+    type TrackCtx = ();
 }
