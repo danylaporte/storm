@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_derive/src/mssql/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings"></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../favicon.svg">
-<link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png">
-<link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../storm_derive/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img src="../../../brush.svg" width="18" height="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../settings.html" title="settings"><img src="../../../wheel.svg" width="18" height="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_derive&#x2F;src&#x2F;mssql&#x2F;mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../storm_derive/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input"name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -407,6 +405,135 @@
 <span id="405">405</span>
 <span id="406">406</span>
 <span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
 </pre><pre class="rust">
 <span class="kw">mod</span> <span class="ident">attrs</span>;
 <span class="kw">mod</span> <span class="ident">builders</span>;
@@ -427,7 +554,7 @@
 <span class="kw">use</span> <span class="ident">proc_macro2</span>::{<span class="ident">Span</span>, <span class="ident">TokenStream</span>};
 <span class="kw">use</span> <span class="ident">quote</span>::{<span class="ident">quote</span>, <span class="ident">ToTokens</span>, <span class="ident">TokenStreamExt</span> <span class="kw">as</span> <span class="kw">_</span>};
 <span class="kw">use</span> <span class="ident">save_translated::SaveTranslated</span>;
-<span class="kw">use</span> <span class="ident">syn</span>::{<span class="ident">DeriveInput</span>, <span class="ident">Error</span>, <span class="ident">Ident</span>, <span class="ident">LitInt</span>, <span class="ident">LitStr</span>, <span class="ident">Type</span>};
+<span class="kw">use</span> <span class="ident">syn</span>::{<span class="ident">DeriveInput</span>, <span class="ident">Error</span>, <span class="ident">Ident</span>, <span class="ident">LitInt</span>, <span class="ident">LitStr</span>, <span class="ident">Type</span>, <span class="ident">Visibility</span>};
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">delete</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">DeriveInput</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
     <span class="kw">let</span> <span class="ident">ident</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">input</span>.<span class="ident">ident</span>;
@@ -469,18 +596,20 @@
         <span class="ident">ident</span>.<span class="ident">span</span>(),
     );
 
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">diff</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">diff</span>.<span class="ident">then</span>(<span class="ident">Vec::new</span>);
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">errors</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">filter_sql</span> <span class="op">=</span> <span class="ident">FilterSqlImpl::default</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">load</span> <span class="op">=</span> <span class="ident">LoadFields::new</span>(<span class="ident">ident</span>, <span class="kw-2">&amp;</span><span class="ident">attrs</span>);
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">translated</span> <span class="op">=</span> <span class="ident">LoadTranslated::new</span>(<span class="ident">ident</span>, <span class="kw-2">&amp;</span><span class="ident">attrs</span>);
     <span class="kw">let</span> <span class="ident">table_name</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="ident">attrs</span>.<span class="ident">table</span>, <span class="ident">attrs</span>.<span class="ident">table</span>.<span class="ident">span</span>());
+    <span class="kw">let</span> <span class="ident">enum_fields_ident</span> <span class="op">=</span> <span class="ident">Ident::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}Fields&quot;</span>, <span class="ident">ident</span>), <span class="ident">ident</span>.<span class="ident">span</span>());
 
     <span class="kw">for</span> <span class="ident">key</span> <span class="kw">in</span> <span class="ident">attrs</span>.<span class="ident">keys</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">errors</span>) {
         <span class="ident">filter_sql</span>.<span class="ident">add_filter</span>(<span class="ident">key</span>);
     }
 
     <span class="kw">for</span> <span class="ident">field</span> <span class="kw">in</span> <span class="macro">try_ts!</span>(<span class="ident">input</span>.<span class="ident">fields</span>()) {
-        <span class="macro">continue_ts!</span>(<span class="ident">field</span>.<span class="ident">ident</span>(), <span class="ident">errors</span>);
+        <span class="kw">let</span> <span class="ident">field_ident</span> <span class="op">=</span> <span class="macro">continue_ts!</span>(<span class="ident">field</span>.<span class="ident">ident</span>(), <span class="ident">errors</span>);
 
         <span class="kw">let</span> <span class="ident">attrs</span> <span class="op">=</span> <span class="macro">continue_ts!</span>(
             <span class="ident">FieldAttrs::from_field</span>(<span class="ident">field</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">write_errors</span>()),
@@ -494,11 +623,19 @@
 
             <span class="ident">load</span>.<span class="ident">skip_field</span>(<span class="ident">field</span>, <span class="kw-2">&amp;</span><span class="ident">attrs</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">errors</span>);
             <span class="ident">translated</span>.<span class="ident">add_field</span>(<span class="ident">field</span>, <span class="kw-2">&amp;</span><span class="ident">column</span>);
+
+            <span class="kw">if</span> <span class="op">!</span><span class="ident">attrs</span>.<span class="ident">skip_diff</span>() {
+                <span class="ident">load_diff_field</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">diff</span>, <span class="ident">field_ident</span>, <span class="kw-2">&amp;</span><span class="ident">enum_fields_ident</span>);
+            }
         } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">attrs</span>.<span class="ident">skip_load</span>() {
             <span class="ident">load</span>.<span class="ident">skip_field</span>(<span class="ident">field</span>, <span class="kw-2">&amp;</span><span class="ident">attrs</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">errors</span>);
         } <span class="kw">else</span> {
             <span class="kw">let</span> <span class="ident">column</span> <span class="op">=</span> <span class="macro">continue_ts!</span>(<span class="ident">RenameAll::column</span>(<span class="ident">rename_all</span>, <span class="kw-2">&amp;</span><span class="ident">attrs</span>.<span class="ident">column</span>, <span class="ident">field</span>), <span class="ident">errors</span>);
             <span class="ident">load</span>.<span class="ident">add_field</span>(<span class="ident">field</span>, <span class="kw-2">&amp;</span><span class="ident">attrs</span>, <span class="kw-2">&amp;</span><span class="ident">column</span>);
+
+            <span class="kw">if</span> <span class="op">!</span><span class="ident">attrs</span>.<span class="ident">skip_diff</span>() {
+                <span class="ident">load_diff_field</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">diff</span>, <span class="ident">field_ident</span>, <span class="kw-2">&amp;</span><span class="ident">enum_fields_ident</span>);
+            }
         }
     }
 
@@ -507,6 +644,7 @@
     <span class="kw">let</span> <span class="ident">translated_where</span> <span class="op">=</span> <span class="ident">translated</span>.<span class="ident">to_where_clause</span>();
     <span class="kw">let</span> <span class="ident">provider</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">provider</span>();
     <span class="kw">let</span> (<span class="ident">metrics_start</span>, <span class="ident">metrics_end</span>) <span class="op">=</span> <span class="ident">metrics</span>(<span class="ident">ident</span>, <span class="string">&quot;load&quot;</span>);
+    <span class="kw">let</span> <span class="ident">diff</span> <span class="op">=</span> <span class="ident">apply_entity_diff</span>(<span class="ident">diff</span>, <span class="ident">ident</span>);
     <span class="kw">let</span> <span class="ident">test</span>;
 
     <span class="kw">if</span> <span class="ident">attrs</span>.<span class="ident">no_test</span> {
@@ -554,6 +692,7 @@
             }
         }
 
+        #<span class="ident">diff</span>
         #<span class="ident">test</span>
     }
 }
@@ -563,6 +702,7 @@
     <span class="kw">let</span> <span class="ident">attrs</span> <span class="op">=</span> <span class="macro">try_ts!</span>(<span class="ident">TypeAttrs::from_derive_input</span>(<span class="ident">input</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">write_errors</span>()));
     <span class="kw">let</span> <span class="ident">rename_all</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">rename_all</span>;
 
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">diff</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">diff</span>.<span class="ident">then</span>(<span class="ident">Vec::new</span>);
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">errors</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">save_part</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">wheres</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
@@ -572,6 +712,9 @@
     <span class="kw">let</span> <span class="ident">is_identity_key</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">is_identity_key</span>();
     <span class="kw">let</span> <span class="ident">identity_col</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">identity</span>.<span class="ident">to_lowercase</span>();
     <span class="kw">let</span> <span class="ident">table_name</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="ident">attrs</span>.<span class="ident">table</span>, <span class="ident">attrs</span>.<span class="ident">table</span>.<span class="ident">span</span>());
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">enum_fields</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+    <span class="kw">let</span> <span class="ident">enum_fields_ident</span> <span class="op">=</span> <span class="ident">Ident::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}Fields&quot;</span>, <span class="ident">ident</span>), <span class="ident">ident</span>.<span class="ident">span</span>());
+    <span class="kw">let</span> <span class="ident">vis</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">input</span>.<span class="ident">vis</span>;
 
     <span class="kw">let</span> <span class="ident">keys</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">keys</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">errors</span>);
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">identity_found</span> <span class="op">=</span> <span class="ident">is_identity_key</span>;
@@ -589,7 +732,8 @@
         }
 
         <span class="kw">let</span> <span class="ident">column</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="macro">continue_ts!</span>(<span class="ident">RenameAll::column</span>(<span class="ident">rename_all</span>, <span class="kw-2">&amp;</span><span class="ident">attrs</span>.<span class="ident">column</span>, <span class="ident">field</span>), <span class="ident">errors</span>);
-        <span class="kw">let</span> <span class="ident">is_identity</span> <span class="op">=</span> <span class="op">!</span><span class="ident">identity_col</span>.<span class="ident">is_empty</span>() <span class="op">&amp;&amp;</span> <span class="ident">identity_col</span> <span class="op">=</span><span class="op">=</span> <span class="ident">column</span>.<span class="ident">to_lowercase</span>();
+        <span class="kw">let</span> <span class="ident">col_lc</span> <span class="op">=</span> <span class="ident">column</span>.<span class="ident">to_lowercase</span>();
+        <span class="kw">let</span> <span class="ident">is_identity</span> <span class="op">=</span> <span class="op">!</span><span class="ident">identity_col</span>.<span class="ident">is_empty</span>() <span class="op">&amp;&amp;</span> <span class="ident">identity_col</span> <span class="op">=</span><span class="op">=</span> <span class="ident">col_lc</span>;
 
         <span class="kw">if</span> <span class="ident">is_identity</span> {
             <span class="ident">identity_found</span> <span class="op">=</span> <span class="bool-val">true</span>;
@@ -608,6 +752,7 @@
         }
 
         <span class="kw">let</span> <span class="ident">ident</span> <span class="op">=</span> <span class="macro">continue_ts!</span>(<span class="ident">field</span>.<span class="ident">ident</span>(), <span class="ident">errors</span>);
+        <span class="kw">let</span> <span class="ident">field_pascal_ident</span> <span class="op">=</span> <span class="ident">Ident::new</span>(<span class="kw-2">&amp;</span><span class="ident">ident</span>.<span class="ident">to_string</span>().<span class="ident">to_pascal_case</span>(), <span class="ident">ident</span>.<span class="ident">span</span>());
 
         <span class="kw">if</span> <span class="ident">is_translated</span>(<span class="kw-2">&amp;</span><span class="ident">field</span>.<span class="ident">ty</span>) {
             <span class="ident">translated</span>.<span class="ident">add_field</span>(<span class="ident">field</span>, <span class="ident">column</span>);
@@ -616,19 +761,65 @@
                 <span class="macro">quote!</span> { <span class="kw">let</span> #<span class="ident">name_bk</span> <span class="op">=</span> <span class="ident">std::mem::replace</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">v</span>.#<span class="ident">ident</span>, <span class="ident">Default::default</span>()); },
             );
             <span class="ident">translated_restore</span>.<span class="ident">push</span>(<span class="macro">quote!</span> { <span class="ident">v</span>.#<span class="ident">ident</span> <span class="op">=</span> #<span class="ident">name_bk</span>; });
+
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">diff</span>.<span class="ident">as_mut</span>().<span class="ident">filter</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="op">!</span><span class="ident">attrs</span>.<span class="ident">skip_diff</span>()) {
+                <span class="ident">diff</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
+                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">storm_mssql::FieldDiff::field_diff</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.#<span class="ident">ident</span>, <span class="kw-2">&amp;</span><span class="ident">old</span>.#<span class="ident">ident</span>) {
+                        <span class="ident">map</span>.<span class="ident">insert</span>(#<span class="ident">enum_fields_ident</span>::#<span class="ident">field_pascal_ident</span>, <span class="ident">diff</span>);
+                    }
+                });
+
+                <span class="ident">enum_fields</span>.<span class="ident">push</span>(<span class="macro">quote!</span>(#<span class="ident">field_pascal_ident</span>));
+            }
+
             <span class="kw">continue</span>;
         }
 
         <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;[{}]&quot;</span>, <span class="ident">column</span>), <span class="ident">ident</span>.<span class="ident">span</span>());
 
-        <span class="ident">save_part</span>.<span class="ident">push</span>(<span class="kw">if</span> <span class="ident">attrs</span>.<span class="ident">part</span> {
-            <span class="macro">quote!</span>(<span class="ident">storm_mssql::SaveEntityPart::save_entity_part</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.#<span class="ident">ident</span>, <span class="ident">k</span>, <span class="ident">builder</span>);)
+        <span class="kw">if</span> <span class="ident">attrs</span>.<span class="ident">part</span> {
+            <span class="ident">save_part</span>.<span class="ident">push</span>(
+                <span class="macro">quote!</span>(<span class="ident">storm_mssql::SaveEntityPart::save_entity_part</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.#<span class="ident">ident</span>, <span class="ident">k</span>, <span class="ident">builder</span>);),
+            );
+
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">diff</span>.<span class="ident">as_mut</span>().<span class="ident">filter</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="op">!</span><span class="ident">attrs</span>.<span class="ident">skip_diff</span>()) {
+                <span class="ident">diff</span>.<span class="ident">push</span>(
+                    <span class="macro">quote!</span> { <span class="ident">storm_mssql::EntityDiff::entity_diff</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.#<span class="ident">ident</span>, <span class="kw-2">&amp;</span><span class="ident">old</span>.#<span class="ident">ident</span>, <span class="ident">map</span>);},
+                );
+
+                <span class="comment">// Ignored for now.</span>
+                <span class="comment">// enum_fields.push(quote!(#ident()));</span>
+            }
         } <span class="kw">else</span> {
             <span class="kw">match</span> <span class="ident">attrs</span>.<span class="ident">save_with</span>.<span class="ident">as_ref</span>() {
-                <span class="prelude-val">Some</span>(<span class="ident">f</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote!</span>(<span class="ident">builder</span>.<span class="ident">add_field_owned</span>(#<span class="ident">name</span>, #<span class="ident">f</span>(<span class="ident">k</span>, <span class="self">self</span>));),
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote!</span>(<span class="ident">builder</span>.<span class="ident">add_field_ref</span>(#<span class="ident">name</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.#<span class="ident">ident</span>);),
+                <span class="prelude-val">Some</span>(<span class="ident">f</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">save_part</span>.<span class="ident">push</span>(<span class="macro">quote!</span>(<span class="ident">builder</span>.<span class="ident">add_field_owned</span>(#<span class="ident">name</span>, #<span class="ident">f</span>(<span class="ident">k</span>, <span class="self">self</span>));));
+
+                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">diff</span>.<span class="ident">as_mut</span>().<span class="ident">filter</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="op">!</span><span class="ident">attrs</span>.<span class="ident">skip_diff</span>()) {
+                        <span class="ident">diff</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
+                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">storm_mssql::FieldDiff::field_diff</span>(<span class="kw-2">&amp;</span>#<span class="ident">f</span>(<span class="ident">k</span>, <span class="self">self</span>), <span class="kw-2">&amp;</span>#<span class="ident">f</span>(<span class="ident">k</span>, <span class="ident">old</span>)) {
+                                <span class="ident">map</span>.<span class="ident">insert</span>(#<span class="ident">enum_fields_ident</span>::#<span class="ident">field_pascal_ident</span>, <span class="ident">diff</span>);
+                            }
+                        });
+
+                        <span class="ident">enum_fields</span>.<span class="ident">push</span>(<span class="macro">quote!</span>(#<span class="ident">field_pascal_ident</span>));
+                    }
+                }
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">save_part</span>.<span class="ident">push</span>(<span class="macro">quote!</span>(<span class="ident">builder</span>.<span class="ident">add_field_ref</span>(#<span class="ident">name</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.#<span class="ident">ident</span>);));
+
+                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">diff</span>.<span class="ident">as_mut</span>().<span class="ident">filter</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="op">!</span><span class="ident">attrs</span>.<span class="ident">skip_diff</span>()) {
+                        <span class="ident">diff</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
+                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">storm_mssql::FieldDiff::field_diff</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.#<span class="ident">ident</span>, <span class="kw-2">&amp;</span><span class="ident">old</span>.#<span class="ident">ident</span>) {
+                                <span class="ident">map</span>.<span class="ident">insert</span>(#<span class="ident">enum_fields_ident</span>::#<span class="ident">field_pascal_ident</span>, <span class="ident">diff</span>);
+                            }
+                        });
+
+                        <span class="ident">enum_fields</span>.<span class="ident">push</span>(<span class="macro">quote!</span>(#<span class="ident">field_pascal_ident</span>));
+                    }
+                }
             }
-        });
+        };
     }
 
     <span class="kw">if</span> <span class="op">!</span><span class="ident">attrs</span>.<span class="ident">identity</span>.<span class="ident">is_empty</span>() <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="ident">identity_found</span> {
@@ -700,6 +891,8 @@
     <span class="kw">let</span> <span class="ident">table</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="ident">attrs</span>.<span class="ident">table</span>, <span class="ident">ident</span>.<span class="ident">span</span>());
     <span class="kw">let</span> <span class="ident">provider</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">provider</span>();
     <span class="kw">let</span> (<span class="ident">metrics_start</span>, <span class="ident">metrics_end</span>) <span class="op">=</span> <span class="ident">metrics</span>(<span class="ident">ident</span>, <span class="string">&quot;upsert&quot;</span>);
+    <span class="kw">let</span> <span class="ident">diff</span> <span class="op">=</span> <span class="ident">entity_diff</span>(<span class="ident">ident</span>, <span class="ident">diff</span>);
+    <span class="kw">let</span> <span class="ident">enum_fields</span> <span class="op">=</span> <span class="ident">enum_fields_impl</span>(<span class="ident">vis</span>, <span class="ident">ident</span>, <span class="ident">enum_fields</span>, <span class="kw-2">&amp;</span><span class="ident">enum_fields_ident</span>, <span class="ident">attrs</span>.<span class="ident">diff</span>);
 
     <span class="macro">quote!</span> {
         <span class="kw">impl</span> #<span class="ident">upsert_trait</span> <span class="kw">for</span> <span class="ident">storm::provider::TransactionProvider</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span> {
@@ -724,6 +917,9 @@
                 })
             }
         }
+
+        #<span class="ident">diff</span>
+        #<span class="ident">enum_fields</span>
 
         <span class="kw">impl</span> <span class="ident">storm_mssql::SaveEntityPart</span> <span class="kw">for</span> #<span class="ident">ident</span> {
             <span class="kw">fn</span> <span class="ident">save_entity_part</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">Self</span><span class="ident">::Key</span>, <span class="ident">builder</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">storm_mssql::UpsertBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>) {
@@ -804,6 +1000,42 @@
     }
 }
 
+<span class="kw">fn</span> <span class="ident">apply_entity_diff</span>(<span class="ident">diff</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TokenStream</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">ident</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">diff</span> {
+        <span class="macro">quote!</span> {
+            <span class="kw">impl</span> <span class="ident">storm_mssql::ApplyEntityDiff</span> <span class="kw">for</span> #<span class="ident">ident</span> {
+                <span class="kw">fn</span> <span class="ident">apply_entity_diff</span><span class="op">&lt;</span><span class="ident">S</span>: <span class="ident">std::hash::BuildHasher</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">diff</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std::collections::HashMap</span><span class="op">&lt;</span><span class="ident">storm::FieldsOrStr</span><span class="op">&lt;</span><span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">storm::EntityFields</span><span class="op">&gt;</span><span class="ident">::Fields</span><span class="op">&gt;</span>, <span class="ident">storm_mssql::serde_json::Value</span>, <span class="ident">S</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">storm_mssql::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+                    #(#<span class="ident">diff</span>)<span class="op">*</span>
+                    <span class="prelude-val">Ok</span>(())
+                }
+            }
+        }
+    } <span class="kw">else</span> {
+        <span class="macro">quote!</span> {}
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">entity_diff</span>(<span class="ident">ident</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>, <span class="ident">diff</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TokenStream</span><span class="op">&gt;</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">diff</span> {
+        <span class="macro">quote!</span> {
+            <span class="kw">impl</span> <span class="ident">storm_mssql::EntityDiff</span> <span class="kw">for</span> #<span class="ident">ident</span> {
+                <span class="kw">fn</span> <span class="ident">entity_diff</span><span class="op">&lt;</span><span class="ident">S</span>: <span class="ident">std::hash::BuildHasher</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">old</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>, <span class="ident">map</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">std::collections::HashMap</span><span class="op">&lt;</span><span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">storm::EntityFields</span><span class="op">&gt;</span><span class="ident">::Fields</span>, <span class="ident">storm_mssql::serde_json::Value</span>, <span class="ident">S</span><span class="op">&gt;</span>) {
+                    #(#<span class="ident">diff</span>)<span class="op">*</span>
+                }
+            }
+        }
+    } <span class="kw">else</span> {
+        <span class="macro">quote!</span>()
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">load_diff_field</span>(<span class="ident">diff</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TokenStream</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">field</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>, <span class="ident">enum_fields_ident</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>) {
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">diff</span>.<span class="ident">as_mut</span>() {
+        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">Ident::new</span>(<span class="kw-2">&amp;</span><span class="ident">field</span>.<span class="ident">to_string</span>().<span class="ident">to_pascal_case</span>(), <span class="ident">field</span>.<span class="ident">span</span>());
+        <span class="ident">diff</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {<span class="ident">storm_mssql::_replace_field_diff</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.#<span class="ident">field</span>, #<span class="ident">enum_fields_ident</span>::#<span class="ident">name</span>, <span class="ident">diff</span>)<span class="question-mark">?</span>;});
+    }
+}
+
 <span class="kw">fn</span> <span class="ident">read_row</span>(<span class="ident">column_index</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
     <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">LitInt::new</span>(<span class="kw-2">&amp;</span><span class="ident">column_index</span>.<span class="ident">to_string</span>(), <span class="ident">Span::call_site</span>());
     <span class="macro">quote!</span>(<span class="ident">storm_mssql::FromSql::from_sql</span>(<span class="ident">row</span>.<span class="ident">try_get</span>(#<span class="ident">l</span>).<span class="ident">map_err</span>(<span class="ident">storm::Error::Mssql</span>)<span class="question-mark">?</span>)<span class="question-mark">?</span>)
@@ -815,5 +1047,31 @@
         <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">read_row</span>(<span class="ident">column_index</span>),
     }
 }
+
+<span class="kw">fn</span> <span class="ident">enum_fields_impl</span>(
+    <span class="ident">vis</span>: <span class="kw-2">&amp;</span><span class="ident">Visibility</span>,
+    <span class="ident">ident</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>,
+    <span class="ident">items</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TokenStream</span><span class="op">&gt;</span>,
+    <span class="ident">enum_ident</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>,
+    <span class="ident">is_diff</span>: <span class="ident">bool</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
+    <span class="kw">if</span> <span class="ident">is_diff</span> {
+        <span class="macro">quote!</span> {
+            <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">PartialEq</span>, <span class="ident">serde::Deserialize</span>, <span class="ident">serde::Serialize</span>)]</span>
+            <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
+            #<span class="ident">vis</span> <span class="kw">enum</span> #<span class="ident">enum_ident</span> {
+                #(#<span class="ident">items</span>,)<span class="op">*</span>
+            }
+
+            <span class="kw">impl</span> <span class="ident">storm::EntityFields</span> <span class="kw">for</span> #<span class="ident">ident</span> {
+                <span class="kw">type</span> <span class="ident">Fields</span> <span class="op">=</span> #<span class="ident">enum_ident</span>;
+            }
+        }
+    } <span class="kw">else</span> {
+        <span class="macro">quote!</span>()
+    }
+}
 </pre></div>
-</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="storm_derive" data-search-index-js="../../../search-index.js" data-search-js="../../../search.js"></div><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="storm_derive" data-search-index-js="../../../search-index.js" data-search-js="../../../search.js"></div>
+    <script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script>
+</body></html>
