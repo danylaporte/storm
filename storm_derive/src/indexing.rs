@@ -11,6 +11,25 @@ pub(crate) fn indexing(item: Item) -> TokenStream {
     }
 }
 
+fn gc(index_name: &Ident, index_ty: &Type) -> (TokenStream, TokenStream) {
+    (
+        quote! {
+            impl storm::Gc for #index_name {
+                const SUPPORT_GC: bool = <#index_ty as storm::Gc>::SUPPORT_GC;
+
+                fn gc(&mut self, ctx: &storm::GcCtx) {
+                    self.0.gc(ctx);
+                }
+            }
+        },
+        quote! {
+            if <#index_ty as storm::Gc>::SUPPORT_GC {
+                storm::gc::collectables::register(|ctx| ctx.index_gc::<#index_name>());
+            }
+        },
+    )
+}
+
 fn indexing_fn(f: &ItemFn) -> TokenStream {
     let vis = &f.vis;
     let name = &f.sig.ident;
@@ -82,10 +101,13 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         #index_name(#name(#(#as_ref_args,)*), storm::version_tag::combine(&[#(#as_ref_tag,)*]))
     });
 
+    let (gc, gc_collect) = gc(&index_name, ty);
+
     quote! {
         #[static_init::dynamic]
         static #static_var: (storm::TblVar<#index_name>, storm::Deps) = {
             #(#deps)*
+            #gc_collect
             Default::default()
         };
 
@@ -146,6 +168,8 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         impl storm::CtxTypeInfo for #index_name {
             const NAME: &'static str = #index_name_lit;
         }
+
+        #gc
 
         #f
     }

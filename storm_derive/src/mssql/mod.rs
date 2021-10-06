@@ -404,12 +404,12 @@ fn is_translated(t: &Type) -> bool {
     }
 }
 
-#[cfg(not(feature = "metrics"))]
+#[cfg(not(feature = "telemetry"))]
 fn metrics(_ident: &Ident, _ops: &str) -> (TokenStream, TokenStream) {
     (quote!(), quote!())
 }
 
-#[cfg(feature = "metrics")]
+#[cfg(feature = "telemetry")]
 fn metrics(ident: &Ident, ops: &str) -> (TokenStream, TokenStream) {
     let start = quote! {
         let instant = std::time::Instant::now();
@@ -420,7 +420,8 @@ fn metrics(ident: &Ident, ops: &str) -> (TokenStream, TokenStream) {
 
     let end = quote! {
         use storm::metrics;
-        metrics::histogram!("storm.execution_time", instant.elapsed().as_secs_f64(), "operation" => #ops, "type" => #typ);
+        metrics::histogram!("storm_execution_time", instant.elapsed().as_secs_f64(), "operation" => #ops, "type" => #typ);
+        metrics::counter!("storm_table_ops", 1, "operation" => #ops, "type" => #typ);
     };
 
     (start, end)

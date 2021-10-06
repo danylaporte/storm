@@ -1,19 +1,16 @@
 use crate::{
-    provider::LoadAll, Accessor, ApplyLog, BoxFuture, Deps, Entity, EntityAccessor, EntityOf, Gc,
-    GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag, Result, Tag, TblVar,
+    provider::LoadAll, Accessor, ApplyLog, BoxFuture, CtxTypeInfo, Deps, Entity, EntityAccessor,
+    EntityOf, Gc, GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag, Result, Tag, TblVar,
 };
 use fxhash::FxHashMap;
 use rayon::{
     collections::hash_map::Iter as ParIter,
-    iter::{
-        IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
-    },
+    iter::{IntoParallelIterator, IntoParallelRefIterator},
 };
 use std::{
     collections::hash_map::{Iter, Keys, Values},
     hash::Hash,
     ops::Deref,
-    sync::atomic::{AtomicBool, Ordering::Relaxed},
 };
 use version_tag::VersionTag;
 
@@ -40,6 +37,17 @@ impl<E: Entity> HashTable<E> {
         self.map.keys()
     }
 
+    fn update_metrics(&self)
+    where
+        E: CtxTypeInfo,
+    {
+        #[cfg(feature = "telemetry")]
+        {
+            use conv::ValueFrom;
+            metrics::gauge!("storm_table_rows", f64::value_from(self.len()).unwrap_or(0.0), "type" => E::NAME);
+        }
+    }
+
     #[inline]
     pub fn values(&self) -> Values<E::Key, E> {
         self.map.values()
@@ -63,7 +71,7 @@ where
 
 impl<E> ApplyLog<Log<E>> for HashTable<E>
 where
-    E: Entity + EntityAccessor<Tbl = Self>,
+    E: CtxTypeInfo + Entity + EntityAccessor<Tbl = Self>,
     E::Key: Eq + Hash,
 {
     fn apply_log(&mut self, log: Log<E>) -> bool {
@@ -82,6 +90,7 @@ where
             }
         }
 
+        self.update_metrics();
         self.tag.notify();
         true
     }
@@ -114,8 +123,9 @@ impl<E: Entity> EntityOf for HashTable<E> {
     type Entity = E;
 }
 
-impl<E: Entity> Extend<(E::Key, E)> for HashTable<E>
+impl<E> Extend<(E::Key, E)> for HashTable<E>
 where
+    E: CtxTypeInfo + Entity,
     E::Key: Eq + Hash,
 {
     fn extend<T>(&mut self, iter: T)
@@ -125,6 +135,8 @@ where
         for (k, v) in iter {
             self.map.insert(k, v);
         }
+
+        self.update_metrics();
     }
 }
 
@@ -133,12 +145,11 @@ where
     E: Entity + Gc,
     E::Key: Eq + Hash,
 {
-    fn gc(&mut self, ctx: &GcCtx) -> bool {
-        let ret = AtomicBool::new(false);
-        self.map
-            .par_iter_mut()
-            .for_each(|(_, v)| ret.store(v.gc(ctx), Relaxed));
-        ret.load(Relaxed)
+    const SUPPORT_GC: bool = E::SUPPORT_GC;
+
+    #[inline]
+    fn gc(&mut self, ctx: &GcCtx) {
+        self.map.gc(ctx);
     }
 }
 
@@ -164,7 +175,7 @@ where
 
 impl<'a, P, E> Init<'a, P> for HashTable<E>
 where
-    E: Entity + Send,
+    E: CtxTypeInfo + Entity + Send,
     E::Key: Eq + Hash + Send,
     P: Sync + LoadAll<E, (), Self>,
 {

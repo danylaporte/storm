@@ -1,15 +1,14 @@
 use crate::{
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
-    Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity, EntityAccessor,
-    Gc, GcCtx, Get, HashTable, Insert, InsertMut, Log, LogAccessor, LogState, Logs, NotifyTag,
-    ProviderContainer, Remove, Result, Tag, Transaction, Vars, VecTable,
+    register_metrics, Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity,
+    EntityAccessor, Gc, GcCtx, Get, HashTable, Insert, InsertMut, Log, LogAccessor, LogState, Logs,
+    NotifyTag, ProviderContainer, Remove, Result, Tag, Transaction, Vars, VecTable,
 };
 use parking_lot::RwLock;
 use std::{hash::Hash, marker::PhantomData};
 use tracing::instrument;
 use version_tag::VersionTag;
 
-#[derive(Default)]
 pub struct Ctx {
     pub(crate) gc: GcCtx,
     pub(crate) provider: ProviderContainer,
@@ -18,6 +17,7 @@ pub struct Ctx {
 
 impl Ctx {
     pub fn new(provider: ProviderContainer) -> Self {
+        register_metrics();
         Ctx {
             gc: Default::default(),
             provider,
@@ -32,6 +32,17 @@ impl Ctx {
     {
         <E::Tbl as Accessor>::clear_deps(&mut self.vars);
         self.vars.clear(E::entity_var());
+    }
+
+    #[doc(hidden)]
+    #[instrument(level = "debug", fields(name = <I as CtxTypeInfo>::NAME, obj = crate::OBJ_INDEX), skip(self))]
+    pub fn index_gc<I>(&mut self)
+    where
+        I: Accessor + CtxTypeInfo + Gc,
+    {
+        if let Some(idx) = self.vars.get_mut(I::var()) {
+            idx.gc(&self.gc);
+        }
     }
 
     #[inline]
@@ -101,9 +112,15 @@ impl Ctx {
     }
 }
 
+impl Default for Ctx {
+    fn default() -> Self {
+        Self::new(Default::default())
+    }
+}
+
 impl<E> AsRefAsync<HashTable<E>> for Ctx
 where
-    E: Entity + EntityAccessor<Tbl = HashTable<E>>,
+    E: CtxTypeInfo + Entity + EntityAccessor<Tbl = HashTable<E>>,
     E::Key: Eq + Hash,
     ProviderContainer: LoadAll<E, (), E::Tbl>,
 {
@@ -115,7 +132,7 @@ where
 
 impl<E> AsRefAsync<VecTable<E>> for Ctx
 where
-    E: Entity + EntityAccessor<Tbl = VecTable<E>>,
+    E: CtxTypeInfo + Entity + EntityAccessor<Tbl = VecTable<E>>,
     E::Key: Into<usize>,
     ProviderContainer: LoadAll<E, (), E::Tbl>,
 {

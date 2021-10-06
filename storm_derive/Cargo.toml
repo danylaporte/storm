@@ -20,6 +20,6 @@ syn = "1"
 [dev-dependencies]
 
 [features]
-metrics = []
-mssql = []
 default = ["mssql"]
+mssql = []
+telemetry = []

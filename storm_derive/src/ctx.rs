@@ -82,7 +82,7 @@ fn gc(input: &DeriveInput) -> Result<(TokenStream, TokenStream), TokenStream> {
     for field in fields {
         if field.ty.is_cache_island() {
             let ident = &field.ident;
-            vec.push(quote!(ret = storm::Gc::gc(&mut self.#ident, ctx) || ret;));
+            vec.push(quote!(storm::Gc::gc(&mut self.#ident, ctx);));
         }
     }
 
@@ -92,10 +92,10 @@ fn gc(input: &DeriveInput) -> Result<(TokenStream, TokenStream), TokenStream> {
         (
             quote! {
                 impl storm::Gc for #ident {
-                    fn gc(&mut self, ctx: &storm::GcCtx) -> bool {
-                        let mut ret = false;
+                    const SUPPORT_GC: bool = true;
+
+                    fn gc(&mut self, ctx: &storm::GcCtx) {
                         #(#vec)*
-                        ret
                     }
                 }
             },

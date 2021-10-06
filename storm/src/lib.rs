@@ -51,7 +51,7 @@ pub use hash_table::HashTable;
 pub use init::Init;
 pub use insert::*;
 pub use is_defined::IsDefined;
-#[cfg(feature = "metrics")]
+#[cfg(feature = "telemetry")]
 pub use metrics;
 pub use once_cell::sync::OnceCell;
 pub use one_to_many::{OneToMany, OneToManyFromIter};
@@ -79,13 +79,24 @@ pub use storm_derive::{indexing, Ctx, LocksAwait, NoopDelete, NoopLoad, NoopSave
 #[cfg(feature = "mssql")]
 pub use storm_derive::{MssqlDelete, MssqlLoad, MssqlSave};
 
-#[cfg(feature = "metrics")]
-pub fn register_metrics() {
-    use metrics::{register_histogram, Unit};
+fn register_metrics() {
+    #[cfg(feature = "telemetry")]
+    {
+        use metrics::{register_counter, register_gauge, register_histogram, Unit};
+        use std::sync::Once;
 
-    register_histogram!(
-        "storm.execution_time",
-        Unit::Seconds,
-        "execution time of a storm request."
-    );
+        static START: Once = Once::new();
+
+        START.call_once(|| {
+            register_histogram!(
+                "storm_execution_time",
+                Unit::Seconds,
+                "execution time of a storm request."
+            );
+
+            register_counter!("storm_table_ops", Unit::Count, "table operation counter");
+            register_gauge!("storm_table_loaded", Unit::Count, "table loaded");
+            register_gauge!("storm_table_rows", Unit::Count, "row count of a table");
+        });
+    }
 }

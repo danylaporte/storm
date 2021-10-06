@@ -1,4 +1,6 @@
+use crate::Gc;
 use fxhash::FxHashSet;
+use rayon::iter::ParallelIterator;
 use std::{cmp::Ordering, hash::Hash, iter::FromIterator, ops::Index};
 use vec_map::VecMap;
 
@@ -7,6 +9,18 @@ pub struct OneToMany<ONE, MANY>(VecMap<ONE, Box<[MANY]>>);
 impl<ONE, MANY> OneToMany<ONE, MANY> {
     pub fn iter(&self) -> vec_map::Iter<ONE, Box<[MANY]>> {
         self.0.iter()
+    }
+}
+
+impl<ONE, MANY> Gc for OneToMany<ONE, MANY>
+where
+    ONE: From<usize> + Send,
+    MANY: Gc + Send + Sync,
+{
+    const SUPPORT_GC: bool = MANY::SUPPORT_GC;
+
+    fn gc(&mut self, ctx: &crate::GcCtx) {
+        self.0.par_iter_mut().for_each(|(_, item)| item.gc(ctx));
     }
 }
 

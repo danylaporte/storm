@@ -1,12 +1,9 @@
 use crate::{
-    provider::LoadAll, Accessor, ApplyLog, BoxFuture, Deps, Entity, EntityAccessor, EntityOf, Gc,
-    GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag, Result, Tag, TblVar,
+    provider::LoadAll, Accessor, ApplyLog, BoxFuture, CtxTypeInfo, Deps, Entity, EntityAccessor,
+    EntityOf, Gc, GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag, Result, Tag, TblVar,
 };
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use std::{
-    ops::Deref,
-    sync::atomic::{AtomicBool, Ordering::Relaxed},
-};
+use rayon::iter::IntoParallelIterator;
+use std::ops::Deref;
 use vec_map::{Iter, Keys, ParIter, Values, VecMap};
 use version_tag::VersionTag;
 
@@ -33,6 +30,17 @@ impl<E: Entity> VecTable<E> {
         self.map.keys()
     }
 
+    fn update_metrics(&self)
+    where
+        E: CtxTypeInfo,
+    {
+        #[cfg(feature = "telemetry")]
+        {
+            use conv::prelude::ValueFrom;
+            metrics::gauge!("storm_table_rows", f64::value_from(self.len()).unwrap_or(0.0), "type" => E::NAME);
+        }
+    }
+
     #[inline]
     pub fn values(&self) -> Values<E::Key, E> {
         self.map.values()
@@ -56,7 +64,7 @@ where
 
 impl<E> ApplyLog<Log<E>> for VecTable<E>
 where
-    E: Entity,
+    E: CtxTypeInfo + Entity,
     E::Key: Clone + Into<usize>,
 {
     fn apply_log(&mut self, log: Log<E>) -> bool {
@@ -75,6 +83,7 @@ where
             }
         }
 
+        self.update_metrics();
         self.tag.notify();
         true
     }
@@ -107,8 +116,9 @@ impl<E: Entity> EntityOf for VecTable<E> {
     type Entity = E;
 }
 
-impl<E: Entity> Extend<(E::Key, E)> for VecTable<E>
+impl<E> Extend<(E::Key, E)> for VecTable<E>
 where
+    E: CtxTypeInfo + Entity,
     E::Key: Into<usize>,
 {
     fn extend<T>(&mut self, iter: T)
@@ -118,6 +128,8 @@ where
         for (k, v) in iter {
             self.map.insert(k, v);
         }
+
+        self.update_metrics();
     }
 }
 
@@ -126,14 +138,11 @@ where
     E: Entity + Gc,
     E::Key: From<usize>,
 {
-    fn gc(&mut self, ctx: &GcCtx) -> bool {
-        let ret = AtomicBool::new(false);
+    const SUPPORT_GC: bool = E::SUPPORT_GC;
 
-        self.map
-            .par_iter_mut()
-            .for_each(|(_, v)| ret.store(v.gc(ctx), Relaxed));
-
-        ret.load(Relaxed)
+    #[inline]
+    fn gc(&mut self, ctx: &GcCtx) {
+        self.map.gc(ctx);
     }
 }
 
@@ -159,7 +168,7 @@ where
 
 impl<'a, P, E> Init<'a, P> for VecTable<E>
 where
-    E: Entity + Send,
+    E: CtxTypeInfo + Entity + Send,
     E::Key: Into<usize> + Send,
     P: Sync + LoadAll<E, (), Self>,
 {
