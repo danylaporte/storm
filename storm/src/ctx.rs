@@ -561,7 +561,7 @@ where
 
             // change tracking...
             let old = self.tbl.get(&k);
-            let result = v.track_insert(&k, old, &mut self.ctx, track).await;
+            let result = v.track_insert(&k, old, self.ctx, track).await;
 
             // if the value is present, this is because the tracker has changed the value.
             log_mut(&mut self.ctx.log_ctx)
@@ -595,7 +595,7 @@ where
 
             // change tracking...
             let old = self.tbl.get(&k);
-            let result = v.track_insert(&k, old, &mut self.ctx, track).await;
+            let result = v.track_insert(&k, old, self.ctx, track).await;
 
             // if the value is present, this is because the tracker has changed the value.
             log_mut(&mut self.ctx.log_ctx)
@@ -623,7 +623,7 @@ where
             let mut result = Ok(());
 
             if let Some(old) = self.tbl.get(&k) {
-                result = old.track_remove(&k, &mut self.ctx, track).await;
+                result = old.track_remove(&k, self.ctx, track).await;
             }
 
             log_mut::<E>(&mut self.ctx.log_ctx)
