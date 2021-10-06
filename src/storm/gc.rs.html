@@ -240,6 +240,11 @@
 <span id="240">240</span>
 <span id="241">241</span>
 <span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::Ctx</span>;
 <span class="kw">use</span> <span class="ident">rayon::iter</span>::{<span class="ident">IntoParallelRefMutIterator</span>, <span class="ident">ParallelIterator</span>};
@@ -256,6 +261,7 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GcCtx</span> {
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;cache&quot;</span>)]</span>
     <span class="ident">island</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
 }
 
@@ -264,7 +270,11 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">gc</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="self">self</span>.<span class="ident">provider</span>.<span class="ident">gc</span>();
         <span class="ident">collectables::collect</span>(<span class="self">self</span>);
-        <span class="self">self</span>.<span class="ident">gc</span>.<span class="ident">island</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">cache::current_cache_island_age</span>());
+
+        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;cache&quot;</span>)]</span>
+        {
+            <span class="self">self</span>.<span class="ident">gc</span>.<span class="ident">island</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">cache::current_cache_island_age</span>());
+        }
     }
 }
 

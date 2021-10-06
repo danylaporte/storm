@@ -2,11 +2,17 @@
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
+<span id="5">5</span>
+<span id="6">6</span>
+<span id="7">7</span>
 </pre><pre class="rust">
 <span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">indexing</span>, <span class="ident">ApplyLog</span>, <span class="ident">AsyncOnceCell</span>, <span class="ident">Ctx</span>, <span class="ident">Entity</span>, <span class="ident">Get</span>, <span class="ident">HashTable</span>, <span class="ident">Insert</span>, <span class="ident">InsertMut</span>, <span class="ident">OnceCell</span>,
+    <span class="ident">ApplyLog</span>, <span class="ident">AsyncOnceCell</span>, <span class="ident">Ctx</span>, <span class="ident">Entity</span>, <span class="ident">Get</span>, <span class="ident">HashTable</span>, <span class="ident">Insert</span>, <span class="ident">InsertMut</span>, <span class="ident">OnceCell</span>,
     <span class="ident">ProviderContainer</span>, <span class="ident">QueueRwLock</span>, <span class="ident">Remove</span>, <span class="ident">Tag</span>, <span class="ident">Transaction</span>, <span class="ident">VecTable</span>,
 };
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;derive&quot;</span>)]</span>
+<span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::indexing</span>;
 </pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
     <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script>
