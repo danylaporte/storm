@@ -22,6 +22,7 @@ mod type_ext;
 use derive_input_ext::DeriveInputExt;
 #[cfg(feature = "mssql")]
 use errors::Errors;
+#[cfg(feature = "mssql")]
 use field_ext::FieldExt;
 use proc_macro::TokenStream;
 #[cfg(feature = "mssql")]

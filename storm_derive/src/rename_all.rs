@@ -1,6 +1,12 @@
 use darling::FromMeta;
+
+#[cfg(feature = "mssql")]
 use inflector::Inflector;
+
+#[cfg(feature = "mssql")]
 use proc_macro2::TokenStream;
+
+#[cfg(feature = "mssql")]
 use syn::{spanned::Spanned, Field};
 
 #[allow(clippy::enum_variant_names)]
@@ -17,6 +23,7 @@ pub(crate) enum RenameAll {
 }
 
 impl RenameAll {
+    #[cfg(feature = "mssql")]
     pub fn column(
         this: Option<Self>,
         column: &Option<String>,
@@ -41,6 +48,7 @@ impl RenameAll {
         })
     }
 
+    #[cfg(feature = "mssql")]
     fn rename(&self, s: String) -> String {
         match self {
             Self::CamelCase => s.to_camel_case(),

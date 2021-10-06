@@ -13,6 +13,7 @@ use vec_map::VecMap;
 
 #[derive(Default)]
 pub struct GcCtx {
+    #[cfg(feature = "cache")]
     island: Option<u64>,
 }
 
@@ -21,7 +22,11 @@ impl Ctx {
     pub fn gc(&mut self) {
         self.provider.gc();
         collectables::collect(self);
-        self.gc.island = Some(cache::current_cache_island_age());
+
+        #[cfg(feature = "cache")]
+        {
+            self.gc.island = Some(cache::current_cache_island_age());
+        }
     }
 }
 
