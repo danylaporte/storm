@@ -714,19 +714,35 @@
 <span id="714">714</span>
 <span id="715">715</span>
 <span id="716">716</span>
+<span id="717">717</span>
+<span id="718">718</span>
+<span id="719">719</span>
+<span id="720">720</span>
+<span id="721">721</span>
+<span id="722">722</span>
+<span id="723">723</span>
+<span id="724">724</span>
+<span id="725">725</span>
+<span id="726">726</span>
+<span id="727">727</span>
+<span id="728">728</span>
+<span id="729">729</span>
+<span id="730">730</span>
+<span id="731">731</span>
+<span id="732">732</span>
+<span id="733">733</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">provider</span>::{<span class="ident">Delete</span>, <span class="ident">LoadAll</span>, <span class="ident">LoadArgs</span>, <span class="ident">LoadOne</span>, <span class="ident">TransactionProvider</span>, <span class="ident">Upsert</span>, <span class="ident">UpsertMut</span>},
-    <span class="ident">Accessor</span>, <span class="ident">ApplyLog</span>, <span class="ident">AsRefAsync</span>, <span class="ident">AsyncTryFrom</span>, <span class="ident">BoxFuture</span>, <span class="ident">CtxTypeInfo</span>, <span class="ident">Entity</span>, <span class="ident">EntityAccessor</span>,
-    <span class="ident">Gc</span>, <span class="ident">GcCtx</span>, <span class="ident">Get</span>, <span class="ident">HashTable</span>, <span class="ident">Insert</span>, <span class="ident">InsertMut</span>, <span class="ident">Log</span>, <span class="ident">LogAccessor</span>, <span class="ident">LogState</span>, <span class="ident">Logs</span>, <span class="ident">NotifyTag</span>,
-    <span class="ident">ProviderContainer</span>, <span class="ident">Remove</span>, <span class="prelude-ty">Result</span>, <span class="ident">Tag</span>, <span class="ident">Transaction</span>, <span class="ident">Vars</span>, <span class="ident">VecTable</span>,
+    <span class="ident">register_metrics</span>, <span class="ident">Accessor</span>, <span class="ident">ApplyLog</span>, <span class="ident">AsRefAsync</span>, <span class="ident">AsyncTryFrom</span>, <span class="ident">BoxFuture</span>, <span class="ident">CtxTypeInfo</span>, <span class="ident">Entity</span>,
+    <span class="ident">EntityAccessor</span>, <span class="ident">Gc</span>, <span class="ident">GcCtx</span>, <span class="ident">Get</span>, <span class="ident">HashTable</span>, <span class="ident">Insert</span>, <span class="ident">InsertMut</span>, <span class="ident">Log</span>, <span class="ident">LogAccessor</span>, <span class="ident">LogState</span>, <span class="ident">Logs</span>,
+    <span class="ident">NotifyTag</span>, <span class="ident">ProviderContainer</span>, <span class="ident">Remove</span>, <span class="prelude-ty">Result</span>, <span class="ident">Tag</span>, <span class="ident">Transaction</span>, <span class="ident">Vars</span>, <span class="ident">VecTable</span>,
 };
 <span class="kw">use</span> <span class="ident">parking_lot::RwLock</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">hash::Hash</span>, <span class="ident">marker::PhantomData</span>};
 <span class="kw">use</span> <span class="ident">tracing::instrument</span>;
 <span class="kw">use</span> <span class="ident">version_tag::VersionTag</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Ctx</span> {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">gc</span>: <span class="ident">GcCtx</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">provider</span>: <span class="ident">ProviderContainer</span>,
@@ -735,6 +751,7 @@
 
 <span class="kw">impl</span> <span class="ident">Ctx</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">provider</span>: <span class="ident">ProviderContainer</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">register_metrics</span>();
         <span class="ident">Ctx</span> {
             <span class="ident">gc</span>: <span class="ident">Default::default</span>(),
             <span class="ident">provider</span>,
@@ -749,6 +766,17 @@
     {
         <span class="op">&lt;</span><span class="ident">E::Tbl</span> <span class="kw">as</span> <span class="ident">Accessor</span><span class="op">&gt;</span><span class="ident">::clear_deps</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">vars</span>);
         <span class="self">self</span>.<span class="ident">vars</span>.<span class="ident">clear</span>(<span class="ident">E::entity_var</span>());
+    }
+
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
+    <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">fields</span>(<span class="ident">name</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">I</span> <span class="kw">as</span> <span class="ident">CtxTypeInfo</span><span class="op">&gt;</span><span class="ident">::NAME</span>, <span class="ident">obj</span> <span class="op">=</span> <span class="kw">crate</span><span class="ident">::OBJ_INDEX</span>), <span class="ident">skip</span>(<span class="self">self</span>))]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">index_gc</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>)
+    <span class="kw">where</span>
+        <span class="ident">I</span>: <span class="ident">Accessor</span> <span class="op">+</span> <span class="ident">CtxTypeInfo</span> <span class="op">+</span> <span class="ident">Gc</span>,
+    {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">vars</span>.<span class="ident">get_mut</span>(<span class="ident">I::var</span>()) {
+            <span class="ident">idx</span>.<span class="ident">gc</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">gc</span>);
+        }
     }
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
@@ -818,9 +846,15 @@
     }
 }
 
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Ctx</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span><span class="ident">::new</span>(<span class="ident">Default::default</span>())
+    }
+}
+
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">HashTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Ctx</span>
 <span class="kw">where</span>
-    <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span><span class="op">&lt;</span><span class="ident">Tbl</span> <span class="op">=</span> <span class="ident">HashTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">E</span>: <span class="ident">CtxTypeInfo</span> <span class="op">+</span> <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span><span class="op">&lt;</span><span class="ident">Tbl</span> <span class="op">=</span> <span class="ident">HashTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">E::Key</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
     <span class="ident">ProviderContainer</span>: <span class="ident">LoadAll</span><span class="op">&lt;</span><span class="ident">E</span>, (), <span class="ident">E::Tbl</span><span class="op">&gt;</span>,
 {
@@ -832,7 +866,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Ctx</span>
 <span class="kw">where</span>
-    <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span><span class="op">&lt;</span><span class="ident">Tbl</span> <span class="op">=</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">E</span>: <span class="ident">CtxTypeInfo</span> <span class="op">+</span> <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span><span class="op">&lt;</span><span class="ident">Tbl</span> <span class="op">=</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">E::Key</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
     <span class="ident">ProviderContainer</span>: <span class="ident">LoadAll</span><span class="op">&lt;</span><span class="ident">E</span>, (), <span class="ident">E::Tbl</span><span class="op">&gt;</span>,
 {
