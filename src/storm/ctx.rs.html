@@ -1295,7 +1295,7 @@
 
             <span class="comment">// change tracking...</span>
             <span class="kw">let</span> <span class="ident">old</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">tbl</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>);
-            <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">track_insert</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>, <span class="ident">old</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">ctx</span>, <span class="ident">track</span>).<span class="kw">await</span>;
+            <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">track_insert</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>, <span class="ident">old</span>, <span class="self">self</span>.<span class="ident">ctx</span>, <span class="ident">track</span>).<span class="kw">await</span>;
 
             <span class="comment">// if the value is present, this is because the tracker has changed the value.</span>
             <span class="ident">log_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">ctx</span>.<span class="ident">log_ctx</span>)
@@ -1329,7 +1329,7 @@
 
             <span class="comment">// change tracking...</span>
             <span class="kw">let</span> <span class="ident">old</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">tbl</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>);
-            <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">track_insert</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>, <span class="ident">old</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">ctx</span>, <span class="ident">track</span>).<span class="kw">await</span>;
+            <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">track_insert</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>, <span class="ident">old</span>, <span class="self">self</span>.<span class="ident">ctx</span>, <span class="ident">track</span>).<span class="kw">await</span>;
 
             <span class="comment">// if the value is present, this is because the tracker has changed the value.</span>
             <span class="ident">log_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">ctx</span>.<span class="ident">log_ctx</span>)
@@ -1357,7 +1357,7 @@
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="prelude-val">Ok</span>(());
 
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">old</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">tbl</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>) {
-                <span class="ident">result</span> <span class="op">=</span> <span class="ident">old</span>.<span class="ident">track_remove</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">ctx</span>, <span class="ident">track</span>).<span class="kw">await</span>;
+                <span class="ident">result</span> <span class="op">=</span> <span class="ident">old</span>.<span class="ident">track_remove</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>, <span class="self">self</span>.<span class="ident">ctx</span>, <span class="ident">track</span>).<span class="kw">await</span>;
             }
 
             <span class="ident">log_mut</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">ctx</span>.<span class="ident">log_ctx</span>)
