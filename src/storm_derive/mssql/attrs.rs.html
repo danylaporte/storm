@@ -254,6 +254,7 @@
 <span id="254">254</span>
 <span id="255">255</span>
 <span id="256">256</span>
+<span id="257">257</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::rename_all::RenameAll</span>;
 <span class="kw">use</span> <span class="ident">darling</span>::{<span class="ident">util::SpannedValue</span>, <span class="ident">FromDeriveInput</span>, <span class="ident">FromField</span>};
@@ -360,6 +361,7 @@
 
     <span class="doccomment">/// used by the ctx macro.</span>
     <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="ident">collection</span>: <span class="ident">String</span>,
 
     <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
