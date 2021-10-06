@@ -103,6 +103,7 @@ pub(super) struct TypeAttrs {
 
     /// used by the ctx macro.
     #[darling(default)]
+    #[allow(dead_code)]
     collection: String,
 
     #[darling(default)]

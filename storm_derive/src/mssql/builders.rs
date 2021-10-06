@@ -68,9 +68,9 @@ impl<'a> JoinConditions<'a> {
         };
 
         self.s.add_sep_str(jointer);
-        add_alias_field(&mut self.s, (alias_left, left));
+        add_alias_field(self.s, (alias_left, left));
         self.s.add('=');
-        add_alias_field(&mut self.s, (alias_right, right));
+        add_alias_field(self.s, (alias_right, right));
     }
 }
 
