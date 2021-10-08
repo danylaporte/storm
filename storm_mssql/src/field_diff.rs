@@ -13,22 +13,13 @@ pub trait FromFieldDiff: Sized {
     fn from_field_diff(value: Value) -> Result<Self>;
 }
 
-/// Extract a Json value from the field diff.
-pub trait ValueFieldDiff {
-    fn value_field_diff(&self) -> Result<Value>;
-}
-
 pub trait ApplyFieldDiff: Sized {
-    fn apply_field_diff(&mut self, value: Value) -> Result<Value>;
+    fn apply_field_diff(&mut self, value: Value) -> Result<()>;
 }
 
-pub fn apply_field_diff_impl<T: FromFieldDiff + ValueFieldDiff>(
-    v: &mut T,
-    value: Value,
-) -> Result<Value> {
-    let new = v.value_field_diff()?;
-    *v = T::from_field_diff(value)?;
-    Ok(new)
+pub fn apply_field_diff_impl<T: for<'de> Deserialize<'de>>(v: &mut T, value: Value) -> Result<()> {
+    *v = from_field_diff_impl(value)?;
+    Ok(())
 }
 
 pub trait FieldDiff {
@@ -47,11 +38,10 @@ pub fn field_diff_impl<T: PartialEq + Serialize>(new: &T, old: &T) -> Option<Val
 pub fn _replace_field_diff<K: Eq + Hash, T: ApplyFieldDiff, S: BuildHasher>(
     field: &mut T,
     name: K,
-    map: &mut HashMap<FieldsOrStr<K>, Value, S>,
+    map: &HashMap<FieldsOrStr<K>, Value, S>,
 ) -> Result<()> {
-    if let Some((key, old)) = map.remove_entry(&FieldsOrStr::Fields(name)) {
-        let new = field.apply_field_diff(old)?;
-        map.insert(key, new);
+    if let Some(old) = map.get(&FieldsOrStr::Fields(name)) {
+        field.apply_field_diff(old.clone())?;
     }
 
     Ok(())
@@ -67,18 +57,20 @@ impl<T: FromFieldDiff> FromFieldDiff for Option<T> {
     }
 }
 
-impl<T: ValueFieldDiff> ValueFieldDiff for Option<T> {
-    fn value_field_diff(&self) -> Result<Value> {
-        match self {
-            Some(v) => v.value_field_diff(),
-            None => Ok(Value::Null),
+impl<T: ApplyFieldDiff + FromFieldDiff> ApplyFieldDiff for Option<T> {
+    fn apply_field_diff(&mut self, value: Value) -> Result<()> {
+        if value.is_null() {
+            *self = None;
+            return Ok(());
         }
-    }
-}
 
-impl<T: FromFieldDiff + ValueFieldDiff> ApplyFieldDiff for Option<T> {
-    fn apply_field_diff(&mut self, value: Value) -> Result<Value> {
-        apply_field_diff_impl(self, value)
+        match self {
+            Some(v) => v.apply_field_diff(value),
+            None => {
+                *self = Some(T::from_field_diff(value)?);
+                Ok(())
+            }
+        }
     }
 }
 
@@ -88,18 +80,14 @@ impl<T: PartialEq + Serialize> FieldDiff for Option<T> {
     }
 }
 
-fn from_value<T: for<'de> Deserialize<'de>>(value: Value) -> Result<T> {
+pub fn from_field_diff_impl<T: for<'de> Deserialize<'de>>(value: Value) -> Result<T> {
     serde_json::from_value(value).map_err(Error::std)
-}
-
-fn to_value<T: Serialize>(value: &T) -> Result<Value> {
-    serde_json::to_value(value).map_err(Error::std)
 }
 
 macro_rules! diff {
     ($n:ty) => {
         impl ApplyFieldDiff for $n {
-            fn apply_field_diff(&mut self, value: Value) -> Result<Value> {
+            fn apply_field_diff(&mut self, value: Value) -> Result<()> {
                 apply_field_diff_impl(self, value)
             }
         }
@@ -112,13 +100,7 @@ macro_rules! diff {
 
         impl FromFieldDiff for $n {
             fn from_field_diff(value: Value) -> Result<Self> {
-                from_value(value)
-            }
-        }
-
-        impl ValueFieldDiff for $n {
-            fn value_field_diff(&self) -> Result<Value> {
-                to_value(self)
+                from_field_diff_impl(value)
             }
         }
     };
