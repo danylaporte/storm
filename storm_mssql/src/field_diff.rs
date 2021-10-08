@@ -22,7 +22,7 @@ pub trait ApplyFieldDiff: Sized {
     fn apply_field_diff(&mut self, value: Value) -> Result<Value>;
 }
 
-fn apply_field_diff_impl<T: FromFieldDiff + ValueFieldDiff>(
+pub fn apply_field_diff_impl<T: FromFieldDiff + ValueFieldDiff>(
     v: &mut T,
     value: Value,
 ) -> Result<Value> {
