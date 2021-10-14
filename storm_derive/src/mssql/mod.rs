@@ -410,18 +410,18 @@ fn metrics(_ident: &Ident, _ops: &str) -> (TokenStream, TokenStream) {
 }
 
 #[cfg(feature = "telemetry")]
-fn metrics(ident: &Ident, ops: &str) -> (TokenStream, TokenStream) {
+fn metrics(ident: &Ident, op: &str) -> (TokenStream, TokenStream) {
     let start = quote! {
         let instant = std::time::Instant::now();
     };
 
-    let ops = LitStr::new(ops, Span::call_site());
-    let typ = LitStr::new(&ident.to_string(), ident.span());
+    let op = LitStr::new(op, Span::call_site());
+    let ty = LitStr::new(&ident.to_string(), ident.span());
 
     let end = quote! {
         use storm::metrics;
-        metrics::histogram!("storm_execution_time", instant.elapsed().as_secs_f64(), "operation" => #ops, "type" => #typ);
-        metrics::counter!("storm_table_ops", 1, "operation" => #ops, "type" => #typ);
+        metrics::counter!("storm.execute.time", instant.elapsed().as_nanos() as u64, "op" => #op, "type" => #ty);
+        metrics::counter!("storm.execute.count", 1, "op" => #op, "type" => #ty);
     };
 
     (start, end)
