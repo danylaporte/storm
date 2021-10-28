@@ -3,17 +3,17 @@ use futures_util::TryStreamExt;
 use std::{
     borrow::Cow,
     fmt::Debug,
-    sync::atomic::{AtomicBool, Ordering::Relaxed},
+    sync::{
+        atomic::{AtomicBool, Ordering::Relaxed},
+        Arc,
+    },
 };
 use storm::{provider, BoxFuture, Error, Result};
 use tiberius::{QueryItem, Row};
 use tokio::sync::{Mutex, MutexGuard};
-use tracing::instrument;
+use tracing::{instrument, Instrument};
 
-pub struct MssqlProvider {
-    cancel_transaction: AtomicBool,
-    state: Mutex<State>,
-}
+pub struct MssqlProvider(Arc<Inner>);
 
 impl MssqlProvider {
     pub fn new<F: ClientFactory>(client_factory: F) -> Self {
@@ -21,9 +21,9 @@ impl MssqlProvider {
     }
 
     async fn state(&self) -> MutexGuard<'_, State> {
-        let mut guard = self.state.lock().await;
+        let mut guard = self.0.state.lock().await;
 
-        if self.cancel_transaction.swap(false, Relaxed) {
+        if self.0.cancel_transaction.swap(false, Relaxed) {
             let _ = guard.cancel().await;
         }
 
@@ -77,18 +77,33 @@ impl Execute for MssqlProvider {
     }
 }
 
+struct Inner {
+    cancel_transaction: AtomicBool,
+    state: Mutex<State>,
+}
+
 impl From<Box<dyn ClientFactory>> for MssqlProvider {
     fn from(factory: Box<dyn ClientFactory>) -> Self {
-        Self {
+        Self(Arc::new(Inner {
             cancel_transaction: Default::default(),
             state: Mutex::new(State::new(factory)),
-        }
+        }))
     }
 }
 
 impl provider::Provider for MssqlProvider {
     fn cancel(&self) {
-        self.cancel_transaction.store(true, Relaxed);
+        self.0.cancel_transaction.store(true, Relaxed);
+
+        let span = tracing::Span::current();
+        let p = Self(Arc::clone(&self.0));
+
+        tokio::spawn(
+            async move {
+                p.state().await;
+            }
+            .instrument(tracing::debug_span!(parent: span, "rollback_transaction")),
+        );
     }
 
     fn commit(&self) -> BoxFuture<'_, Result<()>> {
