@@ -468,7 +468,7 @@ fn apply_entity_diff(diff: Option<Vec<TokenStream>>, ident: &Ident) -> TokenStre
     if let Some(diff) = diff {
         quote! {
             impl storm_mssql::ApplyEntityDiff for #ident {
-                fn apply_entity_diff<S: std::hash::BuildHasher>(&mut self, diff: &mut std::collections::HashMap<storm::FieldsOrStr<<Self as storm::EntityFields>::Fields>, storm_mssql::serde_json::Value, S>) -> storm_mssql::Result<()> {
+                fn apply_entity_diff<S: std::hash::BuildHasher>(&mut self, diff: &std::collections::HashMap<storm::FieldsOrStr<<Self as storm::EntityFields>::Fields>, storm_mssql::serde_json::Value, S>) -> storm_mssql::Result<()> {
                     #(#diff)*
                     Ok(())
                 }

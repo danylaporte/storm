@@ -6,7 +6,7 @@ use storm::{EntityFields, FieldsOrStr};
 pub trait ApplyEntityDiff: EntityFields {
     fn apply_entity_diff<S: BuildHasher>(
         &mut self,
-        map: &mut HashMap<FieldsOrStr<Self::Fields>, Value, S>,
+        map: &HashMap<FieldsOrStr<Self::Fields>, Value, S>,
     ) -> Result<()>;
 }
 
