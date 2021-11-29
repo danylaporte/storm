@@ -1,8 +1,8 @@
 use crate::{
-    provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
+    provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider},
     register_metrics, Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity,
-    EntityAccessor, Gc, GcCtx, Get, HashTable, Insert, InsertMut, Log, LogAccessor, LogState, Logs,
-    NotifyTag, ProviderContainer, Remove, Result, Tag, Transaction, Vars, VecTable,
+    EntityAccessor, Gc, GcCtx, Get, HashTable, Insert, Insertable, Log, LogAccessor, LogState,
+    Logs, NotifyTag, ProviderContainer, Remove, Result, Tag, Transaction, Vars, VecTable,
 };
 use parking_lot::RwLock;
 use std::{hash::Hash, marker::PhantomData};
@@ -275,8 +275,8 @@ where
 }
 
 pub struct CtxTransaction<'a> {
-    log_ctx: Logs,
-    provider: TransactionProvider<'a>,
+    pub(crate) log_ctx: Logs,
+    pub(crate) provider: TransactionProvider<'a>,
     pub ctx: &'a Ctx,
 }
 
@@ -294,16 +294,46 @@ impl<'a> CtxTransaction<'a> {
         &self.provider
     }
 
-    #[instrument(level = "debug", skip(self, k, v), err)]
-    pub async fn insert<'b, E>(&'b mut self, k: E::Key, v: E, track: &'b E::TrackCtx) -> Result<()>
+    #[doc(hidden)]
+    pub async fn _macro_insert_log<'b, E>(
+        &'b mut self,
+        k: E::Key,
+        v: E,
+        track: &'b E::TrackCtx,
+    ) -> Result<E::Key>
     where
         Ctx: AsRefAsync<E::Tbl>,
-        E: Entity + EntityAccessor + LogAccessor,
-        TblTransaction<'a, 'b, E>: Insert<E>,
+        E: Insertable,
+        E::Key: Clone + Eq + Hash,
+        E::Tbl: Get<E>,
         'a: 'b,
     {
-        self.tbl_of::<E>().await?.insert(k, v, track).await?;
-        Ok(())
+        // remove first because if the track change the entity, we want to keep only the latest version.
+        log_mut::<E>(&mut self.log_ctx).remove(&k);
+
+        // change tracking...
+        let old = self.ctx.tbl_of::<E>().await?.get(&k);
+        let result = v.track_insert(&k, old, self, track).await;
+
+        // if the value is present, this is because the tracker has changed the value.
+        log_mut(&mut self.log_ctx)
+            .entry(k.clone())
+            .or_insert(LogState::Inserted(v));
+
+        result.map(|_| k)
+    }
+
+    pub fn insert<'b, E>(
+        &'b mut self,
+        k: E::Key,
+        v: E,
+        track: &'b E::TrackCtx,
+    ) -> BoxFuture<'b, Result<E::Key>>
+    where
+        E: Insertable,
+        'a: 'b,
+    {
+        v.insertable(self, k, track)
     }
 
     #[instrument(level = "debug", skip(self, iter), err)]
@@ -313,57 +343,15 @@ impl<'a> CtxTransaction<'a> {
         track: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<()>>
     where
-        Ctx: AsRefAsync<E::Tbl>,
-        E: Entity + EntityAccessor + LogAccessor,
+        E: Insertable,
         I: IntoIterator<Item = (E::Key, E)> + Send + 'b,
         I::IntoIter: Send,
-        TblTransaction<'a, 'b, E>: Insert<E>,
         'a: 'b,
     {
         Box::pin(async move {
-            self.tbl_of::<E>().await?.insert_all(iter, track).await?;
-            Ok(())
-        })
-    }
-
-    #[instrument(level = "debug", skip(self, k, v), err)]
-    pub fn insert_mut<'b, E>(
-        &'b mut self,
-        k: E::Key,
-        v: E,
-        track: &'b E::TrackCtx,
-    ) -> BoxFuture<'b, Result<()>>
-    where
-        Ctx: AsRefAsync<E::Tbl>,
-        E: Entity + EntityAccessor + LogAccessor,
-        TblTransaction<'a, 'b, E>: InsertMut<E>,
-        'a: 'b,
-    {
-        Box::pin(async move {
-            self.tbl_of::<E>().await?.insert_mut(k, v, track).await?;
-            Ok(())
-        })
-    }
-
-    #[instrument(level = "debug", skip(self, iter,), err)]
-    pub fn insert_mut_all<'b, E, I>(
-        &'b mut self,
-        iter: I,
-        track: &'b E::TrackCtx,
-    ) -> BoxFuture<'b, Result<()>>
-    where
-        Ctx: AsRefAsync<E::Tbl>,
-        E: Entity + EntityAccessor + LogAccessor,
-        I: IntoIterator<Item = (E::Key, E)> + Send + 'b,
-        I::IntoIter: Send,
-        TblTransaction<'a, 'b, E>: InsertMut<E>,
-        'a: 'b,
-    {
-        Box::pin(async move {
-            self.tbl_of::<E>()
-                .await?
-                .insert_mut_all(iter, track)
-                .await?;
+            for (k, v) in iter {
+                v.insertable(self, k, track).await?;
+            }
             Ok(())
         })
     }
@@ -454,11 +442,11 @@ where
         k: E::Key,
         v: E,
         track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<()>>
+    ) -> BoxFuture<'c, Result<E::Key>>
     where
-        Self: Insert<E>,
+        E: Insertable,
     {
-        Insert::insert(self, k, v, track)
+        v.insertable(self.ctx, k, track)
     }
 
     pub fn insert_all<'c, I>(
@@ -472,31 +460,6 @@ where
         Self: Insert<E>,
     {
         Insert::<E>::insert_all(self, iter, track)
-    }
-
-    pub fn insert_mut<'c>(
-        &'c mut self,
-        k: E::Key,
-        v: E,
-        track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<E::Key>>
-    where
-        Self: InsertMut<E>,
-    {
-        InsertMut::insert_mut(self, k, v, track)
-    }
-
-    pub fn insert_mut_all<'c, I>(
-        &'c mut self,
-        iter: I,
-        track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<()>>
-    where
-        I: IntoIterator<Item = (E::Key, E)> + Send + 'a,
-        I::IntoIter: Send,
-        Self: InsertMut<E>,
-    {
-        InsertMut::<E>::insert_mut_all(self, iter, track)
     }
 
     pub fn remove<'c>(&'c mut self, k: E::Key, track: &'c E::TrackCtx) -> BoxFuture<'c, Result<()>>
@@ -541,69 +504,15 @@ where
 
 impl<'a, 'b, E> Insert<E> for TblTransaction<'a, 'b, E>
 where
-    for<'c> TransactionProvider<'c>: Upsert<E>,
-    E: Entity + EntityAccessor + LogAccessor,
-    E::Key: Eq + Hash,
-    E::Tbl: Get<E>,
+    E: Insertable,
 {
-    #[instrument(level = "debug", skip(self, k, v), err)]
     fn insert<'c>(
         &'c mut self,
         k: E::Key,
         v: E,
         track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<()>> {
-        Box::pin(async move {
-            self.ctx.provider.upsert(&k, &v).await?;
-
-            // remove first because if the track change the entity, we want to keep only the latest version.
-            log_mut::<E>(&mut self.ctx.log_ctx).remove(&k);
-
-            // change tracking...
-            let old = self.tbl.get(&k);
-            let result = v.track_insert(&k, old, self.ctx, track).await;
-
-            // if the value is present, this is because the tracker has changed the value.
-            log_mut(&mut self.ctx.log_ctx)
-                .entry(k)
-                .or_insert(LogState::Inserted(v));
-
-            result
-        })
-    }
-}
-
-impl<'a, 'b, E> InsertMut<E> for TblTransaction<'a, 'b, E>
-where
-    for<'c> TransactionProvider<'c>: UpsertMut<E>,
-    E: Entity + EntityAccessor + LogAccessor,
-    E::Key: Clone + Eq + Hash,
-    E::Tbl: Get<E>,
-{
-    #[instrument(level = "debug", skip(self, k, v), err)]
-    fn insert_mut<'c>(
-        &'c mut self,
-        mut k: E::Key,
-        mut v: E,
-        track: &'c E::TrackCtx,
     ) -> BoxFuture<'c, Result<E::Key>> {
-        Box::pin(async move {
-            self.ctx.provider.upsert_mut(&mut k, &mut v).await?;
-
-            // remove first because if the track change the entity, we want to keep only the latest version.
-            log_mut::<E>(&mut self.ctx.log_ctx).remove(&k);
-
-            // change tracking...
-            let old = self.tbl.get(&k);
-            let result = v.track_insert(&k, old, self.ctx, track).await;
-
-            // if the value is present, this is because the tracker has changed the value.
-            log_mut(&mut self.ctx.log_ctx)
-                .entry(k.clone())
-                .or_insert(LogState::Inserted(v));
-
-            result.map(|_| k)
-        })
+        v.insertable(self.ctx, k, track)
     }
 }
 
@@ -714,7 +623,7 @@ where
 
 struct EntityLogApplier<E: Entity + EntityAccessor + LogAccessor>(PhantomData<E>);
 
-fn log_mut<E: Entity + LogAccessor>(logs: &mut Logs) -> &mut Log<E> {
+pub(crate) fn log_mut<E: Entity + LogAccessor>(logs: &mut Logs) -> &mut Log<E> {
     logs.get_or_init_mut(E::log_var(), Default::default)
 }
 

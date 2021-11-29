@@ -3,6 +3,7 @@ mod version_deps;
 
 mod accessor;
 mod apply_log;
+mod insertable;
 mod as_ref_async;
 mod as_ref_opt;
 mod async_try_from;
@@ -50,6 +51,7 @@ pub use get_mut::GetMut;
 pub use hash_table::HashTable;
 pub use init::Init;
 pub use insert::*;
+pub use insertable::*;
 pub use is_defined::IsDefined;
 #[cfg(feature = "telemetry")]
 pub use metrics;

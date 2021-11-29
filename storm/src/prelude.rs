@@ -1,5 +1,5 @@
 pub use crate::{
-    ApplyLog, AsyncOnceCell, Ctx, Entity, Get, HashTable, Insert, InsertMut, OnceCell,
+    ApplyLog, AsyncOnceCell, Ctx, Entity, Get, HashTable, Insert, Insertable, OnceCell,
     ProviderContainer, QueueRwLock, Remove, Tag, Transaction, VecTable,
 };
 

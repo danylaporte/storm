@@ -46,7 +46,7 @@ async fn identity_key_crud() -> Result<()> {
         };
 
         // insert
-        let i1 = entities1.insert_mut(0, e1, &()).await?;
+        let i1 = entities1.insert(0, e1, &()).await?;
 
         assert_eq!(i1, 1);
 
@@ -55,14 +55,14 @@ async fn identity_key_crud() -> Result<()> {
         e1.o = Some(5);
 
         // update
-        entities1.insert_mut(i1, e1, &()).await?;
+        entities1.insert(i1, e1, &()).await?;
 
         let e2 = Entity1 {
             name: "E2".to_string(),
             o: None,
         };
 
-        let i2 = entities1.insert_mut(0, e2, &()).await?;
+        let i2 = entities1.insert(0, e2, &()).await?;
 
         assert_eq!(i2, 2);
 

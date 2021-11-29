@@ -24,7 +24,7 @@ impl<'a> SaveTranslated<'a> {
 
     pub fn add_field(&mut self, field: &Field, column: &str) {
         let ident = &field.ident;
-        let param_index = self.params.add_ts(quote!(&&v.#ident[culture] as _));
+        let param_index = self.params.add_ts(quote!(&&self.#ident[culture] as _));
 
         self.upsert.add_field(column, &param_index.to_string());
     }
@@ -81,7 +81,7 @@ fn add_key_single(
 
 fn add_keys(keys: &[&str], params: &mut ParamsBuilder, builder: &mut UpsertBuilder) {
     if keys.len() == 1 {
-        add_key_single(keys[0], quote!(k as _), params, builder);
+        add_key_single(keys[0], quote!(&k as _), params, builder);
     } else {
         add_key_many(keys, params, builder);
     }

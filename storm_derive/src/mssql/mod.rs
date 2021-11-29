@@ -90,7 +90,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             if !attrs.skip_diff() {
                 load_diff_field(&mut diff, field_ident, &enum_fields_ident);
             }
-        } else if attrs.skip_load() {
+        } else if attrs.part || attrs.skip_load() {
             load.skip_field(field, &attrs, &mut errors);
         } else {
             let column = continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
@@ -221,9 +221,9 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
             translated.add_field(field, column);
             let name_bk = Ident::new(&format!("{}_bk", ident), Span::call_site());
             translated_backup.push(
-                quote! { let #name_bk = std::mem::replace(&mut v.#ident, Default::default()); },
+                quote! { let #name_bk = std::mem::replace(&mut self.#ident, Default::default()); },
             );
-            translated_restore.push(quote! { v.#ident = #name_bk; });
+            translated_restore.push(quote! { self.#ident = #name_bk; });
 
             if let Some(diff) = diff.as_mut().filter(|_| !attrs.skip_diff()) {
                 diff.push(quote! {
@@ -305,8 +305,8 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
                 let n = LitInt::new(&index.to_string(), ident.span());
                 quote! { &k.#n }
             }
-            false if is_identity_key => quote! { *k },
-            false => quote! { k },
+            false if is_identity_key => quote! { k },
+            false => quote! { &k },
         };
 
         wheres.push(quote!(builder.#add_key_or_identity(#name, #k);));
@@ -314,20 +314,14 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
 
     try_ts!(errors.result());
 
-    let upsert_trait;
-    let upsert_sig;
     let builder_invoke;
-    let entity_part_key;
     let reload_entity;
+    let entity_part_key;
 
     if attrs.reload_on_upsert_or_identity() {
-        upsert_trait = quote!(storm::provider::UpsertMut<#ident>);
-        upsert_sig = quote!(fn upsert_mut<'a>(&'a self, k: &'a mut <#ident as storm::Entity>::Key, v: &'a mut #ident) -> storm::BoxFuture<'a, storm::Result<()>>);
         entity_part_key = quote!(&k.clone());
     } else {
-        upsert_trait = quote!(storm::provider::Upsert<#ident>);
-        upsert_sig = quote!(fn upsert<'a>(&'a self, k: &'a <#ident as storm::Entity>::Key, v: &'a #ident) -> storm::BoxFuture<'a, storm::Result<()>>);
-        entity_part_key = quote!(k);
+        entity_part_key = quote!(&k);
     }
 
     if attrs.reload_on_upsert() {
@@ -336,7 +330,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
 
         reload_entity = quote! {
             #backup
-            *v = storm::provider::LoadOne::<#ident>::load_one_with_args(self.container(), &k, storm::provider::LoadArgs { use_transaction: true }).await?.ok_or(storm::Error::EntityNotFound)?;
+            self = storm::provider::LoadOne::<#ident>::load_one_with_args(trx.provider().container(), &k, storm::provider::LoadArgs { use_transaction: true }).await?.ok_or(storm::Error::EntityNotFound)?;
             #restore
         };
     } else {
@@ -344,7 +338,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     }
 
     if is_identity_key {
-        builder_invoke = quote!(builder.execute_identity(provider, k).await?;);
+        builder_invoke = quote!(builder.execute_identity(provider, &mut k).await?;);
     } else {
         builder_invoke = quote!(builder.execute(provider).await?;);
     }
@@ -357,30 +351,44 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let diff = entity_diff(ident, diff);
     let enum_fields = enum_fields_impl(vis, ident, enum_fields, &enum_fields_ident, attrs.diff);
 
-    quote! {
-        impl #upsert_trait for storm::provider::TransactionProvider<'_> {
-            #[tracing::instrument(name = "upsert", level = "debug", skip(self, k, v), fields(table = #table_name))]
-            #upsert_sig {
-                Box::pin(async move {
-                    let provider: &storm_mssql::MssqlProvider = self.container().provide(#provider).await?;
-                    let mut builder = storm_mssql::UpsertBuilder::new(#table);
+    let insertable = if attrs.part {
+        quote!()
+    } else {
+        quote! {
+            impl storm::Insertable for #ident
+            where
+                storm::Ctx: storm::AsRefAsync<<Self as storm::EntityAccessor>::Tbl>,
+            {
+                #[tracing::instrument(name = "upsert", level = "debug", skip(self, k, trx), fields(table = #table_name))]
+                fn insertable<'a, 'b>(mut self, trx: &'b mut storm::CtxTransaction<'a>, mut k: <Self as storm::Entity>::Key, track_ctx: &'b <Self as storm::Entity>::TrackCtx) -> storm::BoxFuture<'b, storm::Result<<Self as storm::Entity>::Key>>
+                where
+                    'a: 'b,
+                {
+                    std::Box::pin(async move {
+                        let provider: &storm_mssql::MssqlProvider = trx.provider().container().provide(#provider).await?;
+                        let mut builder = storm_mssql::UpsertBuilder::new(#table);
 
-                    #metrics_start
+                        #metrics_start
 
-                    let entity_part_key = #entity_part_key;
-                    storm_mssql::SaveEntityPart::save_entity_part(v, entity_part_key, &mut builder);
+                        let entity_part_key = #entity_part_key;
+                        storm_mssql::SaveEntityPart::save_entity_part(&self, entity_part_key, &mut builder);
 
-                    #wheres
-                    #builder_invoke
-                    #reload_entity
-                    #translated
+                        #wheres
+                        #builder_invoke
+                        #reload_entity
+                        #translated
 
-                    #metrics_end
-                    Ok(())
-                })
+                        #metrics_end
+
+                        trx._macro_insert_log(k, self, track_ctx).await
+                    })
+                }
             }
         }
+    };
 
+    quote! {
+        #insertable
         #diff
         #enum_fields
 

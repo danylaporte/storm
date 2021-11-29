@@ -112,6 +112,9 @@ pub(super) struct TypeAttrs {
     /// impl ApplyEntityDiff and impl EntityDiff
     #[darling(default)]
     pub diff: bool,
+
+    #[darling(default)]
+    pub part: bool,
 }
 
 impl TypeAttrs {

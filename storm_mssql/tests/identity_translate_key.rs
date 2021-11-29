@@ -53,7 +53,7 @@ async fn identity_translate_key() -> storm::Result<()> {
         let id = 2;
 
         labels
-            .insert_mut(
+            .insert(
                 id,
                 Label {
                     name: Translated {

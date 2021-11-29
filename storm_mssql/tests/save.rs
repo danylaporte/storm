@@ -1,7 +1,7 @@
-use storm::{Entity, MssqlSave};
+use storm::{Ctx, Entity, MssqlLoad, MssqlSave};
 
-#[derive(MssqlSave)]
-#[storm(table = "t", keys = "id")]
+#[derive(Ctx, MssqlLoad, MssqlSave)]
+#[storm(table = "t", keys = "id", collection = "hash_table", no_test = true)]
 pub struct EntityWithDuplicateKey {
     pub name: String,
     pub id: i32,
@@ -12,8 +12,8 @@ impl Entity for EntityWithDuplicateKey {
     type TrackCtx = ();
 }
 
-#[derive(MssqlSave)]
-#[storm(table = "t", keys = "id")]
+#[derive(Ctx, MssqlLoad, MssqlSave)]
+#[storm(table = "t", keys = "id", collection = "hash_table", no_test = true)]
 pub struct EntitySaveWith {
     #[storm(save_with = "buffer_save_with")]
     pub buffer: String,
@@ -28,8 +28,8 @@ fn buffer_save_with(_key: &i32, value: &EntitySaveWith) -> Vec<u8> {
     value.buffer.as_bytes().to_vec()
 }
 
-#[derive(MssqlSave)]
-#[storm(table = "t", keys = "id")]
+#[derive(Ctx, MssqlLoad, MssqlSave)]
+#[storm(table = "t", keys = "id", collection = "hash_table", no_test = true)]
 pub struct EntityWithPart {
     #[storm(part = true)]
     part: Option<EntityPart>,
@@ -40,8 +40,8 @@ impl Entity for EntityWithPart {
     type TrackCtx = ();
 }
 
-#[derive(MssqlSave)]
-#[storm(table = "t", keys = "id", no_test = true)]
+#[derive(MssqlLoad, MssqlSave)]
+#[storm(table = "t", keys = "id", no_test = true, part = true)]
 pub struct EntityPart {
     pub i: i32,
 }
