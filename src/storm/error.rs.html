@@ -95,41 +95,41 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Error</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">std</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">StdError</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">e</span>: <span class="ident">E</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">std</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">StdError</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">e</span>: <span class="ident">E</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::Std</span>(<span class="ident">e</span>.<span class="ident">into</span>())
     }
 }
 
 <span class="kw">impl</span> <span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">Error</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt::Result</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::AsyncCellLock</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Debug::fmt</span>(<span class="ident">e</span>, <span class="ident">f</span>),
-            <span class="ident"><span class="self">Self</span>::Std</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Debug::fmt</span>(<span class="ident">e</span>, <span class="ident">f</span>),
+            <span class="ident"><span class="self">Self</span>::AsyncCellLock</span>(<span class="ident">e</span>) =&gt; <span class="ident">Debug::fmt</span>(<span class="ident">e</span>, <span class="ident">f</span>),
+            <span class="ident"><span class="self">Self</span>::Std</span>(<span class="ident">e</span>) =&gt; <span class="ident">Debug::fmt</span>(<span class="ident">e</span>, <span class="ident">f</span>),
 
             <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;mssql&quot;</span>)]</span>
-            <span class="ident"><span class="self">Self</span>::Mssql</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Debug::fmt</span>(<span class="ident">e</span>, <span class="ident">f</span>),
+            <span class="ident"><span class="self">Self</span>::Mssql</span>(<span class="ident">e</span>) =&gt; <span class="ident">Debug::fmt</span>(<span class="ident">e</span>, <span class="ident">f</span>),
 
-            <span class="ident">e</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Display::fmt</span>(<span class="ident">e</span>, <span class="ident">f</span>),
+            <span class="ident">e</span> =&gt; <span class="ident">Display::fmt</span>(<span class="ident">e</span>, <span class="ident">f</span>),
         }
     }
 }
 
 <span class="kw">impl</span> <span class="ident">Display</span> <span class="kw">for</span> <span class="ident">Error</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt::Result</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::AlreadyInTransaction</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Already in transaction.&quot;</span>),
-            <span class="ident"><span class="self">Self</span>::AsyncCellLock</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Display::fmt</span>(<span class="ident">e</span>, <span class="ident">f</span>),
-            <span class="ident"><span class="self">Self</span>::ColumnNull</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Column is null.&quot;</span>),
-            <span class="ident"><span class="self">Self</span>::ConvertFailed</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Convert failed: `{}`&quot;</span>, <span class="ident">s</span>)),
-            <span class="ident"><span class="self">Self</span>::ClientInError</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Client in error state.&quot;</span>),
-            <span class="ident"><span class="self">Self</span>::EntityNotFound</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Entity not found.&quot;</span>),
-            <span class="ident"><span class="self">Self</span>::NotInTransaction</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Not in transaction.&quot;</span>),
-            <span class="ident"><span class="self">Self</span>::ProviderNotFound</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Provider not found.&quot;</span>),
+            <span class="ident"><span class="self">Self</span>::AlreadyInTransaction</span> =&gt; <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Already in transaction.&quot;</span>),
+            <span class="ident"><span class="self">Self</span>::AsyncCellLock</span>(<span class="ident">e</span>) =&gt; <span class="ident">Display::fmt</span>(<span class="ident">e</span>, <span class="ident">f</span>),
+            <span class="ident"><span class="self">Self</span>::ColumnNull</span> =&gt; <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Column is null.&quot;</span>),
+            <span class="ident"><span class="self">Self</span>::ConvertFailed</span>(<span class="ident">s</span>) =&gt; <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Convert failed: `{}`&quot;</span>, <span class="ident">s</span>)),
+            <span class="ident"><span class="self">Self</span>::ClientInError</span> =&gt; <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Client in error state.&quot;</span>),
+            <span class="ident"><span class="self">Self</span>::EntityNotFound</span> =&gt; <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Entity not found.&quot;</span>),
+            <span class="ident"><span class="self">Self</span>::NotInTransaction</span> =&gt; <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Not in transaction.&quot;</span>),
+            <span class="ident"><span class="self">Self</span>::ProviderNotFound</span> =&gt; <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Provider not found.&quot;</span>),
 
             <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;mssql&quot;</span>)]</span>
-            <span class="ident"><span class="self">Self</span>::Mssql</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Display::fmt</span>(<span class="ident">e</span>, <span class="ident">f</span>),
+            <span class="ident"><span class="self">Self</span>::Mssql</span>(<span class="ident">e</span>) =&gt; <span class="ident">Display::fmt</span>(<span class="ident">e</span>, <span class="ident">f</span>),
 
-            <span class="ident"><span class="self">Self</span>::Std</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Display::fmt</span>(<span class="ident">e</span>, <span class="ident">f</span>),
+            <span class="ident"><span class="self">Self</span>::Std</span>(<span class="ident">e</span>) =&gt; <span class="ident">Display::fmt</span>(<span class="ident">e</span>, <span class="ident">f</span>),
         }
     }
 }
@@ -137,20 +137,20 @@
 <span class="kw">impl</span> <span class="ident">std::error::Error</span> <span class="kw">for</span> <span class="ident">Error</span> {}
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">async_cell_lock::Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">e</span>: <span class="ident">async_cell_lock::Error</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">e</span>: <span class="ident">async_cell_lock::Error</span>) -&gt; <span class="self">Self</span> {
         <span class="ident">Error::AsyncCellLock</span>(<span class="ident">e</span>)
     }
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">std::error::Error</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">b</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">std::error::Error</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">b</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">std::error::Error</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::Std</span>(<span class="ident">b</span>)
     }
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;mssql&quot;</span>)]</span>
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">tiberius::error::Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">e</span>: <span class="ident">tiberius::error::Error</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">e</span>: <span class="ident">tiberius::error::Error</span>) -&gt; <span class="self">Self</span> {
         <span class="ident">Error::Mssql</span>(<span class="ident">e</span>)
     }
 }

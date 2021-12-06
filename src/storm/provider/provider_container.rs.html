@@ -218,7 +218,7 @@
 
 <span class="doccomment">/// A trait that wrap the ProviderFactory to be able to use it in a Box&lt;Any&gt; trait object context.</span>
 <span class="kw">trait</span> <span class="ident">AnyFactory</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span> {
-    <span class="kw">fn</span> <span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CastProvider</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CastProvider</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 }
 
 <span class="doccomment">/// Wrap a ProviderFactory trait to be able to use it in a Box&lt;Any&gt; trait object context.</span>
@@ -229,7 +229,7 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">P</span><span class="op">&gt;</span> <span class="ident">Factory</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">P</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">factory</span>: <span class="ident">F</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">factory</span>: <span class="ident">F</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">_provider</span>: <span class="ident">PhantomData</span>,
             <span class="ident">factory</span>,
@@ -242,7 +242,7 @@
     <span class="ident">F</span>: <span class="ident">ProviderFactory</span><span class="op">&lt;</span><span class="ident">Provider</span> <span class="op">=</span> <span class="ident">P</span><span class="op">&gt;</span>,
     <span class="ident">P</span>: <span class="ident">Provider</span>,
 {
-    <span class="kw">fn</span> <span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CastProvider</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CastProvider</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> { <span class="prelude-val">Ok</span>(<span class="ident">CastProvider::new</span>(<span class="self">self</span>.<span class="ident">factory</span>.<span class="ident">create_provider</span>().<span class="kw">await</span><span class="question-mark">?</span>)) })
     }
 }
@@ -258,22 +258,22 @@
 }
 
 <span class="kw">impl</span> <span class="ident">ProviderContainer</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::default</span>()
     }
 
-    <span class="kw">fn</span> <span class="ident">find_index</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">type_id</span>: <span class="ident">TypeId</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std::result::Result</span><span class="op">&lt;</span><span class="ident">usize</span>, <span class="ident">usize</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">find_index</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">type_id</span>: <span class="ident">TypeId</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">std::result::Result</span><span class="op">&lt;</span><span class="ident">usize</span>, <span class="ident">usize</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">records</span>.<span class="ident">binary_search_by_key</span>(<span class="kw-2">&amp;</span>(<span class="ident">type_id</span>, <span class="ident">name</span>), <span class="ident">rec_key</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">find_record</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>, <span class="ident">type_id</span>: <span class="ident">TypeId</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Rec</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">find_record</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>, <span class="ident">type_id</span>: <span class="ident">TypeId</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Rec</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">find_index</span>(<span class="ident">type_id</span>, <span class="ident">name</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">index</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">records</span>[<span class="ident">index</span>]),
-            <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error::ProviderNotFound</span>),
+            <span class="prelude-val">Ok</span>(<span class="ident">index</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">records</span>[<span class="ident">index</span>]),
+            <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(<span class="ident">Error::ProviderNotFound</span>),
         }
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">gate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MutexGuard</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, ()<span class="op">&gt;</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">gate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">MutexGuard</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, ()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">lock</span>.<span class="ident">lock</span>().<span class="kw">await</span>
     }
 
@@ -300,7 +300,7 @@
 
     <span class="doccomment">/// Gets or creates a database provider that have been previously registered with</span>
     <span class="doccomment">/// the `register` method.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">provide</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">P</span>: <span class="ident">Provider</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">P</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">provide</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">P</span>: <span class="ident">Provider</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">P</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
             <span class="kw">let</span> <span class="ident">type_id</span> <span class="op">=</span> <span class="ident">TypeId::of</span>::<span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span>();
             <span class="kw">let</span> <span class="ident">rec</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">find_record</span>(<span class="ident">type_id</span>, <span class="ident">name</span>)<span class="question-mark">?</span>;
@@ -310,7 +310,7 @@
         })
     }
 
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">providers</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;_</span> <span class="kw">dyn</span> <span class="ident">Provider</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">providers</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;_</span> <span class="kw">dyn</span> <span class="ident">Provider</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">records</span>
             .<span class="ident">iter</span>()
             .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="prelude-val">Some</span>(<span class="ident">r</span>.<span class="ident">get</span>()<span class="question-mark">?</span>.<span class="ident">provider</span>()))
@@ -326,18 +326,18 @@
         };
 
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">find_index</span>(<span class="ident">rec</span>.<span class="ident">type_id</span>, <span class="kw-2">&amp;</span><span class="ident">rec</span>.<span class="ident">name</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">index</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">records</span>[<span class="ident">index</span>] <span class="op">=</span> <span class="ident">rec</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">index</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">records</span>.<span class="ident">insert</span>(<span class="ident">index</span>, <span class="ident">rec</span>),
+            <span class="prelude-val">Ok</span>(<span class="ident">index</span>) =&gt; <span class="self">self</span>.<span class="ident">records</span>[<span class="ident">index</span>] <span class="op">=</span> <span class="ident">rec</span>,
+            <span class="prelude-val">Err</span>(<span class="ident">index</span>) =&gt; <span class="self">self</span>.<span class="ident">records</span>.<span class="ident">insert</span>(<span class="ident">index</span>, <span class="ident">rec</span>),
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">transaction</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TransactionProvider</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">transaction</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">TransactionProvider</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span> {
         <span class="ident">TransactionProvider</span>(<span class="self">self</span>)
     }
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">ProviderContainer</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">last_gc</span>: <span class="number">0</span>,
             <span class="ident">lock</span>: <span class="ident">Mutex::new</span>(()),
@@ -353,7 +353,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">ProviderRec</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">cast_provider</span>: <span class="ident">CastProvider</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">cast_provider</span>: <span class="ident">CastProvider</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">lru</span>: <span class="ident">Default::default</span>(),
             <span class="ident">cast_provider</span>,
@@ -369,11 +369,11 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Rec</span> {
-    <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">CastProvider</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">CastProvider</span><span class="op">&gt;</span> {
         <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">provider</span>.<span class="ident">get</span>()<span class="question-mark">?</span>.<span class="ident">cast_provider</span>)
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_or_init</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">lru</span>: <span class="kw-2">&amp;</span><span class="ident">Lru</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">CastProvider</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_or_init</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">lru</span>: <span class="kw-2">&amp;</span><span class="ident">Lru</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">CastProvider</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">provider_rec</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">provider</span>
             .<span class="ident">get_or_try_init</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">Error</span><span class="op">&gt;</span>(<span class="kw">async</span> {
@@ -387,19 +387,19 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">rec_key</span>(<span class="ident">rec</span>: <span class="kw-2">&amp;</span><span class="ident">Rec</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">TypeId</span>, <span class="kw-2">&amp;</span><span class="ident">str</span>) {
+<span class="kw">fn</span> <span class="ident">rec_key</span>(<span class="ident">rec</span>: <span class="kw-2">&amp;</span><span class="ident">Rec</span>) -&gt; (<span class="ident">TypeId</span>, <span class="kw-2">&amp;</span><span class="ident">str</span>) {
     (<span class="ident">rec</span>.<span class="ident">type_id</span>, <span class="kw-2">&amp;</span><span class="ident">rec</span>.<span class="ident">name</span>)
 }
 
 <span class="attribute">#[<span class="ident">track_caller</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">global_provider</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">ProviderContainer</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">global_provider</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">ProviderContainer</span> {
     <span class="ident">GLOBAL_PROVIDER</span>.<span class="ident">get</span>().<span class="ident">expect</span>(<span class="string">&quot;global_provider&quot;</span>)
 }
 
 <span class="doccomment">/// Set the global provider.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_global_provider</span>(
     <span class="ident">provider</span>: <span class="ident">ProviderContainer</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std::result::Result</span><span class="op">&lt;</span>(), <span class="ident">ProviderContainer</span><span class="op">&gt;</span> {
+) -&gt; <span class="ident">std::result::Result</span><span class="op">&lt;</span>(), <span class="ident">ProviderContainer</span><span class="op">&gt;</span> {
     <span class="ident">GLOBAL_PROVIDER</span>.<span class="ident">set</span>(<span class="ident">provider</span>)
 }
 
