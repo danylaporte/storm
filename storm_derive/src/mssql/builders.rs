@@ -229,7 +229,9 @@ impl UpsertBuilder {
             END TRY
             BEGIN CATCH
                 IF ERROR_NUMBER() IN (2601, 2627)
-                {update}
+                    {update};
+                ELSE
+                    THROW;
             END CATCH",
             insert = self.insert.to_sql(table),
             update = self.update.to_sql(table),
