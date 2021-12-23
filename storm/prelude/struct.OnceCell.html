@@ -27,6 +27,15 @@ effects of <code>f</code>.</p>
 method never blocks.</p>
 </div></details><details class="rustdoc-toggle method-toggle" open><summary><div id="method.get_mut" class="method has-srclink"><div class="rightside"></div><a href="#method.get_mut" class="anchor"></a><h4 class="code-header">pub fn <a href="#method.get_mut" class="fnname">get_mut</a>(&amp;mut self) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.57.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.57.0/std/primitive.reference.html">&amp;mut </a>T&gt;</h4></div></summary><div class="docblock"><p>Gets the mutable reference to the underlying value.</p>
 <p>Returns <code>None</code> if the cell is empty.</p>
+<p>This method is allowed to violate the invariant of writing to a <code>OnceCell</code>
+at most once because it requires <code>&amp;mut</code> access to <code>self</code>. As with all
+interior mutability, <code>&amp;mut</code> access permits arbitrary modification:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use</span> <span class="ident">once_cell::sync::OnceCell</span>;
+
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cell</span>: <span class="ident">OnceCell</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">OnceCell::new</span>();
+<span class="ident">cell</span>.<span class="ident">set</span>(<span class="number">92</span>).<span class="ident">unwrap</span>();
+<span class="ident">cell</span> <span class="op">=</span> <span class="ident">OnceCell::new</span>();</code></pre></div>
 </div></details><details class="rustdoc-toggle method-toggle" open><summary><div id="method.get_unchecked" class="method has-srclink"><div class="rightside"></div><a href="#method.get_unchecked" class="anchor"></a><h4 class="code-header">pub unsafe fn <a href="#method.get_unchecked" class="fnname">get_unchecked</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.57.0/std/primitive.reference.html">&amp;</a>T</h4></div></summary><div class="docblock"><p>Get the reference to the underlying value, without checking if the
 cell is initialized.</p>
 <h5 id="safety" class="section-header"><a href="#safety">Safety</a></h5>
@@ -112,6 +121,15 @@ deadlocks, but this may be changed to a panic in the future.</p>
 <span class="ident">cell</span>.<span class="ident">set</span>(<span class="string">&quot;hello&quot;</span>.<span class="ident">to_string</span>()).<span class="ident">unwrap</span>();
 <span class="macro">assert_eq!</span>(<span class="ident">cell</span>.<span class="ident">take</span>(), <span class="prelude-val">Some</span>(<span class="string">&quot;hello&quot;</span>.<span class="ident">to_string</span>()));
 <span class="macro">assert_eq!</span>(<span class="ident">cell</span>.<span class="ident">get</span>(), <span class="prelude-val">None</span>);</code></pre></div>
+<p>This method is allowed to violate the invariant of writing to a <code>OnceCell</code>
+at most once because it requires <code>&amp;mut</code> access to <code>self</code>. As with all
+interior mutability, <code>&amp;mut</code> access permits arbitrary modification:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use</span> <span class="ident">once_cell::sync::OnceCell</span>;
+
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cell</span>: <span class="ident">OnceCell</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">OnceCell::new</span>();
+<span class="ident">cell</span>.<span class="ident">set</span>(<span class="number">92</span>).<span class="ident">unwrap</span>();
+<span class="ident">cell</span> <span class="op">=</span> <span class="ident">OnceCell::new</span>();</code></pre></div>
 </div></details><details class="rustdoc-toggle method-toggle" open><summary><div id="method.into_inner" class="method has-srclink"><div class="rightside"></div><a href="#method.into_inner" class="anchor"></a><h4 class="code-header">pub fn <a href="#method.into_inner" class="fnname">into_inner</a>(self) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.57.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;T&gt;</h4></div></summary><div class="docblock"><p>Consumes the <code>OnceCell</code>, returning the wrapped value. Returns
 <code>None</code> if the cell was empty.</p>
 <h5 id="examples-1" class="section-header"><a href="#examples-1">Examples</a></h5>
