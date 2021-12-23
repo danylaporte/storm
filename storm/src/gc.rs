@@ -123,6 +123,17 @@ where
     }
 }
 
+impl<T> Gc for Vec<T>
+where
+    T: Gc + Send,
+{
+    const SUPPORT_GC: bool = T::SUPPORT_GC;
+
+    fn gc(&mut self, ctx: &GcCtx) {
+        self.par_iter_mut().for_each(|v| v.gc(ctx));
+    }
+}
+
 impl<K, V> Gc for VecMap<K, V>
 where
     K: From<usize> + Send,
@@ -169,7 +180,6 @@ gc!(Box<str>);
 gc!(Rc<[u8]>);
 gc!(Rc<str>);
 gc!(String);
-gc!(Vec<u8>);
 gc!(bool);
 gc!(f32);
 gc!(f64);
