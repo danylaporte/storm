@@ -108,12 +108,11 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let provider = attrs.provider();
     let (metrics_start, metrics_end) = metrics(ident, "load");
     let diff = apply_entity_diff(diff, ident);
-    let test;
 
-    if attrs.no_test {
-        test = quote!();
+    let test = if attrs.no_test {
+        quote!()
     } else {
-        test = quote! {
+        quote! {
             #[cfg(test)]
             #[tokio::test]
             async fn #load_test() -> storm::Result<()> {
@@ -121,8 +120,8 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
                 storm::provider::LoadAll::<#ident, _, storm::provider::LoadNothing>::load_all(&provider, &()).await?;
                 Ok(())
             }
-        };
-    }
+        }
+    };
 
     quote! {
         impl<C, FILTER> storm::provider::LoadAll<#ident, FILTER, C> for storm::provider::ProviderContainer
@@ -316,9 +315,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
 
     let upsert_trait;
     let upsert_sig;
-    let builder_invoke;
     let entity_part_key;
-    let reload_entity;
 
     if attrs.reload_on_upsert_or_identity() {
         upsert_trait = quote!(storm::provider::UpsertMut<#ident>);
@@ -330,24 +327,24 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
         entity_part_key = quote!(k);
     }
 
-    if attrs.reload_on_upsert() {
+    let reload_entity = if attrs.reload_on_upsert() {
         let backup = quote!(#(#translated_backup)*);
         let restore = quote!(#(#translated_restore)*);
 
-        reload_entity = quote! {
+        quote! {
             #backup
             *v = storm::provider::LoadOne::<#ident>::load_one_with_args(self.container(), &k, storm::provider::LoadArgs { use_transaction: true }).await?.ok_or(storm::Error::EntityNotFound)?;
             #restore
-        };
+        }
     } else {
-        reload_entity = quote!();
-    }
+        quote!()
+    };
 
-    if is_identity_key {
-        builder_invoke = quote!(builder.execute_identity(provider, k).await?;);
+    let builder_invoke = if is_identity_key {
+        quote!(builder.execute_identity(provider, k).await?;)
     } else {
-        builder_invoke = quote!(builder.execute(provider).await?;);
-    }
+        quote!(builder.execute(provider).await?;)
+    };
 
     let save_part = save_part.ts();
     let wheres = wheres.ts();
