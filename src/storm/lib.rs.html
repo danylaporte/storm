@@ -107,13 +107,6 @@
 <span id="106">106</span>
 <span id="107">107</span>
 <span id="108">108</span>
-<span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
 </pre><pre class="rust"><code><span class="attribute">#[<span class="ident">macro_use</span>]</span>
 <span class="kw">mod</span> <span class="ident">version_deps</span>;
 
@@ -198,33 +191,26 @@
 <span class="kw">fn</span> <span class="ident">register_metrics</span>() {
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;telemetry&quot;</span>)]</span>
     {
-        <span class="kw">use</span> <span class="ident">metrics</span>::{<span class="ident">describe_counter</span>, <span class="ident">describe_gauge</span>, <span class="ident">register_counter</span>, <span class="ident">register_gauge</span>, <span class="ident">Unit</span>};
+        <span class="kw">use</span> <span class="ident">metrics</span>::{<span class="ident">describe_counter</span>, <span class="ident">describe_gauge</span>, <span class="ident">Unit</span>};
         <span class="kw">use</span> <span class="ident">std::sync::Once</span>;
 
         <span class="kw">static</span> <span class="ident">START</span>: <span class="ident">Once</span> <span class="op">=</span> <span class="ident">Once::new</span>();
 
         <span class="ident">START</span>.<span class="ident">call_once</span>(<span class="op">|</span><span class="op">|</span> {
-            <span class="macro">register_counter!</span>(<span class="string">&quot;storm.execute.count&quot;</span>);
             <span class="macro">describe_gauge!</span>(
                 <span class="string">&quot;storm.execute.count&quot;</span>,
                 <span class="ident">Unit::Count</span>,
                 <span class="string">&quot;Operation execution time per type.&quot;</span>
             );
 
-            <span class="macro">register_counter!</span>(<span class="string">&quot;storm.execute.time&quot;</span>);
             <span class="macro">describe_gauge!</span>(
                 <span class="string">&quot;storm.execute.time&quot;</span>,
                 <span class="ident">Unit::Nanoseconds</span>,
                 <span class="string">&quot;Operation execution time per type.&quot;</span>
             );
 
-            <span class="macro">register_counter!</span>(<span class="string">&quot;storm_table_ops&quot;</span>);
             <span class="macro">describe_counter!</span>(<span class="string">&quot;storm_table_ops&quot;</span>, <span class="ident">Unit::Count</span>, <span class="string">&quot;table operation counter&quot;</span>);
-
-            <span class="macro">register_gauge!</span>(<span class="string">&quot;storm_table_loaded&quot;</span>);
             <span class="macro">describe_gauge!</span>(<span class="string">&quot;storm_table_loaded&quot;</span>, <span class="ident">Unit::Count</span>, <span class="string">&quot;table loaded&quot;</span>);
-
-            <span class="macro">register_gauge!</span>(<span class="string">&quot;storm_table_rows&quot;</span>);
             <span class="macro">describe_gauge!</span>(<span class="string">&quot;storm_table_rows&quot;</span>, <span class="ident">Unit::Count</span>, <span class="string">&quot;row count of a table&quot;</span>);
         });
     }
