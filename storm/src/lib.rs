@@ -82,27 +82,34 @@ pub use storm_derive::{MssqlDelete, MssqlLoad, MssqlSave};
 fn register_metrics() {
     #[cfg(feature = "telemetry")]
     {
-        use metrics::{register_counter, register_gauge, Unit};
+        use metrics::{describe_counter, describe_gauge, register_counter, register_gauge, Unit};
         use std::sync::Once;
 
         static START: Once = Once::new();
 
         START.call_once(|| {
-            register_counter!(
+            register_counter!("storm.execute.count");
+            describe_gauge!(
                 "storm.execute.count",
                 Unit::Count,
                 "Operation execution time per type."
             );
 
-            register_counter!(
+            register_counter!("storm.execute.time");
+            describe_gauge!(
                 "storm.execute.time",
                 Unit::Nanoseconds,
                 "Operation execution time per type."
             );
 
-            register_counter!("storm_table_ops", Unit::Count, "table operation counter");
-            register_gauge!("storm_table_loaded", Unit::Count, "table loaded");
-            register_gauge!("storm_table_rows", Unit::Count, "row count of a table");
+            register_counter!("storm_table_ops");
+            describe_counter!("storm_table_ops", Unit::Count, "table operation counter");
+
+            register_gauge!("storm_table_loaded");
+            describe_gauge!("storm_table_loaded", Unit::Count, "table loaded");
+
+            register_gauge!("storm_table_rows");
+            describe_gauge!("storm_table_rows", Unit::Count, "row count of a table");
         });
     }
 }

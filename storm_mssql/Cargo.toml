@@ -2,7 +2,7 @@
 name = "storm_mssql"
 version = "0.13.3-alpha.0"
 authors = ["Dany Laporte <dany_laporte@hotmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/danylaporte/storm"
 publish = false
@@ -17,7 +17,7 @@ fxhash = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 storm = { path = "../storm", features = ["mssql"] }
-tiberius = { version = "0.6.4", features = ["chrono", "sql-browser-tokio"] }
+tiberius = { version = "0.7.1", features = ["chrono", "sql-browser-tokio"] }
 tokio = { version = "1", features = ["io-std", "io-util", "net", "parking_lot", "rt-multi-thread", "sync", "time"] }
 tokio-util = { version = "0.6", features = ["compat"] }
 tracing = "0.1"
