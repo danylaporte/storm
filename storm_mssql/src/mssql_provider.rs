@@ -29,6 +29,13 @@ impl MssqlProvider {
 
         guard
     }
+
+    /// Creates a new [Client](Client) instance.
+    /// # Safety
+    /// This operation is safe but the returning client is not constrained by the lock and can modify the database without storm's knowledge.
+    pub async unsafe fn create_client(&self) -> Result<Client> {
+        self.0.state.lock().await.create_client().await
+    }
 }
 
 impl Execute for MssqlProvider {
@@ -212,12 +219,16 @@ impl State {
     async fn client(&mut self) -> Result<Client> {
         match self.client.take() {
             Some(c) => Ok(c),
-            None => self.factory.create_client().await,
+            None => self.create_client().await,
         }
     }
 
     async fn commit(&mut self) -> Result<()> {
         self.cancel_or_commit("COMMIT").await
+    }
+
+    async fn create_client(&self) -> Result<Client> {
+        self.factory.create_client().await
     }
 
     async fn transaction(&mut self) -> Result<Client> {

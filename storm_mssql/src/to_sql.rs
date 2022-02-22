@@ -135,7 +135,7 @@ to_sql!(transform chrono::NaiveTime);
 to_sql!(transform uuid::Uuid);
 
 #[cfg(feature = "dec19x5")]
-impl ToSql for dec19x5::Decimal {
+impl ToSql for dec19x5crate::Decimal {
     #[inline]
     fn to_sql(&self) -> ColumnData {
         tiberius::ToSql::to_sql(self)
@@ -143,7 +143,7 @@ impl ToSql for dec19x5::Decimal {
 }
 
 #[cfg(feature = "dec19x5")]
-impl ToSqlNull for dec19x5::Decimal {
+impl ToSqlNull for dec19x5crate::Decimal {
     #[inline]
     fn to_sql_null() -> ColumnData<'static> {
         ColumnData::Numeric(None)

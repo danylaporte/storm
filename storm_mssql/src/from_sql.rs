@@ -55,8 +55,8 @@ from_sql!(u8, u8);
 from_sql!(&'a [u8], &'a [u8]);
 
 #[cfg(feature = "dec19x5")]
-impl<'a> FromSql<'a> for dec19x5::Decimal {
-    type Column = dec19x5::Decimal;
+impl<'a> FromSql<'a> for dec19x5crate::Decimal {
+    type Column = dec19x5crate::Decimal;
 
     fn from_sql(col: Option<Self::Column>) -> Result<Self> {
         match col {
