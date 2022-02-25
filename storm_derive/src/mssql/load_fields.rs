@@ -1,7 +1,7 @@
 use super::{
     attrs::{check_empty, check_required, FieldAttrs, TypeAttrs},
     builders::SelectBuilder,
-    read_row, read_row_with,
+    read_row,
 };
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt as _};
@@ -26,8 +26,18 @@ impl<'a> LoadFields<'a> {
 
     pub fn add_field(&mut self, field: &Field, attrs: &FieldAttrs, column: &str) {
         let ident = &field.ident;
-        let index = self.select.add_field(column);
-        let read = read_row_with(index, attrs);
+        let skip_load = attrs.skip_load();
+
+        let column_index = match skip_load {
+            true => 0,
+            false => self.select.add_field(column),
+        };
+
+        let read = match attrs.load_with.as_ref() {
+            Some(f) => quote!(#f(&row)?),
+            None if skip_load => quote!(Default::default()),
+            None => read_row(column_index),
+        };
 
         self.fields.push(quote!(#ident: #read,));
     }

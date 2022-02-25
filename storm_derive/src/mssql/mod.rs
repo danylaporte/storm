@@ -90,13 +90,11 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             if !attrs.skip_diff() {
                 load_diff_field(&mut diff, field_ident, &enum_fields_ident);
             }
-        } else if attrs.skip_load() {
-            load.skip_field(field, &attrs, &mut errors);
         } else {
             let column = continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
             load.add_field(field, &attrs, &column);
 
-            if !attrs.skip_diff() {
+            if !attrs.skip_save() && !attrs.skip_diff() {
                 load_diff_field(&mut diff, field_ident, &enum_fields_ident);
             }
         }
@@ -500,13 +498,6 @@ fn load_diff_field(diff: &mut Option<Vec<TokenStream>>, field: &Ident, enum_fiel
 fn read_row(column_index: usize) -> TokenStream {
     let l = LitInt::new(&column_index.to_string(), Span::call_site());
     quote!(storm_mssql::FromSql::from_sql(row.try_get(#l).map_err(storm::Error::Mssql)?)?)
-}
-
-fn read_row_with(column_index: usize, attrs: &FieldAttrs) -> TokenStream {
-    match attrs.load_with.as_ref() {
-        Some(f) => quote!(#f(&row)?),
-        None => read_row(column_index),
-    }
 }
 
 fn enum_fields_impl(
