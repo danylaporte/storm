@@ -108,6 +108,14 @@
 <span id="106">106</span>
 <span id="107">107</span>
 <span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
 </pre><pre class="rust"><code><span class="attribute">#[<span class="ident">macro_use</span>]</span>
 <span class="kw">mod</span> <span class="ident">version_deps</span>;
 
@@ -210,9 +218,17 @@
                 <span class="string">&quot;Operation execution time per type.&quot;</span>
             );
 
-            <span class="macro">describe_counter!</span>(<span class="string">&quot;storm_table_ops&quot;</span>, <span class="ident">Unit::Count</span>, <span class="string">&quot;table operation counter&quot;</span>);
-            <span class="macro">describe_gauge!</span>(<span class="string">&quot;storm_table_loaded&quot;</span>, <span class="ident">Unit::Count</span>, <span class="string">&quot;table loaded&quot;</span>);
-            <span class="macro">describe_gauge!</span>(<span class="string">&quot;storm_table_rows&quot;</span>, <span class="ident">Unit::Count</span>, <span class="string">&quot;row count of a table&quot;</span>);
+            <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;cache&quot;</span>)]</span>
+            {
+                <span class="macro">describe_counter!</span>(
+                    <span class="string">&quot;storm.cache.island.gc&quot;</span>,
+                    <span class="ident">Unit::Count</span>,
+                    <span class="string">&quot;cache island collected&quot;</span>
+                );
+            }
+
+            <span class="macro">describe_counter!</span>(<span class="string">&quot;storm.gc&quot;</span>, <span class="ident">Unit::Count</span>, <span class="string">&quot;storm gc run&quot;</span>);
+            <span class="macro">describe_gauge!</span>(<span class="string">&quot;storm.table.rows&quot;</span>, <span class="ident">Unit::Count</span>, <span class="string">&quot;row count of a table&quot;</span>);
         });
     }
 }
