@@ -4,6 +4,7 @@ use crate::{
 };
 use rayon::iter::IntoParallelIterator;
 use std::ops::Deref;
+use tracing::instrument;
 use vec_map::{Iter, Keys, ParIter, Values, VecMap};
 use version_tag::VersionTag;
 
@@ -37,7 +38,7 @@ impl<E: Entity> VecTable<E> {
         #[cfg(feature = "telemetry")]
         {
             use conv::prelude::ValueFrom;
-            metrics::gauge!("storm_table_rows", f64::value_from(self.len()).unwrap_or(0.0), "type" => E::NAME);
+            metrics::gauge!("storm.table.rows", f64::value_from(self.len()).unwrap_or(0.0), "type" => E::NAME);
         }
     }
 
@@ -135,11 +136,12 @@ where
 
 impl<E> Gc for VecTable<E>
 where
-    E: Entity + Gc,
+    E: Entity + CtxTypeInfo + Gc,
     E::Key: From<usize>,
 {
     const SUPPORT_GC: bool = E::SUPPORT_GC;
 
+    #[instrument(level = "debug", fields(name = <E as CtxTypeInfo>::NAME, obj = crate::OBJ_TABLE), skip_all)]
     #[inline]
     fn gc(&mut self, ctx: &GcCtx) {
         self.map.gc(ctx);

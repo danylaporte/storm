@@ -100,9 +100,17 @@ fn register_metrics() {
                 "Operation execution time per type."
             );
 
-            describe_counter!("storm_table_ops", Unit::Count, "table operation counter");
-            describe_gauge!("storm_table_loaded", Unit::Count, "table loaded");
-            describe_gauge!("storm_table_rows", Unit::Count, "row count of a table");
+            #[cfg(feature = "cache")]
+            {
+                describe_counter!(
+                    "storm.cache.island.gc",
+                    Unit::Count,
+                    "cache island collected"
+                );
+            }
+
+            describe_counter!("storm.gc", Unit::Count, "storm gc run");
+            describe_gauge!("storm.table.rows", Unit::Count, "row count of a table");
         });
     }
 }

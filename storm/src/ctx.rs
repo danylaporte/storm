@@ -106,10 +106,6 @@ impl Ctx {
     pub fn vars(&self) -> &Vars {
         &self.vars
     }
-
-    pub fn vars_mut(&mut self) -> &Vars {
-        &mut self.vars
-    }
 }
 
 impl Default for Ctx {

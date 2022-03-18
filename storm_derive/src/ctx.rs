@@ -1,10 +1,9 @@
+use crate::derive_input_ext::DeriveInputExt;
 use darling::{FromDeriveInput, FromMeta};
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{DeriveInput, Ident, LitStr};
-
-use crate::{derive_input_ext::DeriveInputExt, type_ext::TypeExt};
 
 pub fn generate(input: &DeriveInput) -> TokenStream {
     let implement = try_ts!(implement(input));
@@ -77,31 +76,25 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 fn gc(input: &DeriveInput) -> Result<(TokenStream, TokenStream), TokenStream> {
     let fields = input.fields()?;
     let ident = &input.ident;
-    let mut vec = Vec::new();
+    let types = fields.iter().map(|f| &f.ty);
+    let fields = fields.iter().map(|f| &f.ident);
 
-    for field in fields {
-        if field.ty.is_cache_island() {
-            let ident = &field.ident;
-            vec.push(quote!(storm::Gc::gc(&mut self.#ident, ctx);));
-        }
-    }
+    Ok((
+        quote! {
+            impl storm::Gc for #ident {
+                const SUPPORT_GC: bool = #(<#types as storm::Gc>::SUPPORT_GC ||)* false;
 
-    Ok(if vec.is_empty() {
-        (quote!(), quote!())
-    } else {
-        (
-            quote! {
-                impl storm::Gc for #ident {
-                    const SUPPORT_GC: bool = true;
-
-                    fn gc(&mut self, ctx: &storm::GcCtx) {
-                        #(#vec)*
-                    }
+                fn gc(&mut self, ctx: &storm::GcCtx) {
+                    #(storm::Gc::gc(&mut self.#fields, ctx);)*
                 }
-            },
-            quote!(storm::gc::collectables::register(|ctx| ctx.tbl_gc::<#ident>());),
-        )
-    })
+            }
+        },
+        quote! {
+            if <#ident as storm::Gc>::SUPPORT_GC {
+                storm::gc::collectables::register(|ctx| ctx.tbl_gc::<#ident>());
+            }
+        },
+    ))
 }
 
 #[derive(Clone, Copy, Debug, Eq, FromMeta, PartialEq)]

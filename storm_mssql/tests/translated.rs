@@ -150,6 +150,8 @@ impl Translated {
     }
 }
 
+impl storm::Gc for Translated {}
+
 #[derive(Clone, Copy, Debug)]
 pub enum Culture {
     Fr = 0,

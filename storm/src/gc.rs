@@ -12,21 +12,16 @@ use tracing::instrument;
 use vec_map::VecMap;
 
 #[derive(Default)]
-pub struct GcCtx {
-    #[cfg(feature = "cache")]
-    island: Option<u64>,
-}
+pub struct GcCtx;
 
 impl Ctx {
     #[instrument(level = "debug", skip(self))]
     pub fn gc(&mut self) {
+        #[cfg(feature = "telemetry")]
+        metrics::counter!("storm.gc", 1);
+
         self.provider.gc();
         collectables::collect(self);
-
-        #[cfg(feature = "cache")]
-        {
-            self.gc.island = Some(cache::current_cache_island_age());
-        }
     }
 }
 
@@ -63,9 +58,12 @@ where
 impl<E> Gc for cache::CacheIsland<E> {
     const SUPPORT_GC: bool = true;
 
-    fn gc(&mut self, ctx: &GcCtx) {
-        if let Some(age) = ctx.island {
-            self.clear_if_untouched_since(age);
+    fn gc(&mut self, _: &GcCtx) {
+        let was_touched = self.untouch();
+
+        if !was_touched && self.take().is_some() {
+            #[cfg(feature = "telemetry")]
+            metrics::counter!("storm.cache.island.gc", 1);
         }
     }
 }
@@ -105,6 +103,19 @@ where
 
     fn gc(&mut self, ctx: &GcCtx) {
         if let Some(v) = self.as_mut() {
+            v.gc(ctx);
+        }
+    }
+}
+
+impl<T> Gc for once_cell::sync::OnceCell<T>
+where
+    T: Gc,
+{
+    const SUPPORT_GC: bool = T::SUPPORT_GC;
+
+    fn gc(&mut self, ctx: &GcCtx) {
+        if let Some(v) = self.get_mut() {
             v.gc(ctx);
         }
     }
