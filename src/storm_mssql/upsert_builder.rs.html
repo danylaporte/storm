@@ -252,9 +252,14 @@
 <span id="250">250</span>
 <span id="251">251</span>
 <span id="252">252</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Execute</span>, <span class="ident">FromSql</span>, <span class="ident">Parameter</span>, <span class="ident">QueryRows</span>, <span class="prelude-ty">Result</span>, <span class="ident">ToSql</span>};
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Error</span>, <span class="ident">Execute</span>, <span class="ident">FromSql</span>, <span class="ident">Parameter</span>, <span class="ident">QueryRows</span>, <span class="prelude-ty">Result</span>, <span class="ident">ToSql</span>};
 <span class="kw">use</span> <span class="ident">storm::IsDefined</span>;
 <span class="kw">use</span> <span class="ident">tiberius::ColumnData</span>;
+<span class="kw">use</span> <span class="ident">tracing::error</span>;
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UpsertBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
     <span class="ident">insert_fields</span>: <span class="ident">String</span>,
@@ -380,7 +385,7 @@
         <span class="ident">provider</span>.<span class="ident">execute</span>(<span class="ident">sql</span>, <span class="ident">params</span>.<span class="ident">as_slice</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">upsert_mode</span> <span class="op">==</span> <span class="ident">UpsertMode::Insert</span> {
-            <span class="kw">let</span> <span class="ident">cast_ty</span> <span class="op">=</span> <span class="ident">column_data_to_sql_type</span>(<span class="ident">key</span>.<span class="ident">to_sql</span>());
+            <span class="kw">let</span> <span class="ident">cast_ty</span> <span class="op">=</span> <span class="ident">column_data_to_sql_type</span>(<span class="ident">key</span>.<span class="ident">to_sql</span>())<span class="question-mark">?</span>;
 
             <span class="kw">let</span> <span class="ident">one</span>: <span class="ident">OneValue</span><span class="op">&lt;</span><span class="ident">K</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">provider</span>
                 .<span class="ident">query_rows</span>(
@@ -495,13 +500,16 @@
     <span class="ident">Update</span>,
 }
 
-<span class="kw">fn</span> <span class="ident">column_data_to_sql_type</span>(<span class="ident">data</span>: <span class="ident">ColumnData</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
+<span class="kw">fn</span> <span class="ident">column_data_to_sql_type</span>(<span class="ident">data</span>: <span class="ident">ColumnData</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
     <span class="kw">match</span> <span class="ident">data</span> {
-        <span class="ident">ColumnData::I16</span>(<span class="kw">_</span>) =&gt; <span class="string">&quot;smallint&quot;</span>,
-        <span class="ident">ColumnData::I32</span>(<span class="kw">_</span>) =&gt; <span class="string">&quot;int&quot;</span>,
-        <span class="ident">ColumnData::I64</span>(<span class="kw">_</span>) =&gt; <span class="string">&quot;bigint&quot;</span>,
-        <span class="ident">ColumnData::U8</span>(<span class="kw">_</span>) =&gt; <span class="string">&quot;tinyint&quot;</span>,
-        <span class="kw">_</span> =&gt; <span class="macro">panic!</span>(<span class="string">&quot;key type is not supported as identity.&quot;</span>),
+        <span class="ident">ColumnData::I16</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="string">&quot;smallint&quot;</span>),
+        <span class="ident">ColumnData::I32</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="string">&quot;int&quot;</span>),
+        <span class="ident">ColumnData::I64</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="string">&quot;bigint&quot;</span>),
+        <span class="ident">ColumnData::U8</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="string">&quot;tinyint&quot;</span>),
+        <span class="kw">_</span> =&gt; {
+            <span class="macro">error!</span>(<span class="string">&quot;key type is not supported as identity.&quot;</span>);
+            <span class="prelude-val">Err</span>(<span class="ident">Error::Internal</span>)
+        }
     }
 }
 </code></pre></div>

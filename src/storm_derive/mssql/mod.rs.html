@@ -762,7 +762,7 @@
             <span class="kw">continue</span>;
         }
 
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;[{}]&quot;</span>, <span class="ident">column</span>), <span class="ident">ident</span>.<span class="ident">span</span>());
+        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;[{column}]&quot;</span>), <span class="ident">ident</span>.<span class="ident">span</span>());
 
         <span class="kw">if</span> <span class="ident">attrs</span>.<span class="ident">part</span> {
             <span class="ident">save_part</span>.<span class="ident">push</span>(
@@ -822,7 +822,7 @@
     };
 
     <span class="kw">for</span> (<span class="ident">index</span>, <span class="ident">key</span>) <span class="kw">in</span> <span class="ident">keys</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;[{}]&quot;</span>, <span class="ident">key</span>), <span class="ident">ident</span>.<span class="ident">span</span>());
+        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;[{key}]&quot;</span>), <span class="ident">ident</span>.<span class="ident">span</span>());
 
         <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">keys</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">1</span> {
             <span class="bool-val">true</span> =&gt; {

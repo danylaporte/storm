@@ -258,6 +258,7 @@
 <span id="256">256</span>
 <span id="257">257</span>
 <span id="258">258</span>
+<span id="259">259</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">execute::ExecuteArgs</span>, <span class="ident">Client</span>, <span class="ident">ClientFactory</span>, <span class="ident">Execute</span>, <span class="ident">Parameter</span>, <span class="ident">QueryRows</span>, <span class="ident">ToSql</span>};
 <span class="kw">use</span> <span class="ident">futures_util::TryStreamExt</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -424,6 +425,7 @@
                 <span class="ident">vec</span>.<span class="ident">push</span>(<span class="ident">mapper</span>(<span class="ident">row</span>)<span class="question-mark">?</span>);
 
                 <span class="kw">if</span> <span class="ident">vec</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">10</span> {
+                    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::iter_with_drain</span>)]</span>
                     <span class="ident">coll</span>.<span class="ident">extend</span>(<span class="ident">vec</span>.<span class="ident">drain</span>(..));
                 }
             }

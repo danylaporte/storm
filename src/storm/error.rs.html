@@ -79,6 +79,8 @@
 <span id="77">77</span>
 <span id="78">78</span>
 <span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::fmt</span>::{<span class="self">self</span>, <span class="ident">Debug</span>, <span class="ident">Display</span>};
 
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Error</span> {
@@ -88,6 +90,7 @@
     <span class="ident">ColumnNull</span>,
     <span class="ident">ConvertFailed</span>(<span class="ident">String</span>),
     <span class="ident">EntityNotFound</span>,
+    <span class="ident">Internal</span>,
     <span class="ident">NotInTransaction</span>,
     <span class="ident">ProviderNotFound</span>,
     <span class="ident">Std</span>(<span class="ident">StdError</span>),
@@ -121,10 +124,11 @@
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident"><span class="self">Self</span>::AlreadyInTransaction</span> =&gt; <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Already in transaction.&quot;</span>),
             <span class="ident"><span class="self">Self</span>::AsyncCellLock</span>(<span class="ident">e</span>) =&gt; <span class="ident">Display::fmt</span>(<span class="ident">e</span>, <span class="ident">f</span>),
+            <span class="ident"><span class="self">Self</span>::ClientInError</span> =&gt; <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Client in error state.&quot;</span>),
             <span class="ident"><span class="self">Self</span>::ColumnNull</span> =&gt; <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Column is null.&quot;</span>),
             <span class="ident"><span class="self">Self</span>::ConvertFailed</span>(<span class="ident">s</span>) =&gt; <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Convert failed: `{}`&quot;</span>, <span class="ident">s</span>)),
-            <span class="ident"><span class="self">Self</span>::ClientInError</span> =&gt; <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Client in error state.&quot;</span>),
             <span class="ident"><span class="self">Self</span>::EntityNotFound</span> =&gt; <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Entity not found.&quot;</span>),
+            <span class="ident"><span class="self">Self</span>::Internal</span> =&gt; <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Internal.&quot;</span>),
             <span class="ident"><span class="self">Self</span>::NotInTransaction</span> =&gt; <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Not in transaction.&quot;</span>),
             <span class="ident"><span class="self">Self</span>::ProviderNotFound</span> =&gt; <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;Provider not found.&quot;</span>),
 
