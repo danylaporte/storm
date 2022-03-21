@@ -1,6 +1,7 @@
-use crate::{Execute, FromSql, Parameter, QueryRows, Result, ToSql};
+use crate::{Error, Execute, FromSql, Parameter, QueryRows, Result, ToSql};
 use storm::IsDefined;
 use tiberius::ColumnData;
+use tracing::error;
 
 pub struct UpsertBuilder<'a> {
     insert_fields: String,
@@ -126,7 +127,7 @@ impl<'a> UpsertBuilder<'a> {
         provider.execute(sql, params.as_slice()).await?;
 
         if self.upsert_mode == UpsertMode::Insert {
-            let cast_ty = column_data_to_sql_type(key.to_sql());
+            let cast_ty = column_data_to_sql_type(key.to_sql())?;
 
             let one: OneValue<K> = provider
                 .query_rows(
@@ -241,12 +242,15 @@ enum UpsertMode {
     Update,
 }
 
-fn column_data_to_sql_type(data: ColumnData<'_>) -> &'static str {
+fn column_data_to_sql_type(data: ColumnData<'_>) -> Result<&'static str> {
     match data {
-        ColumnData::I16(_) => "smallint",
-        ColumnData::I32(_) => "int",
-        ColumnData::I64(_) => "bigint",
-        ColumnData::U8(_) => "tinyint",
-        _ => panic!("key type is not supported as identity."),
+        ColumnData::I16(_) => Ok("smallint"),
+        ColumnData::I32(_) => Ok("int"),
+        ColumnData::I64(_) => Ok("bigint"),
+        ColumnData::U8(_) => Ok("tinyint"),
+        _ => {
+            error!("key type is not supported as identity.");
+            Err(Error::Internal)
+        }
     }
 }

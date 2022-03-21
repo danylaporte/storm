@@ -164,6 +164,7 @@ impl QueryRows for MssqlProvider {
                 vec.push(mapper(row)?);
 
                 if vec.len() == 10 {
+                    #[allow(clippy::iter_with_drain)]
                     coll.extend(vec.drain(..));
                 }
             }

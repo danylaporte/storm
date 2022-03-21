@@ -235,7 +235,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
             continue;
         }
 
-        let name = LitStr::new(&format!("[{}]", column), ident.span());
+        let name = LitStr::new(&format!("[{column}]"), ident.span());
 
         if attrs.part {
             save_part.push(
@@ -295,7 +295,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     };
 
     for (index, key) in keys.iter().enumerate() {
-        let name = LitStr::new(&format!("[{}]", key), ident.span());
+        let name = LitStr::new(&format!("[{key}]"), ident.span());
 
         let k = match keys.len() > 1 {
             true => {

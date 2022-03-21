@@ -7,6 +7,13 @@ use vec_map::VecMap;
 pub struct OneToMany<ONE, MANY>(VecMap<ONE, Box<[MANY]>>);
 
 impl<ONE, MANY> OneToMany<ONE, MANY> {
+    pub fn get(&self, index: &ONE) -> &[MANY]
+    where
+        ONE: Clone + Into<usize>,
+    {
+        self.0.get(index).map_or(&[], |v| &**v)
+    }
+
     pub fn iter(&self) -> vec_map::Iter<ONE, Box<[MANY]>> {
         self.0.iter()
     }
@@ -44,7 +51,7 @@ where
 
     #[inline]
     fn index(&self, index: &ONE) -> &Self::Output {
-        self.0.get(index).map(|v| &**v).unwrap_or(&[])
+        self.get(index)
     }
 }
 

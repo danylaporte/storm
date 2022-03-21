@@ -1,3 +1,5 @@
+#![allow(clippy::indexing_slicing)]
+
 extern crate proc_macro;
 
 #[macro_use]

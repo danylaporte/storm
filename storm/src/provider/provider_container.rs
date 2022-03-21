@@ -1,14 +1,13 @@
 use super::{CastProvider, Provider, ProviderFactory, TransactionProvider};
 use crate::{BoxFuture, Error, Result};
 use async_cell_lock::AsyncOnceCell;
-use once_cell::sync::OnceCell;
 use std::{
     any::TypeId,
     marker::PhantomData,
     sync::atomic::{AtomicU64, Ordering::Relaxed},
 };
 use tokio::sync::{Mutex, MutexGuard};
-use tracing::instrument;
+use tracing::{error, instrument};
 
 /// Last recent use counter
 type Lru = AtomicU64;
@@ -65,7 +64,7 @@ impl ProviderContainer {
 
     fn find_record<'a>(&'a self, type_id: TypeId, name: &str) -> Result<&'a Rec> {
         match self.find_index(type_id, name) {
-            Ok(index) => Ok(&self.records[index]),
+            Ok(index) => self.records.get(index).ok_or(Error::ProviderNotFound),
             Err(_) => Err(Error::ProviderNotFound),
         }
     }
@@ -103,7 +102,10 @@ impl ProviderContainer {
             let rec = self.find_record(type_id, name)?;
             let castable = rec.get_or_init(&self.lru).await?;
 
-            Ok(castable.downcast().expect("provider"))
+            castable.downcast().ok_or_else(|| {
+                error!("invalid cast for provider {name}");
+                Error::Internal
+            })
         })
     }
 
@@ -122,6 +124,7 @@ impl ProviderContainer {
             type_id: TypeId::of::<F::Provider>(),
         };
 
+        #[allow(clippy::indexing_slicing)]
         match self.find_index(rec.type_id, &rec.name) {
             Ok(index) => self.records[index] = rec,
             Err(index) => self.records.insert(index, rec),
@@ -187,17 +190,3 @@ impl Rec {
 fn rec_key(rec: &Rec) -> (TypeId, &str) {
     (rec.type_id, &rec.name)
 }
-
-#[track_caller]
-pub fn global_provider() -> &'static ProviderContainer {
-    GLOBAL_PROVIDER.get().expect("global_provider")
-}
-
-/// Set the global provider.
-pub fn set_global_provider(
-    provider: ProviderContainer,
-) -> std::result::Result<(), ProviderContainer> {
-    GLOBAL_PROVIDER.set(provider)
-}
-
-static GLOBAL_PROVIDER: OnceCell<ProviderContainer> = OnceCell::new();

@@ -69,10 +69,9 @@ fn add_key_single(
 }
 
 fn add_keys(keys: &[&str], params: &mut ParamsBuilder, builder: &mut DeleteBuilder) {
-    if keys.len() == 1 {
-        add_key_single(keys[0], quote!(k as _), params, builder);
-    } else {
-        add_key_many(keys, params, builder);
+    match keys {
+        [k] => add_key_single(k, quote!(k as _), params, builder),
+        _ => add_key_many(keys, params, builder),
     }
 }
 

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ops::Index};
+use std::borrow::Cow;
 use storm::{prelude::*, Error, MssqlLoad, MssqlSave, Result};
 use storm_mssql::{Execute, ExecuteArgs, FromSql, MssqlFactory, MssqlProvider, ToSql, ToSqlNull};
 use tiberius::Config;
@@ -108,6 +108,13 @@ struct Translated {
 }
 
 impl Translated {
+    fn get(&self, culture: Culture) -> &str {
+        match culture {
+            Culture::En => &self.en,
+            Culture::Fr => &self.fr,
+        }
+    }
+
     fn set<'a>(&mut self, culture: Culture, value: impl Into<Cow<'a, str>>) {
         *(match culture {
             Culture::En => &mut self.en,
@@ -137,17 +144,6 @@ impl<'a> FromSql<'a> for Culture {
             Some(1) => Ok(Culture::En),
             Some(v) => Err(Error::ConvertFailed(format!("Culture `{}` invalid.", v))),
             None => Err(Error::ColumnNull),
-        }
-    }
-}
-
-impl Index<Culture> for Translated {
-    type Output = str;
-
-    fn index(&self, culture: Culture) -> &str {
-        match culture {
-            Culture::En => &self.en,
-            Culture::Fr => &self.fr,
         }
     }
 }

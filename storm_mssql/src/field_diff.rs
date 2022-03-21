@@ -30,7 +30,7 @@ pub fn field_diff_impl<T: PartialEq + Serialize>(new: &T, old: &T) -> Option<Val
     if new == old {
         None
     } else {
-        Some(serde_json::to_value(old).expect("diff"))
+        Some(serde_json::json!(old))
     }
 }
 
