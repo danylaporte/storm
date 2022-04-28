@@ -4,3 +4,6 @@ members = [
     "storm_derive",
     "storm_mssql"
 ]
+
+#[patch.'https://github.com/danylaporte/dec19x5']
+#dec19x5 = { path = "../dec19x5" }

@@ -22,7 +22,7 @@ rayon = "1"
 serde = { version = "1", features = ["derive"] }
 static_init = "1"
 storm_derive = { path = "../storm_derive", optional = true }
-tiberius = { version = "0.7.1", optional = true }
+tiberius = { version = "0.8", optional = true }
 tokio = { version = "1", features = ["parking_lot", "sync"], default-features = false }
 tracing = "0.1"
 uuid = { version = "0.8", optional = true, features = ["v4", "serde"] }

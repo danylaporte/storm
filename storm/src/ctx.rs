@@ -4,6 +4,7 @@ use crate::{
     EntityAccessor, Gc, GcCtx, Get, HashTable, Insert, InsertMut, Log, LogAccessor, LogState, Logs,
     NotifyTag, ProviderContainer, Remove, Result, Tag, Transaction, Vars, VecTable,
 };
+use fxhash::FxHashMap;
 use parking_lot::RwLock;
 use std::{hash::Hash, marker::PhantomData};
 use tracing::instrument;
@@ -493,6 +494,13 @@ where
         Self: InsertMut<E>,
     {
         InsertMut::<E>::insert_mut_all(self, iter, track)
+    }
+
+    pub fn log(&self) -> Option<&FxHashMap<E::Key, LogState<E>>>
+    where
+        E: Entity + EntityAccessor + LogAccessor,
+    {
+        self.ctx.log_ctx.get(E::log_var())
     }
 
     pub fn remove<'c>(&'c mut self, k: E::Key, track: &'c E::TrackCtx) -> BoxFuture<'c, Result<()>>
