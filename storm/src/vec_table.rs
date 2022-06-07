@@ -97,6 +97,18 @@ impl<E: Entity> AsRef<Self> for VecTable<E> {
     }
 }
 
+impl<E> Clone for VecTable<E>
+where
+    E: Clone + Entity,
+{
+    fn clone(&self) -> Self {
+        Self {
+            map: self.map.clone(),
+            tag: self.tag.clone(),
+        }
+    }
+}
+
 impl<E: Entity> Default for VecTable<E> {
     #[inline]
     fn default() -> Self {
