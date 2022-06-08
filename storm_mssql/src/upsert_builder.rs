@@ -235,7 +235,7 @@ impl<T> Extend<T> for OneValue<T> {
     }
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 enum UpsertMode {
     InsertThanUpdate,
     Insert,
