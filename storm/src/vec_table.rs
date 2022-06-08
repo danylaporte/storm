@@ -104,7 +104,7 @@ where
     fn clone(&self) -> Self {
         Self {
             map: self.map.clone(),
-            tag: self.tag.clone(),
+            tag: self.tag,
         }
     }
 }
