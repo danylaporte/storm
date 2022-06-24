@@ -7,6 +7,12 @@ use tracing::instrument;
 
 pub trait ClientFactory: Send + Sync + 'static {
     fn create_client(&self) -> BoxFuture<'_, Result<Client>>;
+
+    /// Indicate if the client factory operate under a transaction. This is useful for
+    /// tests operations where all commits are rollback after the tests.
+    fn under_transaction(&self) -> bool {
+        false
+    }
 }
 
 impl ClientFactory for Config {
@@ -16,7 +22,7 @@ impl ClientFactory for Config {
         skip(self),
         err
     )]
-    fn create_client<'a>(&'a self) -> BoxFuture<'a, Result<Client>> {
+    fn create_client(&self) -> BoxFuture<'_, Result<Client>> {
         Box::pin(async move {
             // named instance only available in windows.
             let tcp = TcpStream::connect_named(self).await.map_err(Error::std)?;

@@ -1,5 +1,5 @@
 use crate::{execute::ExecuteArgs, Client, ClientFactory, Execute, Parameter, QueryRows, ToSql};
-use futures_util::TryStreamExt;
+use futures::TryStreamExt;
 use std::{
     borrow::Cow,
     fmt::Debug,
@@ -220,7 +220,18 @@ impl State {
     async fn client(&mut self) -> Result<Client> {
         match self.client.take() {
             Some(c) => Ok(c),
-            None => self.create_client().await,
+            None => {
+                if let Some(client) = self
+                    .factory
+                    .under_transaction()
+                    .then(|| self.transaction.take())
+                    .flatten()
+                {
+                    return Ok(client);
+                }
+
+                self.create_client().await
+            }
         }
     }
 

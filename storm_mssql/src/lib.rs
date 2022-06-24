@@ -10,6 +10,7 @@ mod parameter;
 mod query_rows;
 mod save_entity_part;
 mod to_sql;
+mod transaction_scoped;
 mod upsert_builder;
 
 pub use client_factory::ClientFactory;
@@ -28,6 +29,7 @@ use storm::ProviderContainer;
 pub use storm::{Error, Result};
 pub use tiberius;
 pub use to_sql::{ToSql, ToSqlNull};
+pub use transaction_scoped::TransactionScoped;
 pub use upsert_builder::UpsertBuilder;
 
 pub type Client = tiberius::Client<tokio_util::compat::Compat<tokio::net::TcpStream>>;

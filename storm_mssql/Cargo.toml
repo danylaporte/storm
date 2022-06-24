@@ -12,7 +12,7 @@ async-cell-lock = { git = "https://github.com/danylaporte/async-cell-lock.git" }
 cache_crate = { package = "cache", git = "https://github.com/danylaporte/cache.git", optional = true }
 chrono = { version = "0.4", features = ["serde"] }
 dec19x5crate = { git = "https://github.com/danylaporte/dec19x5.git", features = ["serde", "tiberius"], optional = true, package = "dec19x5" }
-futures-util = "0.3"
+futures = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 storm = { path = "../storm", features = ["mssql"] }
