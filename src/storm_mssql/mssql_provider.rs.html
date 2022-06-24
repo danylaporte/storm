@@ -262,8 +262,19 @@
 <span id="257">257</span>
 <span id="258">258</span>
 <span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">execute::ExecuteArgs</span>, <span class="ident">Client</span>, <span class="ident">ClientFactory</span>, <span class="ident">Execute</span>, <span class="ident">Parameter</span>, <span class="ident">QueryRows</span>, <span class="ident">ToSql</span>};
-<span class="kw">use</span> <span class="ident">futures_util::TryStreamExt</span>;
+<span class="kw">use</span> <span class="ident">futures::TryStreamExt</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">borrow::Cow</span>,
     <span class="ident">fmt::Debug</span>,
@@ -484,7 +495,18 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">client</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Client</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">take</span>() {
             <span class="prelude-val">Some</span>(<span class="ident">c</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">c</span>),
-            <span class="prelude-val">None</span> =&gt; <span class="self">self</span>.<span class="ident">create_client</span>().<span class="kw">await</span>,
+            <span class="prelude-val">None</span> =&gt; {
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">client</span>) <span class="op">=</span> <span class="self">self</span>
+                    .<span class="ident">factory</span>
+                    .<span class="ident">under_transaction</span>()
+                    .<span class="ident">then</span>(<span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">transaction</span>.<span class="ident">take</span>())
+                    .<span class="ident">flatten</span>()
+                {
+                    <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">client</span>);
+                }
+
+                <span class="self">self</span>.<span class="ident">create_client</span>().<span class="kw">await</span>
+            }
         }
     }
 
