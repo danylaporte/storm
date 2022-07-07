@@ -31,6 +31,11 @@ impl<E: Entity> VecTable<E> {
         self.map.keys()
     }
 
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
+
     fn update_metrics(&self)
     where
         E: CtxTypeInfo,
