@@ -19,6 +19,7 @@ mod hash_table;
 mod init;
 mod insert;
 mod is_defined;
+mod length;
 pub mod mem;
 mod one_to_many;
 pub mod prelude;
