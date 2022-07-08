@@ -27,10 +27,7 @@ async fn main() -> Result<()> {
         users.remove(1, &()).await?;
 
         let _topic = trx.tbl_of::<Topic>().await?;
-        let log = trx.commit().await?;
-
-        let mut ctx = ctx.write().await?;
-        ctx.apply_log(log);
+        trx.commit().await?.apply_log(ctx).await?;
 
         Ok(())
     })

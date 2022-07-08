@@ -37,10 +37,10 @@ pub trait LogAccessor: Entity + Sized + 'static {
 }
 
 // typed variable contexts
-pub type Logs = attached::Vars<vars::Log>;
+pub type LogsVar = attached::Vars<vars::Log>;
 pub type Vars = attached::Vars<vars::Tbl>;
 
-pub mod vars {
+pub(crate) mod vars {
     use attached::var_ctx;
 
     var_ctx!(pub Tbl);
