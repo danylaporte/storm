@@ -1,7 +1,7 @@
 [package]
 name = "storm_derive"
 edition = "2021"
-version = "0.20.1-alpha.0"
+version = "0.21.0"
 authors = ["Dany Laporte <dany_laporte@hotmail.com>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/danylaporte/storm"
