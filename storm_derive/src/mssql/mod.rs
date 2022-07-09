@@ -414,9 +414,7 @@ fn metrics(ident: &Ident, op: &str) -> (TokenStream, TokenStream) {
     let ty = LitStr::new(&ident.to_string(), ident.span());
 
     let end = quote! {
-        use storm::metrics;
-        metrics::counter!("storm.execute.time", instant.elapsed().as_nanos() as u64, "op" => #op, "type" => #ty);
-        metrics::counter!("storm.execute.count", 1, "op" => #op, "type" => #ty);
+        storm::telemetry::inc_storm_execute_time(instant, #op, #ty);
     };
 
     (start, end)

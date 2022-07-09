@@ -720,9 +720,11 @@ where
     E: Entity + EntityAccessor + LogAccessor,
     E::Tbl: Accessor + ApplyLog<Log<E>>,
 {
-    LOG_APPLIERS
-        .write()
-        .push(Box::new(EntityLogApplier::<E>(PhantomData)));
+    register_apply_log_dyn(Box::new(EntityLogApplier::<E>(PhantomData)));
+}
+
+fn register_apply_log_dyn(app: Box<dyn LogApplier>) {
+    LOG_APPLIERS.write().push(app);
 }
 
 #[static_init::dynamic]

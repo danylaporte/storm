@@ -17,6 +17,14 @@ pub enum Error {
 }
 
 impl Error {
+    #[cfg(feature = "mssql")]
+    pub fn as_mssql(&self) -> Option<&tiberius::error::Error> {
+        match self {
+            Self::Mssql(e) => Some(e),
+            _ => None,
+        }
+    }
+
     pub fn std<E: Into<StdError>>(e: E) -> Self {
         Self::Std(e.into())
     }

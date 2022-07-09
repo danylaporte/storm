@@ -28,6 +28,9 @@ pub mod provider;
 mod remove;
 mod state;
 mod tag;
+#[cfg(feature = "telemetry")]
+#[doc(hidden)]
+pub mod telemetry;
 mod transaction;
 mod vec_table;
 
