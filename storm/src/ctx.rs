@@ -540,19 +540,29 @@ impl<'a, 'b, E> Length for TblTransaction<'a, 'b, E>
 where
     E: Entity + EntityAccessor + LogAccessor,
     E::Key: Eq + Hash,
+    E::Tbl: Get<E> + Length,
 {
     fn len(&self) -> usize {
+        let mut count = self.tbl.len();
         let logs = self.ctx.log_ctx.get(E::log_var());
         if let Some(logs) = logs {
-            let mut nbr = 0;
-            logs.iter().for_each(|(_, log)| match log {
-                LogState::Inserted(_) => nbr += 1,
-                LogState::Removed => nbr -= 1,
+            logs.iter().for_each(|(id, log)| {
+                let is_present = self.get(id).is_some();
+                match log {
+                    LogState::Inserted(_) => {
+                        if !is_present {
+                            count += 1;
+                        }
+                    }
+                    LogState::Removed => {
+                        if is_present {
+                            count -= 1;
+                        }
+                    }
+                }
             });
-            nbr
-        } else {
-            0
         }
+        count
     }
 }
 

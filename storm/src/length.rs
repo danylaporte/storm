@@ -1,6 +1,6 @@
-use std::{hash::Hash, ops::Deref};
+use std::ops::Deref;
 
-use crate::{Entity, EntityAccessor, HashTable, LogAccessor, TblTransaction, VecTable};
+use crate::{Entity, HashTable, VecTable};
 
 pub trait Length {
     fn len(&self) -> usize;
