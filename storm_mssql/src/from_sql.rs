@@ -155,3 +155,11 @@ impl<'a, 'b> FromSql<'a> for Cow<'b, str> {
         }
     }
 }
+
+/// Internal used for macros
+#[doc(hidden)]
+pub fn _macro_load_field<'a, T: FromSql<'a>>(row: &'a tiberius::Row, index: usize) -> Result<T> {
+    row.try_get(index)
+        .map_err(storm::Error::Mssql)
+        .and_then(FromSql::from_sql)
+}

@@ -1,4 +1,4 @@
-use crate::{telemetry, Ctx};
+use crate::Ctx;
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use std::{
     borrow::Cow,
@@ -18,7 +18,7 @@ impl Ctx {
     #[instrument(level = "debug", skip(self))]
     pub fn gc(&mut self) {
         #[cfg(feature = "telemetry")]
-        telemetry::inc_storm_gc();
+        crate::telemetry::inc_storm_gc();
 
         self.provider.gc();
         collectables::collect(self);
@@ -63,7 +63,7 @@ impl<E> Gc for cache::CacheIsland<E> {
 
         if !was_touched && self.take().is_some() {
             #[cfg(feature = "telemetry")]
-            telemetry::inc_storm_cache_island_gc();
+            crate::telemetry::inc_storm_cache_island_gc();
         }
     }
 }

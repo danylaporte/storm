@@ -80,12 +80,14 @@ impl<'a> ToTokens for LoadFields<'a> {
                 true => SQL.to_string(),
             };
 
-            let mut map: C = storm_mssql::QueryRows::query_rows(provider, load_sql, &*params, |row| {
+            fn load_row(row: storm_mssql::tiberius::Row) -> storm::Result<(<#entity as storm::Entity>::Key, #entity)> {
                 Ok((
                     #keys,
                     #entity { #fields }
                 ))
-            }, args.use_transaction).await?;
+            }
+
+            let mut map: C = storm_mssql::QueryRows::query_rows(provider, load_sql, &*params, load_row, args.use_transaction).await?;
         });
 
         tokens.append_all(quote!(#(#errors)*));
