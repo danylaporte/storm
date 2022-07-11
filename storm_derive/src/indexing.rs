@@ -177,7 +177,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
 
 fn unref(t: &Type) -> &Type {
     match t {
-        Type::Reference(r) => unref(&*r.elem),
+        Type::Reference(r) => unref(&r.elem),
         _ => t,
     }
 }
