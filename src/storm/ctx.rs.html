@@ -734,7 +734,39 @@
 <span id="729">729</span>
 <span id="730">730</span>
 <span id="731">731</span>
+<span id="732">732</span>
+<span id="733">733</span>
+<span id="734">734</span>
+<span id="735">735</span>
+<span id="736">736</span>
+<span id="737">737</span>
+<span id="738">738</span>
+<span id="739">739</span>
+<span id="740">740</span>
+<span id="741">741</span>
+<span id="742">742</span>
+<span id="743">743</span>
+<span id="744">744</span>
+<span id="745">745</span>
+<span id="746">746</span>
+<span id="747">747</span>
+<span id="748">748</span>
+<span id="749">749</span>
+<span id="750">750</span>
+<span id="751">751</span>
+<span id="752">752</span>
+<span id="753">753</span>
+<span id="754">754</span>
+<span id="755">755</span>
+<span id="756">756</span>
+<span id="757">757</span>
+<span id="758">758</span>
+<span id="759">759</span>
+<span id="760">760</span>
+<span id="761">761</span>
+<span id="762">762</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">length::Length</span>,
     <span class="ident">provider</span>::{<span class="ident">Delete</span>, <span class="ident">LoadAll</span>, <span class="ident">LoadArgs</span>, <span class="ident">LoadOne</span>, <span class="ident">TransactionProvider</span>, <span class="ident">Upsert</span>, <span class="ident">UpsertMut</span>},
     <span class="ident">register_metrics</span>, <span class="ident">Accessor</span>, <span class="ident">ApplyLog</span>, <span class="ident">AsRefAsync</span>, <span class="ident">AsyncTryFrom</span>, <span class="ident">BoxFuture</span>, <span class="ident">CtxTypeInfo</span>, <span class="ident">Entity</span>,
     <span class="ident">EntityAccessor</span>, <span class="ident">Gc</span>, <span class="ident">GcCtx</span>, <span class="ident">Get</span>, <span class="ident">HashTable</span>, <span class="ident">Insert</span>, <span class="ident">InsertMut</span>, <span class="ident">Log</span>, <span class="ident">LogAccessor</span>, <span class="ident">LogState</span>, <span class="ident">Logs</span>,
@@ -1268,6 +1300,36 @@
             <span class="prelude-val">Some</span>(<span class="ident">LogState::Removed</span>) =&gt; <span class="prelude-val">None</span>,
             <span class="prelude-val">None</span> =&gt; <span class="self">self</span>.<span class="ident">tbl</span>.<span class="ident">get</span>(<span class="ident">k</span>),
         }
+    }
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span> <span class="ident">Length</span> <span class="kw">for</span> <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
+    <span class="ident">E::Key</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
+    <span class="ident">E::Tbl</span>: <span class="ident">Get</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Length</span>,
+{
+    <span class="kw">fn</span> <span class="ident">len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">count</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">tbl</span>.<span class="ident">len</span>();
+        <span class="kw">let</span> <span class="ident">logs</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ctx</span>.<span class="ident">log_ctx</span>.<span class="ident">get</span>(<span class="ident">E::log_var</span>());
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">logs</span>) <span class="op">=</span> <span class="ident">logs</span> {
+            <span class="ident">logs</span>.<span class="ident">iter</span>().<span class="ident">for_each</span>(<span class="op">|</span>(<span class="ident">id</span>, <span class="ident">log</span>)<span class="op">|</span> {
+                <span class="kw">let</span> <span class="ident">is_present</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get</span>(<span class="ident">id</span>).<span class="ident">is_some</span>();
+                <span class="kw">match</span> <span class="ident">log</span> {
+                    <span class="ident">LogState::Inserted</span>(<span class="kw">_</span>) =&gt; {
+                        <span class="kw">if</span> <span class="op">!</span><span class="ident">is_present</span> {
+                            <span class="ident">count</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+                        }
+                    }
+                    <span class="ident">LogState::Removed</span> =&gt; {
+                        <span class="kw">if</span> <span class="ident">is_present</span> {
+                            <span class="ident">count</span> <span class="op">-</span><span class="op">=</span> <span class="number">1</span>;
+                        }
+                    }
+                }
+            });
+        }
+        <span class="ident">count</span>
     }
 }
 
