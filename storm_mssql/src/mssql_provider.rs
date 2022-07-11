@@ -1,17 +1,19 @@
 use crate::{execute::ExecuteArgs, Client, ClientFactory, Execute, Parameter, QueryRows, ToSql};
-use futures::TryStreamExt;
+use futures::{Stream, StreamExt, TryStreamExt};
 use std::{
     borrow::Cow,
     fmt::Debug,
+    pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering::Relaxed},
         Arc,
     },
+    task::{Context, Poll},
 };
-use storm::{provider, BoxFuture, Error, Result};
-use tiberius::{QueryItem, Row};
+use storm::{provider, BoxFuture, Error, InstrumentErr, Result};
+use tiberius::Row;
 use tokio::sync::{Mutex, MutexGuard};
-use tracing::{instrument, Instrument};
+use tracing::{debug_span, instrument, Instrument, Span};
 
 pub struct MssqlProvider(Arc<Inner>);
 
@@ -72,11 +74,7 @@ impl Execute for MssqlProvider {
                 client_ref = &mut guard.client;
             };
 
-            let count = client
-                .execute(statement, &output)
-                .await
-                .map_err(Error::std)?
-                .total();
+            let count = client.execute(statement, &output).await?.total();
 
             *client_ref = Some(client);
             Ok(count)
@@ -109,7 +107,7 @@ impl provider::Provider for MssqlProvider {
             async move {
                 p.state().await;
             }
-            .instrument(tracing::debug_span!(parent: span, "rollback_transaction")),
+            .instrument(debug_span!(parent: span, "rollback_transaction")),
         );
     }
 
@@ -119,12 +117,6 @@ impl provider::Provider for MssqlProvider {
 }
 
 impl QueryRows for MssqlProvider {
-    #[instrument(
-        level = "debug",
-        name = "MssqlProvider::query_rows",
-        skip(self, mapper, params),
-        err
-    )]
     fn query_rows<'a, S, M, R, C>(
         &'a self,
         statement: S,
@@ -138,51 +130,114 @@ impl QueryRows for MssqlProvider {
         R: Send,
         S: ?Sized + Debug + for<'b> Into<Cow<'b, str>> + Send + 'a,
     {
-        Box::pin(async move {
-            let mut intermediate = Vec::new();
-            let mut output = Vec::new();
+        let sql = statement.into();
+        let span = instrument_query_rows(&sql);
 
-            adapt_params(params, &mut intermediate, &mut output);
+        Box::pin(
+            async move {
+                let mut conn = QueryConn::new(self, use_transaction).await?;
+                let mut query = conn.query(sql, params).await?;
+                let mut vec = Vec::with_capacity(10);
+                let mut coll = C::default();
 
-            let mut coll = C::default();
-            let mut vec = Vec::with_capacity(10);
-            let mut guard = self.state().await;
+                while let Some(row) = query.try_next().await? {
+                    vec.push(mapper(row)?);
 
-            let mut client = match use_transaction {
-                true => guard.transaction().await,
-                false => guard.client().await,
-            }?;
-
-            let mut results = client.query(statement, &output).await.map_err(Error::std)?;
-
-            while let Some(item) = results.try_next().await.map_err(Error::std)? {
-                let row = match item {
-                    QueryItem::Metadata(_) => continue,
-                    QueryItem::Row(row) => row,
-                };
-
-                vec.push(mapper(row)?);
-
-                if vec.len() == 10 {
-                    #[allow(clippy::iter_with_drain)]
-                    coll.extend(vec.drain(..));
+                    if vec.len() == 10 {
+                        #[allow(clippy::iter_with_drain)]
+                        coll.extend(vec.drain(..));
+                    }
                 }
+
+                if !vec.is_empty() {
+                    coll.extend(vec);
+                }
+
+                query.complete().await?;
+                conn.complete();
+
+                Ok(coll)
             }
+            .instrument_err(span),
+        )
+    }
+}
 
-            if !vec.is_empty() {
-                coll.extend(vec);
-            }
+fn instrument_query_rows(sql: &str) -> Span {
+    debug_span!(
+        "MssqlProvider::query_rows",
+        sql,
+        err = tracing::field::Empty
+    )
+}
 
-            // complete the work (making sure the client can take another query).
-            results.into_results().await.map_err(Error::std)?;
+struct QueryConn<'a> {
+    client: Client,
+    guard: MutexGuard<'a, State>,
+    use_transaction: bool,
+}
 
-            match use_transaction {
-                true => guard.transaction = Some(client),
-                false => guard.client = Some(client),
-            }
+impl<'a> QueryConn<'a> {
+    async fn new(provider: &'a MssqlProvider, use_transaction: bool) -> Result<QueryConn<'a>> {
+        let mut guard = provider.state().await;
 
-            Ok(coll)
+        let client = match use_transaction {
+            true => guard.transaction().await,
+            false => guard.client().await,
+        }?;
+
+        Ok(Self {
+            client,
+            guard,
+            use_transaction,
         })
+    }
+
+    fn complete(mut self) {
+        match self.use_transaction {
+            true => self.guard.transaction = Some(self.client),
+            false => self.guard.client = Some(self.client),
+        }
+    }
+
+    async fn query<'b>(
+        &'b mut self,
+        sql: Cow<'b, str>,
+        params: &'b [&'b (dyn ToSql)],
+    ) -> Result<QueryStream<'b>> {
+        let mut intermediate = Vec::new();
+        let mut output = Vec::new();
+
+        adapt_params(params, &mut intermediate, &mut output);
+
+        let stream = self.client.query(sql, &output[..]).await?;
+
+        Ok(QueryStream(stream))
+    }
+}
+
+struct QueryStream<'a>(tiberius::QueryStream<'a>);
+
+impl<'a> QueryStream<'a> {
+    async fn complete(self) -> Result<()> {
+        self.0.into_results().await?;
+        Ok(())
+    }
+}
+
+impl<'a> Stream for QueryStream<'a> {
+    type Item = Result<tiberius::Row>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        loop {
+            return match self.0.poll_next_unpin(cx) {
+                Poll::Pending => Poll::Pending,
+                Poll::Ready(Some(Ok(tiberius::QueryItem::Metadata(_)))) => continue,
+                Poll::Ready(Some(Ok(tiberius::QueryItem::Row(r)))) => Poll::Ready(Some(Ok(r))),
+                Poll::Ready(Some(Err(e))) => Poll::Ready(Some(Err(e.into()))),
+                Poll::Ready(None) => Poll::Ready(None),
+            };
+        }
     }
 }
 

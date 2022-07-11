@@ -28,11 +28,9 @@ impl ClientFactory for Config {
             let tcp = TcpStream::connect_named(self).await.map_err(Error::std)?;
             tcp.set_nodelay(true).map_err(Error::std)?;
 
-            let client = Client::connect(self.clone(), tcp.compat_write())
+            Client::connect(self.clone(), tcp.compat_write())
                 .await
-                .map_err(Error::std)?;
-
-            Ok(client)
+                .map_err(Into::into)
         })
     }
 }

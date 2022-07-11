@@ -127,7 +127,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
 
     quote! {
         fn #instrument_ident(args: &storm::provider::LoadArgs) -> tracing::Span {
-            tracing::debug_span!("load_all", args = ?args, table = #table_name)
+            tracing::debug_span!("load_all", args = ?args, table = #table_name, err = tracing::field::Empty)
         }
 
         impl<C, FILTER> storm::provider::LoadAll<#ident, FILTER, C> for storm::provider::ProviderContainer
@@ -138,7 +138,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             fn load_all_with_args<'a>(&'a self, filter: &'a FILTER, args: storm::provider::LoadArgs) -> storm::BoxFuture<'a, storm::Result<C>> {
                 let span = #instrument_ident(&args);
 
-                Box::pin(tracing::Instrument::instrument(async move {
+                Box::pin(storm::InstrumentErr::instrument_err(async move {
                     let provider: &storm_mssql::MssqlProvider = self.provide(#provider).await?;
                     let (sql, params) = storm_mssql::FilterSql::filter_sql(filter, 0);
                     #metrics_start
