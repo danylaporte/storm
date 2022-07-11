@@ -12,7 +12,7 @@ pub trait Entity: Send + Sync + 'static {
         _ctx: &'a mut CtxTransaction,
         _tracker: &'a Self::TrackCtx,
     ) -> BoxFuture<'a, Result<()>> {
-        Box::pin(std::future::ready(Ok(())))
+        box_future_ok()
     }
 
     fn track_remove<'a>(
@@ -21,7 +21,7 @@ pub trait Entity: Send + Sync + 'static {
         _ctx: &'a mut CtxTransaction,
         _tracker: &'a Self::TrackCtx,
     ) -> BoxFuture<'a, Result<()>> {
-        Box::pin(std::future::ready(Ok(())))
+        box_future_ok()
     }
 }
 
@@ -40,4 +40,8 @@ where
 {
     type Key = T::Key;
     type TrackCtx = T::TrackCtx;
+}
+
+fn box_future_ok() -> BoxFuture<'static, Result<()>> {
+    Box::pin(std::future::ready(Ok(())))
 }

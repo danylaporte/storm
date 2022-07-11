@@ -173,7 +173,7 @@ impl Rec {
         Some(&self.provider.get()?.cast_provider)
     }
 
-    async fn get_or_init(&self, lru: &Lru) -> Result<&CastProvider> {
+    async fn get_or_init<'a>(&'a self, lru: &'a Lru) -> Result<&'a CastProvider> {
         let provider_rec = self
             .provider
             .get_or_try_init::<_, Error>(async {

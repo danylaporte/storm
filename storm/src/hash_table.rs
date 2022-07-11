@@ -43,10 +43,7 @@ impl<E: Entity> HashTable<E> {
         E: CtxTypeInfo,
     {
         #[cfg(feature = "telemetry")]
-        {
-            use conv::ValueFrom;
-            metrics::gauge!("storm.table.rows", f64::value_from(self.len()).unwrap_or(0.0), "type" => E::NAME);
-        }
+        crate::telemetry::update_storm_table_rows(self.len(), E::NAME);
     }
 
     #[inline]

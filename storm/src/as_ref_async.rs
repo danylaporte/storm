@@ -11,6 +11,6 @@ where
     U: AsRefAsync<T>,
 {
     fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ T>> {
-        (&**self).as_ref_async()
+        (**self).as_ref_async()
     }
 }

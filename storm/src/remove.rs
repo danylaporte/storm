@@ -7,7 +7,7 @@ pub trait Remove<E: Entity> {
         &'a mut self,
         keys: K,
         tracker: &'a E::TrackCtx,
-    ) -> BoxFuture<'a, Result<()>>
+    ) -> BoxFuture<'a, Result<usize>>
     where
         K: 'a,
         K: IntoIterator<Item = E::Key> + Send,
@@ -15,11 +15,14 @@ pub trait Remove<E: Entity> {
         Self: Send,
     {
         Box::pin(async move {
+            let mut count = 0;
+
             for key in keys {
                 self.remove(key, tracker).await?;
+                count += 1;
             }
 
-            Ok(())
+            Ok(count)
         })
     }
 }

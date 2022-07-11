@@ -19,7 +19,9 @@ mod hash_table;
 mod init;
 mod insert;
 mod is_defined;
+mod iterator_ext;
 mod length;
+mod logs;
 pub mod mem;
 mod one_to_many;
 pub mod prelude;
@@ -27,6 +29,9 @@ pub mod provider;
 mod remove;
 mod state;
 mod tag;
+#[cfg(feature = "telemetry")]
+#[doc(hidden)]
+pub mod telemetry;
 mod transaction;
 mod vec_table;
 
@@ -52,6 +57,8 @@ pub use hash_table::HashTable;
 pub use init::Init;
 pub use insert::*;
 pub use is_defined::IsDefined;
+pub use iterator_ext::*;
+pub use logs::Logs;
 #[cfg(feature = "telemetry")]
 pub use metrics;
 pub use once_cell::sync::OnceCell;

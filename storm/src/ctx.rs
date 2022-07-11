@@ -3,7 +3,7 @@ use crate::{
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
     register_metrics, Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity,
     EntityAccessor, Gc, GcCtx, Get, HashTable, Insert, InsertMut, Log, LogAccessor, LogState, Logs,
-    NotifyTag, ProviderContainer, Remove, Result, Tag, Transaction, Vars, VecTable,
+    LogsVar, NotifyTag, ProviderContainer, Remove, Result, Tag, Transaction, Vars, VecTable,
 };
 use fxhash::FxHashMap;
 use parking_lot::RwLock;
@@ -273,7 +273,7 @@ where
 }
 
 pub struct CtxTransaction<'a> {
-    log_ctx: Logs,
+    log_ctx: LogsVar,
     provider: TransactionProvider<'a>,
     pub ctx: &'a Ctx,
 }
@@ -283,7 +283,7 @@ impl<'a> CtxTransaction<'a> {
     pub fn commit(self) -> BoxFuture<'a, Result<Logs>> {
         Box::pin(async move {
             self.provider.commit().await?;
-            Ok(self.log_ctx)
+            Ok(Logs(self.log_ctx))
         })
     }
 
@@ -293,39 +293,7 @@ impl<'a> CtxTransaction<'a> {
     }
 
     #[instrument(level = "debug", skip(self, k, v), err)]
-    pub async fn insert<'b, E>(&'b mut self, k: E::Key, v: E, track: &'b E::TrackCtx) -> Result<()>
-    where
-        Ctx: AsRefAsync<E::Tbl>,
-        E: Entity + EntityAccessor + LogAccessor,
-        TblTransaction<'a, 'b, E>: Insert<E>,
-        'a: 'b,
-    {
-        self.tbl_of::<E>().await?.insert(k, v, track).await?;
-        Ok(())
-    }
-
-    #[instrument(level = "debug", skip(self, iter), err)]
-    pub fn insert_all<'b, E, I>(
-        &'b mut self,
-        iter: I,
-        track: &'b E::TrackCtx,
-    ) -> BoxFuture<'b, Result<()>>
-    where
-        Ctx: AsRefAsync<E::Tbl>,
-        E: Entity + EntityAccessor + LogAccessor,
-        I: IntoIterator<Item = (E::Key, E)> + Send + 'b,
-        I::IntoIter: Send,
-        TblTransaction<'a, 'b, E>: Insert<E>,
-        'a: 'b,
-    {
-        Box::pin(async move {
-            self.tbl_of::<E>().await?.insert_all(iter, track).await?;
-            Ok(())
-        })
-    }
-
-    #[instrument(level = "debug", skip(self, k, v), err)]
-    pub fn insert_mut<'b, E>(
+    pub fn insert<'b, E>(
         &'b mut self,
         k: E::Key,
         v: E,
@@ -334,13 +302,43 @@ impl<'a> CtxTransaction<'a> {
     where
         Ctx: AsRefAsync<E::Tbl>,
         E: Entity + EntityAccessor + LogAccessor,
+        TblTransaction<'a, 'b, E>: Insert<E>,
+        'a: 'b,
+    {
+        Box::pin(async move { self.tbl_of::<E>().await?.insert(k, v, track).await })
+    }
+
+    #[instrument(level = "debug", skip(self, iter), err)]
+    pub fn insert_all<'b, E, I>(
+        &'b mut self,
+        iter: I,
+        track: &'b E::TrackCtx,
+    ) -> BoxFuture<'b, Result<usize>>
+    where
+        Ctx: AsRefAsync<E::Tbl>,
+        E: Entity + EntityAccessor + LogAccessor,
+        I: IntoIterator<Item = (E::Key, E)> + Send + 'b,
+        I::IntoIter: Send,
+        TblTransaction<'a, 'b, E>: Insert<E>,
+        'a: 'b,
+    {
+        Box::pin(async move { self.tbl_of::<E>().await?.insert_all(iter, track).await })
+    }
+
+    #[instrument(level = "debug", skip(self, k, v), err)]
+    pub fn insert_mut<'b, E>(
+        &'b mut self,
+        k: E::Key,
+        v: E,
+        track: &'b E::TrackCtx,
+    ) -> BoxFuture<'b, Result<E::Key>>
+    where
+        Ctx: AsRefAsync<E::Tbl>,
+        E: Entity + EntityAccessor + LogAccessor,
         TblTransaction<'a, 'b, E>: InsertMut<E>,
         'a: 'b,
     {
-        Box::pin(async move {
-            self.tbl_of::<E>().await?.insert_mut(k, v, track).await?;
-            Ok(())
-        })
+        Box::pin(async move { self.tbl_of::<E>().await?.insert_mut(k, v, track).await })
     }
 
     #[instrument(level = "debug", skip(self, iter,), err)]
@@ -348,7 +346,7 @@ impl<'a> CtxTransaction<'a> {
         &'b mut self,
         iter: I,
         track: &'b E::TrackCtx,
-    ) -> BoxFuture<'b, Result<()>>
+    ) -> BoxFuture<'b, Result<usize>>
     where
         Ctx: AsRefAsync<E::Tbl>,
         E: Entity + EntityAccessor + LogAccessor,
@@ -357,13 +355,7 @@ impl<'a> CtxTransaction<'a> {
         TblTransaction<'a, 'b, E>: InsertMut<E>,
         'a: 'b,
     {
-        Box::pin(async move {
-            self.tbl_of::<E>()
-                .await?
-                .insert_mut_all(iter, track)
-                .await?;
-            Ok(())
-        })
+        Box::pin(async move { self.tbl_of::<E>().await?.insert_mut_all(iter, track).await })
     }
 
     #[inline]
@@ -375,15 +367,18 @@ impl<'a> CtxTransaction<'a> {
     }
 
     #[instrument(level = "debug", skip(self, k), err)]
-    pub async fn remove<'b, E>(&'b mut self, k: E::Key, track: &'b E::TrackCtx) -> Result<()>
+    pub fn remove<'b, E>(
+        &'b mut self,
+        k: E::Key,
+        track: &'b E::TrackCtx,
+    ) -> BoxFuture<'b, Result<()>>
     where
         Ctx: AsRefAsync<E::Tbl>,
         E: Entity + EntityAccessor + LogAccessor,
         TblTransaction<'a, 'b, E>: Remove<E>,
         'a: 'b,
     {
-        self.tbl_of::<E>().await?.remove(k, track).await?;
-        Ok(())
+        Box::pin(async move { self.tbl_of::<E>().await?.remove(k, track).await })
     }
 
     #[instrument(level = "debug", skip(self, iter), err)]
@@ -391,7 +386,7 @@ impl<'a> CtxTransaction<'a> {
         &'b mut self,
         iter: I,
         track: &'b E::TrackCtx,
-    ) -> BoxFuture<'b, Result<()>>
+    ) -> BoxFuture<'b, Result<usize>>
     where
         Ctx: AsRefAsync<E::Tbl>,
         E: Entity + EntityAccessor + LogAccessor,
@@ -400,10 +395,7 @@ impl<'a> CtxTransaction<'a> {
         TblTransaction<'a, 'b, E>: Remove<E>,
         'a: 'b,
     {
-        Box::pin(async move {
-            self.tbl_of::<E>().await?.remove_all(iter, track).await?;
-            Ok(())
-        })
+        Box::pin(async move { self.tbl_of::<E>().await?.remove_all(iter, track).await })
     }
 
     pub fn tbl_of<'b, E>(&'b mut self) -> BoxFuture<'b, Result<TblTransaction<'a, 'b, E>>>
@@ -463,7 +455,7 @@ where
         &'c mut self,
         iter: I,
         track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<()>>
+    ) -> BoxFuture<'c, Result<usize>>
     where
         I: IntoIterator<Item = (E::Key, E)> + Send + 'a,
         I::IntoIter: Send,
@@ -488,7 +480,7 @@ where
         &'c mut self,
         iter: I,
         track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<()>>
+    ) -> BoxFuture<'c, Result<usize>>
     where
         I: IntoIterator<Item = (E::Key, E)> + Send + 'a,
         I::IntoIter: Send,
@@ -515,7 +507,7 @@ where
         &'c mut self,
         keys: K,
         track: &'c E::TrackCtx,
-    ) -> BoxFuture<'_, Result<()>>
+    ) -> BoxFuture<'_, Result<usize>>
     where
         Self: Remove<E>,
         K: IntoIterator<Item = E::Key> + Send + 'c,
@@ -666,7 +658,7 @@ impl<'a> ApplyLog<Logs> for async_cell_lock::QueueRwLockWriteGuard<'a, Ctx> {
         let mut changed = false;
 
         for applier in &*appliers {
-            changed = applier.apply(&mut self.vars, &mut log) || changed;
+            changed = applier.apply(&mut self.vars, &mut log.0) || changed;
         }
 
         changed
@@ -715,7 +707,7 @@ where
 }
 
 trait LogApplier: Send + Sync {
-    fn apply(&self, vars: &mut Vars, log_ctx: &mut Logs) -> bool;
+    fn apply(&self, vars: &mut Vars, log_ctx: &mut LogsVar) -> bool;
 }
 
 impl<E> LogApplier for EntityLogApplier<E>
@@ -723,7 +715,7 @@ where
     E: Entity + EntityAccessor + LogAccessor,
     E::Tbl: Accessor + ApplyLog<Log<E>>,
 {
-    fn apply(&self, vars: &mut Vars, log_ctx: &mut Logs) -> bool {
+    fn apply(&self, vars: &mut Vars, log_ctx: &mut LogsVar) -> bool {
         if let Some(log) = log_ctx.replace(E::log_var(), None) {
             if let Some(tbl) = vars.get_mut(E::entity_var()) {
                 if tbl.apply_log(log) {
@@ -739,7 +731,7 @@ where
 
 struct EntityLogApplier<E: Entity + EntityAccessor + LogAccessor>(PhantomData<E>);
 
-fn log_mut<E: Entity + LogAccessor>(logs: &mut Logs) -> &mut Log<E> {
+fn log_mut<E: Entity + LogAccessor>(logs: &mut LogsVar) -> &mut Log<E> {
     logs.get_or_init_mut(E::log_var(), Default::default)
 }
 
@@ -749,9 +741,11 @@ where
     E: Entity + EntityAccessor + LogAccessor,
     E::Tbl: Accessor + ApplyLog<Log<E>>,
 {
-    LOG_APPLIERS
-        .write()
-        .push(Box::new(EntityLogApplier::<E>(PhantomData)));
+    register_apply_log_dyn(Box::new(EntityLogApplier::<E>(PhantomData)));
+}
+
+fn register_apply_log_dyn(app: Box<dyn LogApplier>) {
+    LOG_APPLIERS.write().push(app);
 }
 
 #[static_init::dynamic]

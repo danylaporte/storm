@@ -106,6 +106,10 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let provider = attrs.provider();
     let (metrics_start, metrics_end) = metrics(ident, "load");
     let diff = apply_entity_diff(diff, ident);
+    let instrument_ident = Ident::new(
+        &format!("{}_load_all_inst", ident.to_string().to_snake_case()),
+        ident.span(),
+    );
 
     let test = if attrs.no_test {
         quote!()
@@ -122,14 +126,19 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     };
 
     quote! {
+        fn #instrument_ident(args: &storm::provider::LoadArgs) -> tracing::Span {
+            tracing::debug_span!("load_all", args = ?args, table = #table_name)
+        }
+
         impl<C, FILTER> storm::provider::LoadAll<#ident, FILTER, C> for storm::provider::ProviderContainer
         where
             C: Default + Extend<(<#ident as storm::Entity>::Key, #ident)> #translated_where + Send + 'static,
             FILTER: storm_mssql::FilterSql,
         {
-            #[tracing::instrument(name = "load_all", level = "debug", skip(self, filter), fields(table = #table_name))]
             fn load_all_with_args<'a>(&'a self, filter: &'a FILTER, args: storm::provider::LoadArgs) -> storm::BoxFuture<'a, storm::Result<C>> {
-                Box::pin(async move {
+                let span = #instrument_ident(&args);
+
+                Box::pin(tracing::Instrument::instrument(async move {
                     let provider: &storm_mssql::MssqlProvider = self.provide(#provider).await?;
                     let (sql, params) = storm_mssql::FilterSql::filter_sql(filter, 0);
                     #metrics_start
@@ -137,7 +146,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
                     #translated
                     #metrics_end
                     Ok(map)
-                })
+                }, span))
             }
         }
 
@@ -414,9 +423,7 @@ fn metrics(ident: &Ident, op: &str) -> (TokenStream, TokenStream) {
     let ty = LitStr::new(&ident.to_string(), ident.span());
 
     let end = quote! {
-        use storm::metrics;
-        metrics::counter!("storm.execute.time", instant.elapsed().as_nanos() as u64, "op" => #op, "type" => #ty);
-        metrics::counter!("storm.execute.count", 1, "op" => #op, "type" => #ty);
+        storm::telemetry::inc_storm_execute_time(instant, #op, #ty);
     };
 
     (start, end)
@@ -497,7 +504,7 @@ fn load_diff_field(diff: &mut Option<Vec<TokenStream>>, field: &Ident, enum_fiel
 
 fn read_row(column_index: usize) -> TokenStream {
     let l = LitInt::new(&column_index.to_string(), Span::call_site());
-    quote!(storm_mssql::FromSql::from_sql(row.try_get(#l).map_err(storm::Error::Mssql)?)?)
+    quote!(storm_mssql::_macro_load_field(&row, #l)?)
 }
 
 fn enum_fields_impl(

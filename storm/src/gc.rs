@@ -18,7 +18,7 @@ impl Ctx {
     #[instrument(level = "debug", skip(self))]
     pub fn gc(&mut self) {
         #[cfg(feature = "telemetry")]
-        metrics::counter!("storm.gc", 1);
+        crate::telemetry::inc_storm_gc();
 
         self.provider.gc();
         collectables::collect(self);
@@ -63,7 +63,7 @@ impl<E> Gc for cache::CacheIsland<E> {
 
         if !was_touched && self.take().is_some() {
             #[cfg(feature = "telemetry")]
-            metrics::counter!("storm.cache.island.gc", 1);
+            crate::telemetry::inc_storm_cache_island_gc();
         }
     }
 }
@@ -263,6 +263,10 @@ pub mod collectables {
     where
         F: Fn(&mut Ctx) + Send + Sync + 'static,
     {
-        FUNCS.write().push(Box::new(f));
+        register_impl(Box::new(f));
+    }
+
+    fn register_impl(f: Box<dyn Fn(&mut Ctx) + Send + Sync>) {
+        FUNCS.write().push(f);
     }
 }
