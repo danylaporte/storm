@@ -20,6 +20,7 @@ mod init;
 mod insert;
 mod is_defined;
 mod iterator_ext;
+mod length;
 mod logs;
 pub mod mem;
 mod one_to_many;

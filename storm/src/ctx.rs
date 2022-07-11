@@ -1,4 +1,5 @@
 use crate::{
+    length::Length,
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
     register_metrics, Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity,
     EntityAccessor, Gc, GcCtx, Get, HashTable, Insert, InsertMut, Log, LogAccessor, LogState, Logs,
@@ -532,6 +533,36 @@ where
             Some(LogState::Removed) => None,
             None => self.tbl.get(k),
         }
+    }
+}
+
+impl<'a, 'b, E> Length for TblTransaction<'a, 'b, E>
+where
+    E: Entity + EntityAccessor + LogAccessor,
+    E::Key: Eq + Hash,
+    E::Tbl: Get<E> + Length,
+{
+    fn len(&self) -> usize {
+        let mut count = self.tbl.len();
+        let logs = self.ctx.log_ctx.get(E::log_var());
+        if let Some(logs) = logs {
+            logs.iter().for_each(|(id, log)| {
+                let is_present = self.get(id).is_some();
+                match log {
+                    LogState::Inserted(_) => {
+                        if !is_present {
+                            count += 1;
+                        }
+                    }
+                    LogState::Removed => {
+                        if is_present {
+                            count -= 1;
+                        }
+                    }
+                }
+            });
+        }
+        count
     }
 }
 
