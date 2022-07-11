@@ -223,9 +223,6 @@
 <span id="218">218</span>
 <span id="219">219</span>
 <span id="220">220</span>
-<span id="221">221</span>
-<span id="222">222</span>
-<span id="223">223</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">provider::LoadAll</span>, <span class="ident">Accessor</span>, <span class="ident">ApplyLog</span>, <span class="ident">BoxFuture</span>, <span class="ident">CtxTypeInfo</span>, <span class="ident">Deps</span>, <span class="ident">Entity</span>, <span class="ident">EntityAccessor</span>,
     <span class="ident">EntityOf</span>, <span class="ident">Gc</span>, <span class="ident">GcCtx</span>, <span class="ident">Get</span>, <span class="ident">GetMut</span>, <span class="ident">Init</span>, <span class="ident">Log</span>, <span class="ident">LogState</span>, <span class="ident">NotifyTag</span>, <span class="prelude-ty">Result</span>, <span class="ident">Tag</span>, <span class="ident">TblVar</span>,
@@ -271,10 +268,7 @@
         <span class="ident">E</span>: <span class="ident">CtxTypeInfo</span>,
     {
         <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;telemetry&quot;</span>)]</span>
-        {
-            <span class="kw">use</span> <span class="ident">conv::ValueFrom</span>;
-            <span class="macro">metrics::gauge!</span>(<span class="string">&quot;storm.table.rows&quot;</span>, <span class="ident">f64::value_from</span>(<span class="self">self</span>.<span class="ident">len</span>()).<span class="ident">unwrap_or</span>(<span class="number">0.0</span>), <span class="string">&quot;type&quot;</span> =&gt; <span class="ident">E::NAME</span>);
-        }
+        <span class="ident"><span class="kw">crate</span>::telemetry::update_storm_table_rows</span>(<span class="self">self</span>.<span class="ident">len</span>(), <span class="ident">E::NAME</span>);
     }
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
@@ -450,5 +444,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.61.0 (fe5b13d68 2022-05-18)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0 (a8314ef7d 2022-06-27)" ></div>
 </body></html>

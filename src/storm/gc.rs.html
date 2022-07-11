@@ -271,6 +271,10 @@
 <span id="266">266</span>
 <span id="267">267</span>
 <span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::Ctx</span>;
 <span class="kw">use</span> <span class="ident">rayon::iter</span>::{<span class="ident">IntoParallelRefMutIterator</span>, <span class="ident">ParallelIterator</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -291,7 +295,7 @@
     <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">skip</span>(<span class="self">self</span>))]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">gc</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
         <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;telemetry&quot;</span>)]</span>
-        <span class="macro">metrics::counter!</span>(<span class="string">&quot;storm.gc&quot;</span>, <span class="number">1</span>);
+        <span class="ident"><span class="kw">crate</span>::telemetry::inc_storm_gc</span>();
 
         <span class="self">self</span>.<span class="ident">provider</span>.<span class="ident">gc</span>();
         <span class="ident">collectables::collect</span>(<span class="self">self</span>);
@@ -336,7 +340,7 @@
 
         <span class="kw">if</span> <span class="op">!</span><span class="ident">was_touched</span> <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">take</span>().<span class="ident">is_some</span>() {
             <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;telemetry&quot;</span>)]</span>
-            <span class="macro">metrics::counter!</span>(<span class="string">&quot;storm.cache.island.gc&quot;</span>, <span class="number">1</span>);
+            <span class="ident"><span class="kw">crate</span>::telemetry::inc_storm_cache_island_gc</span>();
         }
     }
 }
@@ -536,9 +540,13 @@
     <span class="kw">where</span>
         <span class="ident">F</span>: <span class="ident">Fn</span>(<span class="kw-2">&amp;mut</span> <span class="ident">Ctx</span>) <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
     {
-        <span class="ident">FUNCS</span>.<span class="ident">write</span>().<span class="ident">push</span>(<span class="ident">Box::new</span>(<span class="ident">f</span>));
+        <span class="ident">register_impl</span>(<span class="ident">Box::new</span>(<span class="ident">f</span>));
+    }
+
+    <span class="kw">fn</span> <span class="ident">register_impl</span>(<span class="ident">f</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Fn</span>(<span class="kw-2">&amp;mut</span> <span class="ident">Ctx</span>) <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>) {
+        <span class="ident">FUNCS</span>.<span class="ident">write</span>().<span class="ident">push</span>(<span class="ident">f</span>);
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.61.0 (fe5b13d68 2022-05-18)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0 (a8314ef7d 2022-06-27)" ></div>
 </body></html>

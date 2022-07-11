@@ -56,6 +56,16 @@
 <span id="51">51</span>
 <span id="52">52</span>
 <span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">BoxFuture</span>, <span class="ident">Entity</span>, <span class="prelude-ty">Result</span>};
 
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Insert</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">Entity</span><span class="op">&gt;</span> {
@@ -66,18 +76,25 @@
         <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">E::TrackCtx</span>,
     ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>;
 
-    <span class="kw">fn</span> <span class="ident">insert_all</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">I</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">I</span>, <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">E::TrackCtx</span>) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>
+    <span class="kw">fn</span> <span class="ident">insert_all</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">I</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">iter</span>: <span class="ident">I</span>,
+        <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">E::TrackCtx</span>,
+    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E::Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
         <span class="ident">I::IntoIter</span>: <span class="ident">Send</span>,
         <span class="self">Self</span>: <span class="ident">Send</span>,
     {
         <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">count</span> <span class="op">=</span> <span class="number">0</span>;
+
             <span class="kw">for</span> (<span class="ident">k</span>, <span class="ident">v</span>) <span class="kw">in</span> <span class="ident">iter</span> {
                 <span class="self">self</span>.<span class="ident">insert</span>(<span class="ident">k</span>, <span class="ident">v</span>, <span class="ident">track</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+                <span class="ident">count</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
             }
 
-            <span class="prelude-val">Ok</span>(())
+            <span class="prelude-val">Ok</span>(<span class="ident">count</span>)
         })
     }
 }
@@ -87,28 +104,31 @@
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">k</span>: <span class="ident">E::Key</span>,
         <span class="ident">v</span>: <span class="ident">E</span>,
-        <span class="ident">tracker</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">E::TrackCtx</span>,
+        <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">E::TrackCtx</span>,
     ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">E::Key</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
     <span class="kw">fn</span> <span class="ident">insert_mut_all</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">I</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">iter</span>: <span class="ident">I</span>,
-        <span class="ident">tracker</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">E::TrackCtx</span>,
-    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>
+        <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">E::TrackCtx</span>,
+    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E::Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
         <span class="ident">I::IntoIter</span>: <span class="ident">Send</span>,
         <span class="self">Self</span>: <span class="ident">Send</span>,
     {
         <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">count</span> <span class="op">=</span> <span class="number">0</span>;
+
             <span class="kw">for</span> (<span class="ident">k</span>, <span class="ident">v</span>) <span class="kw">in</span> <span class="ident">iter</span> {
-                <span class="self">self</span>.<span class="ident">insert_mut</span>(<span class="ident">k</span>, <span class="ident">v</span>, <span class="ident">tracker</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+                <span class="self">self</span>.<span class="ident">insert_mut</span>(<span class="ident">k</span>, <span class="ident">v</span>, <span class="ident">track</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+                <span class="ident">count</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
             }
 
-            <span class="prelude-val">Ok</span>(())
+            <span class="prelude-val">Ok</span>(<span class="ident">count</span>)
         })
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.61.0 (fe5b13d68 2022-05-18)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0 (a8314ef7d 2022-06-27)" ></div>
 </body></html>

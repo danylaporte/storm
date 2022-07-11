@@ -51,6 +51,14 @@
 <span id="46">46</span>
 <span id="47">47</span>
 <span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Entity</span>, <span class="ident">Log</span>};
 <span class="kw">use</span> <span class="ident">attached::Var</span>;
 <span class="kw">use</span> <span class="ident">parking_lot::RwLock</span>;
@@ -69,12 +77,20 @@
     }
 
     <span class="kw">fn</span> <span class="ident">clear_deps</span>(<span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vars</span>) {
-        <span class="ident"><span class="self">Self</span>::deps</span>().<span class="ident">read</span>().<span class="ident">iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> <span class="ident">f</span>(<span class="ident">ctx</span>));
+        <span class="ident">clear_deps</span>(<span class="ident"><span class="self">Self</span>::deps</span>(), <span class="ident">ctx</span>);
     }
 
     <span class="kw">fn</span> <span class="ident">register_deps</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Fn</span>(<span class="kw-2">&amp;mut</span> <span class="ident">Vars</span>) <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span>(<span class="ident">f</span>: <span class="ident">F</span>) {
-        <span class="ident"><span class="self">Self</span>::deps</span>().<span class="ident">write</span>().<span class="ident">push</span>(<span class="ident">Box::new</span>(<span class="ident">f</span>));
+        <span class="ident">register_deps</span>(<span class="ident"><span class="self">Self</span>::deps</span>(), <span class="ident">Box::new</span>(<span class="ident">f</span>));
     }
+}
+
+<span class="kw">fn</span> <span class="ident">clear_deps</span>(<span class="ident">deps</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">Deps</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vars</span>) {
+    <span class="ident">deps</span>.<span class="ident">read</span>().<span class="ident">iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> <span class="ident">f</span>(<span class="ident">ctx</span>));
+}
+
+<span class="kw">fn</span> <span class="ident">register_deps</span>(<span class="ident">deps</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">Deps</span>, <span class="ident">f</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Fn</span>(<span class="kw-2">&amp;mut</span> <span class="ident">Vars</span>) <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span>) {
+    <span class="ident">deps</span>.<span class="ident">write</span>().<span class="ident">push</span>(<span class="ident">f</span>);
 }
 
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">EntityAccessor</span>: <span class="ident">Sized</span> <span class="op">+</span> <span class="lifetime">&#39;static</span> {
@@ -90,15 +106,15 @@
 }
 
 <span class="comment">// typed variable contexts</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Logs</span> <span class="op">=</span> <span class="ident">attached::Vars</span><span class="op">&lt;</span><span class="ident">vars::Log</span><span class="op">&gt;</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">LogsVar</span> <span class="op">=</span> <span class="ident">attached::Vars</span><span class="op">&lt;</span><span class="ident">vars::Log</span><span class="op">&gt;</span>;
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Vars</span> <span class="op">=</span> <span class="ident">attached::Vars</span><span class="op">&lt;</span><span class="ident">vars::Tbl</span><span class="op">&gt;</span>;
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">vars</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">vars</span> {
     <span class="kw">use</span> <span class="ident">attached::var_ctx</span>;
 
     <span class="macro">var_ctx!</span>(<span class="kw">pub</span> <span class="ident">Tbl</span>);
     <span class="macro">var_ctx!</span>(<span class="kw">pub</span> <span class="ident">Log</span>);
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.61.0 (fe5b13d68 2022-05-18)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0 (a8314ef7d 2022-06-27)" ></div>
 </body></html>

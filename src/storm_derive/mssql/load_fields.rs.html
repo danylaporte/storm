@@ -120,6 +120,8 @@
 <span id="115">115</span>
 <span id="116">116</span>
 <span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">super</span>::{
     <span class="ident">attrs</span>::{<span class="ident">check_empty</span>, <span class="ident">check_required</span>, <span class="ident">FieldAttrs</span>, <span class="ident">TypeAttrs</span>},
     <span class="ident">builders::SelectBuilder</span>,
@@ -202,12 +204,14 @@
                 <span class="bool-val">true</span> =&gt; <span class="ident">SQL</span>.<span class="ident">to_string</span>(),
             };
 
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span>: <span class="ident">C</span> <span class="op">=</span> <span class="ident">storm_mssql::QueryRows::query_rows</span>(<span class="ident">provider</span>, <span class="ident">load_sql</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">params</span>, <span class="op">|</span><span class="ident">row</span><span class="op">|</span> {
+            <span class="kw">fn</span> <span class="ident">load_row</span>(<span class="ident">row</span>: <span class="ident">storm_mssql::tiberius::Row</span>) -&gt; <span class="ident">storm::Result</span><span class="op">&lt;</span>(<span class="op">&lt;</span>#<span class="ident">entity</span> <span class="kw">as</span> <span class="ident">storm::Entity</span><span class="op">&gt;</span><span class="ident">::Key</span>, #<span class="ident">entity</span>)<span class="op">&gt;</span> {
                 <span class="prelude-val">Ok</span>((
                     #<span class="ident">keys</span>,
                     #<span class="ident">entity</span> { #<span class="ident">fields</span> }
                 ))
-            }, <span class="ident">args</span>.<span class="ident">use_transaction</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+            }
+
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span>: <span class="ident">C</span> <span class="op">=</span> <span class="ident">storm_mssql::QueryRows::query_rows</span>(<span class="ident">provider</span>, <span class="ident">load_sql</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">params</span>, <span class="ident">load_row</span>, <span class="ident">args</span>.<span class="ident">use_transaction</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         });
 
         <span class="ident">tokens</span>.<span class="ident">append_all</span>(<span class="macro">quote!</span>(#(#<span class="ident">errors</span>)<span class="kw-2">*</span>));
@@ -238,5 +242,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="storm_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.61.0 (fe5b13d68 2022-05-18)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="storm_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0 (a8314ef7d 2022-06-27)" ></div>
 </body></html>

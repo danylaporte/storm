@@ -734,17 +734,11 @@
 <span id="729">729</span>
 <span id="730">730</span>
 <span id="731">731</span>
-<span id="732">732</span>
-<span id="733">733</span>
-<span id="734">734</span>
-<span id="735">735</span>
-<span id="736">736</span>
-<span id="737">737</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">provider</span>::{<span class="ident">Delete</span>, <span class="ident">LoadAll</span>, <span class="ident">LoadArgs</span>, <span class="ident">LoadOne</span>, <span class="ident">TransactionProvider</span>, <span class="ident">Upsert</span>, <span class="ident">UpsertMut</span>},
     <span class="ident">register_metrics</span>, <span class="ident">Accessor</span>, <span class="ident">ApplyLog</span>, <span class="ident">AsRefAsync</span>, <span class="ident">AsyncTryFrom</span>, <span class="ident">BoxFuture</span>, <span class="ident">CtxTypeInfo</span>, <span class="ident">Entity</span>,
     <span class="ident">EntityAccessor</span>, <span class="ident">Gc</span>, <span class="ident">GcCtx</span>, <span class="ident">Get</span>, <span class="ident">HashTable</span>, <span class="ident">Insert</span>, <span class="ident">InsertMut</span>, <span class="ident">Log</span>, <span class="ident">LogAccessor</span>, <span class="ident">LogState</span>, <span class="ident">Logs</span>,
-    <span class="ident">NotifyTag</span>, <span class="ident">ProviderContainer</span>, <span class="ident">Remove</span>, <span class="prelude-ty">Result</span>, <span class="ident">Tag</span>, <span class="ident">Transaction</span>, <span class="ident">Vars</span>, <span class="ident">VecTable</span>,
+    <span class="ident">LogsVar</span>, <span class="ident">NotifyTag</span>, <span class="ident">ProviderContainer</span>, <span class="ident">Remove</span>, <span class="prelude-ty">Result</span>, <span class="ident">Tag</span>, <span class="ident">Transaction</span>, <span class="ident">Vars</span>, <span class="ident">VecTable</span>,
 };
 <span class="kw">use</span> <span class="ident">fxhash::FxHashMap</span>;
 <span class="kw">use</span> <span class="ident">parking_lot::RwLock</span>;
@@ -1014,7 +1008,7 @@
 }
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CtxTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="ident">log_ctx</span>: <span class="ident">Logs</span>,
+    <span class="ident">log_ctx</span>: <span class="ident">LogsVar</span>,
     <span class="ident">provider</span>: <span class="ident">TransactionProvider</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Ctx</span>,
 }
@@ -1024,7 +1018,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">commit</span>(<span class="self">self</span>) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Logs</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
             <span class="self">self</span>.<span class="ident">provider</span>.<span class="ident">commit</span>().<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">log_ctx</span>)
+            <span class="prelude-val">Ok</span>(<span class="ident">Logs</span>(<span class="self">self</span>.<span class="ident">log_ctx</span>))
         })
     }
 
@@ -1034,39 +1028,7 @@
     }
 
     <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">k</span>, <span class="ident">v</span>), <span class="ident">err</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">insert</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="ident">E::Key</span>, <span class="ident">v</span>: <span class="ident">E</span>, <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="ident">E::TrackCtx</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
-        <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
-        <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">Insert</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
-        <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
-    {
-        <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">insert</span>(<span class="ident">k</span>, <span class="ident">v</span>, <span class="ident">track</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(())
-    }
-
-    <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">iter</span>), <span class="ident">err</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_all</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">E</span>, <span class="ident">I</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">iter</span>: <span class="ident">I</span>,
-        <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="ident">E::TrackCtx</span>,
-    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
-        <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
-        <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E::Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;b</span>,
-        <span class="ident">I::IntoIter</span>: <span class="ident">Send</span>,
-        <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">Insert</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
-        <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
-    {
-        <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
-            <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">insert_all</span>(<span class="ident">iter</span>, <span class="ident">track</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="prelude-val">Ok</span>(())
-        })
-    }
-
-    <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">k</span>, <span class="ident">v</span>), <span class="ident">err</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_mut</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>(
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">k</span>: <span class="ident">E::Key</span>,
         <span class="ident">v</span>: <span class="ident">E</span>,
@@ -1075,13 +1037,43 @@
     <span class="kw">where</span>
         <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
         <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
+        <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">Insert</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
+        <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
+    {
+        <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> { <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">insert</span>(<span class="ident">k</span>, <span class="ident">v</span>, <span class="ident">track</span>).<span class="kw">await</span> })
+    }
+
+    <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">iter</span>), <span class="ident">err</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_all</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">E</span>, <span class="ident">I</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">iter</span>: <span class="ident">I</span>,
+        <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="ident">E::TrackCtx</span>,
+    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>
+    <span class="kw">where</span>
+        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
+        <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
+        <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E::Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;b</span>,
+        <span class="ident">I::IntoIter</span>: <span class="ident">Send</span>,
+        <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">Insert</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
+        <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
+    {
+        <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> { <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">insert_all</span>(<span class="ident">iter</span>, <span class="ident">track</span>).<span class="kw">await</span> })
+    }
+
+    <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">k</span>, <span class="ident">v</span>), <span class="ident">err</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_mut</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">k</span>: <span class="ident">E::Key</span>,
+        <span class="ident">v</span>: <span class="ident">E</span>,
+        <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="ident">E::TrackCtx</span>,
+    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">E::Key</span><span class="op">&gt;</span><span class="op">&gt;</span>
+    <span class="kw">where</span>
+        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
+        <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
         <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">InsertMut</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
         <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
     {
-        <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
-            <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">insert_mut</span>(<span class="ident">k</span>, <span class="ident">v</span>, <span class="ident">track</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="prelude-val">Ok</span>(())
-        })
+        <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> { <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">insert_mut</span>(<span class="ident">k</span>, <span class="ident">v</span>, <span class="ident">track</span>).<span class="kw">await</span> })
     }
 
     <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">iter</span>,), <span class="ident">err</span>)]</span>
@@ -1089,7 +1081,7 @@
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">iter</span>: <span class="ident">I</span>,
         <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="ident">E::TrackCtx</span>,
-    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>
+    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
         <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
@@ -1098,13 +1090,7 @@
         <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">InsertMut</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
         <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
     {
-        <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
-            <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>()
-                .<span class="kw">await</span><span class="question-mark">?</span>
-                .<span class="ident">insert_mut_all</span>(<span class="ident">iter</span>, <span class="ident">track</span>)
-                .<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="prelude-val">Ok</span>(())
-        })
+        <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> { <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">insert_mut_all</span>(<span class="ident">iter</span>, <span class="ident">track</span>).<span class="kw">await</span> })
     }
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
@@ -1116,15 +1102,18 @@
     }
 
     <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">k</span>), <span class="ident">err</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">remove</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="ident">E::Key</span>, <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="ident">E::TrackCtx</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">remove</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">k</span>: <span class="ident">E::Key</span>,
+        <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="ident">E::TrackCtx</span>,
+    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
         <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
         <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">Remove</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
         <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
     {
-        <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">remove</span>(<span class="ident">k</span>, <span class="ident">track</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(())
+        <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> { <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">remove</span>(<span class="ident">k</span>, <span class="ident">track</span>).<span class="kw">await</span> })
     }
 
     <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">iter</span>), <span class="ident">err</span>)]</span>
@@ -1132,7 +1121,7 @@
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">iter</span>: <span class="ident">I</span>,
         <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="ident">E::TrackCtx</span>,
-    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>
+    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
         <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
@@ -1141,10 +1130,7 @@
         <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">Remove</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
         <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
     {
-        <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
-            <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">remove_all</span>(<span class="ident">iter</span>, <span class="ident">track</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="prelude-val">Ok</span>(())
-        })
+        <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> { <span class="self">self</span>.<span class="ident">tbl_of</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">remove_all</span>(<span class="ident">iter</span>, <span class="ident">track</span>).<span class="kw">await</span> })
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tbl_of</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>
@@ -1204,7 +1190,7 @@
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;c</span> <span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">iter</span>: <span class="ident">I</span>,
         <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c</span> <span class="ident">E::TrackCtx</span>,
-    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>
+    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E::Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
         <span class="ident">I::IntoIter</span>: <span class="ident">Send</span>,
@@ -1229,7 +1215,7 @@
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;c</span> <span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">iter</span>: <span class="ident">I</span>,
         <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c</span> <span class="ident">E::TrackCtx</span>,
-    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>
+    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E::Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
         <span class="ident">I::IntoIter</span>: <span class="ident">Send</span>,
@@ -1256,7 +1242,7 @@
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;c</span> <span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">keys</span>: <span class="ident">K</span>,
         <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c</span> <span class="ident">E::TrackCtx</span>,
-    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>
+    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="self">Self</span>: <span class="ident">Remove</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
         <span class="ident">K</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">E::Key</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;c</span>,
@@ -1387,7 +1373,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">changed</span> <span class="op">=</span> <span class="bool-val">false</span>;
 
         <span class="kw">for</span> <span class="ident">applier</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">appliers</span> {
-            <span class="ident">changed</span> <span class="op">=</span> <span class="ident">applier</span>.<span class="ident">apply</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">vars</span>, <span class="kw-2">&amp;mut</span> <span class="ident">log</span>) <span class="op">|</span><span class="op">|</span> <span class="ident">changed</span>;
+            <span class="ident">changed</span> <span class="op">=</span> <span class="ident">applier</span>.<span class="ident">apply</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">vars</span>, <span class="kw-2">&amp;mut</span> <span class="ident">log</span>.<span class="number">0</span>) <span class="op">|</span><span class="op">|</span> <span class="ident">changed</span>;
         }
 
         <span class="ident">changed</span>
@@ -1436,7 +1422,7 @@
 }
 
 <span class="kw">trait</span> <span class="ident">LogApplier</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {
-    <span class="kw">fn</span> <span class="ident">apply</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">vars</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vars</span>, <span class="ident">log_ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Logs</span>) -&gt; <span class="ident">bool</span>;
+    <span class="kw">fn</span> <span class="ident">apply</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">vars</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vars</span>, <span class="ident">log_ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">LogsVar</span>) -&gt; <span class="ident">bool</span>;
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> <span class="ident">LogApplier</span> <span class="kw">for</span> <span class="ident">EntityLogApplier</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>
@@ -1444,7 +1430,7 @@
     <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
     <span class="ident">E::Tbl</span>: <span class="ident">Accessor</span> <span class="op">+</span> <span class="ident">ApplyLog</span><span class="op">&lt;</span><span class="ident">Log</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
-    <span class="kw">fn</span> <span class="ident">apply</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">vars</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vars</span>, <span class="ident">log_ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Logs</span>) -&gt; <span class="ident">bool</span> {
+    <span class="kw">fn</span> <span class="ident">apply</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">vars</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vars</span>, <span class="ident">log_ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">LogsVar</span>) -&gt; <span class="ident">bool</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">log</span>) <span class="op">=</span> <span class="ident">log_ctx</span>.<span class="ident">replace</span>(<span class="ident">E::log_var</span>(), <span class="prelude-val">None</span>) {
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tbl</span>) <span class="op">=</span> <span class="ident">vars</span>.<span class="ident">get_mut</span>(<span class="ident">E::entity_var</span>()) {
                 <span class="kw">if</span> <span class="ident">tbl</span>.<span class="ident">apply_log</span>(<span class="ident">log</span>) {
@@ -1460,7 +1446,7 @@
 
 <span class="kw">struct</span> <span class="ident">EntityLogApplier</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span><span class="op">&gt;</span>(<span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>);
 
-<span class="kw">fn</span> <span class="ident">log_mut</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">LogAccessor</span><span class="op">&gt;</span>(<span class="ident">logs</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Logs</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident">Log</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">log_mut</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">LogAccessor</span><span class="op">&gt;</span>(<span class="ident">logs</span>: <span class="kw-2">&amp;mut</span> <span class="ident">LogsVar</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident">Log</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> {
     <span class="ident">logs</span>.<span class="ident">get_or_init_mut</span>(<span class="ident">E::log_var</span>(), <span class="ident">Default::default</span>)
 }
 
@@ -1470,13 +1456,15 @@
     <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
     <span class="ident">E::Tbl</span>: <span class="ident">Accessor</span> <span class="op">+</span> <span class="ident">ApplyLog</span><span class="op">&lt;</span><span class="ident">Log</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
-    <span class="ident">LOG_APPLIERS</span>
-        .<span class="ident">write</span>()
-        .<span class="ident">push</span>(<span class="ident">Box::new</span>(<span class="ident">EntityLogApplier</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="ident">PhantomData</span>)));
+    <span class="ident">register_apply_log_dyn</span>(<span class="ident">Box::new</span>(<span class="ident">EntityLogApplier</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="ident">PhantomData</span>)));
+}
+
+<span class="kw">fn</span> <span class="ident">register_apply_log_dyn</span>(<span class="ident">app</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">LogApplier</span><span class="op">&gt;</span>) {
+    <span class="ident">LOG_APPLIERS</span>.<span class="ident">write</span>().<span class="ident">push</span>(<span class="ident">app</span>);
 }
 
 <span class="attribute">#[<span class="ident">static_init::dynamic</span>]</span>
 <span class="kw">static</span> <span class="ident">LOG_APPLIERS</span>: <span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">LogApplier</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Default::default</span>();
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.61.0 (fe5b13d68 2022-05-18)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0 (a8314ef7d 2022-06-27)" ></div>
 </body></html>
