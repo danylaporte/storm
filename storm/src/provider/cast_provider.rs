@@ -21,9 +21,8 @@ impl CastProvider {
         unsafe { &*self.downcast }.downcast_ref()
     }
 
-    #[allow(clippy::explicit_auto_deref)]
     pub fn provider(&self) -> &dyn Provider {
-        &*self.provider
+        self.provider.as_ref()
     }
 }
 
