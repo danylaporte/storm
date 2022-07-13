@@ -25,16 +25,12 @@ where
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let p = self.project();
-        let _entered = p.span.enter();
+        let _ = p.span.enter();
 
-        match p.fut.poll(cx) {
-            Poll::Pending => Poll::Pending,
-            Poll::Ready(Ok(v)) => Poll::Ready(Ok(v)),
-            Poll::Ready(Err(e)) => {
-                p.span.record("err", &tracing::field::debug(&e));
-                Poll::Ready(Err(e))
-            }
-        }
+        p.fut.poll(cx).map_err(|e| {
+            p.span.record("err", &tracing::field::debug(&e));
+            e
+        })
     }
 }
 

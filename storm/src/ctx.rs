@@ -2,13 +2,14 @@ use crate::{
     length::Length,
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
     register_metrics, Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity,
-    EntityAccessor, Gc, GcCtx, Get, HashTable, Insert, InsertMut, Log, LogAccessor, LogState, Logs,
-    LogsVar, NotifyTag, ProviderContainer, Remove, Result, Tag, Transaction, Vars, VecTable,
+    EntityAccessor, Gc, GcCtx, Get, HashTable, Insert, InsertMut, InstrumentErr, Log, LogAccessor,
+    LogState, Logs, LogsVar, NotifyTag, ProviderContainer, Remove, Result, Tag, Transaction, Vars,
+    VecTable,
 };
 use fxhash::FxHashMap;
 use parking_lot::RwLock;
 use std::{hash::Hash, marker::PhantomData};
-use tracing::instrument;
+use tracing::{debug_span, instrument, Span};
 use version_tag::VersionTag;
 
 pub struct Ctx {
@@ -292,7 +293,6 @@ impl<'a> CtxTransaction<'a> {
         &self.provider
     }
 
-    #[instrument(level = "debug", skip(self, k, v), err)]
     pub fn insert<'b, E>(
         &'b mut self,
         k: E::Key,
@@ -305,10 +305,12 @@ impl<'a> CtxTransaction<'a> {
         TblTransaction<'a, 'b, E>: Insert<E>,
         'a: 'b,
     {
-        Box::pin(async move { self.tbl_of::<E>().await?.insert(k, v, track).await })
+        Box::pin(
+            async move { self.tbl_of::<E>().await?.insert(k, v, track).await }
+                .instrument_err(ctx_transaction_insert_span()),
+        )
     }
 
-    #[instrument(level = "debug", skip(self, iter), err)]
     pub fn insert_all<'b, E, I>(
         &'b mut self,
         iter: I,
@@ -322,10 +324,12 @@ impl<'a> CtxTransaction<'a> {
         TblTransaction<'a, 'b, E>: Insert<E>,
         'a: 'b,
     {
-        Box::pin(async move { self.tbl_of::<E>().await?.insert_all(iter, track).await })
+        Box::pin(
+            async move { self.tbl_of::<E>().await?.insert_all(iter, track).await }
+                .instrument_err(ctx_transaction_insert_all_span()),
+        )
     }
 
-    #[instrument(level = "debug", skip(self, k, v), err)]
     pub fn insert_mut<'b, E>(
         &'b mut self,
         k: E::Key,
@@ -338,10 +342,12 @@ impl<'a> CtxTransaction<'a> {
         TblTransaction<'a, 'b, E>: InsertMut<E>,
         'a: 'b,
     {
-        Box::pin(async move { self.tbl_of::<E>().await?.insert_mut(k, v, track).await })
+        Box::pin(
+            async move { self.tbl_of::<E>().await?.insert_mut(k, v, track).await }
+                .instrument_err(ctx_transaction_insert_span()),
+        )
     }
 
-    #[instrument(level = "debug", skip(self, iter,), err)]
     pub fn insert_mut_all<'b, E, I>(
         &'b mut self,
         iter: I,
@@ -355,7 +361,10 @@ impl<'a> CtxTransaction<'a> {
         TblTransaction<'a, 'b, E>: InsertMut<E>,
         'a: 'b,
     {
-        Box::pin(async move { self.tbl_of::<E>().await?.insert_mut_all(iter, track).await })
+        Box::pin(
+            async move { self.tbl_of::<E>().await?.insert_mut_all(iter, track).await }
+                .instrument_err(ctx_transaction_insert_mut_all_span()),
+        )
     }
 
     #[inline]
@@ -366,7 +375,6 @@ impl<'a> CtxTransaction<'a> {
         self.as_ref_async()
     }
 
-    #[instrument(level = "debug", skip(self, k), err)]
     pub fn remove<'b, E>(
         &'b mut self,
         k: E::Key,
@@ -378,10 +386,12 @@ impl<'a> CtxTransaction<'a> {
         TblTransaction<'a, 'b, E>: Remove<E>,
         'a: 'b,
     {
-        Box::pin(async move { self.tbl_of::<E>().await?.remove(k, track).await })
+        Box::pin(
+            async move { self.tbl_of::<E>().await?.remove(k, track).await }
+                .instrument_err(ctx_transaction_remove_span()),
+        )
     }
 
-    #[instrument(level = "debug", skip(self, iter), err)]
     pub fn remove_all<'b, E, I>(
         &'b mut self,
         iter: I,
@@ -395,7 +405,10 @@ impl<'a> CtxTransaction<'a> {
         TblTransaction<'a, 'b, E>: Remove<E>,
         'a: 'b,
     {
-        Box::pin(async move { self.tbl_of::<E>().await?.remove_all(iter, track).await })
+        Box::pin(
+            async move { self.tbl_of::<E>().await?.remove_all(iter, track).await }
+                .instrument_err(ctx_transaction_remove_all_span()),
+        )
     }
 
     pub fn tbl_of<'b, E>(&'b mut self) -> BoxFuture<'b, Result<TblTransaction<'a, 'b, E>>>
@@ -409,6 +422,29 @@ impl<'a> CtxTransaction<'a> {
             Ok(TblTransaction { tbl, ctx: self })
         })
     }
+}
+
+fn ctx_transaction_insert_span() -> Span {
+    debug_span!("CtxTransaction::insert", err = tracing::field::Empty)
+}
+
+fn ctx_transaction_insert_all_span() -> Span {
+    debug_span!("CtxTransaction::insert_all", err = tracing::field::Empty)
+}
+
+fn ctx_transaction_insert_mut_all_span() -> Span {
+    debug_span!(
+        "CtxTransaction::insert_mut_all",
+        err = tracing::field::Empty
+    )
+}
+
+fn ctx_transaction_remove_span() -> Span {
+    debug_span!("CtxTransaction::remove", err = tracing::field::Empty)
+}
+
+fn ctx_transaction_remove_all_span() -> Span {
+    debug_span!("CtxTransaction::remove_all", err = tracing::field::Empty)
 }
 
 impl<'a, T> AsRefAsync<T> for CtxTransaction<'a>
@@ -573,31 +609,37 @@ where
     E::Key: Eq + Hash,
     E::Tbl: Get<E>,
 {
-    #[instrument(level = "debug", skip(self, k, v), err)]
     fn insert<'c>(
         &'c mut self,
         k: E::Key,
         v: E,
         track: &'c E::TrackCtx,
     ) -> BoxFuture<'c, Result<()>> {
-        Box::pin(async move {
-            self.ctx.provider.upsert(&k, &v).await?;
+        Box::pin(
+            async move {
+                self.ctx.provider.upsert(&k, &v).await?;
 
-            // remove first because if the track change the entity, we want to keep only the latest version.
-            log_mut::<E>(&mut self.ctx.log_ctx).remove(&k);
+                // remove first because if the track change the entity, we want to keep only the latest version.
+                log_mut::<E>(&mut self.ctx.log_ctx).remove(&k);
 
-            // change tracking...
-            let old = self.tbl.get(&k);
-            let result = v.track_insert(&k, old, self.ctx, track).await;
+                // change tracking...
+                let old = self.tbl.get(&k);
+                let result = v.track_insert(&k, old, self.ctx, track).await;
 
-            // if the value is present, this is because the tracker has changed the value.
-            log_mut(&mut self.ctx.log_ctx)
-                .entry(k)
-                .or_insert(LogState::Inserted(v));
+                // if the value is present, this is because the tracker has changed the value.
+                log_mut(&mut self.ctx.log_ctx)
+                    .entry(k)
+                    .or_insert(LogState::Inserted(v));
 
-            result
-        })
+                result
+            }
+            .instrument_err(insert_tbl_transaction_span()),
+        )
     }
+}
+
+fn insert_tbl_transaction_span() -> Span {
+    debug_span!("TblTransaction::insert", err = tracing::field::Empty)
 }
 
 impl<'a, 'b, E> InsertMut<E> for TblTransaction<'a, 'b, E>
@@ -607,31 +649,37 @@ where
     E::Key: Clone + Eq + Hash,
     E::Tbl: Get<E>,
 {
-    #[instrument(level = "debug", skip(self, k, v), err)]
     fn insert_mut<'c>(
         &'c mut self,
         mut k: E::Key,
         mut v: E,
         track: &'c E::TrackCtx,
     ) -> BoxFuture<'c, Result<E::Key>> {
-        Box::pin(async move {
-            self.ctx.provider.upsert_mut(&mut k, &mut v).await?;
+        Box::pin(
+            async move {
+                self.ctx.provider.upsert_mut(&mut k, &mut v).await?;
 
-            // remove first because if the track change the entity, we want to keep only the latest version.
-            log_mut::<E>(&mut self.ctx.log_ctx).remove(&k);
+                // remove first because if the track change the entity, we want to keep only the latest version.
+                log_mut::<E>(&mut self.ctx.log_ctx).remove(&k);
 
-            // change tracking...
-            let old = self.tbl.get(&k);
-            let result = v.track_insert(&k, old, self.ctx, track).await;
+                // change tracking...
+                let old = self.tbl.get(&k);
+                let result = v.track_insert(&k, old, self.ctx, track).await;
 
-            // if the value is present, this is because the tracker has changed the value.
-            log_mut(&mut self.ctx.log_ctx)
-                .entry(k.clone())
-                .or_insert(LogState::Inserted(v));
+                // if the value is present, this is because the tracker has changed the value.
+                log_mut(&mut self.ctx.log_ctx)
+                    .entry(k.clone())
+                    .or_insert(LogState::Inserted(v));
 
-            result.map(|_| k)
-        })
+                result.map(|_| k)
+            }
+            .instrument_err(insert_mut_tbl_transaction_span()),
+        )
     }
+}
+
+fn insert_mut_tbl_transaction_span() -> Span {
+    debug_span!("TblTransaction::insert_mut", err = tracing::field::Empty)
 }
 
 impl<'a, 'b, E> Remove<E> for TblTransaction<'a, 'b, E>
@@ -641,25 +689,31 @@ where
     E::Key: Eq + Hash,
     E::Tbl: Accessor + Get<E>,
 {
-    #[instrument(level = "debug", skip(self, k), err)]
     fn remove<'c>(&'c mut self, k: E::Key, track: &'c E::TrackCtx) -> BoxFuture<'c, Result<()>> {
-        Box::pin(async move {
-            self.ctx.provider.delete(&k).await?;
-            log_mut::<E>(&mut self.ctx.log_ctx).remove(&k);
+        Box::pin(
+            async move {
+                self.ctx.provider.delete(&k).await?;
+                log_mut::<E>(&mut self.ctx.log_ctx).remove(&k);
 
-            let mut result = Ok(());
+                let mut result = Ok(());
 
-            if let Some(old) = self.tbl.get(&k) {
-                result = old.track_remove(&k, self.ctx, track).await;
+                if let Some(old) = self.tbl.get(&k) {
+                    result = old.track_remove(&k, self.ctx, track).await;
+                }
+
+                log_mut::<E>(&mut self.ctx.log_ctx)
+                    .entry(k)
+                    .or_insert(LogState::Removed);
+
+                result
             }
-
-            log_mut::<E>(&mut self.ctx.log_ctx)
-                .entry(k)
-                .or_insert(LogState::Removed);
-
-            result
-        })
+            .instrument_err(remove_tbl_transaction_span()),
+        )
     }
+}
+
+fn remove_tbl_transaction_span() -> Span {
+    debug_span!("TblTransaction::remove", err = tracing::field::Empty)
 }
 
 impl<'a> ApplyLog<Logs> for async_cell_lock::QueueRwLockWriteGuard<'a, Ctx> {
