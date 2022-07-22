@@ -15,20 +15,25 @@ pub trait Insert<E: Entity> {
     ) -> BoxFuture<'a, Result<usize>>
     where
         I: IntoIterator<Item = (E::Key, E)> + Send + 'a,
-        I::IntoIter: Send,
-        Self: Send,
-    {
-        Box::pin(async move {
-            let mut count = 0;
+        I::IntoIter: Send;
+}
 
-            for (k, v) in iter {
-                self.insert(k, v, track).await?;
-                count += 1;
-            }
+pub trait InsertIfChanged<E: Entity> {
+    fn insert_if_changed<'a>(
+        &'a mut self,
+        k: E::Key,
+        v: E,
+        track: &'a E::TrackCtx,
+    ) -> BoxFuture<'a, Result<()>>;
 
-            Ok(count)
-        })
-    }
+    fn insert_all_if_changed<'a, I>(
+        &'a mut self,
+        iter: I,
+        track: &'a E::TrackCtx,
+    ) -> BoxFuture<'a, Result<usize>>
+    where
+        I: IntoIterator<Item = (E::Key, E)> + Send + 'a,
+        I::IntoIter: Send;
 }
 
 pub trait InsertMut<E: Entity> {
@@ -47,17 +52,23 @@ pub trait InsertMut<E: Entity> {
     where
         I: IntoIterator<Item = (E::Key, E)> + Send + 'a,
         I::IntoIter: Send,
-        Self: Send,
-    {
-        Box::pin(async move {
-            let mut count = 0;
+        Self: Send;
+}
 
-            for (k, v) in iter {
-                self.insert_mut(k, v, track).await?;
-                count += 1;
-            }
+pub trait InsertMutIfChanged<E: Entity> {
+    fn insert_mut_if_changed<'a>(
+        &'a mut self,
+        k: E::Key,
+        v: E,
+        track: &'a E::TrackCtx,
+    ) -> BoxFuture<'a, Result<E::Key>>;
 
-            Ok(count)
-        })
-    }
+    fn insert_mut_all_if_changed<'a, I>(
+        &'a mut self,
+        iter: I,
+        track: &'a E::TrackCtx,
+    ) -> BoxFuture<'a, Result<usize>>
+    where
+        I: IntoIterator<Item = (E::Key, E)> + Send + 'a,
+        I::IntoIter: Send;
 }

@@ -2,9 +2,9 @@ use crate::{
     length::Length,
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
     register_metrics, Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity,
-    EntityAccessor, Gc, GcCtx, Get, HashTable, Insert, InsertMut, InstrumentErr, Log, LogAccessor,
-    LogState, Logs, LogsVar, NotifyTag, ProviderContainer, Remove, Result, Tag, Transaction, Vars,
-    VecTable,
+    EntityAccessor, Gc, GcCtx, Get, HashTable, Insert, InsertIfChanged, InsertMut,
+    InsertMutIfChanged, InstrumentErr, Log, LogAccessor, LogState, Logs, LogsVar, NotifyTag,
+    ProviderContainer, Remove, Result, Tag, Transaction, Vars, VecTable,
 };
 use fxhash::FxHashMap;
 use parking_lot::RwLock;
@@ -300,15 +300,10 @@ impl<'a> CtxTransaction<'a> {
         track: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<()>>
     where
-        Ctx: AsRefAsync<E::Tbl>,
-        E: Entity + EntityAccessor + LogAccessor,
-        TblTransaction<'a, 'b, E>: Insert<E>,
-        'a: 'b,
+        E: Entity,
+        Self: Insert<E>,
     {
-        Box::pin(
-            async move { self.tbl_of::<E>().await?.insert(k, v, track).await }
-                .instrument_err(ctx_transaction_insert_span()),
-        )
+        Insert::insert(self, k, v, track)
     }
 
     pub fn insert_all<'b, E, I>(
@@ -317,17 +312,12 @@ impl<'a> CtxTransaction<'a> {
         track: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<usize>>
     where
-        Ctx: AsRefAsync<E::Tbl>,
-        E: Entity + EntityAccessor + LogAccessor,
+        E: Entity,
         I: IntoIterator<Item = (E::Key, E)> + Send + 'b,
         I::IntoIter: Send,
-        TblTransaction<'a, 'b, E>: Insert<E>,
-        'a: 'b,
+        Self: Insert<E>,
     {
-        Box::pin(
-            async move { self.tbl_of::<E>().await?.insert_all(iter, track).await }
-                .instrument_err(ctx_transaction_insert_all_span()),
-        )
+        Insert::insert_all(self, iter, track)
     }
 
     pub fn insert_mut<'b, E>(
@@ -337,15 +327,10 @@ impl<'a> CtxTransaction<'a> {
         track: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<E::Key>>
     where
-        Ctx: AsRefAsync<E::Tbl>,
-        E: Entity + EntityAccessor + LogAccessor,
-        TblTransaction<'a, 'b, E>: InsertMut<E>,
-        'a: 'b,
+        E: Entity,
+        Self: InsertMut<E>,
     {
-        Box::pin(
-            async move { self.tbl_of::<E>().await?.insert_mut(k, v, track).await }
-                .instrument_err(ctx_transaction_insert_span()),
-        )
+        InsertMut::insert_mut(self, k, v, track)
     }
 
     pub fn insert_mut_all<'b, E, I>(
@@ -354,17 +339,12 @@ impl<'a> CtxTransaction<'a> {
         track: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<usize>>
     where
-        Ctx: AsRefAsync<E::Tbl>,
-        E: Entity + EntityAccessor + LogAccessor,
+        E: Entity,
         I: IntoIterator<Item = (E::Key, E)> + Send + 'b,
         I::IntoIter: Send,
-        TblTransaction<'a, 'b, E>: InsertMut<E>,
-        'a: 'b,
+        Self: InsertMut<E>,
     {
-        Box::pin(
-            async move { self.tbl_of::<E>().await?.insert_mut_all(iter, track).await }
-                .instrument_err(ctx_transaction_insert_mut_all_span()),
-        )
+        InsertMut::insert_mut_all(self, iter, track)
     }
 
     #[inline]
@@ -381,41 +361,30 @@ impl<'a> CtxTransaction<'a> {
         track: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<()>>
     where
-        Ctx: AsRefAsync<E::Tbl>,
-        E: Entity + EntityAccessor + LogAccessor,
-        TblTransaction<'a, 'b, E>: Remove<E>,
-        'a: 'b,
+        E: Entity,
+        Self: Remove<E>,
     {
-        Box::pin(
-            async move { self.tbl_of::<E>().await?.remove(k, track).await }
-                .instrument_err(ctx_transaction_remove_span()),
-        )
+        Remove::remove(self, k, track)
     }
 
-    pub fn remove_all<'b, E, I>(
+    pub fn remove_all<'b, E, K>(
         &'b mut self,
-        iter: I,
+        keys: K,
         track: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<usize>>
     where
-        Ctx: AsRefAsync<E::Tbl>,
-        E: Entity + EntityAccessor + LogAccessor,
-        I: IntoIterator<Item = E::Key> + Send + 'b,
-        I::IntoIter: Send,
-        TblTransaction<'a, 'b, E>: Remove<E>,
-        'a: 'b,
+        E: Entity,
+        K: IntoIterator<Item = E::Key> + Send + 'b,
+        K::IntoIter: Send,
+        Self: Remove<E>,
     {
-        Box::pin(
-            async move { self.tbl_of::<E>().await?.remove_all(iter, track).await }
-                .instrument_err(ctx_transaction_remove_all_span()),
-        )
+        Remove::remove_all(self, keys, track)
     }
 
     pub fn tbl_of<'b, E>(&'b mut self) -> BoxFuture<'b, Result<TblTransaction<'a, 'b, E>>>
     where
         E: Entity + EntityAccessor + LogAccessor,
         Ctx: AsRefAsync<E::Tbl>,
-        'a: 'b,
     {
         Box::pin(async move {
             let tbl = self.ctx.tbl_of::<E>().await?;
@@ -424,27 +393,159 @@ impl<'a> CtxTransaction<'a> {
     }
 }
 
-fn ctx_transaction_insert_span() -> Span {
-    debug_span!("CtxTransaction::insert", err = tracing::field::Empty)
+impl<'a, E> Insert<E> for CtxTransaction<'a>
+where
+    Ctx: AsRefAsync<E::Tbl>,
+    E: Entity + EntityAccessor + LogAccessor,
+    for<'b> TblTransaction<'a, 'b, E>: Insert<E>,
+{
+    fn insert<'c>(
+        &'c mut self,
+        k: E::Key,
+        v: E,
+        track: &'c E::TrackCtx,
+    ) -> BoxFuture<'c, Result<()>> {
+        Box::pin(async move { self.tbl_of::<E>().await?.insert(k, v, track).await })
+    }
+
+    fn insert_all<'b, I>(
+        &'b mut self,
+        iter: I,
+        track: &'b <E as Entity>::TrackCtx,
+    ) -> BoxFuture<'b, Result<usize>>
+    where
+        I: IntoIterator<Item = (<E as Entity>::Key, E)> + Send + 'b,
+        I::IntoIter: Send,
+    {
+        Box::pin(async move { self.tbl_of::<E>().await?.insert_all(iter, track).await })
+    }
 }
 
-fn ctx_transaction_insert_all_span() -> Span {
-    debug_span!("CtxTransaction::insert_all", err = tracing::field::Empty)
+impl<'a, E> InsertIfChanged<E> for CtxTransaction<'a>
+where
+    Ctx: AsRefAsync<E::Tbl>,
+    E: Entity + EntityAccessor + LogAccessor,
+    for<'b> TblTransaction<'a, 'b, E>: InsertIfChanged<E>,
+{
+    fn insert_if_changed<'b>(
+        &'b mut self,
+        k: E::Key,
+        v: E,
+        track: &'b <E as Entity>::TrackCtx,
+    ) -> BoxFuture<'b, Result<()>> {
+        Box::pin(async move {
+            self.tbl_of::<E>()
+                .await?
+                .insert_if_changed(k, v, track)
+                .await
+        })
+    }
+
+    fn insert_all_if_changed<'b, I>(
+        &'b mut self,
+        iter: I,
+        track: &'b <E as Entity>::TrackCtx,
+    ) -> BoxFuture<'b, Result<usize>>
+    where
+        I: IntoIterator<Item = (E::Key, E)> + Send + 'b,
+        I::IntoIter: Send,
+    {
+        Box::pin(async move {
+            self.tbl_of::<E>()
+                .await?
+                .insert_all_if_changed(iter, track)
+                .await
+        })
+    }
 }
 
-fn ctx_transaction_insert_mut_all_span() -> Span {
-    debug_span!(
-        "CtxTransaction::insert_mut_all",
-        err = tracing::field::Empty
-    )
+impl<'a, E> InsertMut<E> for CtxTransaction<'a>
+where
+    Ctx: AsRefAsync<E::Tbl>,
+    E: Entity + EntityAccessor + LogAccessor,
+    for<'b> TblTransaction<'a, 'b, E>: InsertMut<E>,
+{
+    fn insert_mut<'b>(
+        &'b mut self,
+        k: E::Key,
+        v: E,
+        track: &'b E::TrackCtx,
+    ) -> BoxFuture<'b, Result<E::Key>> {
+        Box::pin(async move { self.tbl_of::<E>().await?.insert_mut(k, v, track).await })
+    }
+
+    fn insert_mut_all<'b, I>(
+        &'b mut self,
+        iter: I,
+        track: &'b <E as Entity>::TrackCtx,
+    ) -> BoxFuture<'b, Result<usize>>
+    where
+        I: IntoIterator<Item = (<E as Entity>::Key, E)> + Send + 'b,
+        I::IntoIter: Send,
+    {
+        Box::pin(async move { self.tbl_of::<E>().await?.insert_mut_all(iter, track).await })
+    }
 }
 
-fn ctx_transaction_remove_span() -> Span {
-    debug_span!("CtxTransaction::remove", err = tracing::field::Empty)
+impl<'a, E> InsertMutIfChanged<E> for CtxTransaction<'a>
+where
+    Ctx: AsRefAsync<E::Tbl>,
+    E: Entity + EntityAccessor + LogAccessor,
+    for<'b> TblTransaction<'a, 'b, E>: InsertMutIfChanged<E>,
+{
+    fn insert_mut_if_changed<'b>(
+        &'b mut self,
+        k: E::Key,
+        v: E,
+        track: &'b <E as Entity>::TrackCtx,
+    ) -> BoxFuture<'b, Result<E::Key>> {
+        Box::pin(async move {
+            self.tbl_of::<E>()
+                .await?
+                .insert_mut_if_changed(k, v, track)
+                .await
+        })
+    }
+
+    fn insert_mut_all_if_changed<'b, I>(
+        &'b mut self,
+        iter: I,
+        track: &'b <E as Entity>::TrackCtx,
+    ) -> BoxFuture<'b, Result<usize>>
+    where
+        I: IntoIterator<Item = (E::Key, E)> + Send + 'b,
+        I::IntoIter: Send,
+    {
+        Box::pin(async move {
+            self.tbl_of::<E>()
+                .await?
+                .insert_mut_all_if_changed(iter, track)
+                .await
+        })
+    }
 }
 
-fn ctx_transaction_remove_all_span() -> Span {
-    debug_span!("CtxTransaction::remove_all", err = tracing::field::Empty)
+impl<'a, E> Remove<E> for CtxTransaction<'a>
+where
+    Ctx: AsRefAsync<E::Tbl>,
+    E: Entity + EntityAccessor + LogAccessor,
+    for<'b> TblTransaction<'a, 'b, E>: Remove<E>,
+{
+    fn remove<'b>(&'b mut self, k: E::Key, track: &'b E::TrackCtx) -> BoxFuture<'b, Result<()>> {
+        Box::pin(async move { self.tbl_of::<E>().await?.remove(k, track).await })
+    }
+
+    fn remove_all<'b, K>(
+        &'b mut self,
+        keys: K,
+        track: &'b <E as Entity>::TrackCtx,
+    ) -> BoxFuture<'b, Result<usize>>
+    where
+        K: IntoIterator<Item = <E as Entity>::Key> + Send + 'b,
+        K::IntoIter: Send,
+    {
+        Box::pin(async move { self.tbl_of::<E>().await?.remove_all(keys, track).await })
+    }
 }
 
 impl<'a, T> AsRefAsync<T> for CtxTransaction<'a>
@@ -543,7 +644,7 @@ where
         &'c mut self,
         keys: K,
         track: &'c E::TrackCtx,
-    ) -> BoxFuture<'_, Result<usize>>
+    ) -> BoxFuture<'c, Result<usize>>
     where
         Self: Remove<E>,
         K: IntoIterator<Item = E::Key> + Send + 'c,
@@ -626,7 +727,7 @@ where
                 let old = self.tbl.get(&k);
                 let result = v.track_insert(&k, old, self.ctx, track).await;
 
-                // if the value is present, this is because the tracker has changed the value.
+                // if the value is present, this is because the track has changed the value.
                 log_mut(&mut self.ctx.log_ctx)
                     .entry(k)
                     .or_insert(LogState::Inserted(v));
@@ -635,6 +736,71 @@ where
             }
             .instrument_err(insert_tbl_transaction_span()),
         )
+    }
+
+    fn insert_all<'c, I>(
+        &'c mut self,
+        iter: I,
+        track: &'c <E as Entity>::TrackCtx,
+    ) -> BoxFuture<'c, Result<usize>>
+    where
+        I: IntoIterator<Item = (<E as Entity>::Key, E)> + Send + 'c,
+        I::IntoIter: Send,
+    {
+        Box::pin(async move {
+            let mut count = 0;
+
+            for (k, v) in iter {
+                self.insert(k, v, track).await?;
+                count += 1;
+            }
+
+            Ok(count)
+        })
+    }
+}
+
+impl<'a, 'b, E> InsertIfChanged<E> for TblTransaction<'a, 'b, E>
+where
+    E: Entity + EntityAccessor + PartialEq,
+    Self: Get<E> + Insert<E>,
+{
+    fn insert_if_changed<'c>(
+        &'c mut self,
+        k: E::Key,
+        v: E,
+        track: &'c E::TrackCtx,
+    ) -> BoxFuture<'c, Result<()>> {
+        Box::pin(async move {
+            if self.get(&k).map_or(true, |old| old != &v) {
+                self.insert(k, v, track).await
+            } else {
+                Ok(())
+            }
+        })
+    }
+
+    fn insert_all_if_changed<'c, I>(
+        &'c mut self,
+        iter: I,
+        track: &'c E::TrackCtx,
+    ) -> BoxFuture<'c, Result<usize>>
+    where
+        I: IntoIterator<Item = (E::Key, E)> + Send + 'c,
+        I::IntoIter: Send,
+    {
+        Box::pin(async move {
+            let mut count = 0;
+
+            for (k, v) in iter {
+                if self.get(&k).map_or(true, |old| old != &v) {
+                    self.insert(k, v, track).await?;
+                    count += 1;
+                }
+            }
+
+            Ok(count)
+        })
     }
 }
 
@@ -666,7 +832,7 @@ where
                 let old = self.tbl.get(&k);
                 let result = v.track_insert(&k, old, self.ctx, track).await;
 
-                // if the value is present, this is because the tracker has changed the value.
+                // if the value is present, this is because the track has changed the value.
                 log_mut(&mut self.ctx.log_ctx)
                     .entry(k.clone())
                     .or_insert(LogState::Inserted(v));
@@ -675,6 +841,71 @@ where
             }
             .instrument_err(insert_mut_tbl_transaction_span()),
         )
+    }
+
+    fn insert_mut_all<'c, I>(
+        &'c mut self,
+        iter: I,
+        track: &'c <E as Entity>::TrackCtx,
+    ) -> BoxFuture<'c, Result<usize>>
+    where
+        I: IntoIterator<Item = (<E as Entity>::Key, E)> + Send + 'c,
+        I::IntoIter: Send,
+    {
+        Box::pin(async move {
+            let mut count = 0;
+
+            for (k, v) in iter {
+                self.insert_mut(k, v, track).await?;
+                count += 1;
+            }
+
+            Ok(count)
+        })
+    }
+}
+
+impl<'a, 'b, E> InsertMutIfChanged<E> for TblTransaction<'a, 'b, E>
+where
+    E: Entity + EntityAccessor + PartialEq,
+    Self: Get<E> + InsertMut<E>,
+{
+    fn insert_mut_if_changed<'c>(
+        &'c mut self,
+        k: E::Key,
+        v: E,
+        track: &'c E::TrackCtx,
+    ) -> BoxFuture<'c, Result<E::Key>> {
+        Box::pin(async move {
+            if self.get(&k).map_or(true, |old| old != &v) {
+                self.insert_mut(k, v, track).await
+            } else {
+                Ok(k)
+            }
+        })
+    }
+
+    fn insert_mut_all_if_changed<'c, I>(
+        &'c mut self,
+        iter: I,
+        track: &'c E::TrackCtx,
+    ) -> BoxFuture<'c, Result<usize>>
+    where
+        I: IntoIterator<Item = (E::Key, E)> + Send + 'c,
+        I::IntoIter: Send,
+    {
+        Box::pin(async move {
+            let mut count = 0;
+
+            for (k, v) in iter {
+                if self.get(&k).map_or(true, |old| old != &v) {
+                    self.insert_mut(k, v, track).await?;
+                    count += 1;
+                }
+            }
+
+            Ok(count)
+        })
     }
 }
 
@@ -693,6 +924,7 @@ where
         Box::pin(
             async move {
                 self.ctx.provider.delete(&k).await?;
+
                 log_mut::<E>(&mut self.ctx.log_ctx).remove(&k);
 
                 let mut result = Ok(());
@@ -709,6 +941,28 @@ where
             }
             .instrument_err(remove_tbl_transaction_span()),
         )
+    }
+
+    fn remove_all<'c, K>(
+        &'c mut self,
+        keys: K,
+        track: &'c <E as Entity>::TrackCtx,
+    ) -> BoxFuture<'c, Result<usize>>
+    where
+        K: 'c,
+        K: IntoIterator<Item = <E as Entity>::Key> + Send,
+        K::IntoIter: Send,
+    {
+        Box::pin(async move {
+            let mut count = 0;
+
+            for key in keys {
+                Remove::remove(self, key, track).await?;
+                count += 1;
+            }
+
+            Ok(count)
+        })
     }
 }
 

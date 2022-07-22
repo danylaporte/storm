@@ -10,7 +10,7 @@ pub trait Entity: Send + Sync + 'static {
         _key: &'a Self::Key,
         _old: Option<&'a Self>,
         _ctx: &'a mut CtxTransaction,
-        _tracker: &'a Self::TrackCtx,
+        _track: &'a Self::TrackCtx,
     ) -> BoxFuture<'a, Result<()>> {
         box_future_ok()
     }
@@ -19,7 +19,7 @@ pub trait Entity: Send + Sync + 'static {
         &'a self,
         _key: &'a Self::Key,
         _ctx: &'a mut CtxTransaction,
-        _tracker: &'a Self::TrackCtx,
+        _track: &'a Self::TrackCtx,
     ) -> BoxFuture<'a, Result<()>> {
         box_future_ok()
     }

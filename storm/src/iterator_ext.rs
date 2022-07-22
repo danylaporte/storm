@@ -1,7 +1,4 @@
-use crate::{
-    AsRefAsync, BoxFuture, Ctx, CtxTransaction, Entity, EntityAccessor, Insert, InsertMut,
-    LogAccessor, Remove, Result, TblTransaction,
-};
+use crate::{BoxFuture, CtxTransaction, Entity, Insert, InsertMut, Remove, Result};
 
 pub trait IteratorExt: Iterator {
     fn insert_all<'a, 'b, E>(
@@ -10,10 +7,9 @@ pub trait IteratorExt: Iterator {
         track: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<usize>>
     where
-        Ctx: AsRefAsync<E::Tbl>,
-        E: Entity + EntityAccessor + LogAccessor,
+        CtxTransaction<'a>: Insert<E>,
+        E: Entity,
         Self: Iterator<Item = (E::Key, E)> + Sized + Send + 'b,
-        TblTransaction<'a, 'b, E>: Insert<E>,
         'a: 'b,
     {
         trx.insert_all(self, track)
@@ -25,10 +21,9 @@ pub trait IteratorExt: Iterator {
         track: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<usize>>
     where
-        Ctx: AsRefAsync<E::Tbl>,
-        E: Entity + EntityAccessor + LogAccessor,
+        CtxTransaction<'a>: InsertMut<E>,
+        E: Entity,
         Self: Iterator<Item = (E::Key, E)> + Sized + Send + 'b,
-        TblTransaction<'a, 'b, E>: InsertMut<E>,
         'a: 'b,
     {
         trx.insert_mut_all(self, track)
@@ -40,10 +35,9 @@ pub trait IteratorExt: Iterator {
         track: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<usize>>
     where
-        Ctx: AsRefAsync<E::Tbl>,
-        E: Entity + EntityAccessor + LogAccessor,
+        CtxTransaction<'a>: Remove<E>,
+        E: Entity,
         Self: Iterator<Item = E::Key> + Sized + Send + 'b,
-        TblTransaction<'a, 'b, E>: Remove<E>,
         'a: 'b,
     {
         trx.remove_all(self, track)

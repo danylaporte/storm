@@ -42,7 +42,7 @@ impl Entity for Entity1 {
         _key: &'a Self::Key,
         old: Option<&'a Self>,
         _ctx: &'a mut storm::CtxTransaction,
-        _tracker: &'a Self::TrackCtx,
+        _track: &'a Self::TrackCtx,
     ) -> storm::BoxFuture<'a, Result<()>> {
         println!("current: {}, old: {:?}", self.v, old.map(|e| e.v));
         Box::pin(ready(Ok(())))
