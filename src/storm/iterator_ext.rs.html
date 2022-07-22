@@ -50,16 +50,7 @@
 <span id="45">45</span>
 <span id="46">46</span>
 <span id="47">47</span>
-<span id="48">48</span>
-<span id="49">49</span>
-<span id="50">50</span>
-<span id="51">51</span>
-<span id="52">52</span>
-<span id="53">53</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">AsRefAsync</span>, <span class="ident">BoxFuture</span>, <span class="ident">Ctx</span>, <span class="ident">CtxTransaction</span>, <span class="ident">Entity</span>, <span class="ident">EntityAccessor</span>, <span class="ident">Insert</span>, <span class="ident">InsertMut</span>,
-    <span class="ident">LogAccessor</span>, <span class="ident">Remove</span>, <span class="prelude-ty">Result</span>, <span class="ident">TblTransaction</span>,
-};
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">BoxFuture</span>, <span class="ident">CtxTransaction</span>, <span class="ident">Entity</span>, <span class="ident">Insert</span>, <span class="ident">InsertMut</span>, <span class="ident">Remove</span>, <span class="prelude-ty">Result</span>};
 
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">IteratorExt</span>: <span class="ident">Iterator</span> {
     <span class="kw">fn</span> <span class="ident">insert_all</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>(
@@ -68,10 +59,9 @@
         <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="ident">E::TrackCtx</span>,
     ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
-        <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
+        <span class="ident">CtxTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>: <span class="ident">Insert</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
+        <span class="ident">E</span>: <span class="ident">Entity</span>,
         <span class="self">Self</span>: <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E::Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Sized</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;b</span>,
-        <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">Insert</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
         <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
     {
         <span class="ident">trx</span>.<span class="ident">insert_all</span>(<span class="self">self</span>, <span class="ident">track</span>)
@@ -83,10 +73,9 @@
         <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="ident">E::TrackCtx</span>,
     ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
-        <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
+        <span class="ident">CtxTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>: <span class="ident">InsertMut</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
+        <span class="ident">E</span>: <span class="ident">Entity</span>,
         <span class="self">Self</span>: <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E::Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Sized</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;b</span>,
-        <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">InsertMut</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
         <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
     {
         <span class="ident">trx</span>.<span class="ident">insert_mut_all</span>(<span class="self">self</span>, <span class="ident">track</span>)
@@ -98,10 +87,9 @@
         <span class="ident">track</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="ident">E::TrackCtx</span>,
     ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">Ctx</span>: <span class="ident">AsRefAsync</span><span class="op">&lt;</span><span class="ident">E::Tbl</span><span class="op">&gt;</span>,
-        <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span> <span class="op">+</span> <span class="ident">LogAccessor</span>,
+        <span class="ident">CtxTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>: <span class="ident">Remove</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
+        <span class="ident">E</span>: <span class="ident">Entity</span>,
         <span class="self">Self</span>: <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">E::Key</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Sized</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;b</span>,
-        <span class="ident">TblTransaction</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">E</span><span class="op">&gt;</span>: <span class="ident">Remove</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
         <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
     {
         <span class="ident">trx</span>.<span class="ident">remove_all</span>(<span class="self">self</span>, <span class="ident">track</span>)
@@ -110,5 +98,5 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">IteratorExt</span> <span class="kw">for</span> <span class="ident">T</span> <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">Iterator</span> {}
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0 (a8314ef7d 2022-06-27)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.1 (e092d0b6b 2022-07-16)" ></div>
 </body></html>
