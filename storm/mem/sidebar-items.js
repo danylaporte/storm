@@ -1,1 +1,1 @@
-initSidebarItems({"trait":[["Commit",""],["Insert",""],["Remove",""]]});
+window.SIDEBAR_ITEMS = {"trait":[["Commit",""],["Insert",""],["Remove",""]]};
