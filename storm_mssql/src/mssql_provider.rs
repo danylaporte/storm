@@ -105,7 +105,7 @@ impl provider::Provider for MssqlProvider {
 
         tokio::spawn(
             async move {
-                p.state().await;
+                let _ = p.state().await;
             }
             .instrument(debug_span!(parent: span, "rollback_transaction")),
         );
