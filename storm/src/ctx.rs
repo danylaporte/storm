@@ -569,6 +569,10 @@ where
     E::Key: Eq + Hash,
     E::Tbl: Get<E>,
 {
+    /// gets a reference from the log or the underlying ctx.
+    ///
+    /// You can take the TblTransaction by ownership and have a longer
+    /// lifetime for the & by using the [Self::into_ref] method.
     pub fn get(&self, k: &E::Key) -> Option<&E>
     where
         Self: Get<E>,
@@ -624,6 +628,19 @@ where
         Self: InsertMut<E>,
     {
         InsertMut::<E>::insert_mut_all(self, iter, track)
+    }
+
+    pub fn into_ref(self, k: &E::Key) -> Option<&'b E>
+    where
+        E: Entity + EntityAccessor + LogAccessor,
+        E::Key: Eq + Hash,
+        E::Tbl: Get<E>,
+    {
+        match self.ctx.log_ctx.get(E::log_var()).and_then(|l| l.get(k)) {
+            Some(LogState::Inserted(v)) => Some(v),
+            Some(LogState::Removed) => None,
+            None => self.tbl.get(k),
+        }
     }
 
     pub fn log(&self) -> Option<&FxHashMap<E::Key, LogState<E>>>
