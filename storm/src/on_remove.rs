@@ -28,7 +28,9 @@ where
     }
 }
 
-pub struct OnRemove<E>(parking_lot::Mutex<Arc<Box<[Arc<dyn RemovingHandler<E> + Send + Sync>]>>>);
+type ArcRemovingHandler<E> = Arc<dyn RemovingHandler<E> + Send + Sync>;
+
+pub struct OnRemove<E>(parking_lot::Mutex<Arc<Box<[ArcRemovingHandler<E>]>>>);
 
 impl<E: Entity> OnRemove<E> {
     #[doc(hidden)]
