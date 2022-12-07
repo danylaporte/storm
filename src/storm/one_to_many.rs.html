@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm/src/one_to_many.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>one_to_many.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm/src/one_to_many.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>one_to_many.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -187,194 +187,194 @@
 <span id="187">187</span>
 <span id="188">188</span>
 <span id="189">189</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::Gc</span>;
-<span class="kw">use</span> <span class="ident">fxhash::FxHashSet</span>;
-<span class="kw">use</span> <span class="ident">rayon::iter::ParallelIterator</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">cmp::Ordering</span>, <span class="ident">hash::Hash</span>, <span class="ident">iter::FromIterator</span>, <span class="ident">ops::Index</span>};
-<span class="kw">use</span> <span class="ident">vec_map::VecMap</span>;
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::Gc;
+<span class="kw">use </span>fxhash::FxHashSet;
+<span class="kw">use </span>rayon::iter::ParallelIterator;
+<span class="kw">use </span>std::{cmp::Ordering, hash::Hash, iter::FromIterator, ops::Index};
+<span class="kw">use </span>vec_map::VecMap;
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OneToMany</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span>(<span class="ident">VecMap</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">MANY</span>]<span class="op">&gt;</span><span class="op">&gt;</span>);
+<span class="kw">pub struct </span>OneToMany&lt;ONE, MANY&gt;(VecMap&lt;ONE, Box&lt;[MANY]&gt;&gt;);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span> <span class="ident">OneToMany</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">index</span>: <span class="kw-2">&amp;</span><span class="ident">ONE</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">MANY</span>]
-    <span class="kw">where</span>
-        <span class="ident">ONE</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;ONE, MANY&gt; OneToMany&lt;ONE, MANY&gt; {
+    <span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, index: <span class="kw-2">&amp;</span>ONE) -&gt; <span class="kw-2">&amp;</span>[MANY]
+    <span class="kw">where
+        </span>ONE: Clone + Into&lt;usize&gt;,
     {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">get</span>(<span class="ident">index</span>).<span class="ident">map_or</span>(<span class="kw-2">&amp;</span>[], <span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">v</span>)
+        <span class="self">self</span>.<span class="number">0</span>.get(index).map_or(<span class="kw-2">&amp;</span>[], |v| <span class="kw-2">&amp;**</span>v)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">iter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">vec_map::Iter</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">MANY</span>]<span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">iter</span>()
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span> <span class="ident">Gc</span> <span class="kw">for</span> <span class="ident">OneToMany</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">ONE</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span>,
-    <span class="ident">MANY</span>: <span class="ident">Gc</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span>,
-{
-    <span class="kw">const</span> <span class="ident">SUPPORT_GC</span>: <span class="ident">bool</span> <span class="op">=</span> <span class="ident">MANY::SUPPORT_GC</span>;
-
-    <span class="kw">fn</span> <span class="ident">gc</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="kw">crate</span>::GcCtx</span>) {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">par_iter_mut</span>().<span class="ident">for_each</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">item</span>)<span class="op">|</span> <span class="ident">item</span>.<span class="ident">gc</span>(<span class="ident">ctx</span>));
+    <span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; vec_map::Iter&lt;ONE, Box&lt;[MANY]&gt;&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.iter()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span> <span class="ident">IntoIterator</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">OneToMany</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">ONE</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;ONE, MANY&gt; Gc <span class="kw">for </span>OneToMany&lt;ONE, MANY&gt;
+<span class="kw">where
+    </span>ONE: From&lt;usize&gt; + Send,
+    MANY: Gc + Send + Sync,
 {
-    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> (<span class="ident">ONE</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">MANY</span>]<span class="op">&gt;</span>);
-    <span class="kw">type</span> <span class="ident">IntoIter</span> <span class="op">=</span> <span class="ident">vec_map::Iter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">ONE</span>, <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">MANY</span>]<span class="op">&gt;</span><span class="op">&gt;</span>;
+    <span class="kw">const </span>SUPPORT_GC: bool = MANY::SUPPORT_GC;
 
-    <span class="kw">fn</span> <span class="ident">into_iter</span>(<span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::IntoIter</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">iter</span>()
+    <span class="kw">fn </span>gc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: <span class="kw-2">&amp;</span><span class="kw">crate</span>::GcCtx) {
+        <span class="self">self</span>.<span class="number">0</span>.par_iter_mut().for_each(|(<span class="kw">_</span>, item)| item.gc(ctx));
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span> <span class="ident">Index</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">ONE</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">OneToMany</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">ONE</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, ONE, MANY&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>OneToMany&lt;ONE, MANY&gt;
+<span class="kw">where
+    </span>ONE: From&lt;usize&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> [<span class="ident">MANY</span>];
+    <span class="kw">type </span>Item = (ONE, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Box&lt;[MANY]&gt;);
+    <span class="kw">type </span>IntoIter = vec_map::Iter&lt;<span class="lifetime">&#39;a</span>, ONE, Box&lt;[MANY]&gt;&gt;;
 
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">fn</span> <span class="ident">index</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">index</span>: <span class="kw-2">&amp;</span><span class="ident">ONE</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="self">self</span>.<span class="ident">get</span>(<span class="ident">index</span>)
+    <span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::IntoIter {
+        <span class="self">self</span>.<span class="number">0</span>.iter()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span> <span class="ident">FromIterator</span><span class="op">&lt;</span>(<span class="ident">ONE</span>, <span class="ident">MANY</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">OneToMany</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">ONE</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
-    <span class="ident">MANY</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
+<span class="kw">impl</span>&lt;ONE, MANY&gt; Index&lt;<span class="kw-2">&amp;</span>ONE&gt; <span class="kw">for </span>OneToMany&lt;ONE, MANY&gt;
+<span class="kw">where
+    </span>ONE: Clone + Into&lt;usize&gt;,
 {
-    <span class="kw">fn</span> <span class="ident">from_iter</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">ONE</span>, <span class="ident">MANY</span>)<span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">iter</span>: <span class="ident">T</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">VecMap::new</span>();
+    <span class="kw">type </span>Output = [MANY];
 
-        <span class="kw">for</span> (<span class="ident">one</span>, <span class="ident">many</span>) <span class="kw">in</span> <span class="ident">iter</span> {
-            <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>).<span class="ident">or_insert_with</span>(<span class="ident">Vec::default</span>).<span class="ident">push</span>(<span class="ident">many</span>);
+    <span class="attribute">#[inline]
+    </span><span class="kw">fn </span>index(<span class="kw-2">&amp;</span><span class="self">self</span>, index: <span class="kw-2">&amp;</span>ONE) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Output {
+        <span class="self">self</span>.get(index)
+    }
+}
+
+<span class="kw">impl</span>&lt;ONE, MANY&gt; FromIterator&lt;(ONE, MANY)&gt; <span class="kw">for </span>OneToMany&lt;ONE, MANY&gt;
+<span class="kw">where
+    </span>ONE: Clone + From&lt;usize&gt; + Into&lt;usize&gt;,
+    MANY: Eq + Hash,
+{
+    <span class="kw">fn </span>from_iter&lt;T: IntoIterator&lt;Item = (ONE, MANY)&gt;&gt;(iter: T) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>map = VecMap::new();
+
+        <span class="kw">for </span>(one, many) <span class="kw">in </span>iter {
+            map.entry(one).or_insert_with(Vec::default).push(many);
         }
 
         <span class="self">Self</span>(
-            <span class="ident">map</span>.<span class="ident">into_iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">one</span>, <span class="ident">many</span>)<span class="op">|</span> (<span class="ident">one</span>, <span class="ident">many</span>.<span class="ident">into_boxed_slice</span>()))
-                .<span class="ident">collect</span>(),
+            map.into_iter()
+                .map(|(one, many)| (one, many.into_boxed_slice()))
+                .collect(),
         )
     }
 }
 
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">OneToManyFromIter</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">ONE</span>, <span class="ident">MANY</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Sized</span>
-<span class="kw">where</span>
-    <span class="ident">ONE</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+<span class="kw">pub trait </span>OneToManyFromIter&lt;ONE, MANY&gt;: IntoIterator&lt;Item = (ONE, MANY)&gt; + Sized
+<span class="kw">where
+    </span>ONE: Clone + From&lt;usize&gt; + Into&lt;usize&gt;,
 {
-    <span class="doccomment">/// Collect and dedup items using an FxHashSet internally.</span>
-    <span class="kw">fn</span> <span class="ident">collect_dedup</span>(<span class="self">self</span>) -&gt; <span class="ident">OneToMany</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">MANY</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
+    <span class="doccomment">/// Collect and dedup items using an FxHashSet internally.
+    </span><span class="kw">fn </span>collect_dedup(<span class="self">self</span>) -&gt; OneToMany&lt;ONE, MANY&gt;
+    <span class="kw">where
+        </span>MANY: Eq + Hash,
     {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">VecMap::new</span>();
+        <span class="kw">let </span><span class="kw-2">mut </span>map = VecMap::new();
 
-        <span class="kw">for</span> (<span class="ident">one</span>, <span class="ident">many</span>) <span class="kw">in</span> <span class="self">self</span> {
-            <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>)
-                .<span class="ident">or_insert_with</span>(<span class="ident">FxHashSet::default</span>)
-                .<span class="ident">insert</span>(<span class="ident">many</span>);
+        <span class="kw">for </span>(one, many) <span class="kw">in </span><span class="self">self </span>{
+            map.entry(one)
+                .or_insert_with(FxHashSet::default)
+                .insert(many);
         }
 
-        <span class="ident">OneToMany</span>(
-            <span class="ident">map</span>.<span class="ident">into_iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">one</span>, <span class="ident">many</span>)<span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">many</span> <span class="op">=</span> <span class="ident">many</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-                    (<span class="ident">one</span>, <span class="ident">many</span>.<span class="ident">into_boxed_slice</span>())
+        OneToMany(
+            map.into_iter()
+                .map(|(one, many)| {
+                    <span class="kw">let </span>many = many.into_iter().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+                    (one, many.into_boxed_slice())
                 })
-                .<span class="ident">collect</span>(),
+                .collect(),
         )
     }
 
-    <span class="doccomment">/// Collect the items and sort them.</span>
-    <span class="kw">fn</span> <span class="ident">collect_sort</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="self">self</span>) -&gt; <span class="ident">OneToMany</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">MANY</span>: <span class="ident">Ord</span>,
+    <span class="doccomment">/// Collect the items and sort them.
+    </span><span class="kw">fn </span>collect_sort&lt;F&gt;(<span class="self">self</span>) -&gt; OneToMany&lt;ONE, MANY&gt;
+    <span class="kw">where
+        </span>MANY: Ord,
     {
-        <span class="self">self</span>.<span class="ident">collect_sort_by</span>(<span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span>.<span class="ident">cmp</span>(<span class="ident">b</span>))
+        <span class="self">self</span>.collect_sort_by(|a, b| a.cmp(b))
     }
 
-    <span class="doccomment">/// Collect the items and sort them by the cmp function specified.</span>
-    <span class="kw">fn</span> <span class="ident">collect_sort_by</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">cmp</span>: <span class="ident">F</span>) -&gt; <span class="ident">OneToMany</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">F</span>: <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="ident">MANY</span>, <span class="kw-2">&amp;</span><span class="ident">MANY</span>) -&gt; <span class="ident">Ordering</span>,
+    <span class="doccomment">/// Collect the items and sort them by the cmp function specified.
+    </span><span class="kw">fn </span>collect_sort_by&lt;F&gt;(<span class="self">self</span>, cmp: F) -&gt; OneToMany&lt;ONE, MANY&gt;
+    <span class="kw">where
+        </span>F: Fn(<span class="kw-2">&amp;</span>MANY, <span class="kw-2">&amp;</span>MANY) -&gt; Ordering,
     {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">VecMap::new</span>();
+        <span class="kw">let </span><span class="kw-2">mut </span>map = VecMap::new();
 
-        <span class="kw">for</span> (<span class="ident">one</span>, <span class="ident">many</span>) <span class="kw">in</span> <span class="self">self</span> {
-            <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>).<span class="ident">or_insert_with</span>(<span class="ident">Vec::default</span>).<span class="ident">push</span>(<span class="ident">many</span>);
+        <span class="kw">for </span>(one, many) <span class="kw">in </span><span class="self">self </span>{
+            map.entry(one).or_insert_with(Vec::default).push(many);
         }
 
-        <span class="ident">OneToMany</span>(
-            <span class="ident">map</span>.<span class="ident">into_iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">one</span>, <span class="kw-2">mut</span> <span class="ident">many</span>)<span class="op">|</span> {
-                    <span class="ident">many</span>.<span class="ident">sort_unstable_by</span>(<span class="kw-2">&amp;</span><span class="ident">cmp</span>);
-                    (<span class="ident">one</span>, <span class="ident">many</span>.<span class="ident">into_boxed_slice</span>())
+        OneToMany(
+            map.into_iter()
+                .map(|(one, <span class="kw-2">mut </span>many)| {
+                    many.sort_unstable_by(<span class="kw-2">&amp;</span>cmp);
+                    (one, many.into_boxed_slice())
                 })
-                .<span class="ident">collect</span>(),
+                .collect(),
         )
     }
 
-    <span class="doccomment">/// Collect the items and sort them using a key_cmp function.</span>
-    <span class="kw">fn</span> <span class="ident">collect_sort_by_key</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">K</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">key_cmp</span>: <span class="ident">F</span>) -&gt; <span class="ident">OneToMany</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">F</span>: <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="ident">MANY</span>) -&gt; <span class="ident">K</span>,
-        <span class="ident">K</span>: <span class="ident">Ord</span>,
+    <span class="doccomment">/// Collect the items and sort them using a key_cmp function.
+    </span><span class="kw">fn </span>collect_sort_by_key&lt;F, K&gt;(<span class="self">self</span>, key_cmp: F) -&gt; OneToMany&lt;ONE, MANY&gt;
+    <span class="kw">where
+        </span>F: Fn(<span class="kw-2">&amp;</span>MANY) -&gt; K,
+        K: Ord,
     {
-        <span class="self">self</span>.<span class="ident">collect_sort_by</span>(<span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">key_cmp</span>(<span class="ident">a</span>).<span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="ident">key_cmp</span>(<span class="ident">b</span>)))
+        <span class="self">self</span>.collect_sort_by(|a, b| key_cmp(a).cmp(<span class="kw-2">&amp;</span>key_cmp(b)))
     }
 
-    <span class="kw">fn</span> <span class="ident">collect_sort_dedup</span>(<span class="self">self</span>) -&gt; <span class="ident">OneToMany</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">MANY</span>: <span class="ident">Ord</span>,
+    <span class="kw">fn </span>collect_sort_dedup(<span class="self">self</span>) -&gt; OneToMany&lt;ONE, MANY&gt;
+    <span class="kw">where
+        </span>MANY: Ord,
     {
-        <span class="self">self</span>.<span class="ident">collect_sort_dedup_by</span>(<span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span>.<span class="ident">cmp</span>(<span class="ident">b</span>))
+        <span class="self">self</span>.collect_sort_dedup_by(|a, b| a.cmp(b))
     }
 
-    <span class="doccomment">/// Collect the items and sort them by the cmp function specified.</span>
-    <span class="doccomment">/// Also removes duplicate MANY items using the same cmp function.</span>
-    <span class="kw">fn</span> <span class="ident">collect_sort_dedup_by</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">cmp</span>: <span class="ident">F</span>) -&gt; <span class="ident">OneToMany</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">F</span>: <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="ident">MANY</span>, <span class="kw-2">&amp;</span><span class="ident">MANY</span>) -&gt; <span class="ident">Ordering</span>,
+    <span class="doccomment">/// Collect the items and sort them by the cmp function specified.
+    /// Also removes duplicate MANY items using the same cmp function.
+    </span><span class="kw">fn </span>collect_sort_dedup_by&lt;F&gt;(<span class="self">self</span>, cmp: F) -&gt; OneToMany&lt;ONE, MANY&gt;
+    <span class="kw">where
+        </span>F: Fn(<span class="kw-2">&amp;</span>MANY, <span class="kw-2">&amp;</span>MANY) -&gt; Ordering,
     {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">VecMap::new</span>();
+        <span class="kw">let </span><span class="kw-2">mut </span>map = VecMap::new();
 
-        <span class="kw">for</span> (<span class="ident">one</span>, <span class="ident">many</span>) <span class="kw">in</span> <span class="self">self</span> {
-            <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>).<span class="ident">or_insert_with</span>(<span class="ident">Vec::default</span>).<span class="ident">push</span>(<span class="ident">many</span>);
+        <span class="kw">for </span>(one, many) <span class="kw">in </span><span class="self">self </span>{
+            map.entry(one).or_insert_with(Vec::default).push(many);
         }
 
-        <span class="ident">OneToMany</span>(
-            <span class="ident">map</span>.<span class="ident">into_iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">one</span>, <span class="kw-2">mut</span> <span class="ident">many</span>)<span class="op">|</span> {
-                    <span class="ident">many</span>.<span class="ident">sort_unstable_by</span>(<span class="kw-2">&amp;</span><span class="ident">cmp</span>);
-                    <span class="ident">many</span>.<span class="ident">dedup_by</span>(<span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">cmp</span>(<span class="ident">a</span>, <span class="ident">b</span>) <span class="op">==</span> <span class="ident">Ordering::Equal</span>);
-                    (<span class="ident">one</span>, <span class="ident">many</span>.<span class="ident">into_boxed_slice</span>())
+        OneToMany(
+            map.into_iter()
+                .map(|(one, <span class="kw-2">mut </span>many)| {
+                    many.sort_unstable_by(<span class="kw-2">&amp;</span>cmp);
+                    many.dedup_by(|a, b| cmp(a, b) == Ordering::Equal);
+                    (one, many.into_boxed_slice())
                 })
-                .<span class="ident">collect</span>(),
+                .collect(),
         )
     }
 
-    <span class="doccomment">/// Collect the items and sort them by the key_cmp function specified.</span>
-    <span class="doccomment">/// Also removes duplicate MANY items using the same key_cmp function.</span>
-    <span class="kw">fn</span> <span class="ident">collect_sort_dedup_by_key</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">K</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">key_cmp</span>: <span class="ident">F</span>) -&gt; <span class="ident">OneToMany</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">F</span>: <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="ident">MANY</span>) -&gt; <span class="ident">K</span>,
-        <span class="ident">K</span>: <span class="ident">Ord</span>,
+    <span class="doccomment">/// Collect the items and sort them by the key_cmp function specified.
+    /// Also removes duplicate MANY items using the same key_cmp function.
+    </span><span class="kw">fn </span>collect_sort_dedup_by_key&lt;F, K&gt;(<span class="self">self</span>, key_cmp: F) -&gt; OneToMany&lt;ONE, MANY&gt;
+    <span class="kw">where
+        </span>F: Fn(<span class="kw-2">&amp;</span>MANY) -&gt; K,
+        K: Ord,
     {
-        <span class="self">self</span>.<span class="ident">collect_sort_dedup_by</span>(<span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">key_cmp</span>(<span class="ident">a</span>).<span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="ident">key_cmp</span>(<span class="ident">b</span>)))
+        <span class="self">self</span>.collect_sort_dedup_by(|a, b| key_cmp(a).cmp(<span class="kw-2">&amp;</span>key_cmp(b)))
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">OneToManyFromIter</span><span class="op">&lt;</span><span class="ident">ONE</span>, <span class="ident">MANY</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">T</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">ONE</span>, <span class="ident">MANY</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Sized</span>,
-    <span class="ident">ONE</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;ONE, MANY, T&gt; OneToManyFromIter&lt;ONE, MANY&gt; <span class="kw">for </span>T
+<span class="kw">where
+    </span>T: IntoIterator&lt;Item = (ONE, MANY)&gt; + Sized,
+    ONE: Clone + From&lt;usize&gt; + Into&lt;usize&gt;,
 {
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

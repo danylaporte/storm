@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm/src/vec_table.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>vec_table.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm/src/vec_table.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>vec_table.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -226,233 +226,233 @@
 <span id="226">226</span>
 <span id="227">227</span>
 <span id="228">228</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">provider::LoadAll</span>, <span class="ident">Accessor</span>, <span class="ident">ApplyLog</span>, <span class="ident">BoxFuture</span>, <span class="ident">CtxTypeInfo</span>, <span class="ident">Deps</span>, <span class="ident">Entity</span>, <span class="ident">EntityAccessor</span>,
-    <span class="ident">EntityOf</span>, <span class="ident">Gc</span>, <span class="ident">GcCtx</span>, <span class="ident">Get</span>, <span class="ident">GetMut</span>, <span class="ident">Init</span>, <span class="ident">Log</span>, <span class="ident">LogState</span>, <span class="ident">NotifyTag</span>, <span class="prelude-ty">Result</span>, <span class="ident">Tag</span>, <span class="ident">TblVar</span>,
+</pre><pre class="rust"><code><span class="kw">use crate</span>::{
+    provider::LoadAll, Accessor, ApplyLog, BoxFuture, CtxTypeInfo, Deps, Entity, EntityAccessor,
+    EntityOf, Gc, GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag, <span class="prelude-ty">Result</span>, Tag, TblVar,
 };
-<span class="kw">use</span> <span class="ident">rayon::iter::IntoParallelIterator</span>;
-<span class="kw">use</span> <span class="ident">std::ops::Deref</span>;
-<span class="kw">use</span> <span class="ident">tracing::instrument</span>;
-<span class="kw">use</span> <span class="ident">vec_map</span>::{<span class="ident">Iter</span>, <span class="ident">Keys</span>, <span class="ident">ParIter</span>, <span class="ident">Values</span>, <span class="ident">VecMap</span>};
-<span class="kw">use</span> <span class="ident">version_tag::VersionTag</span>;
+<span class="kw">use </span>rayon::iter::IntoParallelIterator;
+<span class="kw">use </span>std::ops::Deref;
+<span class="kw">use </span>tracing::instrument;
+<span class="kw">use </span>vec_map::{Iter, Keys, ParIter, Values, VecMap};
+<span class="kw">use </span>version_tag::VersionTag;
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">Entity</span><span class="op">&gt;</span> {
-    <span class="ident">map</span>: <span class="ident">VecMap</span><span class="op">&lt;</span><span class="ident">E::Key</span>, <span class="ident">E</span><span class="op">&gt;</span>,
-    <span class="ident">tag</span>: <span class="ident">VersionTag</span>,
+<span class="kw">pub struct </span>VecTable&lt;E: Entity&gt; {
+    map: VecMap&lt;E::Key, E&gt;,
+    tag: VersionTag,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">Entity</span><span class="op">&gt;</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">map</span>: <span class="ident">VecMap::new</span>(),
-            <span class="ident">tag</span>: <span class="ident">VersionTag::new</span>(),
+<span class="kw">impl</span>&lt;E: Entity&gt; VecTable&lt;E&gt; {
+    <span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            map: VecMap::new(),
+            tag: VersionTag::new(),
         }
     }
 
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">iter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Iter</span><span class="op">&lt;</span><span class="ident">E::Key</span>, <span class="ident">E</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">map</span>.<span class="ident">iter</span>()
+    <span class="attribute">#[inline]
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Iter&lt;E::Key, E&gt; {
+        <span class="self">self</span>.map.iter()
     }
 
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">keys</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Keys</span><span class="op">&lt;</span><span class="ident">E::Key</span>, <span class="ident">E</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">map</span>.<span class="ident">keys</span>()
+    <span class="attribute">#[inline]
+    </span><span class="kw">pub fn </span>keys(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Keys&lt;E::Key, E&gt; {
+        <span class="self">self</span>.map.keys()
     }
 
-    <span class="kw">fn</span> <span class="ident">update_metrics</span>(<span class="kw-2">&amp;</span><span class="self">self</span>)
-    <span class="kw">where</span>
-        <span class="ident">E</span>: <span class="ident">CtxTypeInfo</span>,
+    <span class="kw">fn </span>update_metrics(<span class="kw-2">&amp;</span><span class="self">self</span>)
+    <span class="kw">where
+        </span>E: CtxTypeInfo,
     {
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;telemetry&quot;</span>)]</span>
-        <span class="ident"><span class="kw">crate</span>::telemetry::update_storm_table_rows</span>(<span class="self">self</span>.<span class="ident">len</span>(), <span class="ident">E::NAME</span>);
+        <span class="attribute">#[cfg(feature = <span class="string">&quot;telemetry&quot;</span>)]
+        </span><span class="kw">crate</span>::telemetry::update_storm_table_rows(<span class="self">self</span>.len(), E::NAME);
     }
 
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">values</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Values</span><span class="op">&lt;</span><span class="ident">E::Key</span>, <span class="ident">E</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">map</span>.<span class="ident">values</span>()
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> <span class="ident">Accessor</span> <span class="kw">for</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">EntityAccessor</span><span class="op">&lt;</span><span class="ident">Tbl</span> <span class="op">=</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-{
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">fn</span> <span class="ident">var</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">TblVar</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="ident">E::entity_var</span>()
-    }
-
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">fn</span> <span class="ident">deps</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">Deps</span> {
-        <span class="ident">E::entity_deps</span>()
+    <span class="attribute">#[inline]
+    </span><span class="kw">pub fn </span>values(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Values&lt;E::Key, E&gt; {
+        <span class="self">self</span>.map.values()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> <span class="ident">ApplyLog</span><span class="op">&lt;</span><span class="ident">Log</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">E</span>: <span class="ident">CtxTypeInfo</span> <span class="op">+</span> <span class="ident">Entity</span>,
-    <span class="ident">E::Key</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;E&gt; Accessor <span class="kw">for </span>VecTable&lt;E&gt;
+<span class="kw">where
+    </span>E: Entity + EntityAccessor&lt;Tbl = VecTable&lt;E&gt;&gt;,
 {
-    <span class="kw">fn</span> <span class="ident">apply_log</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">log</span>: <span class="ident">Log</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>) -&gt; <span class="ident">bool</span> {
-        <span class="kw">if</span> <span class="ident">log</span>.<span class="ident">is_empty</span>() {
-            <span class="kw">return</span> <span class="bool-val">false</span>;
+    <span class="attribute">#[inline]
+    </span><span class="kw">fn </span>var() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>TblVar&lt;<span class="self">Self</span>&gt; {
+        E::entity_var()
+    }
+
+    <span class="attribute">#[inline]
+    </span><span class="kw">fn </span>deps() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Deps {
+        E::entity_deps()
+    }
+}
+
+<span class="kw">impl</span>&lt;E&gt; ApplyLog&lt;Log&lt;E&gt;&gt; <span class="kw">for </span>VecTable&lt;E&gt;
+<span class="kw">where
+    </span>E: CtxTypeInfo + Entity,
+    E::Key: Clone + Into&lt;usize&gt;,
+{
+    <span class="kw">fn </span>apply_log(<span class="kw-2">&amp;mut </span><span class="self">self</span>, log: Log&lt;E&gt;) -&gt; bool {
+        <span class="kw">if </span>log.is_empty() {
+            <span class="kw">return </span><span class="bool-val">false</span>;
         }
 
-        <span class="kw">for</span> (<span class="ident">k</span>, <span class="ident">state</span>) <span class="kw">in</span> <span class="ident">log</span> {
-            <span class="kw">match</span> <span class="ident">state</span> {
-                <span class="ident">LogState::Inserted</span>(<span class="ident">v</span>) =&gt; {
-                    <span class="self">self</span>.<span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">k</span>, <span class="ident">v</span>);
+        <span class="kw">for </span>(k, state) <span class="kw">in </span>log {
+            <span class="kw">match </span>state {
+                LogState::Inserted(v) =&gt; {
+                    <span class="self">self</span>.map.insert(k, v);
                 }
-                <span class="ident">LogState::Removed</span> =&gt; {
-                    <span class="self">self</span>.<span class="ident">map</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>);
+                LogState::Removed =&gt; {
+                    <span class="self">self</span>.map.remove(<span class="kw-2">&amp;</span>k);
                 }
             }
         }
 
-        <span class="self">self</span>.<span class="ident">update_metrics</span>();
-        <span class="self">self</span>.<span class="ident">tag</span>.<span class="ident">notify</span>();
-        <span class="bool-val">true</span>
-    }
+        <span class="self">self</span>.update_metrics();
+        <span class="self">self</span>.tag.notify();
+        <span class="bool-val">true
+    </span>}
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">Entity</span><span class="op">&gt;</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> {
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">fn</span> <span class="ident">as_ref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span> {
-        <span class="self">self</span>
-    }
+<span class="kw">impl</span>&lt;E: Entity&gt; AsRef&lt;<span class="self">Self</span>&gt; <span class="kw">for </span>VecTable&lt;E&gt; {
+    <span class="attribute">#[inline]
+    </span><span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self </span>{
+        <span class="self">self
+    </span>}
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">E</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Entity</span>,
+<span class="kw">impl</span>&lt;E&gt; Clone <span class="kw">for </span>VecTable&lt;E&gt;
+<span class="kw">where
+    </span>E: Clone + Entity,
 {
-    <span class="kw">fn</span> <span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">map</span>: <span class="self">self</span>.<span class="ident">map</span>.<span class="ident">clone</span>(),
-            <span class="ident">tag</span>: <span class="self">self</span>.<span class="ident">tag</span>,
+    <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            map: <span class="self">self</span>.map.clone(),
+            tag: <span class="self">self</span>.tag,
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">Entity</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> {
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::new</span>()
+<span class="kw">impl</span>&lt;E: Entity&gt; Default <span class="kw">for </span>VecTable&lt;E&gt; {
+    <span class="attribute">#[inline]
+    </span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::new()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">Entity</span><span class="op">&gt;</span> <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">VecMap</span><span class="op">&lt;</span><span class="ident">E::Key</span>, <span class="ident">E</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;E: Entity&gt; Deref <span class="kw">for </span>VecTable&lt;E&gt; {
+    <span class="kw">type </span>Target = VecMap&lt;E::Key, E&gt;;
 
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">map</span>
+    <span class="attribute">#[inline]
+    </span><span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.map
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">Entity</span><span class="op">&gt;</span> <span class="ident">EntityOf</span> <span class="kw">for</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Entity</span> <span class="op">=</span> <span class="ident">E</span>;
+<span class="kw">impl</span>&lt;E: Entity&gt; EntityOf <span class="kw">for </span>VecTable&lt;E&gt; {
+    <span class="kw">type </span>Entity = E;
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span>(<span class="ident">E::Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">E</span>: <span class="ident">CtxTypeInfo</span> <span class="op">+</span> <span class="ident">Entity</span>,
-    <span class="ident">E::Key</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;E&gt; Extend&lt;(E::Key, E)&gt; <span class="kw">for </span>VecTable&lt;E&gt;
+<span class="kw">where
+    </span>E: CtxTypeInfo + Entity,
+    E::Key: Into&lt;usize&gt;,
 {
-    <span class="kw">fn</span> <span class="ident">extend</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">T</span>)
-    <span class="kw">where</span>
-        <span class="ident">T</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E::Key</span>, <span class="ident">E</span>)<span class="op">&gt;</span>,
+    <span class="kw">fn </span>extend&lt;T&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iter: T)
+    <span class="kw">where
+        </span>T: IntoIterator&lt;Item = (E::Key, E)&gt;,
     {
-        <span class="kw">for</span> (<span class="ident">k</span>, <span class="ident">v</span>) <span class="kw">in</span> <span class="ident">iter</span> {
-            <span class="self">self</span>.<span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">k</span>, <span class="ident">v</span>);
+        <span class="kw">for </span>(k, v) <span class="kw">in </span>iter {
+            <span class="self">self</span>.map.insert(k, v);
         }
 
-        <span class="self">self</span>.<span class="ident">update_metrics</span>();
+        <span class="self">self</span>.update_metrics();
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> <span class="ident">Gc</span> <span class="kw">for</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">E</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">CtxTypeInfo</span> <span class="op">+</span> <span class="ident">Gc</span>,
-    <span class="ident">E::Key</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;E&gt; Gc <span class="kw">for </span>VecTable&lt;E&gt;
+<span class="kw">where
+    </span>E: Entity + CtxTypeInfo + Gc,
+    E::Key: From&lt;usize&gt;,
 {
-    <span class="kw">const</span> <span class="ident">SUPPORT_GC</span>: <span class="ident">bool</span> <span class="op">=</span> <span class="ident">E::SUPPORT_GC</span>;
+    <span class="kw">const </span>SUPPORT_GC: bool = E::SUPPORT_GC;
 
-    <span class="attribute">#[<span class="ident">instrument</span>(<span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">fields</span>(<span class="ident">name</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">E</span> <span class="kw">as</span> <span class="ident">CtxTypeInfo</span><span class="op">&gt;</span><span class="ident">::NAME</span>, <span class="ident">obj</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::OBJ_TABLE</span>), <span class="ident">skip_all</span>)]</span>
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">fn</span> <span class="ident">gc</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">GcCtx</span>) {
-        <span class="self">self</span>.<span class="ident">map</span>.<span class="ident">gc</span>(<span class="ident">ctx</span>);
+    <span class="attribute">#[instrument(level = <span class="string">&quot;debug&quot;</span>, fields(name = &lt;E <span class="kw">as </span>CtxTypeInfo&gt;::NAME, obj = <span class="kw">crate</span>::OBJ_TABLE), skip_all)]
+    #[inline]
+    </span><span class="kw">fn </span>gc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: <span class="kw-2">&amp;</span>GcCtx) {
+        <span class="self">self</span>.map.gc(ctx);
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">Entity</span><span class="op">&gt;</span> <span class="ident">Get</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">E::Key</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;E: Entity&gt; Get&lt;E&gt; <span class="kw">for </span>VecTable&lt;E&gt;
+<span class="kw">where
+    </span>E::Key: Clone + Into&lt;usize&gt;,
 {
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="ident">E::Key</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">E</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">map</span>.<span class="ident">get</span>(<span class="ident">k</span>)
+    <span class="attribute">#[inline]
+    </span><span class="kw">fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, k: <span class="kw-2">&amp;</span>E::Key) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>E&gt; {
+        <span class="self">self</span>.map.get(k)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">Entity</span><span class="op">&gt;</span> <span class="ident">GetMut</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">E::Key</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;E: Entity&gt; GetMut&lt;E&gt; <span class="kw">for </span>VecTable&lt;E&gt;
+<span class="kw">where
+    </span>E::Key: Clone + Into&lt;usize&gt;,
 {
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">fn</span> <span class="ident">get_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="ident">E::Key</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;mut</span> <span class="ident">E</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">map</span>.<span class="ident">get_mut</span>(<span class="ident">k</span>)
+    <span class="attribute">#[inline]
+    </span><span class="kw">fn </span>get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span>E::Key) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>E&gt; {
+        <span class="self">self</span>.map.get_mut(k)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">P</span>, <span class="ident">E</span><span class="op">&gt;</span> <span class="ident">Init</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">P</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">E</span>: <span class="ident">CtxTypeInfo</span> <span class="op">+</span> <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">Send</span>,
-    <span class="ident">E::Key</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span>,
-    <span class="ident">P</span>: <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">LoadAll</span><span class="op">&lt;</span><span class="ident">E</span>, (), <span class="self">Self</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, P, E&gt; Init&lt;<span class="lifetime">&#39;a</span>, P&gt; <span class="kw">for </span>VecTable&lt;E&gt;
+<span class="kw">where
+    </span>E: CtxTypeInfo + Entity + Send,
+    E::Key: Into&lt;usize&gt; + Send,
+    P: Sync + LoadAll&lt;E, (), <span class="self">Self</span>&gt;,
 {
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">fn</span> <span class="ident">init</span>(<span class="ident">provider</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">P</span>) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="ident">provider</span>.<span class="ident">load_all</span>(<span class="kw-2">&amp;</span>())
+    <span class="attribute">#[inline]
+    </span><span class="kw">fn </span>init(provider: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>P) -&gt; BoxFuture&lt;<span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt;&gt; {
+        provider.load_all(<span class="kw-2">&amp;</span>())
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">E</span>: <span class="ident">Entity</span><span class="op">&gt;</span> <span class="ident">IntoIterator</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">E::Key</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, E: Entity&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>VecTable&lt;E&gt;
+<span class="kw">where
+    </span>E::Key: From&lt;usize&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E::Key</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">E</span>);
-    <span class="kw">type</span> <span class="ident">IntoIter</span> <span class="op">=</span> <span class="ident">Iter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">E::Key</span>, <span class="ident">E</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Item = (E::Key, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>E);
+    <span class="kw">type </span>IntoIter = Iter&lt;<span class="lifetime">&#39;a</span>, E::Key, E&gt;;
 
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">fn</span> <span class="ident">into_iter</span>(<span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::IntoIter</span> {
-        <span class="self">self</span>.<span class="ident">map</span>.<span class="ident">iter</span>()
+    <span class="attribute">#[inline]
+    </span><span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::IntoIter {
+        <span class="self">self</span>.map.iter()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">E</span>: <span class="ident">Entity</span><span class="op">&gt;</span> <span class="ident">IntoParallelIterator</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">E::Key</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, E: Entity&gt; IntoParallelIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>VecTable&lt;E&gt;
+<span class="kw">where
+    </span>E::Key: From&lt;usize&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> (<span class="ident">E::Key</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">E</span>);
-    <span class="kw">type</span> <span class="ident">Iter</span> <span class="op">=</span> <span class="ident">ParIter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">E::Key</span>, <span class="ident">E</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Item = (E::Key, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>E);
+    <span class="kw">type </span>Iter = ParIter&lt;<span class="lifetime">&#39;a</span>, E::Key, E&gt;;
 
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">fn</span> <span class="ident">into_par_iter</span>(<span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Iter</span> {
-        <span class="self">self</span>.<span class="ident">map</span>.<span class="ident">par_iter</span>()
+    <span class="attribute">#[inline]
+    </span><span class="kw">fn </span>into_par_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::Iter {
+        <span class="self">self</span>.map.par_iter()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">Entity</span><span class="op">&gt;</span> <span class="ident">NotifyTag</span> <span class="kw">for</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">notify_tag</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">tag</span>.<span class="ident">notify</span>()
+<span class="kw">impl</span>&lt;E: Entity&gt; NotifyTag <span class="kw">for </span>VecTable&lt;E&gt; {
+    <span class="kw">fn </span>notify_tag(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="self">self</span>.tag.notify()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">Entity</span><span class="op">&gt;</span> <span class="ident">Tag</span> <span class="kw">for</span> <span class="ident">VecTable</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">tag</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">VersionTag</span> {
-        <span class="self">self</span>.<span class="ident">tag</span>
+<span class="kw">impl</span>&lt;E: Entity&gt; Tag <span class="kw">for </span>VecTable&lt;E&gt; {
+    <span class="kw">fn </span>tag(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VersionTag {
+        <span class="self">self</span>.tag
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

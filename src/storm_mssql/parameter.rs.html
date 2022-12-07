@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_mssql/src/parameter.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>parameter.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm_mssql/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm_mssql/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm_mssql/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_mssql/src/parameter.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>parameter.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm_mssql/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm_mssql/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm_mssql/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -84,91 +84,91 @@
 <span id="84">84</span>
 <span id="85">85</span>
 <span id="86">86</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::ToSql</span>;
-<span class="kw">use</span> <span class="ident">std::borrow</span>::{<span class="ident">Borrow</span>, <span class="ident">Cow</span>};
-<span class="kw">use</span> <span class="ident">tiberius::ColumnData</span>;
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::ToSql;
+<span class="kw">use </span>std::borrow::{Borrow, Cow};
+<span class="kw">use </span>tiberius::ColumnData;
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Parameter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">ColumnData</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>);
+<span class="kw">pub struct </span>Parameter&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw">pub</span>(<span class="kw">crate</span>) ColumnData&lt;<span class="lifetime">&#39;a</span>&gt;);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">Parameter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_ref</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">ToSql</span><span class="op">&gt;</span>(<span class="ident">t</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span>(<span class="ident">t</span>.<span class="ident">to_sql</span>())
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Parameter&lt;<span class="lifetime">&#39;a</span>&gt; {
+    <span class="kw">pub fn </span>from_ref&lt;T: ToSql&gt;(t: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>(t.to_sql())
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Parameter</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_owned</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">ToSql</span><span class="op">&gt;</span>(<span class="ident">t</span>: <span class="ident">T</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">fn</span> <span class="ident">cow</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="question-mark">?</span><span class="ident">Sized</span> <span class="op">+</span> <span class="ident">ToOwned</span><span class="op">&gt;</span>(<span class="ident">o</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-            <span class="kw">match</span> <span class="ident">o</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">Cow::Owned</span>(<span class="ident">v</span>)) =&gt; <span class="prelude-val">Some</span>(<span class="ident">Cow::Owned</span>(<span class="ident">v</span>)),
-                <span class="prelude-val">Some</span>(<span class="ident">Cow::Borrowed</span>(<span class="ident">v</span>)) =&gt; <span class="prelude-val">Some</span>(<span class="ident">Cow::Owned</span>(<span class="ident">v</span>.<span class="ident">to_owned</span>())),
-                <span class="prelude-val">None</span> =&gt; <span class="prelude-val">None</span>,
+<span class="kw">impl </span>Parameter&lt;<span class="lifetime">&#39;static</span>&gt; {
+    <span class="kw">pub fn </span>from_owned&lt;T: ToSql&gt;(t: T) -&gt; <span class="self">Self </span>{
+        <span class="kw">fn </span>cow&lt;T: <span class="question-mark">?</span>Sized + ToOwned&gt;(o: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;_</span>, T&gt;&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;static</span>, T&gt;&gt; {
+            <span class="kw">match </span>o {
+                <span class="prelude-val">Some</span>(Cow::Owned(v)) =&gt; <span class="prelude-val">Some</span>(Cow::Owned(v)),
+                <span class="prelude-val">Some</span>(Cow::Borrowed(v)) =&gt; <span class="prelude-val">Some</span>(Cow::Owned(v.to_owned())),
+                <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
             }
         }
 
-        <span class="self">Self</span>(<span class="kw">match</span> <span class="ident">t</span>.<span class="ident">to_sql</span>() {
-            <span class="ident">ColumnData::Binary</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::Binary</span>(<span class="ident">cow</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::Bit</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::Bit</span>(<span class="ident">v</span>),
-            <span class="ident">ColumnData::Date</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::Date</span>(<span class="ident">v</span>),
-            <span class="ident">ColumnData::DateTime</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::DateTime</span>(<span class="ident">v</span>),
-            <span class="ident">ColumnData::DateTime2</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::DateTime2</span>(<span class="ident">v</span>),
-            <span class="ident">ColumnData::DateTimeOffset</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::DateTimeOffset</span>(<span class="ident">v</span>),
-            <span class="ident">ColumnData::F32</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::F32</span>(<span class="ident">v</span>),
-            <span class="ident">ColumnData::F64</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::F64</span>(<span class="ident">v</span>),
-            <span class="ident">ColumnData::Guid</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::Guid</span>(<span class="ident">v</span>),
-            <span class="ident">ColumnData::I16</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::I16</span>(<span class="ident">v</span>),
-            <span class="ident">ColumnData::I32</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::I32</span>(<span class="ident">v</span>),
-            <span class="ident">ColumnData::I64</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::I64</span>(<span class="ident">v</span>),
-            <span class="ident">ColumnData::Numeric</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::Numeric</span>(<span class="ident">v</span>),
-            <span class="ident">ColumnData::SmallDateTime</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::SmallDateTime</span>(<span class="ident">v</span>),
-            <span class="ident">ColumnData::String</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::String</span>(<span class="ident">cow</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::Time</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::Time</span>(<span class="ident">v</span>),
-            <span class="ident">ColumnData::U8</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::U8</span>(<span class="ident">v</span>),
-            <span class="ident">ColumnData::Xml</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::Xml</span>(<span class="ident">cow</span>(<span class="ident">v</span>)),
+        <span class="self">Self</span>(<span class="kw">match </span>t.to_sql() {
+            ColumnData::Binary(v) =&gt; ColumnData::Binary(cow(v)),
+            ColumnData::Bit(v) =&gt; ColumnData::Bit(v),
+            ColumnData::Date(v) =&gt; ColumnData::Date(v),
+            ColumnData::DateTime(v) =&gt; ColumnData::DateTime(v),
+            ColumnData::DateTime2(v) =&gt; ColumnData::DateTime2(v),
+            ColumnData::DateTimeOffset(v) =&gt; ColumnData::DateTimeOffset(v),
+            ColumnData::F32(v) =&gt; ColumnData::F32(v),
+            ColumnData::F64(v) =&gt; ColumnData::F64(v),
+            ColumnData::Guid(v) =&gt; ColumnData::Guid(v),
+            ColumnData::I16(v) =&gt; ColumnData::I16(v),
+            ColumnData::I32(v) =&gt; ColumnData::I32(v),
+            ColumnData::I64(v) =&gt; ColumnData::I64(v),
+            ColumnData::Numeric(v) =&gt; ColumnData::Numeric(v),
+            ColumnData::SmallDateTime(v) =&gt; ColumnData::SmallDateTime(v),
+            ColumnData::String(v) =&gt; ColumnData::String(cow(v)),
+            ColumnData::Time(v) =&gt; ColumnData::Time(v),
+            ColumnData::U8(v) =&gt; ColumnData::U8(v),
+            ColumnData::Xml(v) =&gt; ColumnData::Xml(cow(v)),
         })
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">ToSql</span> <span class="kw">for</span> <span class="ident">Parameter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">to_sql</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">ColumnData</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span> {
-        <span class="ident">tiberius::ToSql::to_sql</span>(<span class="self">self</span>)
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; ToSql <span class="kw">for </span>Parameter&lt;<span class="lifetime">&#39;a</span>&gt; {
+    <span class="kw">fn </span>to_sql(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ColumnData&lt;<span class="lifetime">&#39;_</span>&gt; {
+        tiberius::ToSql::to_sql(<span class="self">self</span>)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">tiberius::ToSql</span> <span class="kw">for</span> <span class="ident">Parameter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">to_sql</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">ColumnData</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span> {
-        <span class="kw">fn</span> <span class="ident">copy</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Copy</span><span class="op">&gt;</span>(<span class="ident">o</span>: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-            <span class="ident">o</span>.<span class="ident">as_ref</span>().<span class="ident">copied</span>()
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; tiberius::ToSql <span class="kw">for </span>Parameter&lt;<span class="lifetime">&#39;a</span>&gt; {
+    <span class="kw">fn </span>to_sql(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ColumnData&lt;<span class="lifetime">&#39;_</span>&gt; {
+        <span class="kw">fn </span>copy&lt;T: Copy&gt;(o: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
+            o.as_ref().copied()
         }
 
-        <span class="kw">fn</span> <span class="ident">cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="question-mark">?</span><span class="ident">Sized</span> <span class="op">+</span> <span class="ident">ToOwned</span><span class="op">&gt;</span>(<span class="ident">o</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-            <span class="ident">o</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">v</span> {
-                <span class="ident">Cow::Borrowed</span>(<span class="ident">v</span>) =&gt; <span class="ident">Cow::Borrowed</span>(<span class="kw-2">*</span><span class="ident">v</span>),
-                <span class="ident">Cow::Owned</span>(<span class="ident">v</span>) =&gt; <span class="ident">Cow::Borrowed</span>(<span class="ident">v</span>.<span class="ident">borrow</span>()),
+        <span class="kw">fn </span>cow&lt;<span class="lifetime">&#39;a</span>, T: <span class="question-mark">?</span>Sized + ToOwned&gt;(o: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;a</span>, T&gt;&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;a</span>, T&gt;&gt; {
+            o.as_ref().map(|v| <span class="kw">match </span>v {
+                Cow::Borrowed(v) =&gt; Cow::Borrowed(<span class="kw-2">*</span>v),
+                Cow::Owned(v) =&gt; Cow::Borrowed(v.borrow()),
             })
         }
 
-        <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span> {
-            <span class="ident">ColumnData::Binary</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::Binary</span>(<span class="ident">cow</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::Bit</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::Bit</span>(<span class="ident">copy</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::Date</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::Date</span>(<span class="ident">copy</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::DateTime</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::DateTime</span>(<span class="ident">copy</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::DateTime2</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::DateTime2</span>(<span class="ident">copy</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::DateTimeOffset</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::DateTimeOffset</span>(<span class="ident">copy</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::F32</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::F32</span>(<span class="ident">copy</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::F64</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::F64</span>(<span class="ident">copy</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::Guid</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::Guid</span>(<span class="ident">copy</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::I16</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::I16</span>(<span class="ident">copy</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::I32</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::I32</span>(<span class="ident">copy</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::I64</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::I64</span>(<span class="ident">copy</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::Numeric</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::Numeric</span>(<span class="ident">copy</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::SmallDateTime</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::SmallDateTime</span>(<span class="ident">copy</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::String</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::String</span>(<span class="ident">cow</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::Time</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::Time</span>(<span class="ident">copy</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::U8</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::U8</span>(<span class="ident">copy</span>(<span class="ident">v</span>)),
-            <span class="ident">ColumnData::Xml</span>(<span class="ident">v</span>) =&gt; <span class="ident">ColumnData::Xml</span>(<span class="ident">cow</span>(<span class="ident">v</span>)),
+        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0 </span>{
+            ColumnData::Binary(v) =&gt; ColumnData::Binary(cow(v)),
+            ColumnData::Bit(v) =&gt; ColumnData::Bit(copy(v)),
+            ColumnData::Date(v) =&gt; ColumnData::Date(copy(v)),
+            ColumnData::DateTime(v) =&gt; ColumnData::DateTime(copy(v)),
+            ColumnData::DateTime2(v) =&gt; ColumnData::DateTime2(copy(v)),
+            ColumnData::DateTimeOffset(v) =&gt; ColumnData::DateTimeOffset(copy(v)),
+            ColumnData::F32(v) =&gt; ColumnData::F32(copy(v)),
+            ColumnData::F64(v) =&gt; ColumnData::F64(copy(v)),
+            ColumnData::Guid(v) =&gt; ColumnData::Guid(copy(v)),
+            ColumnData::I16(v) =&gt; ColumnData::I16(copy(v)),
+            ColumnData::I32(v) =&gt; ColumnData::I32(copy(v)),
+            ColumnData::I64(v) =&gt; ColumnData::I64(copy(v)),
+            ColumnData::Numeric(v) =&gt; ColumnData::Numeric(copy(v)),
+            ColumnData::SmallDateTime(v) =&gt; ColumnData::SmallDateTime(copy(v)),
+            ColumnData::String(v) =&gt; ColumnData::String(cow(v)),
+            ColumnData::Time(v) =&gt; ColumnData::Time(copy(v)),
+            ColumnData::U8(v) =&gt; ColumnData::U8(copy(v)),
+            ColumnData::Xml(v) =&gt; ColumnData::Xml(cow(v)),
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm_mssql" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm_mssql" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

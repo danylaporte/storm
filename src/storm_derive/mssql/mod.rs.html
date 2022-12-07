@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_derive/src/mssql/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../storm_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../storm_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../storm_derive/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_derive/src/mssql/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../storm_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../storm_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../storm_derive/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -530,50 +530,50 @@
 <span id="530">530</span>
 <span id="531">531</span>
 <span id="532">532</span>
-</pre><pre class="rust"><code><span class="kw">mod</span> <span class="ident">attrs</span>;
-<span class="kw">mod</span> <span class="ident">builders</span>;
-<span class="kw">mod</span> <span class="ident">delete</span>;
-<span class="kw">mod</span> <span class="ident">load_fields</span>;
-<span class="kw">mod</span> <span class="ident">load_translated</span>;
-<span class="kw">mod</span> <span class="ident">save_translated</span>;
+</pre><pre class="rust"><code><span class="kw">mod </span>attrs;
+<span class="kw">mod </span>builders;
+<span class="kw">mod </span>delete;
+<span class="kw">mod </span>load_fields;
+<span class="kw">mod </span>load_translated;
+<span class="kw">mod </span>save_translated;
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">token_stream_ext::TokenStreamExt</span>, <span class="ident">DeriveInputExt</span>, <span class="ident">Errors</span>, <span class="ident">FieldExt</span>, <span class="ident">RenameAll</span>, <span class="ident">StringExt</span>,
+<span class="kw">use crate</span>::{
+    token_stream_ext::TokenStreamExt, DeriveInputExt, Errors, FieldExt, RenameAll, StringExt,
 };
-<span class="kw">use</span> <span class="ident">attrs</span>::{<span class="ident">FieldAttrs</span>, <span class="ident">TypeAttrs</span>};
-<span class="kw">use</span> <span class="ident">darling</span>::{<span class="ident">FromDeriveInput</span>, <span class="ident">FromField</span>};
-<span class="kw">use</span> <span class="ident">delete::Delete</span>;
-<span class="kw">use</span> <span class="ident">inflector::Inflector</span>;
-<span class="kw">use</span> <span class="ident">load_fields::LoadFields</span>;
-<span class="kw">use</span> <span class="ident">load_translated::LoadTranslated</span>;
-<span class="kw">use</span> <span class="ident">proc_macro2</span>::{<span class="ident">Span</span>, <span class="ident">TokenStream</span>};
-<span class="kw">use</span> <span class="ident">quote</span>::{<span class="ident">quote</span>, <span class="ident">ToTokens</span>, <span class="ident">TokenStreamExt</span> <span class="kw">as</span> <span class="kw">_</span>};
-<span class="kw">use</span> <span class="ident">save_translated::SaveTranslated</span>;
-<span class="kw">use</span> <span class="ident">syn</span>::{<span class="ident">DeriveInput</span>, <span class="ident">Error</span>, <span class="ident">Ident</span>, <span class="ident">LitInt</span>, <span class="ident">LitStr</span>, <span class="ident">Type</span>, <span class="ident">Visibility</span>};
+<span class="kw">use </span>attrs::{FieldAttrs, TypeAttrs};
+<span class="kw">use </span>darling::{FromDeriveInput, FromField};
+<span class="kw">use </span>delete::Delete;
+<span class="kw">use </span>inflector::Inflector;
+<span class="kw">use </span>load_fields::LoadFields;
+<span class="kw">use </span>load_translated::LoadTranslated;
+<span class="kw">use </span>proc_macro2::{Span, TokenStream};
+<span class="kw">use </span>quote::{quote, ToTokens, TokenStreamExt <span class="kw">as _</span>};
+<span class="kw">use </span>save_translated::SaveTranslated;
+<span class="kw">use </span>syn::{DeriveInput, Error, Ident, LitInt, LitStr, Type, Visibility};
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">delete</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">DeriveInput</span>) -&gt; <span class="ident">TokenStream</span> {
-    <span class="kw">let</span> <span class="ident">ident</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">input</span>.<span class="ident">ident</span>;
-    <span class="kw">let</span> <span class="ident">attrs</span> <span class="op">=</span> <span class="macro">try_ts!</span>(<span class="ident">TypeAttrs::from_derive_input</span>(<span class="ident">input</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">write_errors</span>()));
-    <span class="kw">let</span> <span class="ident">normal</span> <span class="op">=</span> <span class="ident">Delete</span>::<span class="op">&lt;</span><span class="ident">delete::selectors::Normal</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="kw-2">&amp;</span><span class="ident">attrs</span>);
-    <span class="kw">let</span> <span class="ident">translate</span> <span class="op">=</span> <span class="ident">Delete</span>::<span class="op">&lt;</span><span class="ident">delete::selectors::Translate</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="kw-2">&amp;</span><span class="ident">attrs</span>);
-    <span class="kw">let</span> <span class="ident">table_name</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="ident">attrs</span>.<span class="ident">table</span>, <span class="ident">attrs</span>.<span class="ident">table</span>.<span class="ident">span</span>());
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>delete(input: <span class="kw-2">&amp;</span>DeriveInput) -&gt; TokenStream {
+    <span class="kw">let </span>ident = <span class="kw-2">&amp;</span>input.ident;
+    <span class="kw">let </span>attrs = <span class="macro">try_ts!</span>(TypeAttrs::from_derive_input(input).map_err(|e| e.write_errors()));
+    <span class="kw">let </span>normal = Delete::&lt;delete::selectors::Normal&gt;::new(<span class="kw-2">&amp;</span>attrs);
+    <span class="kw">let </span>translate = Delete::&lt;delete::selectors::Translate&gt;::new(<span class="kw-2">&amp;</span>attrs);
+    <span class="kw">let </span>table_name = LitStr::new(<span class="kw-2">&amp;</span>attrs.table, attrs.table.span());
 
-    <span class="kw">let</span> <span class="ident">provider</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">provider</span>();
-    <span class="kw">let</span> (<span class="ident">metrics_start</span>, <span class="ident">metrics_end</span>) <span class="op">=</span> <span class="ident">metrics</span>(<span class="ident">ident</span>, <span class="string">&quot;delete&quot;</span>);
+    <span class="kw">let </span>provider = attrs.provider();
+    <span class="kw">let </span>(metrics_start, metrics_end) = metrics(ident, <span class="string">&quot;delete&quot;</span>);
 
-    <span class="macro">quote!</span> {
-        <span class="kw">impl</span> <span class="ident">storm::provider::Delete</span><span class="op">&lt;</span>#<span class="ident">ident</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">storm::provider::TransactionProvider</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span> {
-            <span class="attribute">#[<span class="ident">tracing::instrument</span>(<span class="ident">name</span> <span class="op">=</span> <span class="string">&quot;delete&quot;</span>, <span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">k</span>), <span class="ident">fields</span>(<span class="ident">table</span> <span class="op">=</span> #<span class="ident">table_name</span>))]</span>
-            <span class="kw">fn</span> <span class="ident">delete</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="op">&lt;</span>#<span class="ident">ident</span> <span class="kw">as</span> <span class="ident">storm::Entity</span><span class="op">&gt;</span><span class="ident">::Key</span>) -&gt; <span class="ident">storm::BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">storm::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span> {
-                <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
-                    <span class="kw">let</span> <span class="ident">provider</span>: <span class="kw-2">&amp;</span><span class="ident">storm_mssql::MssqlProvider</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">container</span>().<span class="ident">provide</span>(#<span class="ident">provider</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="macro">quote! </span>{
+        <span class="kw">impl </span>storm::provider::Delete&lt;#ident&gt; <span class="kw">for </span>storm::provider::TransactionProvider&lt;<span class="lifetime">&#39;_</span>&gt; {
+            <span class="attribute">#[tracing::instrument(name = <span class="string">&quot;delete&quot;</span>, level = <span class="string">&quot;debug&quot;</span>, skip(<span class="self">self</span>, k), fields(table = #table_name))]
+            </span><span class="kw">fn </span>delete&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>&lt;#ident <span class="kw">as </span>storm::Entity&gt;::Key) -&gt; storm::BoxFuture&lt;<span class="lifetime">&#39;a</span>, storm::Result&lt;()&gt;&gt; {
+                Box::pin(<span class="kw">async move </span>{
+                    <span class="kw">let </span>provider: <span class="kw-2">&amp;</span>storm_mssql::MssqlProvider = <span class="self">self</span>.container().provide(#provider).<span class="kw">await</span><span class="question-mark">?</span>;
 
-                    #<span class="ident">metrics_start</span>
+                    #metrics_start
 
-                    #<span class="ident">translate</span>
-                    #<span class="ident">normal</span>
+                    #translate
+                    #normal
 
-                    #<span class="ident">metrics_end</span>
+                    #metrics_end
                     <span class="prelude-val">Ok</span>(())
                 })
             }
@@ -581,486 +581,486 @@
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">load</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">DeriveInput</span>) -&gt; <span class="ident">TokenStream</span> {
-    <span class="kw">let</span> <span class="ident">ident</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">input</span>.<span class="ident">ident</span>;
-    <span class="kw">let</span> <span class="ident">attrs</span> <span class="op">=</span> <span class="macro">try_ts!</span>(<span class="ident">TypeAttrs::from_derive_input</span>(<span class="ident">input</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">write_errors</span>()));
-    <span class="kw">let</span> <span class="ident">rename_all</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">rename_all</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>load(input: <span class="kw-2">&amp;</span>DeriveInput) -&gt; TokenStream {
+    <span class="kw">let </span>ident = <span class="kw-2">&amp;</span>input.ident;
+    <span class="kw">let </span>attrs = <span class="macro">try_ts!</span>(TypeAttrs::from_derive_input(input).map_err(|e| e.write_errors()));
+    <span class="kw">let </span>rename_all = attrs.rename_all;
 
-    <span class="kw">let</span> <span class="ident">load_test</span> <span class="op">=</span> <span class="ident">Ident::new</span>(
-        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;test_{}_load&quot;</span>, <span class="ident">ident</span>.<span class="ident">to_string</span>().<span class="ident">to_snake_case</span>()),
-        <span class="ident">ident</span>.<span class="ident">span</span>(),
+    <span class="kw">let </span>load_test = Ident::new(
+        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;test_{}_load&quot;</span>, ident.to_string().to_snake_case()),
+        ident.span(),
     );
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">diff</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">diff</span>.<span class="ident">then</span>(<span class="ident">Vec::new</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">errors</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">filter_sql</span> <span class="op">=</span> <span class="ident">FilterSqlImpl::default</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">load</span> <span class="op">=</span> <span class="ident">LoadFields::new</span>(<span class="ident">ident</span>, <span class="kw-2">&amp;</span><span class="ident">attrs</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">translated</span> <span class="op">=</span> <span class="ident">LoadTranslated::new</span>(<span class="ident">ident</span>, <span class="kw-2">&amp;</span><span class="ident">attrs</span>);
-    <span class="kw">let</span> <span class="ident">table_name</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="ident">attrs</span>.<span class="ident">table</span>, <span class="ident">attrs</span>.<span class="ident">table</span>.<span class="ident">span</span>());
-    <span class="kw">let</span> <span class="ident">enum_fields_ident</span> <span class="op">=</span> <span class="ident">Ident::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}Fields&quot;</span>, <span class="ident">ident</span>), <span class="ident">ident</span>.<span class="ident">span</span>());
+    <span class="kw">let </span><span class="kw-2">mut </span>diff = attrs.diff.then(Vec::new);
+    <span class="kw">let </span><span class="kw-2">mut </span>errors = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>filter_sql = FilterSqlImpl::default();
+    <span class="kw">let </span><span class="kw-2">mut </span>load = LoadFields::new(ident, <span class="kw-2">&amp;</span>attrs);
+    <span class="kw">let </span><span class="kw-2">mut </span>translated = LoadTranslated::new(ident, <span class="kw-2">&amp;</span>attrs);
+    <span class="kw">let </span>table_name = LitStr::new(<span class="kw-2">&amp;</span>attrs.table, attrs.table.span());
+    <span class="kw">let </span>enum_fields_ident = Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}Fields&quot;</span>, ident), ident.span());
 
-    <span class="kw">for</span> <span class="ident">key</span> <span class="kw">in</span> <span class="ident">attrs</span>.<span class="ident">keys</span>(<span class="kw-2">&amp;mut</span> <span class="ident">errors</span>) {
-        <span class="ident">filter_sql</span>.<span class="ident">add_filter</span>(<span class="ident">key</span>);
+    <span class="kw">for </span>key <span class="kw">in </span>attrs.keys(<span class="kw-2">&amp;mut </span>errors) {
+        filter_sql.add_filter(key);
     }
 
-    <span class="kw">for</span> <span class="ident">field</span> <span class="kw">in</span> <span class="macro">try_ts!</span>(<span class="ident">input</span>.<span class="ident">fields</span>()) {
-        <span class="kw">let</span> <span class="ident">field_ident</span> <span class="op">=</span> <span class="macro">continue_ts!</span>(<span class="ident">field</span>.<span class="ident">ident</span>(), <span class="ident">errors</span>);
+    <span class="kw">for </span>field <span class="kw">in </span><span class="macro">try_ts!</span>(input.fields()) {
+        <span class="kw">let </span>field_ident = <span class="macro">continue_ts!</span>(field.ident(), errors);
 
-        <span class="kw">let</span> <span class="ident">attrs</span> <span class="op">=</span> <span class="macro">continue_ts!</span>(
-            <span class="ident">FieldAttrs::from_field</span>(<span class="ident">field</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">write_errors</span>()),
-            <span class="ident">errors</span>
+        <span class="kw">let </span>attrs = <span class="macro">continue_ts!</span>(
+            FieldAttrs::from_field(field).map_err(|e| e.write_errors()),
+            errors
         );
 
-        <span class="ident">attrs</span>.<span class="ident">validate_load</span>(<span class="kw-2">&amp;mut</span> <span class="ident">errors</span>);
+        attrs.validate_load(<span class="kw-2">&amp;mut </span>errors);
 
-        <span class="kw">if</span> <span class="ident">is_translated</span>(<span class="kw-2">&amp;</span><span class="ident">field</span>.<span class="ident">ty</span>) {
-            <span class="kw">let</span> <span class="ident">column</span> <span class="op">=</span> <span class="macro">continue_ts!</span>(<span class="ident">RenameAll::column</span>(<span class="ident">rename_all</span>, <span class="kw-2">&amp;</span><span class="ident">attrs</span>.<span class="ident">column</span>, <span class="ident">field</span>), <span class="ident">errors</span>);
+        <span class="kw">if </span>is_translated(<span class="kw-2">&amp;</span>field.ty) {
+            <span class="kw">let </span>column = <span class="macro">continue_ts!</span>(RenameAll::column(rename_all, <span class="kw-2">&amp;</span>attrs.column, field), errors);
 
-            <span class="ident">load</span>.<span class="ident">skip_field</span>(<span class="ident">field</span>, <span class="kw-2">&amp;</span><span class="ident">attrs</span>, <span class="kw-2">&amp;mut</span> <span class="ident">errors</span>);
-            <span class="ident">translated</span>.<span class="ident">add_field</span>(<span class="ident">field</span>, <span class="kw-2">&amp;</span><span class="ident">column</span>);
+            load.skip_field(field, <span class="kw-2">&amp;</span>attrs, <span class="kw-2">&amp;mut </span>errors);
+            translated.add_field(field, <span class="kw-2">&amp;</span>column);
 
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">attrs</span>.<span class="ident">skip_diff</span>() {
-                <span class="ident">load_diff_field</span>(<span class="kw-2">&amp;mut</span> <span class="ident">diff</span>, <span class="ident">field_ident</span>, <span class="kw-2">&amp;</span><span class="ident">enum_fields_ident</span>);
+            <span class="kw">if </span>!attrs.skip_diff() {
+                load_diff_field(<span class="kw-2">&amp;mut </span>diff, field_ident, <span class="kw-2">&amp;</span>enum_fields_ident);
             }
-        } <span class="kw">else</span> {
-            <span class="kw">let</span> <span class="ident">column</span> <span class="op">=</span> <span class="macro">continue_ts!</span>(<span class="ident">RenameAll::column</span>(<span class="ident">rename_all</span>, <span class="kw-2">&amp;</span><span class="ident">attrs</span>.<span class="ident">column</span>, <span class="ident">field</span>), <span class="ident">errors</span>);
-            <span class="ident">load</span>.<span class="ident">add_field</span>(<span class="ident">field</span>, <span class="kw-2">&amp;</span><span class="ident">attrs</span>, <span class="kw-2">&amp;</span><span class="ident">column</span>);
+        } <span class="kw">else </span>{
+            <span class="kw">let </span>column = <span class="macro">continue_ts!</span>(RenameAll::column(rename_all, <span class="kw-2">&amp;</span>attrs.column, field), errors);
+            load.add_field(field, <span class="kw-2">&amp;</span>attrs, <span class="kw-2">&amp;</span>column);
 
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">attrs</span>.<span class="ident">skip_save</span>() <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="ident">attrs</span>.<span class="ident">skip_diff</span>() {
-                <span class="ident">load_diff_field</span>(<span class="kw-2">&amp;mut</span> <span class="ident">diff</span>, <span class="ident">field_ident</span>, <span class="kw-2">&amp;</span><span class="ident">enum_fields_ident</span>);
+            <span class="kw">if </span>!attrs.skip_save() &amp;&amp; !attrs.skip_diff() {
+                load_diff_field(<span class="kw-2">&amp;mut </span>diff, field_ident, <span class="kw-2">&amp;</span>enum_fields_ident);
             }
         }
     }
 
-    <span class="macro">try_ts!</span>(<span class="ident">errors</span>.<span class="ident">result</span>());
+    <span class="macro">try_ts!</span>(errors.result());
 
-    <span class="kw">let</span> <span class="ident">translated_where</span> <span class="op">=</span> <span class="ident">translated</span>.<span class="ident">to_where_clause</span>();
-    <span class="kw">let</span> <span class="ident">provider</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">provider</span>();
-    <span class="kw">let</span> (<span class="ident">metrics_start</span>, <span class="ident">metrics_end</span>) <span class="op">=</span> <span class="ident">metrics</span>(<span class="ident">ident</span>, <span class="string">&quot;load&quot;</span>);
-    <span class="kw">let</span> <span class="ident">diff</span> <span class="op">=</span> <span class="ident">apply_entity_diff</span>(<span class="ident">diff</span>, <span class="ident">ident</span>);
-    <span class="kw">let</span> <span class="ident">instrument_ident</span> <span class="op">=</span> <span class="ident">Ident::new</span>(
-        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}_load_all_inst&quot;</span>, <span class="ident">ident</span>.<span class="ident">to_string</span>().<span class="ident">to_snake_case</span>()),
-        <span class="ident">ident</span>.<span class="ident">span</span>(),
+    <span class="kw">let </span>translated_where = translated.to_where_clause();
+    <span class="kw">let </span>provider = attrs.provider();
+    <span class="kw">let </span>(metrics_start, metrics_end) = metrics(ident, <span class="string">&quot;load&quot;</span>);
+    <span class="kw">let </span>diff = apply_entity_diff(diff, ident);
+    <span class="kw">let </span>instrument_ident = Ident::new(
+        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}_load_all_inst&quot;</span>, ident.to_string().to_snake_case()),
+        ident.span(),
     );
 
-    <span class="kw">let</span> <span class="ident">test</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">attrs</span>.<span class="ident">no_test</span> {
+    <span class="kw">let </span>test = <span class="kw">if </span>attrs.no_test {
         <span class="macro">quote!</span>()
-    } <span class="kw">else</span> {
-        <span class="macro">quote!</span> {
-            <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-            <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-            <span class="kw">async</span> <span class="kw">fn</span> #<span class="ident">load_test</span>() -&gt; <span class="ident">storm::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">provider</span> <span class="op">=</span> <span class="ident">storm_mssql::create_provider_container_from_env</span>(<span class="string">&quot;DB&quot;</span>, #<span class="ident">provider</span>)<span class="question-mark">?</span>;
-                <span class="ident">storm::provider::LoadAll</span>::<span class="op">&lt;</span>#<span class="ident">ident</span>, <span class="kw">_</span>, <span class="ident">storm::provider::LoadNothing</span><span class="op">&gt;</span><span class="ident">::load_all</span>(<span class="kw-2">&amp;</span><span class="ident">provider</span>, <span class="kw-2">&amp;</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
+    } <span class="kw">else </span>{
+        <span class="macro">quote! </span>{
+            <span class="attribute">#[cfg(test)]
+            #[tokio::test]
+            </span><span class="kw">async fn </span>#load_test() -&gt; storm::Result&lt;()&gt; {
+                <span class="kw">let </span>provider = storm_mssql::create_provider_container_from_env(<span class="string">&quot;DB&quot;</span>, #provider)<span class="question-mark">?</span>;
+                storm::provider::LoadAll::&lt;#ident, <span class="kw">_</span>, storm::provider::LoadNothing&gt;::load_all(<span class="kw-2">&amp;</span>provider, <span class="kw-2">&amp;</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(())
             }
         }
     };
 
-    <span class="macro">quote!</span> {
-        <span class="kw">fn</span> #<span class="ident">instrument_ident</span>(<span class="ident">args</span>: <span class="kw-2">&amp;</span><span class="ident">storm::provider::LoadArgs</span>) -&gt; <span class="ident">tracing::Span</span> {
-            <span class="macro">tracing::debug_span!</span>(<span class="string">&quot;load_all&quot;</span>, <span class="ident">args</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">args</span>, <span class="ident">table</span> <span class="op">=</span> #<span class="ident">table_name</span>, <span class="ident">err</span> <span class="op">=</span> <span class="ident">tracing::field::Empty</span>)
+    <span class="macro">quote! </span>{
+        <span class="kw">fn </span>#instrument_ident(args: <span class="kw-2">&amp;</span>storm::provider::LoadArgs) -&gt; tracing::Span {
+            <span class="macro">tracing::debug_span!</span>(<span class="string">&quot;load_all&quot;</span>, args = <span class="question-mark">?</span>args, table = #table_name, err = tracing::field::Empty)
         }
 
-        <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">FILTER</span><span class="op">&gt;</span> <span class="ident">storm::provider::LoadAll</span><span class="op">&lt;</span>#<span class="ident">ident</span>, <span class="ident">FILTER</span>, <span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">storm::provider::ProviderContainer</span>
-        <span class="kw">where</span>
-            <span class="ident">C</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Extend</span><span class="op">&lt;</span>(<span class="op">&lt;</span>#<span class="ident">ident</span> <span class="kw">as</span> <span class="ident">storm::Entity</span><span class="op">&gt;</span><span class="ident">::Key</span>, #<span class="ident">ident</span>)<span class="op">&gt;</span> #<span class="ident">translated_where</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
-            <span class="ident">FILTER</span>: <span class="ident">storm_mssql::FilterSql</span>,
+        <span class="kw">impl</span>&lt;C, FILTER&gt; storm::provider::LoadAll&lt;#ident, FILTER, C&gt; <span class="kw">for </span>storm::provider::ProviderContainer
+        <span class="kw">where
+            </span>C: Default + Extend&lt;(&lt;#ident <span class="kw">as </span>storm::Entity&gt;::Key, #ident)&gt; #translated_where + Send + <span class="lifetime">&#39;static</span>,
+            FILTER: storm_mssql::FilterSql,
         {
-            <span class="kw">fn</span> <span class="ident">load_all_with_args</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>, <span class="ident">filter</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">FILTER</span>, <span class="ident">args</span>: <span class="ident">storm::provider::LoadArgs</span>) -&gt; <span class="ident">storm::BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">storm::Result</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">span</span> <span class="op">=</span> #<span class="ident">instrument_ident</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>);
+            <span class="kw">fn </span>load_all_with_args&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, filter: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>FILTER, args: storm::provider::LoadArgs) -&gt; storm::BoxFuture&lt;<span class="lifetime">&#39;a</span>, storm::Result&lt;C&gt;&gt; {
+                <span class="kw">let </span>span = #instrument_ident(<span class="kw-2">&amp;</span>args);
 
-                <span class="ident">Box::pin</span>(<span class="ident">storm::InstrumentErr::instrument_err</span>(<span class="kw">async</span> <span class="kw">move</span> {
-                    <span class="kw">let</span> <span class="ident">provider</span>: <span class="kw-2">&amp;</span><span class="ident">storm_mssql::MssqlProvider</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">provide</span>(#<span class="ident">provider</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-                    <span class="kw">let</span> (<span class="ident">sql</span>, <span class="ident">params</span>) <span class="op">=</span> <span class="ident">storm_mssql::FilterSql::filter_sql</span>(<span class="ident">filter</span>, <span class="number">0</span>);
-                    #<span class="ident">metrics_start</span>
-                    #<span class="ident">load</span>
-                    #<span class="ident">translated</span>
-                    #<span class="ident">metrics_end</span>
-                    <span class="prelude-val">Ok</span>(<span class="ident">map</span>)
-                }, <span class="ident">span</span>))
+                Box::pin(storm::InstrumentErr::instrument_err(<span class="kw">async move </span>{
+                    <span class="kw">let </span>provider: <span class="kw-2">&amp;</span>storm_mssql::MssqlProvider = <span class="self">self</span>.provide(#provider).<span class="kw">await</span><span class="question-mark">?</span>;
+                    <span class="kw">let </span>(sql, params) = storm_mssql::FilterSql::filter_sql(filter, <span class="number">0</span>);
+                    #metrics_start
+                    #load
+                    #translated
+                    #metrics_end
+                    <span class="prelude-val">Ok</span>(map)
+                }, span))
             }
         }
 
-        <span class="kw">impl</span> <span class="ident">storm::provider::LoadOne</span><span class="op">&lt;</span>#<span class="ident">ident</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">storm::provider::ProviderContainer</span> {
-            <span class="attribute">#[<span class="ident">tracing::instrument</span>(<span class="ident">name</span> <span class="op">=</span> <span class="string">&quot;load_one&quot;</span>, <span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">k</span>), <span class="ident">fields</span>(<span class="ident">table</span> <span class="op">=</span> #<span class="ident">table_name</span>))]</span>
-            <span class="kw">fn</span> <span class="ident">load_one_with_args</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="op">&lt;</span>#<span class="ident">ident</span> <span class="kw">as</span> <span class="ident">Entity</span><span class="op">&gt;</span><span class="ident">::Key</span>, <span class="ident">args</span>: <span class="ident">storm::provider::LoadArgs</span>) -&gt; <span class="ident">storm::BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">storm::Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span>#<span class="ident">ident</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-                <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
-                    <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> #<span class="ident">filter_sql</span>;
-                    <span class="kw">let</span> <span class="ident">v</span>: <span class="ident">storm::provider::LoadOneInternal</span><span class="op">&lt;</span>#<span class="ident">ident</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">storm::provider::LoadAll::load_all_with_args</span>(<span class="self">self</span>, <span class="kw-2">&amp;</span><span class="ident">filter</span>, <span class="ident">args</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-                    <span class="prelude-val">Ok</span>(<span class="ident">v</span>.<span class="ident">into_inner</span>())
+        <span class="kw">impl </span>storm::provider::LoadOne&lt;#ident&gt; <span class="kw">for </span>storm::provider::ProviderContainer {
+            <span class="attribute">#[tracing::instrument(name = <span class="string">&quot;load_one&quot;</span>, level = <span class="string">&quot;debug&quot;</span>, skip(<span class="self">self</span>, k), fields(table = #table_name))]
+            </span><span class="kw">fn </span>load_one_with_args&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>&lt;#ident <span class="kw">as </span>Entity&gt;::Key, args: storm::provider::LoadArgs) -&gt; storm::BoxFuture&lt;<span class="lifetime">&#39;a</span>, storm::Result&lt;<span class="prelude-ty">Option</span>&lt;#ident&gt;&gt;&gt; {
+                Box::pin(<span class="kw">async move </span>{
+                    <span class="kw">let </span>filter = #filter_sql;
+                    <span class="kw">let </span>v: storm::provider::LoadOneInternal&lt;#ident&gt; = storm::provider::LoadAll::load_all_with_args(<span class="self">self</span>, <span class="kw-2">&amp;</span>filter, args).<span class="kw">await</span><span class="question-mark">?</span>;
+                    <span class="prelude-val">Ok</span>(v.into_inner())
                 })
             }
         }
 
-        #<span class="ident">diff</span>
-        #<span class="ident">test</span>
+        #diff
+        #test
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">save</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">DeriveInput</span>) -&gt; <span class="ident">TokenStream</span> {
-    <span class="kw">let</span> <span class="ident">ident</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">input</span>.<span class="ident">ident</span>;
-    <span class="kw">let</span> <span class="ident">attrs</span> <span class="op">=</span> <span class="macro">try_ts!</span>(<span class="ident">TypeAttrs::from_derive_input</span>(<span class="ident">input</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">write_errors</span>()));
-    <span class="kw">let</span> <span class="ident">rename_all</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">rename_all</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>save(input: <span class="kw-2">&amp;</span>DeriveInput) -&gt; TokenStream {
+    <span class="kw">let </span>ident = <span class="kw-2">&amp;</span>input.ident;
+    <span class="kw">let </span>attrs = <span class="macro">try_ts!</span>(TypeAttrs::from_derive_input(input).map_err(|e| e.write_errors()));
+    <span class="kw">let </span>rename_all = attrs.rename_all;
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">diff</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">diff</span>.<span class="ident">then</span>(<span class="ident">Vec::new</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">errors</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">save_part</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">wheres</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">translated</span> <span class="op">=</span> <span class="ident">SaveTranslated::new</span>(<span class="kw-2">&amp;</span><span class="ident">attrs</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">translated_backup</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">translated_restore</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-    <span class="kw">let</span> <span class="ident">is_identity_key</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">is_identity_key</span>();
-    <span class="kw">let</span> <span class="ident">identity_col</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">identity</span>.<span class="ident">to_lowercase</span>();
-    <span class="kw">let</span> <span class="ident">table_name</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="ident">attrs</span>.<span class="ident">table</span>, <span class="ident">attrs</span>.<span class="ident">table</span>.<span class="ident">span</span>());
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">enum_fields</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-    <span class="kw">let</span> <span class="ident">enum_fields_ident</span> <span class="op">=</span> <span class="ident">Ident::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}Fields&quot;</span>, <span class="ident">ident</span>), <span class="ident">ident</span>.<span class="ident">span</span>());
-    <span class="kw">let</span> <span class="ident">vis</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">input</span>.<span class="ident">vis</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>diff = attrs.diff.then(Vec::new);
+    <span class="kw">let </span><span class="kw-2">mut </span>errors = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>save_part = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>wheres = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>translated = SaveTranslated::new(<span class="kw-2">&amp;</span>attrs);
+    <span class="kw">let </span><span class="kw-2">mut </span>translated_backup = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>translated_restore = Vec::new();
+    <span class="kw">let </span>is_identity_key = attrs.is_identity_key();
+    <span class="kw">let </span>identity_col = attrs.identity.to_lowercase();
+    <span class="kw">let </span>table_name = LitStr::new(<span class="kw-2">&amp;</span>attrs.table, attrs.table.span());
+    <span class="kw">let </span><span class="kw-2">mut </span>enum_fields = Vec::new();
+    <span class="kw">let </span>enum_fields_ident = Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}Fields&quot;</span>, ident), ident.span());
+    <span class="kw">let </span>vis = <span class="kw-2">&amp;</span>input.vis;
 
-    <span class="kw">let</span> <span class="ident">keys</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">keys</span>(<span class="kw-2">&amp;mut</span> <span class="ident">errors</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">identity_found</span> <span class="op">=</span> <span class="ident">is_identity_key</span>;
+    <span class="kw">let </span>keys = attrs.keys(<span class="kw-2">&amp;mut </span>errors);
+    <span class="kw">let </span><span class="kw-2">mut </span>identity_found = is_identity_key;
 
-    <span class="kw">for</span> <span class="ident">field</span> <span class="kw">in</span> <span class="macro">try_ts!</span>(<span class="ident">input</span>.<span class="ident">fields</span>()) {
-        <span class="kw">let</span> <span class="ident">attrs</span>: <span class="ident">FieldAttrs</span> <span class="op">=</span> <span class="macro">continue_ts!</span>(
-            <span class="ident">FieldAttrs::from_field</span>(<span class="ident">field</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">write_errors</span>()),
-            <span class="ident">errors</span>
+    <span class="kw">for </span>field <span class="kw">in </span><span class="macro">try_ts!</span>(input.fields()) {
+        <span class="kw">let </span>attrs: FieldAttrs = <span class="macro">continue_ts!</span>(
+            FieldAttrs::from_field(field).map_err(|e| e.write_errors()),
+            errors
         );
 
-        <span class="ident">attrs</span>.<span class="ident">validate_save</span>(<span class="kw-2">&amp;mut</span> <span class="ident">errors</span>);
+        attrs.validate_save(<span class="kw-2">&amp;mut </span>errors);
 
-        <span class="kw">if</span> <span class="ident">attrs</span>.<span class="ident">skip_save</span>() {
+        <span class="kw">if </span>attrs.skip_save() {
             <span class="kw">continue</span>;
         }
 
-        <span class="kw">let</span> <span class="ident">column</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="macro">continue_ts!</span>(<span class="ident">RenameAll::column</span>(<span class="ident">rename_all</span>, <span class="kw-2">&amp;</span><span class="ident">attrs</span>.<span class="ident">column</span>, <span class="ident">field</span>), <span class="ident">errors</span>);
-        <span class="kw">let</span> <span class="ident">col_lc</span> <span class="op">=</span> <span class="ident">column</span>.<span class="ident">to_lowercase</span>();
-        <span class="kw">let</span> <span class="ident">is_identity</span> <span class="op">=</span> <span class="op">!</span><span class="ident">identity_col</span>.<span class="ident">is_empty</span>() <span class="op">&amp;&amp;</span> <span class="ident">identity_col</span> <span class="op">==</span> <span class="ident">col_lc</span>;
+        <span class="kw">let </span>column = <span class="kw-2">&amp;</span><span class="macro">continue_ts!</span>(RenameAll::column(rename_all, <span class="kw-2">&amp;</span>attrs.column, field), errors);
+        <span class="kw">let </span>col_lc = column.to_lowercase();
+        <span class="kw">let </span>is_identity = !identity_col.is_empty() &amp;&amp; identity_col == col_lc;
 
-        <span class="kw">if</span> <span class="ident">is_identity</span> {
-            <span class="ident">identity_found</span> <span class="op">=</span> <span class="bool-val">true</span>;
+        <span class="kw">if </span>is_identity {
+            identity_found = <span class="bool-val">true</span>;
             <span class="kw">continue</span>;
         }
 
-        <span class="comment">// keys are processed at the end.</span>
-        <span class="kw">if</span> <span class="ident">keys</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">column</span>.<span class="ident">as_str</span>()) {
-            <span class="kw">if</span> <span class="ident">attrs</span>.<span class="ident">save_with</span>.<span class="ident">is_some</span>() {
-                <span class="ident">errors</span>.<span class="ident">push</span>(
-                    <span class="ident">Error::new</span>(<span class="ident">attrs</span>.<span class="ident">save_with</span>.<span class="ident">span</span>(), <span class="string">&quot;Invalid since this field is a key.&quot;</span>)
-                        .<span class="ident">to_compile_error</span>(),
+        <span class="comment">// keys are processed at the end.
+        </span><span class="kw">if </span>keys.contains(<span class="kw-2">&amp;</span>column.as_str()) {
+            <span class="kw">if </span>attrs.save_with.is_some() {
+                errors.push(
+                    Error::new(attrs.save_with.span(), <span class="string">&quot;Invalid since this field is a key.&quot;</span>)
+                        .to_compile_error(),
                 );
             }
             <span class="kw">continue</span>;
         }
 
-        <span class="kw">let</span> <span class="ident">ident</span> <span class="op">=</span> <span class="macro">continue_ts!</span>(<span class="ident">field</span>.<span class="ident">ident</span>(), <span class="ident">errors</span>);
-        <span class="kw">let</span> <span class="ident">field_pascal_ident</span> <span class="op">=</span> <span class="ident">Ident::new</span>(<span class="kw-2">&amp;</span><span class="ident">ident</span>.<span class="ident">to_string</span>().<span class="ident">to_pascal_case</span>(), <span class="ident">ident</span>.<span class="ident">span</span>());
+        <span class="kw">let </span>ident = <span class="macro">continue_ts!</span>(field.ident(), errors);
+        <span class="kw">let </span>field_pascal_ident = Ident::new(<span class="kw-2">&amp;</span>ident.to_string().to_pascal_case(), ident.span());
 
-        <span class="kw">if</span> <span class="ident">is_translated</span>(<span class="kw-2">&amp;</span><span class="ident">field</span>.<span class="ident">ty</span>) {
-            <span class="ident">translated</span>.<span class="ident">add_field</span>(<span class="ident">field</span>, <span class="ident">column</span>);
-            <span class="kw">let</span> <span class="ident">name_bk</span> <span class="op">=</span> <span class="ident">Ident::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}_bk&quot;</span>, <span class="ident">ident</span>), <span class="ident">Span::call_site</span>());
-            <span class="ident">translated_backup</span>.<span class="ident">push</span>(
-                <span class="macro">quote!</span> { <span class="kw">let</span> #<span class="ident">name_bk</span> <span class="op">=</span> <span class="ident">std::mem::replace</span>(<span class="kw-2">&amp;mut</span> <span class="ident">v</span>.#<span class="ident">ident</span>, <span class="ident">Default::default</span>()); },
+        <span class="kw">if </span>is_translated(<span class="kw-2">&amp;</span>field.ty) {
+            translated.add_field(field, column);
+            <span class="kw">let </span>name_bk = Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}_bk&quot;</span>, ident), Span::call_site());
+            translated_backup.push(
+                <span class="macro">quote! </span>{ <span class="kw">let </span>#name_bk = std::mem::replace(<span class="kw-2">&amp;mut </span>v.#ident, Default::default()); },
             );
-            <span class="ident">translated_restore</span>.<span class="ident">push</span>(<span class="macro">quote!</span> { <span class="ident">v</span>.#<span class="ident">ident</span> <span class="op">=</span> #<span class="ident">name_bk</span>; });
+            translated_restore.push(<span class="macro">quote! </span>{ v.#ident = #name_bk; });
 
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">diff</span>.<span class="ident">as_mut</span>().<span class="ident">filter</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="op">!</span><span class="ident">attrs</span>.<span class="ident">skip_diff</span>()) {
-                <span class="ident">diff</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">storm_mssql::FieldDiff::field_diff</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.#<span class="ident">ident</span>, <span class="kw-2">&amp;</span><span class="ident">old</span>.#<span class="ident">ident</span>) {
-                        <span class="ident">map</span>.<span class="ident">insert</span>(#<span class="ident">enum_fields_ident</span>::#<span class="ident">field_pascal_ident</span>, <span class="ident">diff</span>);
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff.as_mut().filter(|<span class="kw">_</span>| !attrs.skip_diff()) {
+                diff.push(<span class="macro">quote! </span>{
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = storm_mssql::FieldDiff::field_diff(<span class="kw-2">&amp;</span><span class="self">self</span>.#ident, <span class="kw-2">&amp;</span>old.#ident) {
+                        map.insert(#enum_fields_ident::#field_pascal_ident, diff);
                     }
                 });
 
-                <span class="ident">enum_fields</span>.<span class="ident">push</span>(<span class="macro">quote!</span>(#<span class="ident">field_pascal_ident</span>));
+                enum_fields.push(<span class="macro">quote!</span>(#field_pascal_ident));
             }
 
             <span class="kw">continue</span>;
         }
 
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;[{column}]&quot;</span>), <span class="ident">ident</span>.<span class="ident">span</span>());
+        <span class="kw">let </span>name = LitStr::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;[{column}]&quot;</span>), ident.span());
 
-        <span class="kw">if</span> <span class="ident">attrs</span>.<span class="ident">part</span> {
-            <span class="ident">save_part</span>.<span class="ident">push</span>(
-                <span class="macro">quote!</span>(<span class="ident">storm_mssql::SaveEntityPart::save_entity_part</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.#<span class="ident">ident</span>, <span class="ident">k</span>, <span class="ident">builder</span>);),
+        <span class="kw">if </span>attrs.part {
+            save_part.push(
+                <span class="macro">quote!</span>(storm_mssql::SaveEntityPart::save_entity_part(<span class="kw-2">&amp;</span><span class="self">self</span>.#ident, k, builder);),
             );
 
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">diff</span>.<span class="ident">as_mut</span>().<span class="ident">filter</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="op">!</span><span class="ident">attrs</span>.<span class="ident">skip_diff</span>()) {
-                <span class="ident">diff</span>.<span class="ident">push</span>(
-                    <span class="macro">quote!</span> { <span class="ident">storm_mssql::EntityDiff::entity_diff</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.#<span class="ident">ident</span>, <span class="kw-2">&amp;</span><span class="ident">old</span>.#<span class="ident">ident</span>, <span class="ident">map</span>);},
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff.as_mut().filter(|<span class="kw">_</span>| !attrs.skip_diff()) {
+                diff.push(
+                    <span class="macro">quote! </span>{ storm_mssql::EntityDiff::entity_diff(<span class="kw-2">&amp;</span><span class="self">self</span>.#ident, <span class="kw-2">&amp;</span>old.#ident, map);},
                 );
 
-                <span class="comment">// Ignored for now.</span>
-                <span class="comment">// enum_fields.push(quote!(#ident()));</span>
-            }
-        } <span class="kw">else</span> {
-            <span class="kw">match</span> <span class="ident">attrs</span>.<span class="ident">save_with</span>.<span class="ident">as_ref</span>() {
-                <span class="prelude-val">Some</span>(<span class="ident">f</span>) =&gt; {
-                    <span class="ident">save_part</span>.<span class="ident">push</span>(<span class="macro">quote!</span>(<span class="ident">builder</span>.<span class="ident">add_field_owned</span>(#<span class="ident">name</span>, #<span class="ident">f</span>(<span class="ident">k</span>, <span class="self">self</span>));));
+                <span class="comment">// Ignored for now.
+                // enum_fields.push(quote!(#ident()));
+            </span>}
+        } <span class="kw">else </span>{
+            <span class="kw">match </span>attrs.save_with.as_ref() {
+                <span class="prelude-val">Some</span>(f) =&gt; {
+                    save_part.push(<span class="macro">quote!</span>(builder.add_field_owned(#name, #f(k, <span class="self">self</span>));));
 
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">diff</span>.<span class="ident">as_mut</span>().<span class="ident">filter</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="op">!</span><span class="ident">attrs</span>.<span class="ident">skip_diff</span>()) {
-                        <span class="ident">diff</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
-                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">storm_mssql::FieldDiff::field_diff</span>(<span class="kw-2">&amp;</span>#<span class="ident">f</span>(<span class="ident">k</span>, <span class="self">self</span>), <span class="kw-2">&amp;</span>#<span class="ident">f</span>(<span class="ident">k</span>, <span class="ident">old</span>)) {
-                                <span class="ident">map</span>.<span class="ident">insert</span>(#<span class="ident">enum_fields_ident</span>::#<span class="ident">field_pascal_ident</span>, <span class="ident">diff</span>);
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff.as_mut().filter(|<span class="kw">_</span>| !attrs.skip_diff()) {
+                        diff.push(<span class="macro">quote! </span>{
+                            <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = storm_mssql::FieldDiff::field_diff(<span class="kw-2">&amp;</span>#f(k, <span class="self">self</span>), <span class="kw-2">&amp;</span>#f(k, old)) {
+                                map.insert(#enum_fields_ident::#field_pascal_ident, diff);
                             }
                         });
 
-                        <span class="ident">enum_fields</span>.<span class="ident">push</span>(<span class="macro">quote!</span>(#<span class="ident">field_pascal_ident</span>));
+                        enum_fields.push(<span class="macro">quote!</span>(#field_pascal_ident));
                     }
                 }
-                <span class="prelude-val">None</span> =&gt; {
-                    <span class="ident">save_part</span>.<span class="ident">push</span>(<span class="macro">quote!</span>(<span class="ident">builder</span>.<span class="ident">add_field_ref</span>(#<span class="ident">name</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.#<span class="ident">ident</span>);));
+                <span class="prelude-val">None </span>=&gt; {
+                    save_part.push(<span class="macro">quote!</span>(builder.add_field_ref(#name, <span class="kw-2">&amp;</span><span class="self">self</span>.#ident);));
 
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">diff</span>.<span class="ident">as_mut</span>().<span class="ident">filter</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="op">!</span><span class="ident">attrs</span>.<span class="ident">skip_diff</span>()) {
-                        <span class="ident">diff</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
-                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">storm_mssql::FieldDiff::field_diff</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.#<span class="ident">ident</span>, <span class="kw-2">&amp;</span><span class="ident">old</span>.#<span class="ident">ident</span>) {
-                                <span class="ident">map</span>.<span class="ident">insert</span>(#<span class="ident">enum_fields_ident</span>::#<span class="ident">field_pascal_ident</span>, <span class="ident">diff</span>);
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff.as_mut().filter(|<span class="kw">_</span>| !attrs.skip_diff()) {
+                        diff.push(<span class="macro">quote! </span>{
+                            <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = storm_mssql::FieldDiff::field_diff(<span class="kw-2">&amp;</span><span class="self">self</span>.#ident, <span class="kw-2">&amp;</span>old.#ident) {
+                                map.insert(#enum_fields_ident::#field_pascal_ident, diff);
                             }
                         });
 
-                        <span class="ident">enum_fields</span>.<span class="ident">push</span>(<span class="macro">quote!</span>(#<span class="ident">field_pascal_ident</span>));
+                        enum_fields.push(<span class="macro">quote!</span>(#field_pascal_ident));
                     }
                 }
             }
         };
     }
 
-    <span class="kw">if</span> <span class="op">!</span><span class="ident">attrs</span>.<span class="ident">identity</span>.<span class="ident">is_empty</span>() <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="ident">identity_found</span> {
-        <span class="ident">errors</span>.<span class="ident">push</span>(
-            <span class="ident">Error::new</span>(<span class="ident">attrs</span>.<span class="ident">identity</span>.<span class="ident">span</span>(), <span class="string">&quot;Identity field not found.&quot;</span>).<span class="ident">to_compile_error</span>(),
+    <span class="kw">if </span>!attrs.identity.is_empty() &amp;&amp; !identity_found {
+        errors.push(
+            Error::new(attrs.identity.span(), <span class="string">&quot;Identity field not found.&quot;</span>).to_compile_error(),
         );
     }
 
-    <span class="kw">let</span> <span class="ident">add_key_or_identity</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">is_identity_key</span> {
-        <span class="macro">quote!</span>(<span class="ident">add_key_identity</span>)
-    } <span class="kw">else</span> {
-        <span class="macro">quote!</span>(<span class="ident">add_key_ref</span>)
+    <span class="kw">let </span>add_key_or_identity = <span class="kw">if </span>is_identity_key {
+        <span class="macro">quote!</span>(add_key_identity)
+    } <span class="kw">else </span>{
+        <span class="macro">quote!</span>(add_key_ref)
     };
 
-    <span class="kw">for</span> (<span class="ident">index</span>, <span class="ident">key</span>) <span class="kw">in</span> <span class="ident">keys</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;[{key}]&quot;</span>), <span class="ident">ident</span>.<span class="ident">span</span>());
+    <span class="kw">for </span>(index, key) <span class="kw">in </span>keys.iter().enumerate() {
+        <span class="kw">let </span>name = LitStr::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;[{key}]&quot;</span>), ident.span());
 
-        <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">keys</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">1</span> {
-            <span class="bool-val">true</span> =&gt; {
-                <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="ident">LitInt::new</span>(<span class="kw-2">&amp;</span><span class="ident">index</span>.<span class="ident">to_string</span>(), <span class="ident">ident</span>.<span class="ident">span</span>());
-                <span class="macro">quote!</span> { <span class="kw-2">&amp;</span><span class="ident">k</span>.#<span class="ident">n</span> }
+        <span class="kw">let </span>k = <span class="kw">match </span>keys.len() &gt; <span class="number">1 </span>{
+            <span class="bool-val">true </span>=&gt; {
+                <span class="kw">let </span>n = LitInt::new(<span class="kw-2">&amp;</span>index.to_string(), ident.span());
+                <span class="macro">quote! </span>{ <span class="kw-2">&amp;</span>k.#n }
             }
-            <span class="bool-val">false</span> <span class="kw">if</span> <span class="ident">is_identity_key</span> =&gt; <span class="macro">quote!</span> { <span class="kw-2">*</span><span class="ident">k</span> },
-            <span class="bool-val">false</span> =&gt; <span class="macro">quote!</span> { <span class="ident">k</span> },
+            <span class="bool-val">false </span><span class="kw">if </span>is_identity_key =&gt; <span class="macro">quote! </span>{ <span class="kw-2">*</span>k },
+            <span class="bool-val">false </span>=&gt; <span class="macro">quote! </span>{ k },
         };
 
-        <span class="ident">wheres</span>.<span class="ident">push</span>(<span class="macro">quote!</span>(<span class="ident">builder</span>.#<span class="ident">add_key_or_identity</span>(#<span class="ident">name</span>, #<span class="ident">k</span>);));
+        wheres.push(<span class="macro">quote!</span>(builder.#add_key_or_identity(#name, #k);));
     }
 
-    <span class="macro">try_ts!</span>(<span class="ident">errors</span>.<span class="ident">result</span>());
+    <span class="macro">try_ts!</span>(errors.result());
 
-    <span class="kw">let</span> <span class="ident">upsert_trait</span>;
-    <span class="kw">let</span> <span class="ident">upsert_sig</span>;
-    <span class="kw">let</span> <span class="ident">entity_part_key</span>;
+    <span class="kw">let </span>upsert_trait;
+    <span class="kw">let </span>upsert_sig;
+    <span class="kw">let </span>entity_part_key;
 
-    <span class="kw">if</span> <span class="ident">attrs</span>.<span class="ident">reload_on_upsert_or_identity</span>() {
-        <span class="ident">upsert_trait</span> <span class="op">=</span> <span class="macro">quote!</span>(<span class="ident">storm::provider::UpsertMut</span><span class="op">&lt;</span>#<span class="ident">ident</span><span class="op">&gt;</span>);
-        <span class="ident">upsert_sig</span> <span class="op">=</span> <span class="macro">quote!</span>(<span class="kw">fn</span> <span class="ident">upsert_mut</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="op">&lt;</span>#<span class="ident">ident</span> <span class="kw">as</span> <span class="ident">storm::Entity</span><span class="op">&gt;</span><span class="ident">::Key</span>, <span class="ident">v</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> #<span class="ident">ident</span>) -&gt; <span class="ident">storm::BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">storm::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>);
-        <span class="ident">entity_part_key</span> <span class="op">=</span> <span class="macro">quote!</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>.<span class="ident">clone</span>());
-    } <span class="kw">else</span> {
-        <span class="ident">upsert_trait</span> <span class="op">=</span> <span class="macro">quote!</span>(<span class="ident">storm::provider::Upsert</span><span class="op">&lt;</span>#<span class="ident">ident</span><span class="op">&gt;</span>);
-        <span class="ident">upsert_sig</span> <span class="op">=</span> <span class="macro">quote!</span>(<span class="kw">fn</span> <span class="ident">upsert</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="op">&lt;</span>#<span class="ident">ident</span> <span class="kw">as</span> <span class="ident">storm::Entity</span><span class="op">&gt;</span><span class="ident">::Key</span>, <span class="ident">v</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> #<span class="ident">ident</span>) -&gt; <span class="ident">storm::BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">storm::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>);
-        <span class="ident">entity_part_key</span> <span class="op">=</span> <span class="macro">quote!</span>(<span class="ident">k</span>);
+    <span class="kw">if </span>attrs.reload_on_upsert_or_identity() {
+        upsert_trait = <span class="macro">quote!</span>(storm::provider::UpsertMut&lt;#ident&gt;);
+        upsert_sig = <span class="macro">quote!</span>(<span class="kw">fn </span>upsert_mut&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>&lt;#ident <span class="kw">as </span>storm::Entity&gt;::Key, v: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>#ident) -&gt; storm::BoxFuture&lt;<span class="lifetime">&#39;a</span>, storm::Result&lt;()&gt;&gt;);
+        entity_part_key = <span class="macro">quote!</span>(<span class="kw-2">&amp;</span>k.clone());
+    } <span class="kw">else </span>{
+        upsert_trait = <span class="macro">quote!</span>(storm::provider::Upsert&lt;#ident&gt;);
+        upsert_sig = <span class="macro">quote!</span>(<span class="kw">fn </span>upsert&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>&lt;#ident <span class="kw">as </span>storm::Entity&gt;::Key, v: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>#ident) -&gt; storm::BoxFuture&lt;<span class="lifetime">&#39;a</span>, storm::Result&lt;()&gt;&gt;);
+        entity_part_key = <span class="macro">quote!</span>(k);
     }
 
-    <span class="kw">let</span> <span class="ident">reload_entity</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">attrs</span>.<span class="ident">reload_on_upsert</span>() {
-        <span class="kw">let</span> <span class="ident">backup</span> <span class="op">=</span> <span class="macro">quote!</span>(#(#<span class="ident">translated_backup</span>)<span class="kw-2">*</span>);
-        <span class="kw">let</span> <span class="ident">restore</span> <span class="op">=</span> <span class="macro">quote!</span>(#(#<span class="ident">translated_restore</span>)<span class="kw-2">*</span>);
+    <span class="kw">let </span>reload_entity = <span class="kw">if </span>attrs.reload_on_upsert() {
+        <span class="kw">let </span>backup = <span class="macro">quote!</span>(#(#translated_backup)<span class="kw-2">*</span>);
+        <span class="kw">let </span>restore = <span class="macro">quote!</span>(#(#translated_restore)<span class="kw-2">*</span>);
 
-        <span class="macro">quote!</span> {
-            #<span class="ident">backup</span>
-            <span class="kw-2">*</span><span class="ident">v</span> <span class="op">=</span> <span class="ident">storm::provider::LoadOne</span>::<span class="op">&lt;</span>#<span class="ident">ident</span><span class="op">&gt;</span><span class="ident">::load_one_with_args</span>(<span class="self">self</span>.<span class="ident">container</span>(), <span class="kw-2">&amp;</span><span class="ident">k</span>, <span class="ident">storm::provider::LoadArgs</span> { <span class="ident">use_transaction</span>: <span class="bool-val">true</span> }).<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">ok_or</span>(<span class="ident">storm::Error::EntityNotFound</span>)<span class="question-mark">?</span>;
-            #<span class="ident">restore</span>
+        <span class="macro">quote! </span>{
+            #backup
+            <span class="kw-2">*</span>v = storm::provider::LoadOne::&lt;#ident&gt;::load_one_with_args(<span class="self">self</span>.container(), <span class="kw-2">&amp;</span>k, storm::provider::LoadArgs { use_transaction: <span class="bool-val">true </span>}).<span class="kw">await</span><span class="question-mark">?</span>.ok_or(storm::Error::EntityNotFound)<span class="question-mark">?</span>;
+            #restore
         }
-    } <span class="kw">else</span> {
+    } <span class="kw">else </span>{
         <span class="macro">quote!</span>()
     };
 
-    <span class="kw">let</span> <span class="ident">builder_invoke</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">is_identity_key</span> {
-        <span class="macro">quote!</span>(<span class="ident">builder</span>.<span class="ident">execute_identity</span>(<span class="ident">provider</span>, <span class="ident">k</span>).<span class="kw">await</span><span class="question-mark">?</span>;)
-    } <span class="kw">else</span> {
-        <span class="macro">quote!</span>(<span class="ident">builder</span>.<span class="ident">execute</span>(<span class="ident">provider</span>).<span class="kw">await</span><span class="question-mark">?</span>;)
+    <span class="kw">let </span>builder_invoke = <span class="kw">if </span>is_identity_key {
+        <span class="macro">quote!</span>(builder.execute_identity(provider, k).<span class="kw">await</span><span class="question-mark">?</span>;)
+    } <span class="kw">else </span>{
+        <span class="macro">quote!</span>(builder.execute(provider).<span class="kw">await</span><span class="question-mark">?</span>;)
     };
 
-    <span class="kw">let</span> <span class="ident">save_part</span> <span class="op">=</span> <span class="ident">save_part</span>.<span class="ident">ts</span>();
-    <span class="kw">let</span> <span class="ident">wheres</span> <span class="op">=</span> <span class="ident">wheres</span>.<span class="ident">ts</span>();
-    <span class="kw">let</span> <span class="ident">table</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="ident">attrs</span>.<span class="ident">table</span>, <span class="ident">ident</span>.<span class="ident">span</span>());
-    <span class="kw">let</span> <span class="ident">provider</span> <span class="op">=</span> <span class="ident">attrs</span>.<span class="ident">provider</span>();
-    <span class="kw">let</span> (<span class="ident">metrics_start</span>, <span class="ident">metrics_end</span>) <span class="op">=</span> <span class="ident">metrics</span>(<span class="ident">ident</span>, <span class="string">&quot;upsert&quot;</span>);
-    <span class="kw">let</span> <span class="ident">diff</span> <span class="op">=</span> <span class="ident">entity_diff</span>(<span class="ident">ident</span>, <span class="ident">diff</span>);
-    <span class="kw">let</span> <span class="ident">enum_fields</span> <span class="op">=</span> <span class="ident">enum_fields_impl</span>(<span class="ident">vis</span>, <span class="ident">ident</span>, <span class="ident">enum_fields</span>, <span class="kw-2">&amp;</span><span class="ident">enum_fields_ident</span>, <span class="ident">attrs</span>.<span class="ident">diff</span>);
+    <span class="kw">let </span>save_part = save_part.ts();
+    <span class="kw">let </span>wheres = wheres.ts();
+    <span class="kw">let </span>table = LitStr::new(<span class="kw-2">&amp;</span>attrs.table, ident.span());
+    <span class="kw">let </span>provider = attrs.provider();
+    <span class="kw">let </span>(metrics_start, metrics_end) = metrics(ident, <span class="string">&quot;upsert&quot;</span>);
+    <span class="kw">let </span>diff = entity_diff(ident, diff);
+    <span class="kw">let </span>enum_fields = enum_fields_impl(vis, ident, enum_fields, <span class="kw-2">&amp;</span>enum_fields_ident, attrs.diff);
 
-    <span class="macro">quote!</span> {
-        <span class="kw">impl</span> #<span class="ident">upsert_trait</span> <span class="kw">for</span> <span class="ident">storm::provider::TransactionProvider</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span> {
-            <span class="attribute">#[<span class="ident">tracing::instrument</span>(<span class="ident">name</span> <span class="op">=</span> <span class="string">&quot;upsert&quot;</span>, <span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>, <span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">k</span>, <span class="ident">v</span>), <span class="ident">fields</span>(<span class="ident">table</span> <span class="op">=</span> #<span class="ident">table_name</span>))]</span>
-            #<span class="ident">upsert_sig</span> {
-                <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
-                    <span class="kw">let</span> <span class="ident">provider</span>: <span class="kw-2">&amp;</span><span class="ident">storm_mssql::MssqlProvider</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">container</span>().<span class="ident">provide</span>(#<span class="ident">provider</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">storm_mssql::UpsertBuilder::new</span>(#<span class="ident">table</span>);
+    <span class="macro">quote! </span>{
+        <span class="kw">impl </span>#upsert_trait <span class="kw">for </span>storm::provider::TransactionProvider&lt;<span class="lifetime">&#39;_</span>&gt; {
+            <span class="attribute">#[tracing::instrument(name = <span class="string">&quot;upsert&quot;</span>, level = <span class="string">&quot;debug&quot;</span>, skip(<span class="self">self</span>, k, v), fields(table = #table_name))]
+            </span>#upsert_sig {
+                Box::pin(<span class="kw">async move </span>{
+                    <span class="kw">let </span>provider: <span class="kw-2">&amp;</span>storm_mssql::MssqlProvider = <span class="self">self</span>.container().provide(#provider).<span class="kw">await</span><span class="question-mark">?</span>;
+                    <span class="kw">let </span><span class="kw-2">mut </span>builder = storm_mssql::UpsertBuilder::new(#table);
 
-                    #<span class="ident">metrics_start</span>
+                    #metrics_start
 
-                    <span class="kw">let</span> <span class="ident">entity_part_key</span> <span class="op">=</span> #<span class="ident">entity_part_key</span>;
-                    <span class="ident">storm_mssql::SaveEntityPart::save_entity_part</span>(<span class="ident">v</span>, <span class="ident">entity_part_key</span>, <span class="kw-2">&amp;mut</span> <span class="ident">builder</span>);
+                    <span class="kw">let </span>entity_part_key = #entity_part_key;
+                    storm_mssql::SaveEntityPart::save_entity_part(v, entity_part_key, <span class="kw-2">&amp;mut </span>builder);
 
-                    #<span class="ident">wheres</span>
-                    #<span class="ident">builder_invoke</span>
-                    #<span class="ident">reload_entity</span>
-                    #<span class="ident">translated</span>
+                    #wheres
+                    #builder_invoke
+                    #reload_entity
+                    #translated
 
-                    #<span class="ident">metrics_end</span>
+                    #metrics_end
                     <span class="prelude-val">Ok</span>(())
                 })
             }
         }
 
-        #<span class="ident">diff</span>
-        #<span class="ident">enum_fields</span>
+        #diff
+        #enum_fields
 
-        <span class="kw">impl</span> <span class="ident">storm_mssql::SaveEntityPart</span> <span class="kw">for</span> #<span class="ident">ident</span> {
-            <span class="kw">fn</span> <span class="ident">save_entity_part</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>, <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident"><span class="self">Self</span>::Key</span>, <span class="ident">builder</span>: <span class="kw-2">&amp;mut</span> <span class="ident">storm_mssql::UpsertBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>) {
-                #<span class="ident">save_part</span>
+        <span class="kw">impl </span>storm_mssql::SaveEntityPart <span class="kw">for </span>#ident {
+            <span class="kw">fn </span>save_entity_part&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">Self</span>::Key, builder: <span class="kw-2">&amp;mut </span>storm_mssql::UpsertBuilder&lt;<span class="lifetime">&#39;a</span>&gt;) {
+                #save_part
             }
         }
     }
 }
 
-<span class="kw">fn</span> <span class="ident">is_translated</span>(<span class="ident">t</span>: <span class="kw-2">&amp;</span><span class="ident">Type</span>) -&gt; <span class="ident">bool</span> {
-    <span class="kw">match</span> <span class="ident">t</span> {
-        <span class="ident">Type::Path</span>(<span class="ident">p</span>) =&gt; <span class="ident">p</span>
-            .<span class="ident">path</span>
-            .<span class="ident">segments</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">last</span>()
-            .<span class="ident">map_or</span>(<span class="bool-val">false</span>, <span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="ident">s</span>.<span class="ident">ident</span> <span class="op">==</span> <span class="string">&quot;Translated&quot;</span>),
-        <span class="kw">_</span> =&gt; <span class="bool-val">false</span>,
+<span class="kw">fn </span>is_translated(t: <span class="kw-2">&amp;</span>Type) -&gt; bool {
+    <span class="kw">match </span>t {
+        Type::Path(p) =&gt; p
+            .path
+            .segments
+            .iter()
+            .last()
+            .map_or(<span class="bool-val">false</span>, |s| <span class="kw-2">&amp;</span>s.ident == <span class="string">&quot;Translated&quot;</span>),
+        <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;telemetry&quot;</span>))]</span>
-<span class="kw">fn</span> <span class="ident">metrics</span>(<span class="ident">_ident</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>, <span class="ident">_ops</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; (<span class="ident">TokenStream</span>, <span class="ident">TokenStream</span>) {
+<span class="attribute">#[cfg(not(feature = <span class="string">&quot;telemetry&quot;</span>))]
+</span><span class="kw">fn </span>metrics(_ident: <span class="kw-2">&amp;</span>Ident, _ops: <span class="kw-2">&amp;</span>str) -&gt; (TokenStream, TokenStream) {
     (<span class="macro">quote!</span>(), <span class="macro">quote!</span>())
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;telemetry&quot;</span>)]</span>
-<span class="kw">fn</span> <span class="ident">metrics</span>(<span class="ident">ident</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>, <span class="ident">op</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; (<span class="ident">TokenStream</span>, <span class="ident">TokenStream</span>) {
-    <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">quote!</span> {
-        <span class="kw">let</span> <span class="ident">instant</span> <span class="op">=</span> <span class="ident">std::time::Instant::now</span>();
+<span class="attribute">#[cfg(feature = <span class="string">&quot;telemetry&quot;</span>)]
+</span><span class="kw">fn </span>metrics(ident: <span class="kw-2">&amp;</span>Ident, op: <span class="kw-2">&amp;</span>str) -&gt; (TokenStream, TokenStream) {
+    <span class="kw">let </span>start = <span class="macro">quote! </span>{
+        <span class="kw">let </span>instant = std::time::Instant::now();
     };
 
-    <span class="kw">let</span> <span class="ident">op</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="ident">op</span>, <span class="ident">Span::call_site</span>());
-    <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="ident">ident</span>.<span class="ident">to_string</span>(), <span class="ident">ident</span>.<span class="ident">span</span>());
+    <span class="kw">let </span>op = LitStr::new(op, Span::call_site());
+    <span class="kw">let </span>ty = LitStr::new(<span class="kw-2">&amp;</span>ident.to_string(), ident.span());
 
-    <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="macro">quote!</span> {
-        <span class="ident">storm::telemetry::inc_storm_execute_time</span>(<span class="ident">instant</span>, #<span class="ident">op</span>, #<span class="ident">ty</span>);
+    <span class="kw">let </span>end = <span class="macro">quote! </span>{
+        storm::telemetry::inc_storm_execute_time(instant, #op, #ty);
     };
 
-    (<span class="ident">start</span>, <span class="ident">end</span>)
+    (start, end)
 }
 
-<span class="doccomment">/// Creates a where clauses and parameters for the load sql query.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
-<span class="kw">struct</span> <span class="ident">FilterSqlImpl</span> {
-    <span class="ident">params</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TokenStream</span><span class="op">&gt;</span>,
-    <span class="ident">sql</span>: <span class="ident">String</span>,
+<span class="doccomment">/// Creates a where clauses and parameters for the load sql query.
+</span><span class="attribute">#[derive(Default)]
+</span><span class="kw">struct </span>FilterSqlImpl {
+    params: Vec&lt;TokenStream&gt;,
+    sql: String,
 }
 
-<span class="kw">impl</span> <span class="ident">FilterSqlImpl</span> {
-    <span class="kw">fn</span> <span class="ident">add_filter</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
-        <span class="self">self</span>.<span class="ident">sql</span>
-            .<span class="ident">add_sep_str</span>(<span class="string">&quot;AND&quot;</span>)
-            .<span class="ident">add_str</span>(<span class="string">&quot;(t.[&quot;</span>)
-            .<span class="ident">add_str</span>(<span class="ident">key</span>)
-            .<span class="ident">add_str</span>(<span class="string">&quot;]=@p&quot;</span>)
-            .<span class="ident">add_str</span>(<span class="kw-2">&amp;</span>(<span class="self">self</span>.<span class="ident">params</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="number">1</span>).<span class="ident">to_string</span>())
-            .<span class="ident">add</span>(<span class="string">&#39;)&#39;</span>);
+<span class="kw">impl </span>FilterSqlImpl {
+    <span class="kw">fn </span>add_filter(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) {
+        <span class="self">self</span>.sql
+            .add_sep_str(<span class="string">&quot;AND&quot;</span>)
+            .add_str(<span class="string">&quot;(t.[&quot;</span>)
+            .add_str(key)
+            .add_str(<span class="string">&quot;]=@p&quot;</span>)
+            .add_str(<span class="kw-2">&amp;</span>(<span class="self">self</span>.params.len() + <span class="number">1</span>).to_string())
+            .add(<span class="string">&#39;)&#39;</span>);
 
-        <span class="kw">let</span> <span class="ident">index</span> <span class="op">=</span> <span class="ident">LitInt::new</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">params</span>.<span class="ident">len</span>().<span class="ident">to_string</span>(), <span class="ident">Span::call_site</span>());
-        <span class="self">self</span>.<span class="ident">params</span>.<span class="ident">push</span>(<span class="macro">quote!</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>.#<span class="ident">index</span> <span class="kw">as</span> <span class="kw">_</span>,));
+        <span class="kw">let </span>index = LitInt::new(<span class="kw-2">&amp;</span><span class="self">self</span>.params.len().to_string(), Span::call_site());
+        <span class="self">self</span>.params.push(<span class="macro">quote!</span>(<span class="kw-2">&amp;</span>k.#index <span class="kw">as _</span>,));
     }
 }
 
-<span class="kw">impl</span> <span class="ident">ToTokens</span> <span class="kw">for</span> <span class="ident">FilterSqlImpl</span> {
-    <span class="kw">fn</span> <span class="ident">to_tokens</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">tokens</span>: <span class="kw-2">&amp;mut</span> <span class="ident">TokenStream</span>) {
-        <span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">params</span>;
+<span class="kw">impl </span>ToTokens <span class="kw">for </span>FilterSqlImpl {
+    <span class="kw">fn </span>to_tokens(<span class="kw-2">&amp;</span><span class="self">self</span>, tokens: <span class="kw-2">&amp;mut </span>TokenStream) {
+        <span class="kw">let </span>params = <span class="kw-2">&amp;</span><span class="self">self</span>.params;
 
-        <span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">params</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">1</span> {
-            <span class="macro">quote!</span>(<span class="ident">k</span> <span class="kw">as</span> <span class="kw">_</span>)
-        } <span class="kw">else</span> {
-            <span class="macro">quote!</span>(#(#<span class="ident">params</span>)<span class="kw-2">*</span>)
+        <span class="kw">let </span>params = <span class="kw">if </span>params.len() == <span class="number">1 </span>{
+            <span class="macro">quote!</span>(k <span class="kw">as _</span>)
+        } <span class="kw">else </span>{
+            <span class="macro">quote!</span>(#(#params)<span class="kw-2">*</span>)
         };
 
-        <span class="kw">let</span> <span class="ident">sql</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">sql</span>, <span class="ident">Span::call_site</span>());
-        <span class="ident">tokens</span>.<span class="ident">append_all</span>(<span class="macro">quote!</span>((#<span class="ident">sql</span>, <span class="kw-2">&amp;</span>[#<span class="ident">params</span>][..])));
+        <span class="kw">let </span>sql = LitStr::new(<span class="kw-2">&amp;</span><span class="self">self</span>.sql, Span::call_site());
+        tokens.append_all(<span class="macro">quote!</span>((#sql, <span class="kw-2">&amp;</span>[#params][..])));
     }
 }
 
-<span class="kw">fn</span> <span class="ident">apply_entity_diff</span>(<span class="ident">diff</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TokenStream</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">ident</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>) -&gt; <span class="ident">TokenStream</span> {
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">diff</span> {
-        <span class="macro">quote!</span> {
-            <span class="kw">impl</span> <span class="ident">storm_mssql::ApplyEntityDiff</span> <span class="kw">for</span> #<span class="ident">ident</span> {
-                <span class="kw">fn</span> <span class="ident">apply_entity_diff</span><span class="op">&lt;</span><span class="ident">S</span>: <span class="ident">std::hash::BuildHasher</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">diff</span>: <span class="kw-2">&amp;</span><span class="ident">std::collections::HashMap</span><span class="op">&lt;</span><span class="ident">storm::FieldsOrStr</span><span class="op">&lt;</span><span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">storm::EntityFields</span><span class="op">&gt;</span><span class="ident">::Fields</span><span class="op">&gt;</span>, <span class="ident">storm_mssql::serde_json::Value</span>, <span class="ident">S</span><span class="op">&gt;</span>) -&gt; <span class="ident">storm_mssql::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-                    #(#<span class="ident">diff</span>)<span class="op">*</span>
+<span class="kw">fn </span>apply_entity_diff(diff: <span class="prelude-ty">Option</span>&lt;Vec&lt;TokenStream&gt;&gt;, ident: <span class="kw-2">&amp;</span>Ident) -&gt; TokenStream {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff {
+        <span class="macro">quote! </span>{
+            <span class="kw">impl </span>storm_mssql::ApplyEntityDiff <span class="kw">for </span>#ident {
+                <span class="kw">fn </span>apply_entity_diff&lt;S: std::hash::BuildHasher&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, diff: <span class="kw-2">&amp;</span>std::collections::HashMap&lt;storm::FieldsOrStr&lt;&lt;<span class="self">Self </span><span class="kw">as </span>storm::EntityFields&gt;::Fields&gt;, storm_mssql::serde_json::Value, S&gt;) -&gt; storm_mssql::Result&lt;()&gt; {
+                    #(#diff)*
                     <span class="prelude-val">Ok</span>(())
                 }
             }
         }
-    } <span class="kw">else</span> {
-        <span class="macro">quote!</span> {}
+    } <span class="kw">else </span>{
+        <span class="macro">quote! </span>{}
     }
 }
 
-<span class="kw">fn</span> <span class="ident">entity_diff</span>(<span class="ident">ident</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>, <span class="ident">diff</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TokenStream</span><span class="op">&gt;</span><span class="op">&gt;</span>) -&gt; <span class="ident">TokenStream</span> {
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">diff</span> {
-        <span class="macro">quote!</span> {
-            <span class="kw">impl</span> <span class="ident">storm_mssql::EntityDiff</span> <span class="kw">for</span> #<span class="ident">ident</span> {
-                <span class="kw">fn</span> <span class="ident">entity_diff</span><span class="op">&lt;</span><span class="ident">S</span>: <span class="ident">std::hash::BuildHasher</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">old</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>, <span class="ident">map</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::collections::HashMap</span><span class="op">&lt;</span><span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">storm::EntityFields</span><span class="op">&gt;</span><span class="ident">::Fields</span>, <span class="ident">storm_mssql::serde_json::Value</span>, <span class="ident">S</span><span class="op">&gt;</span>) {
-                    #(#<span class="ident">diff</span>)<span class="op">*</span>
+<span class="kw">fn </span>entity_diff(ident: <span class="kw-2">&amp;</span>Ident, diff: <span class="prelude-ty">Option</span>&lt;Vec&lt;TokenStream&gt;&gt;) -&gt; TokenStream {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff {
+        <span class="macro">quote! </span>{
+            <span class="kw">impl </span>storm_mssql::EntityDiff <span class="kw">for </span>#ident {
+                <span class="kw">fn </span>entity_diff&lt;S: std::hash::BuildHasher&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, old: <span class="kw-2">&amp;</span><span class="self">Self</span>, map: <span class="kw-2">&amp;mut </span>std::collections::HashMap&lt;&lt;<span class="self">Self </span><span class="kw">as </span>storm::EntityFields&gt;::Fields, storm_mssql::serde_json::Value, S&gt;) {
+                    #(#diff)*
                 }
             }
         }
-    } <span class="kw">else</span> {
+    } <span class="kw">else </span>{
         <span class="macro">quote!</span>()
     }
 }
 
-<span class="kw">fn</span> <span class="ident">load_diff_field</span>(<span class="ident">diff</span>: <span class="kw-2">&amp;mut</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TokenStream</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">field</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>, <span class="ident">enum_fields_ident</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>) {
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">diff</span>) <span class="op">=</span> <span class="ident">diff</span>.<span class="ident">as_mut</span>() {
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">Ident::new</span>(<span class="kw-2">&amp;</span><span class="ident">field</span>.<span class="ident">to_string</span>().<span class="ident">to_pascal_case</span>(), <span class="ident">field</span>.<span class="ident">span</span>());
-        <span class="ident">diff</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {<span class="ident">storm_mssql::_replace_field_diff</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.#<span class="ident">field</span>, #<span class="ident">enum_fields_ident</span>::#<span class="ident">name</span>, <span class="ident">diff</span>)<span class="question-mark">?</span>;});
+<span class="kw">fn </span>load_diff_field(diff: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;Vec&lt;TokenStream&gt;&gt;, field: <span class="kw-2">&amp;</span>Ident, enum_fields_ident: <span class="kw-2">&amp;</span>Ident) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff.as_mut() {
+        <span class="kw">let </span>name = Ident::new(<span class="kw-2">&amp;</span>field.to_string().to_pascal_case(), field.span());
+        diff.push(<span class="macro">quote! </span>{storm_mssql::_replace_field_diff(<span class="kw-2">&amp;mut </span><span class="self">self</span>.#field, #enum_fields_ident::#name, diff)<span class="question-mark">?</span>;});
     }
 }
 
-<span class="kw">fn</span> <span class="ident">read_row</span>(<span class="ident">column_index</span>: <span class="ident">usize</span>) -&gt; <span class="ident">TokenStream</span> {
-    <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">LitInt::new</span>(<span class="kw-2">&amp;</span><span class="ident">column_index</span>.<span class="ident">to_string</span>(), <span class="ident">Span::call_site</span>());
-    <span class="macro">quote!</span>(<span class="ident">storm_mssql::_macro_load_field</span>(<span class="kw-2">&amp;</span><span class="ident">row</span>, #<span class="ident">l</span>)<span class="question-mark">?</span>)
+<span class="kw">fn </span>read_row(column_index: usize) -&gt; TokenStream {
+    <span class="kw">let </span>l = LitInt::new(<span class="kw-2">&amp;</span>column_index.to_string(), Span::call_site());
+    <span class="macro">quote!</span>(storm_mssql::_macro_load_field(<span class="kw-2">&amp;</span>row, #l)<span class="question-mark">?</span>)
 }
 
-<span class="kw">fn</span> <span class="ident">enum_fields_impl</span>(
-    <span class="ident">vis</span>: <span class="kw-2">&amp;</span><span class="ident">Visibility</span>,
-    <span class="ident">ident</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>,
-    <span class="ident">items</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TokenStream</span><span class="op">&gt;</span>,
-    <span class="ident">enum_ident</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>,
-    <span class="ident">is_diff</span>: <span class="ident">bool</span>,
-) -&gt; <span class="ident">TokenStream</span> {
-    <span class="kw">if</span> <span class="ident">is_diff</span> {
-        <span class="macro">quote!</span> {
-            <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">PartialEq</span>, <span class="ident">serde::Deserialize</span>, <span class="ident">serde::Serialize</span>)]</span>
-            <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
-            #<span class="ident">vis</span> <span class="kw">enum</span> #<span class="ident">enum_ident</span> {
-                #(#<span class="ident">items</span>,)<span class="op">*</span>
+<span class="kw">fn </span>enum_fields_impl(
+    vis: <span class="kw-2">&amp;</span>Visibility,
+    ident: <span class="kw-2">&amp;</span>Ident,
+    items: Vec&lt;TokenStream&gt;,
+    enum_ident: <span class="kw-2">&amp;</span>Ident,
+    is_diff: bool,
+) -&gt; TokenStream {
+    <span class="kw">if </span>is_diff {
+        <span class="macro">quote! </span>{
+            <span class="attribute">#[derive(Clone, Copy, Eq, Hash, PartialEq, serde::Deserialize, serde::Serialize)]
+            #[serde(rename_all = <span class="string">&quot;camelCase&quot;</span>)]
+            </span>#vis <span class="kw">enum </span>#enum_ident {
+                #(#items,)*
             }
 
-            <span class="kw">impl</span> <span class="ident">storm::EntityFields</span> <span class="kw">for</span> #<span class="ident">ident</span> {
-                <span class="kw">type</span> <span class="ident">Fields</span> <span class="op">=</span> #<span class="ident">enum_ident</span>;
+            <span class="kw">impl </span>storm::EntityFields <span class="kw">for </span>#ident {
+                <span class="kw">type </span>Fields = #enum_ident;
             }
         }
-    } <span class="kw">else</span> {
+    } <span class="kw">else </span>{
         <span class="macro">quote!</span>()
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="storm_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="storm_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

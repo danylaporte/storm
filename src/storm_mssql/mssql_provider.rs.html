@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_mssql/src/mssql_provider.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mssql_provider.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm_mssql/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm_mssql/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm_mssql/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_mssql/src/mssql_provider.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mssql_provider.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm_mssql/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm_mssql/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm_mssql/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -323,330 +323,330 @@
 <span id="323">323</span>
 <span id="324">324</span>
 <span id="325">325</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">execute::ExecuteArgs</span>, <span class="ident">Client</span>, <span class="ident">ClientFactory</span>, <span class="ident">Execute</span>, <span class="ident">Parameter</span>, <span class="ident">QueryRows</span>, <span class="ident">ToSql</span>};
-<span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">Stream</span>, <span class="ident">StreamExt</span>, <span class="ident">TryStreamExt</span>};
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">borrow::Cow</span>,
-    <span class="ident">fmt::Debug</span>,
-    <span class="ident">pin::Pin</span>,
-    <span class="ident">sync</span>::{
-        <span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">Ordering::Relaxed</span>},
-        <span class="ident">Arc</span>,
+</pre><pre class="rust"><code><span class="kw">use crate</span>::{execute::ExecuteArgs, Client, ClientFactory, Execute, Parameter, QueryRows, ToSql};
+<span class="kw">use </span>futures::{Stream, StreamExt, TryStreamExt};
+<span class="kw">use </span>std::{
+    borrow::Cow,
+    fmt::Debug,
+    pin::Pin,
+    sync::{
+        atomic::{AtomicBool, Ordering::Relaxed},
+        Arc,
     },
-    <span class="ident">task</span>::{<span class="ident">Context</span>, <span class="ident">Poll</span>},
+    task::{Context, Poll},
 };
-<span class="kw">use</span> <span class="ident">storm</span>::{<span class="ident">provider</span>, <span class="ident">BoxFuture</span>, <span class="ident">Error</span>, <span class="ident">InstrumentErr</span>, <span class="prelude-ty">Result</span>};
-<span class="kw">use</span> <span class="ident">tiberius::Row</span>;
-<span class="kw">use</span> <span class="ident">tokio::sync</span>::{<span class="ident">Mutex</span>, <span class="ident">MutexGuard</span>};
-<span class="kw">use</span> <span class="ident">tracing</span>::{<span class="ident">debug_span</span>, <span class="ident">instrument</span>, <span class="ident">Instrument</span>, <span class="ident">Span</span>};
+<span class="kw">use </span>storm::{provider, BoxFuture, Error, InstrumentErr, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>tiberius::Row;
+<span class="kw">use </span>tokio::sync::{Mutex, MutexGuard};
+<span class="kw">use </span>tracing::{debug_span, instrument, Instrument, Span};
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MssqlProvider</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Inner</span><span class="op">&gt;</span>);
+<span class="kw">pub struct </span>MssqlProvider(Arc&lt;Inner&gt;);
 
-<span class="kw">impl</span> <span class="ident">MssqlProvider</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">ClientFactory</span><span class="op">&gt;</span>(<span class="ident">client_factory</span>: <span class="ident">F</span>) -&gt; <span class="self">Self</span> {
-        (<span class="ident">Box::new</span>(<span class="ident">client_factory</span>) <span class="kw">as</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ClientFactory</span><span class="op">&gt;</span>).<span class="ident">into</span>()
+<span class="kw">impl </span>MssqlProvider {
+    <span class="kw">pub fn </span>new&lt;F: ClientFactory&gt;(client_factory: F) -&gt; <span class="self">Self </span>{
+        (Box::new(client_factory) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>ClientFactory&gt;).into()
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">state</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">MutexGuard</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">State</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">guard</span> <span class="op">=</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">state</span>.<span class="ident">lock</span>().<span class="kw">await</span>;
+    <span class="kw">async fn </span>state(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MutexGuard&lt;<span class="lifetime">&#39;_</span>, State&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>guard = <span class="self">self</span>.<span class="number">0</span>.state.lock().<span class="kw">await</span>;
 
-        <span class="kw">if</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">cancel_transaction</span>.<span class="ident">swap</span>(<span class="bool-val">false</span>, <span class="ident">Relaxed</span>) {
-            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">guard</span>.<span class="ident">cancel</span>().<span class="kw">await</span>;
+        <span class="kw">if </span><span class="self">self</span>.<span class="number">0</span>.cancel_transaction.swap(<span class="bool-val">false</span>, Relaxed) {
+            <span class="kw">let _ </span>= guard.cancel().<span class="kw">await</span>;
         }
 
-        <span class="ident">guard</span>
+        guard
     }
 
-    <span class="doccomment">/// Creates a new [Client](Client) instance.</span>
-    <span class="doccomment">/// # Safety</span>
-    <span class="doccomment">/// This operation is safe but the returning client is not constrained by the lock and can modify the database without storm&#39;s knowledge.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">create_client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Client</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">state</span>.<span class="ident">lock</span>().<span class="kw">await</span>.<span class="ident">create_client</span>().<span class="kw">await</span>
-    }
+    <span class="doccomment">/// Creates a new [Client](Client) instance.
+    /// # Safety
+    /// This operation is safe but the returning client is not constrained by the lock and can modify the database without storm&#39;s knowledge.
+    </span><span class="kw">pub async unsafe fn </span>create_client(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Client&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.state.lock().<span class="kw">await</span>.create_client().<span class="kw">await
+    </span>}
 }
 
-<span class="kw">impl</span> <span class="ident">Execute</span> <span class="kw">for</span> <span class="ident">MssqlProvider</span> {
-    <span class="attribute">#[<span class="ident">instrument</span>(
-        <span class="ident">level</span> <span class="op">=</span> <span class="string">&quot;debug&quot;</span>,
-        <span class="ident">name</span> <span class="op">=</span> <span class="string">&quot;MssqlProvider::execute&quot;</span>,
-        <span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">params</span>),
-        <span class="ident">err</span>
-    )]</span>
-    <span class="kw">fn</span> <span class="ident">execute_with_args</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">S</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>,
-        <span class="ident">statement</span>: <span class="ident">S</span>,
-        <span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> (<span class="kw">dyn</span> <span class="ident">ToSql</span>)],
-        <span class="ident">args</span>: <span class="ident">ExecuteArgs</span>,
-    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">S</span>: <span class="question-mark">?</span><span class="ident">Sized</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">str</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
+<span class="kw">impl </span>Execute <span class="kw">for </span>MssqlProvider {
+    <span class="attribute">#[instrument(
+        level = <span class="string">&quot;debug&quot;</span>,
+        name = <span class="string">&quot;MssqlProvider::execute&quot;</span>,
+        skip(<span class="self">self</span>, params),
+        err
+    )]
+    </span><span class="kw">fn </span>execute_with_args&lt;<span class="lifetime">&#39;a</span>, S&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>,
+        statement: S,
+        params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>(<span class="kw">dyn </span>ToSql)],
+        args: ExecuteArgs,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span>&lt;u64&gt;&gt;
+    <span class="kw">where
+        </span>S: <span class="question-mark">?</span>Sized + Debug + Into&lt;Cow&lt;<span class="lifetime">&#39;a</span>, str&gt;&gt; + Send + <span class="lifetime">&#39;a</span>,
     {
-        <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">intermediate</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+        Box::pin(<span class="kw">async move </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>intermediate = Vec::new();
+            <span class="kw">let </span><span class="kw-2">mut </span>output = Vec::new();
 
-            <span class="ident">adapt_params</span>(<span class="ident">params</span>, <span class="kw-2">&amp;mut</span> <span class="ident">intermediate</span>, <span class="kw-2">&amp;mut</span> <span class="ident">output</span>);
+            adapt_params(params, <span class="kw-2">&amp;mut </span>intermediate, <span class="kw-2">&amp;mut </span>output);
 
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span>;
-            <span class="kw">let</span> <span class="ident">client_ref</span>;
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">guard</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">state</span>().<span class="kw">await</span>;
+            <span class="kw">let </span><span class="kw-2">mut </span>client;
+            <span class="kw">let </span>client_ref;
+            <span class="kw">let </span><span class="kw-2">mut </span>guard = <span class="self">self</span>.state().<span class="kw">await</span>;
 
-            <span class="kw">if</span> <span class="ident">args</span>.<span class="ident">use_transaction</span> {
-                <span class="ident">client</span> <span class="op">=</span> <span class="ident">guard</span>.<span class="ident">transaction</span>().<span class="kw">await</span><span class="question-mark">?</span>;
-                <span class="ident">client_ref</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">guard</span>.<span class="ident">transaction</span>;
-            } <span class="kw">else</span> {
-                <span class="ident">client</span> <span class="op">=</span> <span class="ident">guard</span>.<span class="ident">client</span>().<span class="kw">await</span><span class="question-mark">?</span>;
-                <span class="ident">client_ref</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">guard</span>.<span class="ident">client</span>;
+            <span class="kw">if </span>args.use_transaction {
+                client = guard.transaction().<span class="kw">await</span><span class="question-mark">?</span>;
+                client_ref = <span class="kw-2">&amp;mut </span>guard.transaction;
+            } <span class="kw">else </span>{
+                client = guard.client().<span class="kw">await</span><span class="question-mark">?</span>;
+                client_ref = <span class="kw-2">&amp;mut </span>guard.client;
             };
 
-            <span class="kw">let</span> <span class="ident">count</span> <span class="op">=</span> <span class="ident">client</span>.<span class="ident">execute</span>(<span class="ident">statement</span>, <span class="kw-2">&amp;</span><span class="ident">output</span>).<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">total</span>();
+            <span class="kw">let </span>count = client.execute(statement, <span class="kw-2">&amp;</span>output).<span class="kw">await</span><span class="question-mark">?</span>.total();
 
-            <span class="kw-2">*</span><span class="ident">client_ref</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">client</span>);
-            <span class="prelude-val">Ok</span>(<span class="ident">count</span>)
+            <span class="kw-2">*</span>client_ref = <span class="prelude-val">Some</span>(client);
+            <span class="prelude-val">Ok</span>(count)
         })
     }
 }
 
-<span class="kw">struct</span> <span class="ident">Inner</span> {
-    <span class="ident">cancel_transaction</span>: <span class="ident">AtomicBool</span>,
-    <span class="ident">state</span>: <span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">State</span><span class="op">&gt;</span>,
+<span class="kw">struct </span>Inner {
+    cancel_transaction: AtomicBool,
+    state: Mutex&lt;State&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ClientFactory</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MssqlProvider</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">factory</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ClientFactory</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span>(<span class="ident">Arc::new</span>(<span class="ident">Inner</span> {
-            <span class="ident">cancel_transaction</span>: <span class="ident">Default::default</span>(),
-            <span class="ident">state</span>: <span class="ident">Mutex::new</span>(<span class="ident">State::new</span>(<span class="ident">factory</span>)),
+<span class="kw">impl </span>From&lt;Box&lt;<span class="kw">dyn </span>ClientFactory&gt;&gt; <span class="kw">for </span>MssqlProvider {
+    <span class="kw">fn </span>from(factory: Box&lt;<span class="kw">dyn </span>ClientFactory&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>(Arc::new(Inner {
+            cancel_transaction: Default::default(),
+            state: Mutex::new(State::new(factory)),
         }))
     }
 }
 
-<span class="kw">impl</span> <span class="ident">provider::Provider</span> <span class="kw">for</span> <span class="ident">MssqlProvider</span> {
-    <span class="kw">fn</span> <span class="ident">cancel</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">cancel_transaction</span>.<span class="ident">store</span>(<span class="bool-val">true</span>, <span class="ident">Relaxed</span>);
+<span class="kw">impl </span>provider::Provider <span class="kw">for </span>MssqlProvider {
+    <span class="kw">fn </span>cancel(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="self">self</span>.<span class="number">0</span>.cancel_transaction.store(<span class="bool-val">true</span>, Relaxed);
 
-        <span class="kw">let</span> <span class="ident">span</span> <span class="op">=</span> <span class="ident">tracing::Span::current</span>();
-        <span class="kw">let</span> <span class="ident">p</span> <span class="op">=</span> <span class="self">Self</span>(<span class="ident">Arc::clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>));
+        <span class="kw">let </span>span = tracing::Span::current();
+        <span class="kw">let </span>p = <span class="self">Self</span>(Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>));
 
-        <span class="ident">tokio::spawn</span>(
-            <span class="kw">async</span> <span class="kw">move</span> {
-                <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">p</span>.<span class="ident">state</span>().<span class="kw">await</span>;
+        tokio::spawn(
+            <span class="kw">async move </span>{
+                <span class="kw">let _ </span>= p.state().<span class="kw">await</span>;
             }
-            .<span class="ident">instrument</span>(<span class="macro">debug_span!</span>(<span class="ident">parent</span>: <span class="ident">span</span>, <span class="string">&quot;rollback_transaction&quot;</span>)),
+            .instrument(<span class="macro">debug_span!</span>(parent: span, <span class="string">&quot;rollback_transaction&quot;</span>)),
         );
     }
 
-    <span class="kw">fn</span> <span class="ident">commit</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> { <span class="self">self</span>.<span class="ident">state</span>().<span class="kw">await</span>.<span class="ident">commit</span>().<span class="kw">await</span> })
+    <span class="kw">fn </span>commit(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
+        Box::pin(<span class="kw">async move </span>{ <span class="self">self</span>.state().<span class="kw">await</span>.commit().<span class="kw">await </span>})
     }
 }
 
-<span class="kw">impl</span> <span class="ident">QueryRows</span> <span class="kw">for</span> <span class="ident">MssqlProvider</span> {
-    <span class="kw">fn</span> <span class="ident">query_rows</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">S</span>, <span class="ident">M</span>, <span class="ident">R</span>, <span class="ident">C</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>,
-        <span class="ident">statement</span>: <span class="ident">S</span>,
-        <span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> (<span class="kw">dyn</span> <span class="ident">ToSql</span>)],
-        <span class="kw-2">mut</span> <span class="ident">mapper</span>: <span class="ident">M</span>,
-        <span class="ident">use_transaction</span>: <span class="ident">bool</span>,
-    ) -&gt; <span class="ident">BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">C</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span>,
-        <span class="ident">M</span>: <span class="ident">FnMut</span>(<span class="ident">Row</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-        <span class="ident">R</span>: <span class="ident">Send</span>,
-        <span class="ident">S</span>: <span class="question-mark">?</span><span class="ident">Sized</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">str</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
+<span class="kw">impl </span>QueryRows <span class="kw">for </span>MssqlProvider {
+    <span class="kw">fn </span>query_rows&lt;<span class="lifetime">&#39;a</span>, S, M, R, C&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>,
+        statement: S,
+        params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>(<span class="kw">dyn </span>ToSql)],
+        <span class="kw-2">mut </span>mapper: M,
+        use_transaction: bool,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span>&lt;C&gt;&gt;
+    <span class="kw">where
+        </span>C: Default + Extend&lt;R&gt; + Send,
+        M: FnMut(Row) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt; + Send + <span class="lifetime">&#39;a</span>,
+        R: Send,
+        S: <span class="question-mark">?</span>Sized + Debug + <span class="kw">for</span>&lt;<span class="lifetime">&#39;b</span>&gt; Into&lt;Cow&lt;<span class="lifetime">&#39;b</span>, str&gt;&gt; + Send + <span class="lifetime">&#39;a</span>,
     {
-        <span class="kw">let</span> <span class="ident">sql</span> <span class="op">=</span> <span class="ident">statement</span>.<span class="ident">into</span>();
-        <span class="kw">let</span> <span class="ident">span</span> <span class="op">=</span> <span class="ident">instrument_query_rows</span>(<span class="kw-2">&amp;</span><span class="ident">sql</span>);
+        <span class="kw">let </span>sql = statement.into();
+        <span class="kw">let </span>span = instrument_query_rows(<span class="kw-2">&amp;</span>sql);
 
-        <span class="ident">Box::pin</span>(
-            <span class="kw">async</span> <span class="kw">move</span> {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">conn</span> <span class="op">=</span> <span class="ident">QueryConn::new</span>(<span class="self">self</span>, <span class="ident">use_transaction</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">query</span> <span class="op">=</span> <span class="ident">conn</span>.<span class="ident">query</span>(<span class="ident">sql</span>, <span class="ident">params</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">vec</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="number">10</span>);
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">coll</span> <span class="op">=</span> <span class="ident">C::default</span>();
+        Box::pin(
+            <span class="kw">async move </span>{
+                <span class="kw">let </span><span class="kw-2">mut </span>conn = QueryConn::new(<span class="self">self</span>, use_transaction).<span class="kw">await</span><span class="question-mark">?</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>query = conn.query(sql, params).<span class="kw">await</span><span class="question-mark">?</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>vec = Vec::with_capacity(<span class="number">10</span>);
+                <span class="kw">let </span><span class="kw-2">mut </span>coll = C::default();
 
-                <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">row</span>) <span class="op">=</span> <span class="ident">query</span>.<span class="ident">try_next</span>().<span class="kw">await</span><span class="question-mark">?</span> {
-                    <span class="ident">vec</span>.<span class="ident">push</span>(<span class="ident">mapper</span>(<span class="ident">row</span>)<span class="question-mark">?</span>);
+                <span class="kw">while let </span><span class="prelude-val">Some</span>(row) = query.try_next().<span class="kw">await</span><span class="question-mark">? </span>{
+                    vec.push(mapper(row)<span class="question-mark">?</span>);
 
-                    <span class="kw">if</span> <span class="ident">vec</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">10</span> {
-                        <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::iter_with_drain</span>)]</span>
-                        <span class="ident">coll</span>.<span class="ident">extend</span>(<span class="ident">vec</span>.<span class="ident">drain</span>(..));
+                    <span class="kw">if </span>vec.len() == <span class="number">10 </span>{
+                        <span class="attribute">#[allow(clippy::iter_with_drain)]
+                        </span>coll.extend(vec.drain(..));
                     }
                 }
 
-                <span class="kw">if</span> <span class="op">!</span><span class="ident">vec</span>.<span class="ident">is_empty</span>() {
-                    <span class="ident">coll</span>.<span class="ident">extend</span>(<span class="ident">vec</span>);
+                <span class="kw">if </span>!vec.is_empty() {
+                    coll.extend(vec);
                 }
 
-                <span class="ident">query</span>.<span class="ident">complete</span>().<span class="kw">await</span><span class="question-mark">?</span>;
-                <span class="ident">conn</span>.<span class="ident">complete</span>();
+                query.complete().<span class="kw">await</span><span class="question-mark">?</span>;
+                conn.complete();
 
-                <span class="prelude-val">Ok</span>(<span class="ident">coll</span>)
+                <span class="prelude-val">Ok</span>(coll)
             }
-            .<span class="ident">instrument_err</span>(<span class="ident">span</span>),
+            .instrument_err(span),
         )
     }
 }
 
-<span class="kw">fn</span> <span class="ident">instrument_query_rows</span>(<span class="ident">sql</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">Span</span> {
+<span class="kw">fn </span>instrument_query_rows(sql: <span class="kw-2">&amp;</span>str) -&gt; Span {
     <span class="macro">debug_span!</span>(
         <span class="string">&quot;MssqlProvider::query_rows&quot;</span>,
-        <span class="ident">sql</span>,
-        <span class="ident">err</span> <span class="op">=</span> <span class="ident">tracing::field::Empty</span>
+        sql,
+        err = tracing::field::Empty
     )
 }
 
-<span class="kw">struct</span> <span class="ident">QueryConn</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="ident">client</span>: <span class="ident">Client</span>,
-    <span class="ident">guard</span>: <span class="ident">MutexGuard</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">State</span><span class="op">&gt;</span>,
-    <span class="ident">use_transaction</span>: <span class="ident">bool</span>,
+<span class="kw">struct </span>QueryConn&lt;<span class="lifetime">&#39;a</span>&gt; {
+    client: Client,
+    guard: MutexGuard&lt;<span class="lifetime">&#39;a</span>, State&gt;,
+    use_transaction: bool,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">QueryConn</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">provider</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">MssqlProvider</span>, <span class="ident">use_transaction</span>: <span class="ident">bool</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">QueryConn</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">guard</span> <span class="op">=</span> <span class="ident">provider</span>.<span class="ident">state</span>().<span class="kw">await</span>;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; QueryConn&lt;<span class="lifetime">&#39;a</span>&gt; {
+    <span class="kw">async fn </span>new(provider: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>MssqlProvider, use_transaction: bool) -&gt; <span class="prelude-ty">Result</span>&lt;QueryConn&lt;<span class="lifetime">&#39;a</span>&gt;&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>guard = provider.state().<span class="kw">await</span>;
 
-        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">use_transaction</span> {
-            <span class="bool-val">true</span> =&gt; <span class="ident">guard</span>.<span class="ident">transaction</span>().<span class="kw">await</span>,
-            <span class="bool-val">false</span> =&gt; <span class="ident">guard</span>.<span class="ident">client</span>().<span class="kw">await</span>,
+        <span class="kw">let </span>client = <span class="kw">match </span>use_transaction {
+            <span class="bool-val">true </span>=&gt; guard.transaction().<span class="kw">await</span>,
+            <span class="bool-val">false </span>=&gt; guard.client().<span class="kw">await</span>,
         }<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">client</span>,
-            <span class="ident">guard</span>,
-            <span class="ident">use_transaction</span>,
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            client,
+            guard,
+            use_transaction,
         })
     }
 
-    <span class="kw">fn</span> <span class="ident">complete</span>(<span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">use_transaction</span> {
-            <span class="bool-val">true</span> =&gt; <span class="self">self</span>.<span class="ident">guard</span>.<span class="ident">transaction</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">client</span>),
-            <span class="bool-val">false</span> =&gt; <span class="self">self</span>.<span class="ident">guard</span>.<span class="ident">client</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">client</span>),
+    <span class="kw">fn </span>complete(<span class="kw-2">mut </span><span class="self">self</span>) {
+        <span class="kw">match </span><span class="self">self</span>.use_transaction {
+            <span class="bool-val">true </span>=&gt; <span class="self">self</span>.guard.transaction = <span class="prelude-val">Some</span>(<span class="self">self</span>.client),
+            <span class="bool-val">false </span>=&gt; <span class="self">self</span>.guard.client = <span class="prelude-val">Some</span>(<span class="self">self</span>.client),
         }
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">query</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">sql</span>: <span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">str</span><span class="op">&gt;</span>,
-        <span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> [<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> (<span class="kw">dyn</span> <span class="ident">ToSql</span>)],
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">QueryStream</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">intermediate</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+    <span class="kw">async fn </span>query&lt;<span class="lifetime">&#39;b</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>,
+        sql: Cow&lt;<span class="lifetime">&#39;b</span>, str&gt;,
+        params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>[<span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>(<span class="kw">dyn </span>ToSql)],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;QueryStream&lt;<span class="lifetime">&#39;b</span>&gt;&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>intermediate = Vec::new();
+        <span class="kw">let </span><span class="kw-2">mut </span>output = Vec::new();
 
-        <span class="ident">adapt_params</span>(<span class="ident">params</span>, <span class="kw-2">&amp;mut</span> <span class="ident">intermediate</span>, <span class="kw-2">&amp;mut</span> <span class="ident">output</span>);
+        adapt_params(params, <span class="kw-2">&amp;mut </span>intermediate, <span class="kw-2">&amp;mut </span>output);
 
-        <span class="kw">let</span> <span class="ident">stream</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">query</span>(<span class="ident">sql</span>, <span class="kw-2">&amp;</span><span class="ident">output</span>[..]).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let </span>stream = <span class="self">self</span>.client.query(sql, <span class="kw-2">&amp;</span>output[..]).<span class="kw">await</span><span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">QueryStream</span>(<span class="ident">stream</span>))
+        <span class="prelude-val">Ok</span>(QueryStream(stream))
     }
 }
 
-<span class="kw">struct</span> <span class="ident">QueryStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="ident">tiberius::QueryStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>);
+<span class="kw">struct </span>QueryStream&lt;<span class="lifetime">&#39;a</span>&gt;(tiberius::QueryStream&lt;<span class="lifetime">&#39;a</span>&gt;);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">QueryStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">complete</span>(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">into_results</span>().<span class="kw">await</span><span class="question-mark">?</span>;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; QueryStream&lt;<span class="lifetime">&#39;a</span>&gt; {
+    <span class="kw">async fn </span>complete(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.into_results().<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">Stream</span> <span class="kw">for</span> <span class="ident">QueryStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">tiberius::Row</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Stream <span class="kw">for </span>QueryStream&lt;<span class="lifetime">&#39;a</span>&gt; {
+    <span class="kw">type </span>Item = <span class="prelude-ty">Result</span>&lt;tiberius::Row&gt;;
 
-    <span class="kw">fn</span> <span class="ident">poll_next</span>(<span class="kw-2">mut</span> <span class="self">self</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="kw-2">&amp;mut</span> <span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">cx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">Poll</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Item</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">loop</span> {
-            <span class="kw">return</span> <span class="kw">match</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">poll_next_unpin</span>(<span class="ident">cx</span>) {
-                <span class="ident">Poll::Pending</span> =&gt; <span class="ident">Poll::Pending</span>,
-                <span class="ident">Poll::Ready</span>(<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(<span class="ident">tiberius::QueryItem::Metadata</span>(<span class="kw">_</span>)))) =&gt; <span class="kw">continue</span>,
-                <span class="ident">Poll::Ready</span>(<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(<span class="ident">tiberius::QueryItem::Row</span>(<span class="ident">r</span>)))) =&gt; <span class="ident">Poll::Ready</span>(<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(<span class="ident">r</span>))),
-                <span class="ident">Poll::Ready</span>(<span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(<span class="ident">e</span>))) =&gt; <span class="ident">Poll::Ready</span>(<span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(<span class="ident">e</span>.<span class="ident">into</span>()))),
-                <span class="ident">Poll::Ready</span>(<span class="prelude-val">None</span>) =&gt; <span class="ident">Poll::Ready</span>(<span class="prelude-val">None</span>),
+    <span class="kw">fn </span>poll_next(<span class="kw-2">mut </span><span class="self">self</span>: Pin&lt;<span class="kw-2">&amp;mut </span><span class="self">Self</span>&gt;, cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; Poll&lt;<span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt;&gt; {
+        <span class="kw">loop </span>{
+            <span class="kw">return match </span><span class="self">self</span>.<span class="number">0</span>.poll_next_unpin(cx) {
+                Poll::Pending =&gt; Poll::Pending,
+                Poll::Ready(<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(tiberius::QueryItem::Metadata(<span class="kw">_</span>)))) =&gt; <span class="kw">continue</span>,
+                Poll::Ready(<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(tiberius::QueryItem::Row(r)))) =&gt; Poll::Ready(<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(r))),
+                Poll::Ready(<span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(e))) =&gt; Poll::Ready(<span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(e.into()))),
+                Poll::Ready(<span class="prelude-val">None</span>) =&gt; Poll::Ready(<span class="prelude-val">None</span>),
             };
         }
     }
 }
 
-<span class="kw">struct</span> <span class="ident">State</span> {
-    <span class="ident">client</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Client</span><span class="op">&gt;</span>,
-    <span class="ident">factory</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ClientFactory</span><span class="op">&gt;</span>,
-    <span class="ident">transaction</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Client</span><span class="op">&gt;</span>,
+<span class="kw">struct </span>State {
+    client: <span class="prelude-ty">Option</span>&lt;Client&gt;,
+    factory: Box&lt;<span class="kw">dyn </span>ClientFactory&gt;,
+    transaction: <span class="prelude-ty">Option</span>&lt;Client&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">State</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">factory</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ClientFactory</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">client</span>: <span class="prelude-val">None</span>,
-            <span class="ident">factory</span>,
-            <span class="ident">transaction</span>: <span class="prelude-val">None</span>,
+<span class="kw">impl </span>State {
+    <span class="kw">fn </span>new(factory: Box&lt;<span class="kw">dyn </span>ClientFactory&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            client: <span class="prelude-val">None</span>,
+            factory,
+            transaction: <span class="prelude-val">None</span>,
         }
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">cancel</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">cancel_or_commit</span>(<span class="string">&quot;ROLLBACK&quot;</span>).<span class="kw">await</span>
-    }
+    <span class="kw">async fn </span>cancel(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="self">self</span>.cancel_or_commit(<span class="string">&quot;ROLLBACK&quot;</span>).<span class="kw">await
+    </span>}
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">cancel_or_commit</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">statement</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">mut</span> <span class="ident">client</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">transaction</span>.<span class="ident">take</span>() {
-            <span class="ident">client</span>.<span class="ident">simple_query</span>(<span class="ident">statement</span>).<span class="kw">await</span>.<span class="ident">map_err</span>(<span class="ident">Error::Mssql</span>)<span class="question-mark">?</span>;
+    <span class="kw">async fn </span>cancel_or_commit(<span class="kw-2">&amp;mut </span><span class="self">self</span>, statement: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>client) = <span class="self">self</span>.transaction.take() {
+            client.simple_query(statement).<span class="kw">await</span>.map_err(Error::Mssql)<span class="question-mark">?</span>;
 
-            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">is_none</span>() {
-                <span class="self">self</span>.<span class="ident">client</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">client</span>);
+            <span class="kw">if </span><span class="self">self</span>.client.is_none() {
+                <span class="self">self</span>.client = <span class="prelude-val">Some</span>(client);
             }
         }
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">client</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Client</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">take</span>() {
-            <span class="prelude-val">Some</span>(<span class="ident">c</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">c</span>),
-            <span class="prelude-val">None</span> =&gt; {
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">client</span>) <span class="op">=</span> <span class="self">self</span>
-                    .<span class="ident">factory</span>
-                    .<span class="ident">under_transaction</span>()
-                    .<span class="ident">then</span>(<span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">transaction</span>.<span class="ident">take</span>())
-                    .<span class="ident">flatten</span>()
+    <span class="kw">async fn </span>client(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Client&gt; {
+        <span class="kw">match </span><span class="self">self</span>.client.take() {
+            <span class="prelude-val">Some</span>(c) =&gt; <span class="prelude-val">Ok</span>(c),
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(client) = <span class="self">self
+                    </span>.factory
+                    .under_transaction()
+                    .then(|| <span class="self">self</span>.transaction.take())
+                    .flatten()
                 {
-                    <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">client</span>);
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(client);
                 }
 
-                <span class="self">self</span>.<span class="ident">create_client</span>().<span class="kw">await</span>
-            }
+                <span class="self">self</span>.create_client().<span class="kw">await
+            </span>}
         }
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">commit</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">cancel_or_commit</span>(<span class="string">&quot;COMMIT&quot;</span>).<span class="kw">await</span>
-    }
+    <span class="kw">async fn </span>commit(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="self">self</span>.cancel_or_commit(<span class="string">&quot;COMMIT&quot;</span>).<span class="kw">await
+    </span>}
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Client</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">factory</span>.<span class="ident">create_client</span>().<span class="kw">await</span>
-    }
+    <span class="kw">async fn </span>create_client(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Client&gt; {
+        <span class="self">self</span>.factory.create_client().<span class="kw">await
+    </span>}
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">transaction</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Client</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">transaction</span>.<span class="ident">take</span>() {
-            <span class="prelude-val">Some</span>(<span class="ident">t</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">t</span>),
-            <span class="prelude-val">None</span> =&gt; {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>().<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">async fn </span>transaction(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Client&gt; {
+        <span class="kw">match </span><span class="self">self</span>.transaction.take() {
+            <span class="prelude-val">Some</span>(t) =&gt; <span class="prelude-val">Ok</span>(t),
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="kw">let </span><span class="kw-2">mut </span>client = <span class="self">self</span>.client().<span class="kw">await</span><span class="question-mark">?</span>;
 
-                <span class="ident">client</span>
-                    .<span class="ident">simple_query</span>(<span class="string">&quot;BEGIN TRAN&quot;</span>)
-                    .<span class="kw">await</span>
-                    .<span class="ident">map_err</span>(<span class="ident">Error::Mssql</span>)<span class="question-mark">?</span>;
+                client
+                    .simple_query(<span class="string">&quot;BEGIN TRAN&quot;</span>)
+                    .<span class="kw">await
+                    </span>.map_err(Error::Mssql)<span class="question-mark">?</span>;
 
-                <span class="prelude-val">Ok</span>(<span class="ident">client</span>)
+                <span class="prelude-val">Ok</span>(client)
             }
         }
     }
 }
 
-<span class="kw">fn</span> <span class="ident">adapt_params</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(
-    <span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">ToSql</span>],
-    <span class="ident">intermediate</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Parameter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">output</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw">dyn</span> <span class="ident">tiberius::ToSql</span><span class="op">&gt;</span>,
+<span class="kw">fn </span>adapt_params&lt;<span class="lifetime">&#39;a</span>&gt;(
+    input: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[<span class="kw-2">&amp;</span><span class="kw">dyn </span>ToSql],
+    intermediate: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>Vec&lt;Parameter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;,
+    output: <span class="kw-2">&amp;mut </span>Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>tiberius::ToSql&gt;,
 ) {
-    <span class="ident">intermediate</span>.<span class="ident">extend</span>(<span class="ident">input</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">Parameter</span>(<span class="ident">p</span>.<span class="ident">to_sql</span>())));
-    <span class="ident">output</span>.<span class="ident">extend</span>(<span class="ident">intermediate</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">tiberius::ToSql</span>));
+    intermediate.extend(input.iter().map(|p| Parameter(p.to_sql())));
+    output.extend(intermediate.iter().map(|p| p <span class="kw">as </span><span class="kw-2">&amp;</span><span class="kw">dyn </span>tiberius::ToSql));
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm_mssql" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm_mssql" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

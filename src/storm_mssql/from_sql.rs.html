@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_mssql/src/from_sql.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>from_sql.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm_mssql/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm_mssql/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm_mssql/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_mssql/src/from_sql.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>from_sql.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm_mssql/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm_mssql/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm_mssql/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -163,170 +163,170 @@
 <span id="163">163</span>
 <span id="164">164</span>
 <span id="165">165</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">chrono</span>::{<span class="ident">DateTime</span>, <span class="ident">FixedOffset</span>, <span class="ident">NaiveDate</span>, <span class="ident">NaiveDateTime</span>, <span class="ident">NaiveTime</span>, <span class="ident">Utc</span>};
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">borrow::Cow</span>, <span class="ident">sync::Arc</span>};
-<span class="kw">use</span> <span class="ident">storm</span>::{<span class="ident">Error</span>, <span class="prelude-ty">Result</span>};
-<span class="kw">use</span> <span class="ident">tiberius::Uuid</span>;
+</pre><pre class="rust"><code><span class="kw">use </span>chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
+<span class="kw">use </span>std::{borrow::Cow, sync::Arc};
+<span class="kw">use </span>storm::{Error, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>tiberius::Uuid;
 
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>: <span class="ident">Sized</span> {
-    <span class="kw">type</span> <span class="ident">Column</span>: <span class="ident">tiberius::FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>;
+<span class="kw">pub trait </span>FromSql&lt;<span class="lifetime">&#39;a</span>&gt;: Sized {
+    <span class="kw">type </span>Column: tiberius::FromSql&lt;<span class="lifetime">&#39;a</span>&gt;;
 
-    <span class="kw">fn</span> <span class="ident">from_sql</span>(<span class="ident">col</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Column</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>;
+    <span class="kw">fn </span>from_sql(col: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Column&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt;;
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T&gt; FromSql&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;T&gt;
+<span class="kw">where
+    </span>T: FromSql&lt;<span class="lifetime">&#39;a</span>&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Column</span> <span class="op">=</span> <span class="ident">T::Column</span>;
+    <span class="kw">type </span>Column = T::Column;
 
-    <span class="kw">fn</span> <span class="ident">from_sql</span>(<span class="ident">col</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Column</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="kw">match</span> <span class="ident">col</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">v</span>) =&gt; <span class="prelude-val">Some</span>(<span class="ident">T::from_sql</span>(<span class="prelude-val">Some</span>(<span class="ident">v</span>))<span class="question-mark">?</span>),
-            <span class="prelude-val">None</span> =&gt; <span class="prelude-val">None</span>,
+    <span class="kw">fn </span>from_sql(col: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Column&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="prelude-val">Ok</span>(<span class="kw">match </span>col {
+            <span class="prelude-val">Some</span>(v) =&gt; <span class="prelude-val">Some</span>(T::from_sql(<span class="prelude-val">Some</span>(v))<span class="question-mark">?</span>),
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
         })
     }
 }
 
-<span class="macro">macro_rules!</span> <span class="ident">from_sql</span> {
-    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">s</span>:<span class="ident">ty</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">col</span>:<span class="ident">ty</span>) =&gt; {
-        <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">s</span> {
-            <span class="kw">type</span> <span class="ident">Column</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">col</span>;
+<span class="macro">macro_rules! </span>from_sql {
+    (<span class="macro-nonterminal">$s</span>:ty, <span class="macro-nonterminal">$col</span>:ty) =&gt; {
+        <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; FromSql&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span><span class="macro-nonterminal">$s </span>{
+            <span class="kw">type </span>Column = <span class="macro-nonterminal">$col</span>;
 
-            <span class="kw">fn</span> <span class="ident">from_sql</span>(<span class="ident">col</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Column</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-                <span class="kw">match</span> <span class="ident">col</span> {
-                    <span class="prelude-val">Some</span>(<span class="ident">v</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">v</span>),
-                    <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">storm::Error::ColumnNull</span>),
+            <span class="kw">fn </span>from_sql(col: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Column&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+                <span class="kw">match </span>col {
+                    <span class="prelude-val">Some</span>(v) =&gt; <span class="prelude-val">Ok</span>(v),
+                    <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(storm::Error::ColumnNull),
                 }
             }
         }
     };
 }
 
-<span class="macro">from_sql!</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>);
-<span class="macro">from_sql!</span>(<span class="ident">DateTime</span><span class="op">&lt;</span><span class="ident">FixedOffset</span><span class="op">&gt;</span>, <span class="ident">DateTime</span><span class="op">&lt;</span><span class="ident">FixedOffset</span><span class="op">&gt;</span>);
-<span class="macro">from_sql!</span>(<span class="ident">DateTime</span><span class="op">&lt;</span><span class="ident">Utc</span><span class="op">&gt;</span>, <span class="ident">DateTime</span><span class="op">&lt;</span><span class="ident">Utc</span><span class="op">&gt;</span>);
-<span class="macro">from_sql!</span>(<span class="ident">NaiveDate</span>, <span class="ident">NaiveDate</span>);
-<span class="macro">from_sql!</span>(<span class="ident">NaiveDateTime</span>, <span class="ident">NaiveDateTime</span>);
-<span class="macro">from_sql!</span>(<span class="ident">NaiveTime</span>, <span class="ident">NaiveTime</span>);
-<span class="macro">from_sql!</span>(<span class="ident">Uuid</span>, <span class="ident">Uuid</span>);
-<span class="macro">from_sql!</span>(<span class="ident">bool</span>, <span class="ident">bool</span>);
-<span class="macro">from_sql!</span>(<span class="ident">f32</span>, <span class="ident">f32</span>);
-<span class="macro">from_sql!</span>(<span class="ident">f64</span>, <span class="ident">f64</span>);
-<span class="macro">from_sql!</span>(<span class="ident">i16</span>, <span class="ident">i16</span>);
-<span class="macro">from_sql!</span>(<span class="ident">i32</span>, <span class="ident">i32</span>);
-<span class="macro">from_sql!</span>(<span class="ident">i64</span>, <span class="ident">i64</span>);
-<span class="macro">from_sql!</span>(<span class="ident">u8</span>, <span class="ident">u8</span>);
-<span class="macro">from_sql!</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">u8</span>], <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">u8</span>]);
+<span class="macro">from_sql!</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str);
+<span class="macro">from_sql!</span>(DateTime&lt;FixedOffset&gt;, DateTime&lt;FixedOffset&gt;);
+<span class="macro">from_sql!</span>(DateTime&lt;Utc&gt;, DateTime&lt;Utc&gt;);
+<span class="macro">from_sql!</span>(NaiveDate, NaiveDate);
+<span class="macro">from_sql!</span>(NaiveDateTime, NaiveDateTime);
+<span class="macro">from_sql!</span>(NaiveTime, NaiveTime);
+<span class="macro">from_sql!</span>(Uuid, Uuid);
+<span class="macro">from_sql!</span>(bool, bool);
+<span class="macro">from_sql!</span>(f32, f32);
+<span class="macro">from_sql!</span>(f64, f64);
+<span class="macro">from_sql!</span>(i16, i16);
+<span class="macro">from_sql!</span>(i32, i32);
+<span class="macro">from_sql!</span>(i64, i64);
+<span class="macro">from_sql!</span>(u8, u8);
+<span class="macro">from_sql!</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8], <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8]);
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;dec19x5&quot;</span>)]</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">dec19x5crate::Decimal</span> {
-    <span class="kw">type</span> <span class="ident">Column</span> <span class="op">=</span> <span class="ident">dec19x5crate::Decimal</span>;
+<span class="attribute">#[cfg(feature = <span class="string">&quot;dec19x5&quot;</span>)]
+</span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; FromSql&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>dec19x5crate::Decimal {
+    <span class="kw">type </span>Column = dec19x5crate::Decimal;
 
-    <span class="kw">fn</span> <span class="ident">from_sql</span>(<span class="ident">col</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Column</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">col</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">v</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">v</span>),
-            <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">storm::Error::ColumnNull</span>),
+    <span class="kw">fn </span>from_sql(col: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Column&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">match </span>col {
+            <span class="prelude-val">Some</span>(v) =&gt; <span class="prelude-val">Ok</span>(v),
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(storm::Error::ColumnNull),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">String</span> {
-    <span class="kw">type</span> <span class="ident">Column</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; FromSql&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>String {
+    <span class="kw">type </span>Column = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str;
 
-    <span class="kw">fn</span> <span class="ident">from_sql</span>(<span class="ident">col</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Column</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">col</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">v</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">v</span>.<span class="ident">to_owned</span>()),
-            <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">storm::Error::ColumnNull</span>),
+    <span class="kw">fn </span>from_sql(col: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Column&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">match </span>col {
+            <span class="prelude-val">Some</span>(v) =&gt; <span class="prelude-val">Ok</span>(v.to_owned()),
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(storm::Error::ColumnNull),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Column</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">u8</span>];
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; FromSql&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>Vec&lt;u8&gt; {
+    <span class="kw">type </span>Column = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8];
 
-    <span class="kw">fn</span> <span class="ident">from_sql</span>(<span class="ident">col</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Column</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">col</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">v</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">v</span>.<span class="ident">to_owned</span>()),
-            <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">storm::Error::ColumnNull</span>),
+    <span class="kw">fn </span>from_sql(col: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Column&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">match </span>col {
+            <span class="prelude-val">Some</span>(v) =&gt; <span class="prelude-val">Ok</span>(v.to_owned()),
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(storm::Error::ColumnNull),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Column</span> <span class="op">=</span> <span class="ident">T::Column</span>;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: FromSql&lt;<span class="lifetime">&#39;a</span>&gt;&gt; FromSql&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>Arc&lt;T&gt; {
+    <span class="kw">type </span>Column = T::Column;
 
-    <span class="kw">fn</span> <span class="ident">from_sql</span>(<span class="ident">col</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Column</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="ident">T::from_sql</span>(<span class="ident">col</span>).<span class="ident">map</span>(<span class="ident">Arc::new</span>)
+    <span class="kw">fn </span>from_sql(col: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Column&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        T::from_sql(col).map(Arc::new)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Column</span> <span class="op">=</span> <span class="ident">T::Column</span>;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: FromSql&lt;<span class="lifetime">&#39;a</span>&gt;&gt; FromSql&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>Box&lt;T&gt; {
+    <span class="kw">type </span>Column = T::Column;
 
-    <span class="kw">fn</span> <span class="ident">from_sql</span>(<span class="ident">col</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Column</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="ident">T::from_sql</span>(<span class="ident">col</span>).<span class="ident">map</span>(<span class="ident">Box::new</span>)
+    <span class="kw">fn </span>from_sql(col: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Column&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        T::from_sql(col).map(Box::new)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Column</span> <span class="op">=</span> <span class="ident">T::Column</span>;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: Clone + FromSql&lt;<span class="lifetime">&#39;a</span>&gt;&gt; FromSql&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>Cow&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    <span class="kw">type </span>Column = T::Column;
 
-    <span class="kw">fn</span> <span class="ident">from_sql</span>(<span class="ident">col</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Column</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="ident">T::from_sql</span>(<span class="ident">col</span>).<span class="ident">map</span>(<span class="ident">Cow::Owned</span>)
+    <span class="kw">fn </span>from_sql(col: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Column&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        T::from_sql(col).map(Cow::Owned)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Column</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">u8</span>];
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; FromSql&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>Box&lt;[u8]&gt; {
+    <span class="kw">type </span>Column = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8];
 
-    <span class="kw">fn</span> <span class="ident">from_sql</span>(<span class="ident">col</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Column</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">col</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">col</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">col</span>.<span class="ident">to_vec</span>().<span class="ident">into_boxed_slice</span>()),
-            <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">Error::ColumnNull</span>),
+    <span class="kw">fn </span>from_sql(col: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Column&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">match </span>col {
+            <span class="prelude-val">Some</span>(col) =&gt; <span class="prelude-val">Ok</span>(col.to_vec().into_boxed_slice()),
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(Error::ColumnNull),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Column</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; FromSql&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>Box&lt;str&gt; {
+    <span class="kw">type </span>Column = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str;
 
-    <span class="kw">fn</span> <span class="ident">from_sql</span>(<span class="ident">col</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Column</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">col</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">col</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">col</span>.<span class="ident">to_string</span>().<span class="ident">into_boxed_str</span>()),
-            <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">Error::ColumnNull</span>),
+    <span class="kw">fn </span>from_sql(col: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Column&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">match </span>col {
+            <span class="prelude-val">Some</span>(col) =&gt; <span class="prelude-val">Ok</span>(col.to_string().into_boxed_str()),
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(Error::ColumnNull),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span><span class="op">&gt;</span> <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, [<span class="ident">u8</span>]<span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Column</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">u8</span>];
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt; FromSql&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>Cow&lt;<span class="lifetime">&#39;b</span>, [u8]&gt; {
+    <span class="kw">type </span>Column = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8];
 
-    <span class="kw">fn</span> <span class="ident">from_sql</span>(<span class="ident">col</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Column</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">col</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">col</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">Cow::Owned</span>(<span class="ident">col</span>.<span class="ident">to_vec</span>())),
-            <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">Error::ColumnNull</span>),
+    <span class="kw">fn </span>from_sql(col: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Column&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">match </span>col {
+            <span class="prelude-val">Some</span>(col) =&gt; <span class="prelude-val">Ok</span>(Cow::Owned(col.to_vec())),
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(Error::ColumnNull),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span><span class="op">&gt;</span> <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">str</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Column</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt; FromSql&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>Cow&lt;<span class="lifetime">&#39;b</span>, str&gt; {
+    <span class="kw">type </span>Column = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str;
 
-    <span class="kw">fn</span> <span class="ident">from_sql</span>(<span class="ident">col</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Column</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">col</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">col</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">Cow::Owned</span>(<span class="ident">col</span>.<span class="ident">to_string</span>())),
-            <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">Error::ColumnNull</span>),
+    <span class="kw">fn </span>from_sql(col: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Column&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">match </span>col {
+            <span class="prelude-val">Some</span>(col) =&gt; <span class="prelude-val">Ok</span>(Cow::Owned(col.to_string())),
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(Error::ColumnNull),
         }
     }
 }
 
-<span class="doccomment">/// Internal used for macros</span>
-<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">_macro_load_field</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">row</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">tiberius::Row</span>, <span class="ident">index</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="ident">row</span>.<span class="ident">try_get</span>(<span class="ident">index</span>)
-        .<span class="ident">map_err</span>(<span class="ident">storm::Error::Mssql</span>)
-        .<span class="ident">and_then</span>(<span class="ident">FromSql::from_sql</span>)
+<span class="doccomment">/// Internal used for macros
+</span><span class="attribute">#[doc(hidden)]
+</span><span class="kw">pub fn </span>_macro_load_field&lt;<span class="lifetime">&#39;a</span>, T: FromSql&lt;<span class="lifetime">&#39;a</span>&gt;&gt;(row: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>tiberius::Row, index: usize) -&gt; <span class="prelude-ty">Result</span>&lt;T&gt; {
+    row.try_get(index)
+        .map_err(storm::Error::Mssql)
+        .and_then(FromSql::from_sql)
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm_mssql" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm_mssql" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

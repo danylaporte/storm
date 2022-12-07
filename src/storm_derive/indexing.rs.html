@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_derive/src/indexing.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>indexing.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm_derive/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_derive/src/indexing.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>indexing.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm_derive/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -181,188 +181,188 @@
 <span id="181">181</span>
 <span id="182">182</span>
 <span id="183">183</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::TypeExt</span>;
-<span class="kw">use</span> <span class="ident">inflector::Inflector</span>;
-<span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
-<span class="kw">use</span> <span class="ident">quote::quote</span>;
-<span class="kw">use</span> <span class="ident">syn</span>::{<span class="ident">spanned::Spanned</span>, <span class="ident">Error</span>, <span class="ident">FnArg</span>, <span class="ident">Ident</span>, <span class="ident">Item</span>, <span class="ident">ItemFn</span>, <span class="ident">LitStr</span>, <span class="ident">ReturnType</span>, <span class="ident">Type</span>};
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::TypeExt;
+<span class="kw">use </span>inflector::Inflector;
+<span class="kw">use </span>proc_macro2::TokenStream;
+<span class="kw">use </span>quote::quote;
+<span class="kw">use </span>syn::{spanned::Spanned, Error, FnArg, Ident, Item, ItemFn, LitStr, ReturnType, Type};
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">indexing</span>(<span class="ident">item</span>: <span class="ident">Item</span>) -&gt; <span class="ident">TokenStream</span> {
-    <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">item</span> {
-        <span class="ident">Item::Fn</span>(<span class="ident">f</span>) =&gt; <span class="ident">indexing_fn</span>(<span class="ident">f</span>),
-        <span class="kw">_</span> =&gt; <span class="ident">Error::new</span>(<span class="ident">item</span>.<span class="ident">span</span>(), <span class="string">&quot;Only function is supported.&quot;</span>).<span class="ident">to_compile_error</span>(),
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>indexing(item: Item) -&gt; TokenStream {
+    <span class="kw">match </span><span class="kw-2">&amp;</span>item {
+        Item::Fn(f) =&gt; indexing_fn(f),
+        <span class="kw">_ </span>=&gt; Error::new(item.span(), <span class="string">&quot;Only function is supported.&quot;</span>).to_compile_error(),
     }
 }
 
-<span class="kw">fn</span> <span class="ident">gc</span>(<span class="ident">index_name</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>, <span class="ident">index_ty</span>: <span class="kw-2">&amp;</span><span class="ident">Type</span>) -&gt; (<span class="ident">TokenStream</span>, <span class="ident">TokenStream</span>) {
+<span class="kw">fn </span>gc(index_name: <span class="kw-2">&amp;</span>Ident, index_ty: <span class="kw-2">&amp;</span>Type) -&gt; (TokenStream, TokenStream) {
     (
-        <span class="macro">quote!</span> {
-            <span class="kw">impl</span> <span class="ident">storm::Gc</span> <span class="kw">for</span> #<span class="ident">index_name</span> {
-                <span class="kw">const</span> <span class="ident">SUPPORT_GC</span>: <span class="ident">bool</span> <span class="op">=</span> <span class="op">&lt;</span>#<span class="ident">index_ty</span> <span class="kw">as</span> <span class="ident">storm::Gc</span><span class="op">&gt;</span><span class="ident">::SUPPORT_GC</span>;
+        <span class="macro">quote! </span>{
+            <span class="kw">impl </span>storm::Gc <span class="kw">for </span>#index_name {
+                <span class="kw">const </span>SUPPORT_GC: bool = &lt;#index_ty <span class="kw">as </span>storm::Gc&gt;::SUPPORT_GC;
 
-                <span class="kw">fn</span> <span class="ident">gc</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">storm::GcCtx</span>) {
-                    <span class="self">self</span>.<span class="number">0</span>.<span class="ident">gc</span>(<span class="ident">ctx</span>);
+                <span class="kw">fn </span>gc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: <span class="kw-2">&amp;</span>storm::GcCtx) {
+                    <span class="self">self</span>.<span class="number">0</span>.gc(ctx);
                 }
             }
         },
-        <span class="macro">quote!</span> {
-            <span class="kw">if</span> <span class="op">&lt;</span>#<span class="ident">index_ty</span> <span class="kw">as</span> <span class="ident">storm::Gc</span><span class="op">&gt;</span><span class="ident">::SUPPORT_GC</span> {
-                <span class="ident">storm::gc::collectables::register</span>(<span class="op">|</span><span class="ident">ctx</span><span class="op">|</span> <span class="ident">ctx</span>.<span class="ident">index_gc</span>::<span class="op">&lt;</span>#<span class="ident">index_name</span><span class="op">&gt;</span>());
+        <span class="macro">quote! </span>{
+            <span class="kw">if </span>&lt;#index_ty <span class="kw">as </span>storm::Gc&gt;::SUPPORT_GC {
+                storm::gc::collectables::register(|ctx| ctx.index_gc::&lt;#index_name&gt;());
             }
         },
     )
 }
 
-<span class="kw">fn</span> <span class="ident">indexing_fn</span>(<span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="ident">ItemFn</span>) -&gt; <span class="ident">TokenStream</span> {
-    <span class="kw">let</span> <span class="ident">vis</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">f</span>.<span class="ident">vis</span>;
-    <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">f</span>.<span class="ident">sig</span>.<span class="ident">ident</span>;
-    <span class="kw">let</span> <span class="ident">name_str</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">name</span>.<span class="ident">to_string</span>().<span class="ident">to_pascal_case</span>();
-    <span class="kw">let</span> <span class="ident">index_name</span> <span class="op">=</span> <span class="ident">Ident::new</span>(<span class="ident">name_str</span>, <span class="ident">name</span>.<span class="ident">span</span>());
-    <span class="kw">let</span> <span class="ident">index_name_lit</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="ident">name_str</span>, <span class="ident">name</span>.<span class="ident">span</span>());
+<span class="kw">fn </span>indexing_fn(f: <span class="kw-2">&amp;</span>ItemFn) -&gt; TokenStream {
+    <span class="kw">let </span>vis = <span class="kw-2">&amp;</span>f.vis;
+    <span class="kw">let </span>name = <span class="kw-2">&amp;</span>f.sig.ident;
+    <span class="kw">let </span>name_str = <span class="kw-2">&amp;</span>name.to_string().to_pascal_case();
+    <span class="kw">let </span>index_name = Ident::new(name_str, name.span());
+    <span class="kw">let </span>index_name_lit = LitStr::new(name_str, name.span());
 
-    <span class="kw">let</span> <span class="ident">screaming_snake</span> <span class="op">=</span> <span class="ident">name</span>.<span class="ident">to_string</span>().<span class="ident">to_screaming_snake_case</span>();
-    <span class="kw">let</span> <span class="ident">static_var</span> <span class="op">=</span> <span class="ident">Ident::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}_VAR&quot;</span>, <span class="ident">screaming_snake</span>), <span class="ident">name</span>.<span class="ident">span</span>());
+    <span class="kw">let </span>screaming_snake = name.to_string().to_screaming_snake_case();
+    <span class="kw">let </span>static_var = Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}_VAR&quot;</span>, screaming_snake), name.span());
 
-    <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">f</span>.<span class="ident">sig</span>.<span class="ident">output</span> {
-        <span class="ident">ReturnType::Type</span>(<span class="kw">_</span>, <span class="ident">t</span>) =&gt; <span class="ident">t</span>,
-        <span class="ident">ReturnType::Default</span> =&gt; {
-            <span class="kw">return</span> <span class="ident">Error::new</span>(<span class="ident">f</span>.<span class="ident">sig</span>.<span class="ident">output</span>.<span class="ident">span</span>(), <span class="string">&quot;Index must have a return value.&quot;</span>)
-                .<span class="ident">to_compile_error</span>()
+    <span class="kw">let </span>ty = <span class="kw">match </span><span class="kw-2">&amp;</span>f.sig.output {
+        ReturnType::Type(<span class="kw">_</span>, t) =&gt; t,
+        ReturnType::Default =&gt; {
+            <span class="kw">return </span>Error::new(f.sig.output.span(), <span class="string">&quot;Index must have a return value.&quot;</span>)
+                .to_compile_error()
         }
     };
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">args</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+    <span class="kw">let </span><span class="kw-2">mut </span>args = Vec::new();
 
-    <span class="kw">for</span> <span class="ident">arg</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">f</span>.<span class="ident">sig</span>.<span class="ident">inputs</span> {
-        <span class="kw">match</span> <span class="ident">arg</span> {
-            <span class="ident">FnArg::Typed</span>(<span class="ident">t</span>) =&gt; <span class="ident">args</span>.<span class="ident">push</span>(<span class="ident">t</span>),
-            <span class="ident">FnArg::Receiver</span>(<span class="ident">r</span>) =&gt; {
-                <span class="kw">return</span> <span class="ident">Error::new</span>(<span class="ident">r</span>.<span class="ident">span</span>(), <span class="string">&quot;Self is not expected here.&quot;</span>).<span class="ident">to_compile_error</span>()
+    <span class="kw">for </span>arg <span class="kw">in </span><span class="kw-2">&amp;</span>f.sig.inputs {
+        <span class="kw">match </span>arg {
+            FnArg::Typed(t) =&gt; args.push(t),
+            FnArg::Receiver(r) =&gt; {
+                <span class="kw">return </span>Error::new(r.span(), <span class="string">&quot;Self is not expected here.&quot;</span>).to_compile_error()
             }
         };
     }
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">as_ref_decl</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">as_ref_decl_async</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">as_ref_args</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">as_ref_tag</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">as_ref_async_wheres</span> <span class="op">=</span> <span class="macro">quote!</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">as_ref_wheres</span> <span class="op">=</span> <span class="macro">quote!</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">deps</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+    <span class="kw">let </span><span class="kw-2">mut </span>as_ref_decl = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>as_ref_decl_async = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>as_ref_args = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>as_ref_tag = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>as_ref_async_wheres = <span class="macro">quote!</span>();
+    <span class="kw">let </span><span class="kw-2">mut </span>as_ref_wheres = <span class="macro">quote!</span>();
+    <span class="kw">let </span><span class="kw-2">mut </span>deps = Vec::new();
 
-    <span class="kw">for</span> (<span class="ident">index</span>, <span class="ident">arg</span>) <span class="kw">in</span> <span class="ident">args</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-        <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">unref</span>(<span class="kw-2">&amp;</span><span class="ident">arg</span>.<span class="ident">ty</span>);
-        <span class="kw">let</span> <span class="ident">ident</span> <span class="op">=</span> <span class="ident">Ident::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;var{}&quot;</span>, <span class="ident">index</span>), <span class="ident">arg</span>.<span class="ident">span</span>());
+    <span class="kw">for </span>(index, arg) <span class="kw">in </span>args.iter().enumerate() {
+        <span class="kw">let </span>ty = unref(<span class="kw-2">&amp;</span>arg.ty);
+        <span class="kw">let </span>ident = Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;var{}&quot;</span>, index), arg.span());
 
-        <span class="kw">if</span> <span class="ident">ty</span>.<span class="ident">is_storm_ctx</span>() {
-            <span class="ident">as_ref_decl</span>.<span class="ident">push</span>(<span class="macro">quote!</span>(<span class="kw">let</span> #<span class="ident">ident</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ctx</span>;));
-            <span class="ident">as_ref_decl_async</span>.<span class="ident">push</span>(<span class="macro">quote!</span>(<span class="kw">let</span> #<span class="ident">ident</span> <span class="op">=</span> <span class="self">self</span>;));
-            <span class="ident">as_ref_args</span>.<span class="ident">push</span>(<span class="ident">ident</span>);
-        } <span class="kw">else</span> {
-            <span class="ident">as_ref_decl</span>.<span class="ident">push</span>(<span class="macro">quote!</span>(<span class="kw">let</span> #<span class="ident">ident</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">as_ref</span>();));
-            <span class="ident">as_ref_decl_async</span>
-                .<span class="ident">push</span>(<span class="macro">quote!</span>(<span class="kw">let</span> #<span class="ident">ident</span> <span class="op">=</span> <span class="ident">storm::AsRefAsync::as_ref_async</span>(<span class="self">self</span>).<span class="kw">await</span><span class="question-mark">?</span>;));
-            <span class="ident">as_ref_tag</span>.<span class="ident">push</span>(<span class="macro">quote!</span>(<span class="ident">storm::Tag::tag</span>(#<span class="ident">ident</span>)));
-            <span class="ident">as_ref_args</span>.<span class="ident">push</span>(<span class="ident">ident</span>);
-            <span class="ident">deps</span>.<span class="ident">push</span>(<span class="macro">quote!</span>(<span class="op">&lt;</span>#<span class="ident">ty</span> <span class="kw">as</span> <span class="ident">storm::Accessor</span><span class="op">&gt;</span><span class="ident">::register_deps</span>(<span class="op">&lt;</span>#<span class="ident">index_name</span> <span class="kw">as</span> <span class="ident">storm::Accessor</span><span class="op">&gt;</span><span class="ident">::clear</span>);));
+        <span class="kw">if </span>ty.is_storm_ctx() {
+            as_ref_decl.push(<span class="macro">quote!</span>(<span class="kw">let </span>#ident = <span class="self">self</span>.ctx;));
+            as_ref_decl_async.push(<span class="macro">quote!</span>(<span class="kw">let </span>#ident = <span class="self">self</span>;));
+            as_ref_args.push(ident);
+        } <span class="kw">else </span>{
+            as_ref_decl.push(<span class="macro">quote!</span>(<span class="kw">let </span>#ident = <span class="self">self</span>.as_ref();));
+            as_ref_decl_async
+                .push(<span class="macro">quote!</span>(<span class="kw">let </span>#ident = storm::AsRefAsync::as_ref_async(<span class="self">self</span>).<span class="kw">await</span><span class="question-mark">?</span>;));
+            as_ref_tag.push(<span class="macro">quote!</span>(storm::Tag::tag(#ident)));
+            as_ref_args.push(ident);
+            deps.push(<span class="macro">quote!</span>(&lt;#ty <span class="kw">as </span>storm::Accessor&gt;::register_deps(&lt;#index_name <span class="kw">as </span>storm::Accessor&gt;::clear);));
 
-            <span class="kw">let</span> <span class="ident">ref_async</span> <span class="op">=</span> <span class="macro">quote!</span>(<span class="ident">storm::AsRefAsync</span><span class="op">&lt;</span>#<span class="ident">ty</span><span class="op">&gt;</span>);
-            <span class="kw">let</span> <span class="ident">ref_sync</span> <span class="op">=</span> <span class="macro">quote!</span>(<span class="ident">AsRef</span><span class="op">&lt;</span>#<span class="ident">ty</span><span class="op">&gt;</span>);
+            <span class="kw">let </span>ref_async = <span class="macro">quote!</span>(storm::AsRefAsync&lt;#ty&gt;);
+            <span class="kw">let </span>ref_sync = <span class="macro">quote!</span>(AsRef&lt;#ty&gt;);
 
-            <span class="kw">if</span> <span class="ident">as_ref_wheres</span>.<span class="ident">is_empty</span>() {
-                <span class="ident">as_ref_async_wheres</span> <span class="op">=</span> <span class="macro">quote!</span>(<span class="kw">where</span> <span class="self">Self</span>: #<span class="ident">ref_async</span>);
-                <span class="ident">as_ref_wheres</span> <span class="op">=</span> <span class="macro">quote!</span>(<span class="kw">where</span> <span class="self">Self</span>: #<span class="ident">ref_sync</span>);
-            } <span class="kw">else</span> {
-                <span class="ident">as_ref_async_wheres</span> <span class="op">=</span> <span class="macro">quote!</span>(#<span class="ident">as_ref_async_wheres</span> <span class="op">+</span> #<span class="ident">ref_async</span>);
-                <span class="ident">as_ref_wheres</span> <span class="op">=</span> <span class="macro">quote!</span>(#<span class="ident">as_ref_wheres</span> <span class="op">+</span> #<span class="ident">ref_sync</span>);
+            <span class="kw">if </span>as_ref_wheres.is_empty() {
+                as_ref_async_wheres = <span class="macro">quote!</span>(<span class="kw">where </span><span class="self">Self</span>: #ref_async);
+                as_ref_wheres = <span class="macro">quote!</span>(<span class="kw">where </span><span class="self">Self</span>: #ref_sync);
+            } <span class="kw">else </span>{
+                as_ref_async_wheres = <span class="macro">quote!</span>(#as_ref_async_wheres + #ref_async);
+                as_ref_wheres = <span class="macro">quote!</span>(#as_ref_wheres + #ref_sync);
             };
         }
     }
 
-    <span class="kw">let</span> <span class="ident">get_or_init</span> <span class="op">=</span> <span class="macro">quote!</span>({
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="macro">tracing::span!</span>(<span class="ident">tracing::Level::DEBUG</span>, <span class="op">&lt;</span>#<span class="ident">index_name</span> <span class="kw">as</span> <span class="ident">storm::CtxTypeInfo</span><span class="op">&gt;</span><span class="ident">::NAME</span>, <span class="ident">obj</span> <span class="op">=</span> <span class="ident">storm::OBJ_INDEX</span>, <span class="ident">ev</span> <span class="op">=</span> <span class="ident">storm::EV_CREATED</span>).<span class="ident">entered</span>();
-        #<span class="ident">index_name</span>(#<span class="ident">name</span>(#(#<span class="ident">as_ref_args</span>,)<span class="kw-2">*</span>), <span class="ident">storm::version_tag::combine</span>(<span class="kw-2">&amp;</span>[#(#<span class="ident">as_ref_tag</span>,)<span class="kw-2">*</span>]))
+    <span class="kw">let </span>get_or_init = <span class="macro">quote!</span>({
+        <span class="kw">let _ </span>= <span class="macro">tracing::span!</span>(tracing::Level::DEBUG, &lt;#index_name <span class="kw">as </span>storm::CtxTypeInfo&gt;::NAME, obj = storm::OBJ_INDEX, ev = storm::EV_CREATED).entered();
+        #index_name(#name(#(#as_ref_args,)<span class="kw-2">*</span>), storm::version_tag::combine(<span class="kw-2">&amp;</span>[#(#as_ref_tag,)<span class="kw-2">*</span>]))
     });
 
-    <span class="kw">let</span> (<span class="ident">gc</span>, <span class="ident">gc_collect</span>) <span class="op">=</span> <span class="ident">gc</span>(<span class="kw-2">&amp;</span><span class="ident">index_name</span>, <span class="ident">ty</span>);
+    <span class="kw">let </span>(gc, gc_collect) = gc(<span class="kw-2">&amp;</span>index_name, ty);
 
-    <span class="macro">quote!</span> {
-        <span class="attribute">#[<span class="ident">static_init::dynamic</span>]</span>
-        <span class="kw">static</span> #<span class="ident">static_var</span>: (<span class="ident">storm::TblVar</span><span class="op">&lt;</span>#<span class="ident">index_name</span><span class="op">&gt;</span>, <span class="ident">storm::Deps</span>) <span class="op">=</span> {
-            #(#<span class="ident">deps</span>)<span class="op">*</span>
-            #<span class="ident">gc_collect</span>
-            <span class="ident">Default::default</span>()
+    <span class="macro">quote! </span>{
+        <span class="attribute">#[static_init::dynamic]
+        </span><span class="kw">static </span>#static_var: (storm::TblVar&lt;#index_name&gt;, storm::Deps) = {
+            #(#deps)*
+            #gc_collect
+            Default::default()
         };
 
-        #<span class="ident">vis</span> <span class="kw">struct</span> #<span class="ident">index_name</span>(#<span class="ident">ty</span>, <span class="ident">storm::VersionTag</span>);
+        #vis <span class="kw">struct </span>#index_name(#ty, storm::VersionTag);
 
-        <span class="kw">impl</span> <span class="ident">storm::Accessor</span> <span class="kw">for</span> #<span class="ident">index_name</span> {
-            <span class="attribute">#[<span class="ident">inline</span>]</span>
-            <span class="kw">fn</span> <span class="ident">var</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">storm::TblVar</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-                <span class="kw-2">&amp;</span>#<span class="ident">static_var</span>.<span class="number">0</span>
-            }
+        <span class="kw">impl </span>storm::Accessor <span class="kw">for </span>#index_name {
+            <span class="attribute">#[inline]
+            </span><span class="kw">fn </span>var() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>storm::TblVar&lt;<span class="self">Self</span>&gt; {
+                <span class="kw-2">&amp;</span>#static_var.<span class="number">0
+            </span>}
 
-            <span class="attribute">#[<span class="ident">inline</span>]</span>
-            <span class="kw">fn</span> <span class="ident">deps</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">storm::Deps</span> {
-                <span class="kw-2">&amp;</span>#<span class="ident">static_var</span>.<span class="number">1</span>
+            <span class="attribute">#[inline]
+            </span><span class="kw">fn </span>deps() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>storm::Deps {
+                <span class="kw-2">&amp;</span>#static_var.<span class="number">1
+            </span>}
+        }
+
+        <span class="kw">impl </span>std::ops::Deref <span class="kw">for </span>#index_name {
+            <span class="kw">type </span>Target = #ty;
+
+            <span class="attribute">#[inline]
+            </span><span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+            </span>}
+        }
+
+        <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, L&gt; AsRef&lt;#index_name&gt; <span class="kw">for </span>storm::CtxLocks&lt;<span class="lifetime">&#39;a</span>, L&gt; #as_ref_wheres {
+            <span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>#index_name {
+                #(#as_ref_decl)*
+                <span class="self">self</span>.ctx.vars().get_or_init(&lt;#index_name <span class="kw">as </span>storm::Accessor&gt;::var(), <span class="kw">move </span>|| #get_or_init)
             }
         }
 
-        <span class="kw">impl</span> <span class="ident">std::ops::Deref</span> <span class="kw">for</span> #<span class="ident">index_name</span> {
-            <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> #<span class="ident">ty</span>;
+        <span class="kw">impl </span>storm::AsRefAsync&lt;#index_name&gt; <span class="kw">for </span>storm::Ctx #as_ref_async_wheres {
+            <span class="kw">fn </span>as_ref_async(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; storm::BoxFuture&lt;<span class="lifetime">&#39;_</span>, storm::Result&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>#index_name&gt;&gt; {
+                <span class="kw">let </span>var = &lt;#index_name <span class="kw">as </span>storm::Accessor&gt;::var();
 
-            <span class="attribute">#[<span class="ident">inline</span>]</span>
-            <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
-                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
-            }
-        }
+                Box::pin(<span class="kw">async move </span>{
+                    <span class="kw">let </span>ctx = <span class="self">self</span>.vars();
 
-        <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">L</span><span class="op">&gt;</span> <span class="ident">AsRef</span><span class="op">&lt;</span>#<span class="ident">index_name</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">storm::CtxLocks</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">L</span><span class="op">&gt;</span> #<span class="ident">as_ref_wheres</span> {
-            <span class="kw">fn</span> <span class="ident">as_ref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>#<span class="ident">index_name</span> {
-                #(#<span class="ident">as_ref_decl</span>)<span class="op">*</span>
-                <span class="self">self</span>.<span class="ident">ctx</span>.<span class="ident">vars</span>().<span class="ident">get_or_init</span>(<span class="op">&lt;</span>#<span class="ident">index_name</span> <span class="kw">as</span> <span class="ident">storm::Accessor</span><span class="op">&gt;</span><span class="ident">::var</span>(), <span class="kw">move</span> <span class="op">|</span><span class="op">|</span> #<span class="ident">get_or_init</span>)
-            }
-        }
-
-        <span class="kw">impl</span> <span class="ident">storm::AsRefAsync</span><span class="op">&lt;</span>#<span class="ident">index_name</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">storm::Ctx</span> #<span class="ident">as_ref_async_wheres</span> {
-            <span class="kw">fn</span> <span class="ident">as_ref_async</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">storm::BoxFuture</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">storm::Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;_</span> #<span class="ident">index_name</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">var</span> <span class="op">=</span> <span class="op">&lt;</span>#<span class="ident">index_name</span> <span class="kw">as</span> <span class="ident">storm::Accessor</span><span class="op">&gt;</span><span class="ident">::var</span>();
-
-                <span class="ident">Box::pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
-                    <span class="kw">let</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">vars</span>();
-
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">v</span>) <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">get</span>(<span class="ident">var</span>) {
-                        <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">v</span>);
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = ctx.get(var) {
+                        <span class="kw">return </span><span class="prelude-val">Ok</span>(v);
                     }
 
-                    #(#<span class="ident">as_ref_decl_async</span>)<span class="op">*</span>
-                    <span class="prelude-val">Ok</span>(<span class="ident">ctx</span>.<span class="ident">get_or_init</span>(<span class="ident">var</span>, <span class="op">|</span><span class="op">|</span> #<span class="ident">get_or_init</span>))
+                    #(#as_ref_decl_async)*
+                    <span class="prelude-val">Ok</span>(ctx.get_or_init(var, || #get_or_init))
                 })
             }
         }
 
-        <span class="kw">impl</span> <span class="ident">storm::Tag</span> <span class="kw">for</span> #<span class="ident">index_name</span> {
-            <span class="attribute">#[<span class="ident">inline</span>]</span>
-            <span class="kw">fn</span> <span class="ident">tag</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">storm::VersionTag</span> {
-                <span class="self">self</span>.<span class="number">1</span>
-            }
+        <span class="kw">impl </span>storm::Tag <span class="kw">for </span>#index_name {
+            <span class="attribute">#[inline]
+            </span><span class="kw">fn </span>tag(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; storm::VersionTag {
+                <span class="self">self</span>.<span class="number">1
+            </span>}
         }
 
-        <span class="kw">impl</span> <span class="ident">storm::CtxTypeInfo</span> <span class="kw">for</span> #<span class="ident">index_name</span> {
-            <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> #<span class="ident">index_name_lit</span>;
+        <span class="kw">impl </span>storm::CtxTypeInfo <span class="kw">for </span>#index_name {
+            <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = #index_name_lit;
         }
 
-        #<span class="ident">gc</span>
+        #gc
 
-        #<span class="ident">f</span>
+        #f
     }
 }
 
-<span class="kw">fn</span> <span class="ident">unref</span>(<span class="ident">t</span>: <span class="kw-2">&amp;</span><span class="ident">Type</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">Type</span> {
-    <span class="kw">match</span> <span class="ident">t</span> {
-        <span class="ident">Type::Reference</span>(<span class="ident">r</span>) =&gt; <span class="ident">unref</span>(<span class="kw-2">&amp;</span><span class="ident">r</span>.<span class="ident">elem</span>),
-        <span class="kw">_</span> =&gt; <span class="ident">t</span>,
+<span class="kw">fn </span>unref(t: <span class="kw-2">&amp;</span>Type) -&gt; <span class="kw-2">&amp;</span>Type {
+    <span class="kw">match </span>t {
+        Type::Reference(r) =&gt; unref(<span class="kw-2">&amp;</span>r.elem),
+        <span class="kw">_ </span>=&gt; t,
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

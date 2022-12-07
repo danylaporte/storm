@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm/src/accessor.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>accessor.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm/src/accessor.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>accessor.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -54,61 +54,65 @@
 <span id="54">54</span>
 <span id="55">55</span>
 <span id="56">56</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Entity</span>, <span class="ident">Log</span>};
-<span class="kw">use</span> <span class="ident">attached::Var</span>;
-<span class="kw">use</span> <span class="ident">parking_lot::RwLock</span>;
+<span id="57">57</span>
+<span id="58">58</span>
+</pre><pre class="rust"><code><span class="kw">use crate</span>::{Entity, Log, OnRemove};
+<span class="kw">use </span>attached::Var;
+<span class="kw">use </span>parking_lot::RwLock;
 
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Deps</span> <span class="op">=</span> <span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Fn</span>(<span class="kw-2">&amp;mut</span> <span class="ident">Vars</span>) <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>;
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">LogVar</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Var</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">vars::Log</span><span class="op">&gt;</span>;
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">TblVar</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Var</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">vars::Tbl</span><span class="op">&gt;</span>;
+<span class="kw">pub type </span>Deps = RwLock&lt;Vec&lt;Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Vars) + Send + Sync&gt;&gt;&gt;;
+<span class="kw">pub type </span>LogVar&lt;T&gt; = Var&lt;T, vars::Log&gt;;
+<span class="kw">pub type </span>TblVar&lt;T&gt; = Var&lt;T, vars::Tbl&gt;;
 
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Accessor</span>: <span class="ident">Sized</span> <span class="op">+</span> <span class="lifetime">&#39;static</span> {
-    <span class="kw">fn</span> <span class="ident">var</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">TblVar</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">deps</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">Deps</span>;
+<span class="kw">pub trait </span>Accessor: Sized + <span class="lifetime">&#39;static </span>{
+    <span class="kw">fn </span>var() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>TblVar&lt;<span class="self">Self</span>&gt;;
+    <span class="kw">fn </span>deps() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Deps;
 
-    <span class="kw">fn</span> <span class="ident">clear</span>(<span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vars</span>) {
-        <span class="ident">ctx</span>.<span class="ident">clear</span>(<span class="ident"><span class="self">Self</span>::var</span>());
-        <span class="ident"><span class="self">Self</span>::clear_deps</span>(<span class="ident">ctx</span>);
+    <span class="kw">fn </span>clear(ctx: <span class="kw-2">&amp;mut </span>Vars) {
+        ctx.clear(<span class="self">Self</span>::var());
+        <span class="self">Self</span>::clear_deps(ctx);
     }
 
-    <span class="kw">fn</span> <span class="ident">clear_deps</span>(<span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vars</span>) {
-        <span class="ident">clear_deps</span>(<span class="ident"><span class="self">Self</span>::deps</span>(), <span class="ident">ctx</span>);
+    <span class="kw">fn </span>clear_deps(ctx: <span class="kw-2">&amp;mut </span>Vars) {
+        clear_deps(<span class="self">Self</span>::deps(), ctx);
     }
 
-    <span class="kw">fn</span> <span class="ident">register_deps</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Fn</span>(<span class="kw-2">&amp;mut</span> <span class="ident">Vars</span>) <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span>(<span class="ident">f</span>: <span class="ident">F</span>) {
-        <span class="ident">register_deps</span>(<span class="ident"><span class="self">Self</span>::deps</span>(), <span class="ident">Box::new</span>(<span class="ident">f</span>));
+    <span class="kw">fn </span>register_deps&lt;F: Fn(<span class="kw-2">&amp;mut </span>Vars) + Send + Sync + <span class="lifetime">&#39;static</span>&gt;(f: F) {
+        register_deps(<span class="self">Self</span>::deps(), Box::new(f));
     }
 }
 
-<span class="kw">fn</span> <span class="ident">clear_deps</span>(<span class="ident">deps</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">Deps</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vars</span>) {
-    <span class="ident">deps</span>.<span class="ident">read</span>().<span class="ident">iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> <span class="ident">f</span>(<span class="ident">ctx</span>));
+<span class="kw">fn </span>clear_deps(deps: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Deps, ctx: <span class="kw-2">&amp;mut </span>Vars) {
+    deps.read().iter().for_each(|f| f(ctx));
 }
 
-<span class="kw">fn</span> <span class="ident">register_deps</span>(<span class="ident">deps</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">Deps</span>, <span class="ident">f</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Fn</span>(<span class="kw-2">&amp;mut</span> <span class="ident">Vars</span>) <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span>) {
-    <span class="ident">deps</span>.<span class="ident">write</span>().<span class="ident">push</span>(<span class="ident">f</span>);
+<span class="kw">fn </span>register_deps(deps: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Deps, f: Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Vars) + Send + Sync + <span class="lifetime">&#39;static</span>&gt;) {
+    deps.write().push(f);
 }
 
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">EntityAccessor</span>: <span class="ident">Sized</span> <span class="op">+</span> <span class="lifetime">&#39;static</span> {
-    <span class="kw">type</span> <span class="ident">Tbl</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span>;
+<span class="kw">pub trait </span>EntityAccessor: Entity + Sized + <span class="lifetime">&#39;static </span>{
+    <span class="kw">type </span>Tbl: Send + Sync;
 
-    <span class="kw">fn</span> <span class="ident">entity_var</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">TblVar</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Tbl</span><span class="op">&gt;</span>;
+    <span class="kw">fn </span>entity_var() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>TblVar&lt;<span class="self">Self</span>::Tbl&gt;;
 
-    <span class="kw">fn</span> <span class="ident">entity_deps</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">Deps</span>;
+    <span class="kw">fn </span>entity_deps() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Deps;
+
+    <span class="kw">fn </span>on_remove() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>OnRemove&lt;<span class="self">Self</span>&gt;;
 }
 
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">LogAccessor</span>: <span class="ident">Entity</span> <span class="op">+</span> <span class="ident">Sized</span> <span class="op">+</span> <span class="lifetime">&#39;static</span> {
-    <span class="kw">fn</span> <span class="ident">log_var</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">LogVar</span><span class="op">&lt;</span><span class="ident">Log</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">pub trait </span>LogAccessor: Entity + Sized + <span class="lifetime">&#39;static </span>{
+    <span class="kw">fn </span>log_var() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>LogVar&lt;Log&lt;<span class="self">Self</span>&gt;&gt;;
 }
 
-<span class="comment">// typed variable contexts</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">LogsVar</span> <span class="op">=</span> <span class="ident">attached::Vars</span><span class="op">&lt;</span><span class="ident">vars::Log</span><span class="op">&gt;</span>;
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Vars</span> <span class="op">=</span> <span class="ident">attached::Vars</span><span class="op">&lt;</span><span class="ident">vars::Tbl</span><span class="op">&gt;</span>;
+<span class="comment">// typed variable contexts
+</span><span class="kw">pub type </span>LogsVar = attached::Vars&lt;vars::Log&gt;;
+<span class="kw">pub type </span>Vars = attached::Vars&lt;vars::Tbl&gt;;
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">vars</span> {
-    <span class="kw">use</span> <span class="ident">attached::var_ctx</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>vars {
+    <span class="kw">use </span>attached::var_ctx;
 
-    <span class="macro">var_ctx!</span>(<span class="kw">pub</span> <span class="ident">Tbl</span>);
-    <span class="macro">var_ctx!</span>(<span class="kw">pub</span> <span class="ident">Log</span>);
+    <span class="macro">var_ctx!</span>(<span class="kw">pub </span>Tbl);
+    <span class="macro">var_ctx!</span>(<span class="kw">pub </span>Log);
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

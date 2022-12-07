@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_derive/src/ctx.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>ctx.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm_derive/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_derive/src/ctx.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>ctx.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm_derive/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -124,131 +124,141 @@
 <span id="124">124</span>
 <span id="125">125</span>
 <span id="126">126</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::derive_input_ext::DeriveInputExt</span>;
-<span class="kw">use</span> <span class="ident">darling</span>::{<span class="ident">FromDeriveInput</span>, <span class="ident">FromMeta</span>};
-<span class="kw">use</span> <span class="ident">inflector::Inflector</span>;
-<span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
-<span class="kw">use</span> <span class="ident">quote::quote</span>;
-<span class="kw">use</span> <span class="ident">syn</span>::{<span class="ident">DeriveInput</span>, <span class="ident">Ident</span>, <span class="ident">LitStr</span>};
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::derive_input_ext::DeriveInputExt;
+<span class="kw">use </span>darling::{FromDeriveInput, FromMeta};
+<span class="kw">use </span>inflector::Inflector;
+<span class="kw">use </span>proc_macro2::TokenStream;
+<span class="kw">use </span>quote::quote;
+<span class="kw">use </span>syn::{DeriveInput, Ident, LitStr};
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">DeriveInput</span>) -&gt; <span class="ident">TokenStream</span> {
-    <span class="kw">let</span> <span class="ident">implement</span> <span class="op">=</span> <span class="macro">try_ts!</span>(<span class="ident">implement</span>(<span class="ident">input</span>));
+<span class="kw">pub fn </span>generate(input: <span class="kw-2">&amp;</span>DeriveInput) -&gt; TokenStream {
+    <span class="kw">let </span>implement = <span class="macro">try_ts!</span>(implement(input));
 
-    <span class="macro">quote!</span> {
-        #<span class="ident">implement</span>
+    <span class="macro">quote! </span>{
+        #implement
     }
 }
 
-<span class="kw">fn</span> <span class="ident">implement</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">DeriveInput</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TokenStream</span>, <span class="ident">TokenStream</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">vis</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">input</span>.<span class="ident">vis</span>;
-    <span class="kw">let</span> <span class="ident">entity</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">input</span>.<span class="ident">ident</span>;
-    <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="ident">TypeArgs::from_derive_input</span>(<span class="ident">input</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">write_errors</span>())<span class="question-mark">?</span>;
+<span class="kw">fn </span>implement(input: <span class="kw-2">&amp;</span>DeriveInput) -&gt; <span class="prelude-ty">Result</span>&lt;TokenStream, TokenStream&gt; {
+    <span class="kw">let </span>vis = <span class="kw-2">&amp;</span>input.vis;
+    <span class="kw">let </span>entity = <span class="kw-2">&amp;</span>input.ident;
+    <span class="kw">let </span>args = TypeArgs::from_derive_input(input).map_err(|e| e.write_errors())<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">entity_name</span> <span class="op">=</span> <span class="ident">entity</span>.<span class="ident">to_string</span>();
-    <span class="kw">let</span> <span class="ident">table_name</span> <span class="op">=</span> <span class="ident">entity_name</span>.<span class="ident">to_plural</span>();
-    <span class="kw">let</span> <span class="ident">table_name_lit</span> <span class="op">=</span> <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="ident">entity_name</span>, <span class="ident">entity</span>.<span class="ident">span</span>());
-    <span class="kw">let</span> <span class="ident">table_alias</span> <span class="op">=</span> <span class="ident">Ident::new</span>(<span class="kw-2">&amp;</span><span class="ident">table_name</span>, <span class="ident">entity</span>.<span class="ident">span</span>());
+    <span class="kw">let </span>entity_name = entity.to_string();
+    <span class="kw">let </span>table_name = entity_name.to_plural();
+    <span class="kw">let </span>table_name_lit = LitStr::new(<span class="kw-2">&amp;</span>entity_name, entity.span());
+    <span class="kw">let </span>table_alias = Ident::new(<span class="kw-2">&amp;</span>table_name, entity.span());
 
-    <span class="kw">let</span> <span class="ident">screaming_snake_case</span> <span class="op">=</span> <span class="ident">entity_name</span>.<span class="ident">to_screaming_snake_case</span>();
-    <span class="kw">let</span> <span class="ident">tbl_var</span> <span class="op">=</span> <span class="ident">Ident::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}_TBL&quot;</span>, <span class="ident">screaming_snake_case</span>), <span class="ident">input</span>.<span class="ident">ident</span>.<span class="ident">span</span>());
-    <span class="kw">let</span> <span class="ident">log_var</span> <span class="op">=</span> <span class="ident">Ident::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}_TRX&quot;</span>, <span class="ident">screaming_snake_case</span>), <span class="ident">input</span>.<span class="ident">ident</span>.<span class="ident">span</span>());
-    <span class="kw">let</span> <span class="ident">coll_ty</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">collection</span>.<span class="ident">ty</span>(<span class="ident">entity</span>);
-    <span class="kw">let</span> (<span class="ident">gc</span>, <span class="ident">gc_collect</span>) <span class="op">=</span> <span class="ident">gc</span>(<span class="ident">input</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>screaming_snake_case = entity_name.to_screaming_snake_case();
+    <span class="kw">let </span>tbl_var = Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}_TBL&quot;</span>, screaming_snake_case), input.ident.span());
+    <span class="kw">let </span>log_var = Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}_TRX&quot;</span>, screaming_snake_case), input.ident.span());
+    <span class="kw">let </span>coll_ty = args.collection.ty(entity);
+    <span class="kw">let </span>(gc, gc_collect) = gc(input)<span class="question-mark">?</span>;
 
-    <span class="prelude-val">Ok</span>(<span class="macro">quote!</span> {
-        #<span class="ident">vis</span> <span class="kw">type</span> #<span class="ident">table_alias</span> <span class="op">=</span> #<span class="ident">coll_ty</span>;
+    <span class="prelude-val">Ok</span>(<span class="macro">quote! </span>{
+        #vis <span class="kw">type </span>#table_alias = #coll_ty;
 
-        <span class="attribute">#[<span class="ident">static_init::dynamic</span>]</span>
-        <span class="kw">static</span> #<span class="ident">tbl_var</span>: (<span class="ident">storm::TblVar</span><span class="op">&lt;</span>#<span class="ident">table_alias</span><span class="op">&gt;</span>, <span class="ident">storm::Deps</span>) <span class="op">=</span> {
-            #<span class="ident">gc_collect</span>
-            <span class="ident">Default::default</span>()
+        <span class="attribute">#[static_init::dynamic]
+        </span><span class="kw">static </span>#tbl_var: (storm::TblVar&lt;#table_alias&gt;, storm::Deps, storm::OnRemove&lt;#entity&gt;) = {
+            #gc_collect
+            Default::default()
         };
 
-        <span class="attribute">#[<span class="ident">static_init::dynamic</span>]</span>
-        <span class="kw">static</span> #<span class="ident">log_var</span>: <span class="ident">storm::LogVar</span><span class="op">&lt;</span><span class="ident">storm::Log</span><span class="op">&lt;</span>#<span class="ident">entity</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> {
-            <span class="ident">storm::register_apply_log</span>::<span class="op">&lt;</span>#<span class="ident">entity</span><span class="op">&gt;</span>();
-            <span class="ident">Default::default</span>()
+        <span class="attribute">#[static_init::dynamic]
+        </span><span class="kw">static </span>#log_var: storm::LogVar&lt;storm::Log&lt;#entity&gt;&gt; = {
+            storm::register_apply_log::&lt;#entity&gt;();
+            Default::default()
         };
 
-        <span class="kw">impl</span> <span class="ident">storm::EntityAccessor</span> <span class="kw">for</span> #<span class="ident">entity</span> {
-            <span class="kw">type</span> <span class="ident">Tbl</span> <span class="op">=</span> #<span class="ident">table_alias</span>;
+        <span class="kw">impl </span>storm::EntityAccessor <span class="kw">for </span>#entity {
+            <span class="kw">type </span>Tbl = #table_alias;
 
-            <span class="attribute">#[<span class="ident">inline</span>]</span>
-            <span class="kw">fn</span> <span class="ident">entity_var</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">storm::TblVar</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Tbl</span><span class="op">&gt;</span> {
-                <span class="kw-2">&amp;</span>#<span class="ident">tbl_var</span>.<span class="number">0</span>
-            }
+            <span class="attribute">#[inline]
+            </span><span class="kw">fn </span>entity_var() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>storm::TblVar&lt;<span class="self">Self</span>::Tbl&gt; {
+                <span class="kw-2">&amp;</span>#tbl_var.<span class="number">0
+            </span>}
 
-            <span class="attribute">#[<span class="ident">inline</span>]</span>
-            <span class="kw">fn</span> <span class="ident">entity_deps</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">storm::Deps</span> {
-                <span class="kw-2">&amp;</span>#<span class="ident">tbl_var</span>.<span class="number">1</span>
+            <span class="attribute">#[inline]
+            </span><span class="kw">fn </span>entity_deps() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>storm::Deps {
+                <span class="kw-2">&amp;</span>#tbl_var.<span class="number">1
+            </span>}
+
+            <span class="attribute">#[inline]
+            </span><span class="kw">fn </span>on_remove() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>storm::OnRemove&lt;<span class="self">Self</span>&gt; {
+                <span class="kw-2">&amp;</span>#tbl_var.<span class="number">2
+            </span>}
+        }
+
+        <span class="kw">impl </span>storm::LogAccessor <span class="kw">for </span>#entity {
+            <span class="attribute">#[inline]
+            </span><span class="kw">fn </span>log_var() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>storm::LogVar&lt;storm::Log&lt;<span class="self">Self</span>&gt;&gt; {
+                <span class="kw-2">&amp;</span>#log_var
             }
         }
 
-        <span class="kw">impl</span> <span class="ident">storm::LogAccessor</span> <span class="kw">for</span> #<span class="ident">entity</span> {
-            <span class="attribute">#[<span class="ident">inline</span>]</span>
-            <span class="kw">fn</span> <span class="ident">log_var</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">storm::LogVar</span><span class="op">&lt;</span><span class="ident">storm::Log</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-                <span class="kw-2">&amp;</span>#<span class="ident">log_var</span>
-            }
+        <span class="kw">impl </span>storm::CtxTypeInfo <span class="kw">for </span>#entity {
+            <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = #table_name_lit;
         }
 
-        <span class="kw">impl</span> <span class="ident">storm::CtxTypeInfo</span> <span class="kw">for</span> #<span class="ident">entity</span> {
-            <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> #<span class="ident">table_name_lit</span>;
-        }
-
-        #<span class="ident">gc</span>
+        #gc
     })
 }
 
-<span class="kw">fn</span> <span class="ident">gc</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">DeriveInput</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">TokenStream</span>, <span class="ident">TokenStream</span>), <span class="ident">TokenStream</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">fields</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">fields</span>()<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">ident</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">input</span>.<span class="ident">ident</span>;
-    <span class="kw">let</span> <span class="ident">types</span> <span class="op">=</span> <span class="ident">fields</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="ident">f</span>.<span class="ident">ty</span>);
-    <span class="kw">let</span> <span class="ident">fields</span> <span class="op">=</span> <span class="ident">fields</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="ident">f</span>.<span class="ident">ident</span>);
+<span class="kw">fn </span>gc(input: <span class="kw-2">&amp;</span>DeriveInput) -&gt; <span class="prelude-ty">Result</span>&lt;(TokenStream, TokenStream), TokenStream&gt; {
+    <span class="kw">let </span>fields = input.fields()<span class="question-mark">?</span>;
+    <span class="kw">let </span>ident = <span class="kw-2">&amp;</span>input.ident;
+    <span class="kw">let </span>types = fields.iter().map(|f| <span class="kw-2">&amp;</span>f.ty);
+    <span class="kw">let </span>fields = fields.iter().map(|f| <span class="kw-2">&amp;</span>f.ident);
 
     <span class="prelude-val">Ok</span>((
-        <span class="macro">quote!</span> {
-            <span class="kw">impl</span> <span class="ident">storm::Gc</span> <span class="kw">for</span> #<span class="ident">ident</span> {
-                <span class="kw">const</span> <span class="ident">SUPPORT_GC</span>: <span class="ident">bool</span> <span class="op">=</span> #(<span class="op">&lt;</span>#<span class="ident">types</span> <span class="kw">as</span> <span class="ident">storm::Gc</span><span class="op">&gt;</span><span class="ident">::SUPPORT_GC</span> <span class="op">|</span><span class="op">|</span>)<span class="op">*</span> <span class="bool-val">false</span>;
+        <span class="macro">quote! </span>{
+            <span class="kw">impl </span>storm::Gc <span class="kw">for </span>#ident {
+                <span class="kw">const </span>SUPPORT_GC: bool = #(&lt;#types <span class="kw">as </span>storm::Gc&gt;::SUPPORT_GC ||)* <span class="bool-val">false</span>;
 
-                <span class="kw">fn</span> <span class="ident">gc</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">storm::GcCtx</span>) {
-                    #(<span class="ident">storm::Gc::gc</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.#<span class="ident">fields</span>, <span class="ident">ctx</span>);)<span class="op">*</span>
+                <span class="kw">fn </span>gc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: <span class="kw-2">&amp;</span>storm::GcCtx) {
+                    #(storm::Gc::gc(<span class="kw-2">&amp;mut </span><span class="self">self</span>.#fields, ctx);)*
                 }
             }
         },
-        <span class="macro">quote!</span> {
-            <span class="kw">if</span> <span class="op">&lt;</span>#<span class="ident">ident</span> <span class="kw">as</span> <span class="ident">storm::Gc</span><span class="op">&gt;</span><span class="ident">::SUPPORT_GC</span> {
-                <span class="ident">storm::gc::collectables::register</span>(<span class="op">|</span><span class="ident">ctx</span><span class="op">|</span> <span class="ident">ctx</span>.<span class="ident">tbl_gc</span>::<span class="op">&lt;</span>#<span class="ident">ident</span><span class="op">&gt;</span>());
+        <span class="macro">quote! </span>{
+            <span class="kw">if </span>&lt;#ident <span class="kw">as </span>storm::Gc&gt;::SUPPORT_GC {
+                storm::gc::collectables::register(|ctx| ctx.tbl_gc::&lt;#ident&gt;());
             }
         },
     ))
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">FromMeta</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">enum</span> <span class="ident">Collection</span> {
-    <span class="ident">HashTable</span>,
-    <span class="ident">VecTable</span>,
+<span class="attribute">#[derive(Clone, Copy, Debug, Eq, FromMeta, PartialEq)]
+</span><span class="kw">enum </span>Collection {
+    HashTable,
+    VecTable,
 }
 
-<span class="kw">impl</span> <span class="ident">Collection</span> {
-    <span class="kw">fn</span> <span class="ident">ty</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">entity</span>: <span class="kw-2">&amp;</span><span class="ident">Ident</span>) -&gt; <span class="ident">TokenStream</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::HashTable</span> =&gt; <span class="macro">quote!</span>(<span class="ident">storm::HashTable</span><span class="op">&lt;</span>#<span class="ident">entity</span><span class="op">&gt;</span>),
-            <span class="ident"><span class="self">Self</span>::VecTable</span> =&gt; <span class="macro">quote!</span>(<span class="ident">storm::VecTable</span><span class="op">&lt;</span>#<span class="ident">entity</span><span class="op">&gt;</span>),
+<span class="kw">impl </span>Collection {
+    <span class="kw">fn </span>ty(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: <span class="kw-2">&amp;</span>Ident) -&gt; TokenStream {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::HashTable =&gt; <span class="macro">quote!</span>(storm::HashTable&lt;#entity&gt;),
+            <span class="self">Self</span>::VecTable =&gt; <span class="macro">quote!</span>(storm::VecTable&lt;#entity&gt;),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Collection</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::VecTable</span>
+<span class="kw">impl </span>Default <span class="kw">for </span>Collection {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::VecTable
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">FromDeriveInput</span>)]</span>
-<span class="attribute">#[<span class="ident">darling</span>(<span class="ident">attributes</span>(<span class="ident">storm</span>), <span class="ident">allow_unknown_fields</span>)]</span>
-<span class="kw">struct</span> <span class="ident">TypeArgs</span> {
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">collection</span>: <span class="ident">Collection</span>,
+<span class="attribute">#[derive(Debug, FromDeriveInput)]
+#[darling(attributes(storm), allow_unknown_fields)]
+</span><span class="kw">struct </span>TypeArgs {
+    <span class="attribute">#[darling(default)]
+    </span>collection: Collection,
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_derive/src/mssql/attrs.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>attrs.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../storm_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../storm_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../storm_derive/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_derive/src/mssql/attrs.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>attrs.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../storm_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../storm_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../storm_derive/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -255,262 +255,262 @@
 <span id="255">255</span>
 <span id="256">256</span>
 <span id="257">257</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::rename_all::RenameAll</span>;
-<span class="kw">use</span> <span class="ident">darling</span>::{<span class="ident">util::SpannedValue</span>, <span class="ident">FromDeriveInput</span>, <span class="ident">FromField</span>};
-<span class="kw">use</span> <span class="ident">proc_macro2</span>::{<span class="ident">Span</span>, <span class="ident">TokenStream</span>};
-<span class="kw">use</span> <span class="ident">syn</span>::{<span class="ident">Error</span>, <span class="ident">Ident</span>, <span class="ident">LitStr</span>};
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::rename_all::RenameAll;
+<span class="kw">use </span>darling::{util::SpannedValue, FromDeriveInput, FromField};
+<span class="kw">use </span>proc_macro2::{Span, TokenStream};
+<span class="kw">use </span>syn::{Error, Ident, LitStr};
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">FromField</span>)]</span>
-<span class="attribute">#[<span class="ident">darling</span>(<span class="ident">attributes</span>(<span class="ident">storm</span>))]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct</span> <span class="ident">FieldAttrs</span> {
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">column</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Debug, FromField)]
+#[darling(attributes(storm))]
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>FieldAttrs {
+    <span class="attribute">#[darling(default)]
+    </span><span class="kw">pub </span>column: <span class="prelude-ty">Option</span>&lt;String&gt;,
 
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">load_with</span>: <span class="ident">SpannedValue</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Ident</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="attribute">#[darling(default)]
+    </span><span class="kw">pub </span>load_with: SpannedValue&lt;<span class="prelude-ty">Option</span>&lt;Ident&gt;&gt;,
 
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">part</span>: <span class="ident">bool</span>,
+    <span class="attribute">#[darling(default)]
+    </span><span class="kw">pub </span>part: bool,
 
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">save_with</span>: <span class="ident">SpannedValue</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Ident</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="attribute">#[darling(default)]
+    </span><span class="kw">pub </span>save_with: SpannedValue&lt;<span class="prelude-ty">Option</span>&lt;Ident&gt;&gt;,
 
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">skip</span>: <span class="ident">SpannedValue</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="attribute">#[darling(default)]
+    </span>skip: SpannedValue&lt;<span class="prelude-ty">Option</span>&lt;bool&gt;&gt;,
 
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">skip_load</span>: <span class="ident">SpannedValue</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="attribute">#[darling(default)]
+    </span>skip_load: SpannedValue&lt;<span class="prelude-ty">Option</span>&lt;bool&gt;&gt;,
 
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">skip_save</span>: <span class="ident">SpannedValue</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="attribute">#[darling(default)]
+    </span>skip_save: SpannedValue&lt;<span class="prelude-ty">Option</span>&lt;bool&gt;&gt;,
 
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">skip_diff</span>: <span class="ident">bool</span>,
+    <span class="attribute">#[darling(default)]
+    </span>skip_diff: bool,
 }
 
-<span class="kw">impl</span> <span class="ident">FieldAttrs</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">skip_diff</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">skip_diff</span>
+<span class="kw">impl </span>FieldAttrs {
+    <span class="kw">pub fn </span>skip_diff(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.skip_diff
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">skip_load</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">skip_load</span>.<span class="ident">unwrap_or_default</span>() <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">skip</span>.<span class="ident">unwrap_or_default</span>()
+    <span class="kw">pub fn </span>skip_load(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.skip_load.unwrap_or_default() || <span class="self">self</span>.skip.unwrap_or_default()
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">skip_save</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">skip_save</span>.<span class="ident">unwrap_or_default</span>() <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">skip</span>.<span class="ident">unwrap_or_default</span>()
+    <span class="kw">pub fn </span>skip_save(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.skip_save.unwrap_or_default() || <span class="self">self</span>.skip.unwrap_or_default()
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">validate_load</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">errors</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TokenStream</span><span class="op">&gt;</span>) {
-        <span class="kw">if</span> <span class="kw">let</span> (<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="prelude-val">Some</span>(<span class="bool-val">false</span>)) <span class="op">=</span> (<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">skip</span>, <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">skip_load</span>) {
-            <span class="ident">errors</span>.<span class="ident">push</span>(<span class="ident">Error::new</span>(<span class="self">self</span>.<span class="ident">skip_load</span>.<span class="ident">span</span>(), <span class="ident">SKIP_IS_INCOMPATIBLE</span>).<span class="ident">to_compile_error</span>());
+    <span class="kw">pub fn </span>validate_load(<span class="kw-2">&amp;</span><span class="self">self</span>, errors: <span class="kw-2">&amp;mut </span>Vec&lt;TokenStream&gt;) {
+        <span class="kw">if let </span>(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="prelude-val">Some</span>(<span class="bool-val">false</span>)) = (<span class="kw-2">*</span><span class="self">self</span>.skip, <span class="kw-2">*</span><span class="self">self</span>.skip_load) {
+            errors.push(Error::new(<span class="self">self</span>.skip_load.span(), SKIP_IS_INCOMPATIBLE).to_compile_error());
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">validate_save</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">errors</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TokenStream</span><span class="op">&gt;</span>) {
-        <span class="kw">if</span> <span class="kw">let</span> (<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="prelude-val">Some</span>(<span class="bool-val">false</span>)) <span class="op">=</span> (<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">skip</span>, <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">skip_save</span>) {
-            <span class="ident">errors</span>.<span class="ident">push</span>(<span class="ident">Error::new</span>(<span class="self">self</span>.<span class="ident">skip_save</span>.<span class="ident">span</span>(), <span class="ident">SKIP_IS_INCOMPATIBLE</span>).<span class="ident">to_compile_error</span>());
+    <span class="kw">pub fn </span>validate_save(<span class="kw-2">&amp;</span><span class="self">self</span>, errors: <span class="kw-2">&amp;mut </span>Vec&lt;TokenStream&gt;) {
+        <span class="kw">if let </span>(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="prelude-val">Some</span>(<span class="bool-val">false</span>)) = (<span class="kw-2">*</span><span class="self">self</span>.skip, <span class="kw-2">*</span><span class="self">self</span>.skip_save) {
+            errors.push(Error::new(<span class="self">self</span>.skip_save.span(), SKIP_IS_INCOMPATIBLE).to_compile_error());
         }
 
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">skip_save</span>() <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">save_with</span>.<span class="ident">is_some</span>() {
-            <span class="ident">errors</span>.<span class="ident">push</span>(<span class="ident">Error::new</span>(<span class="self">self</span>.<span class="ident">save_with</span>.<span class="ident">span</span>(), <span class="string">&quot;Save is skipped.&quot;</span>).<span class="ident">to_compile_error</span>());
+        <span class="kw">if </span><span class="self">self</span>.skip_save() &amp;&amp; <span class="self">self</span>.save_with.is_some() {
+            errors.push(Error::new(<span class="self">self</span>.save_with.span(), <span class="string">&quot;Save is skipped.&quot;</span>).to_compile_error());
         }
 
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">part</span> <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">save_with</span>.<span class="ident">is_some</span>() {
-            <span class="ident">errors</span>.<span class="ident">push</span>(
-                <span class="ident">Error::new</span>(<span class="self">self</span>.<span class="ident">save_with</span>.<span class="ident">span</span>(), <span class="string">&quot;Ignored on part field.&quot;</span>).<span class="ident">to_compile_error</span>(),
+        <span class="kw">if </span><span class="self">self</span>.part &amp;&amp; <span class="self">self</span>.save_with.is_some() {
+            errors.push(
+                Error::new(<span class="self">self</span>.save_with.span(), <span class="string">&quot;Ignored on part field.&quot;</span>).to_compile_error(),
             );
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">FromDeriveInput</span>)]</span>
-<span class="attribute">#[<span class="ident">darling</span>(<span class="ident">attributes</span>(<span class="ident">storm</span>))]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct</span> <span class="ident">TypeAttrs</span> {
-    <span class="kw">pub</span> <span class="ident">table</span>: <span class="ident">SpannedValue</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">keys</span>: <span class="ident">SpannedValue</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Debug, FromDeriveInput)]
+#[darling(attributes(storm))]
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>TypeAttrs {
+    <span class="kw">pub </span>table: SpannedValue&lt;String&gt;,
+    <span class="kw">pub </span>keys: SpannedValue&lt;String&gt;,
 
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">no_test</span>: <span class="ident">bool</span>,
+    <span class="attribute">#[darling(default)]
+    </span><span class="kw">pub </span>no_test: bool,
 
-    <span class="doccomment">/// The name of the provider in the ProviderContainer.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Provider can be named to accommodate multiple database</span>
-    <span class="doccomment">/// of the same vendor, for example multiple MS SQL database.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// When the provider type is different, PostgreSQL and MS Sql, there is</span>
-    <span class="doccomment">/// no need to provide a name.</span>
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">provider</span>: <span class="ident">String</span>,
+    <span class="doccomment">/// The name of the provider in the ProviderContainer.
+    ///
+    /// Provider can be named to accommodate multiple database
+    /// of the same vendor, for example multiple MS SQL database.
+    ///
+    /// When the provider type is different, PostgreSQL and MS Sql, there is
+    /// no need to provide a name.
+    </span><span class="attribute">#[darling(default)]
+    </span><span class="kw">pub </span>provider: String,
 
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">reload_on_upsert</span>: <span class="ident">bool</span>,
+    <span class="attribute">#[darling(default)]
+    </span>reload_on_upsert: bool,
 
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">rename_all</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">RenameAll</span><span class="op">&gt;</span>,
+    <span class="attribute">#[darling(default)]
+    </span><span class="kw">pub </span>rename_all: <span class="prelude-ty">Option</span>&lt;RenameAll&gt;,
 
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">translate_table</span>: <span class="ident">SpannedValue</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="attribute">#[darling(default)]
+    </span><span class="kw">pub </span>translate_table: SpannedValue&lt;String&gt;,
 
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">translate_keys</span>: <span class="ident">SpannedValue</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="attribute">#[darling(default)]
+    </span><span class="kw">pub </span>translate_keys: SpannedValue&lt;String&gt;,
 
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">where_clause</span>: <span class="ident">String</span>,
+    <span class="attribute">#[darling(default)]
+    </span><span class="kw">pub </span>where_clause: String,
 
-    <span class="doccomment">/// used by the ctx macro.</span>
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-    <span class="ident">collection</span>: <span class="ident">String</span>,
+    <span class="doccomment">/// used by the ctx macro.
+    </span><span class="attribute">#[darling(default)]
+    #[allow(dead_code)]
+    </span>collection: String,
 
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">identity</span>: <span class="ident">SpannedValue</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="attribute">#[darling(default)]
+    </span><span class="kw">pub </span>identity: SpannedValue&lt;String&gt;,
 
-    <span class="doccomment">/// impl ApplyEntityDiff and impl EntityDiff</span>
-    <span class="attribute">#[<span class="ident">darling</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">diff</span>: <span class="ident">bool</span>,
+    <span class="doccomment">/// impl ApplyEntityDiff and impl EntityDiff
+    </span><span class="attribute">#[darling(default)]
+    </span><span class="kw">pub </span>diff: bool,
 }
 
-<span class="kw">impl</span> <span class="ident">TypeAttrs</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">keys</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">errors</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TokenStream</span><span class="op">&gt;</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">vec</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">keys_internal</span>();
+<span class="kw">impl </span>TypeAttrs {
+    <span class="kw">pub fn </span>keys(<span class="kw-2">&amp;</span><span class="self">self</span>, errors: <span class="kw-2">&amp;mut </span>Vec&lt;TokenStream&gt;) -&gt; Vec&lt;<span class="kw-2">&amp;</span>str&gt; {
+        <span class="kw">let </span>vec = <span class="self">self</span>.keys_internal();
 
-        <span class="kw">if</span> <span class="ident">vec</span>.<span class="ident">is_empty</span>() {
-            <span class="ident">errors</span>.<span class="ident">push</span>(
-                <span class="ident">Error::new</span>(<span class="self">self</span>.<span class="ident">keys</span>.<span class="ident">span</span>(), <span class="string">&quot;Must specify at least one key.&quot;</span>).<span class="ident">to_compile_error</span>(),
+        <span class="kw">if </span>vec.is_empty() {
+            errors.push(
+                Error::new(<span class="self">self</span>.keys.span(), <span class="string">&quot;Must specify at least one key.&quot;</span>).to_compile_error(),
             );
         }
 
-        <span class="kw">if</span> <span class="ident">vec</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">1</span> <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">is_identity_key</span>() {
-            <span class="ident">errors</span>.<span class="ident">push</span>(
-                <span class="ident">Error::new</span>(
-                    <span class="self">self</span>.<span class="ident">keys</span>.<span class="ident">span</span>(),
+        <span class="kw">if </span>vec.len() &gt; <span class="number">1 </span>&amp;&amp; <span class="self">self</span>.is_identity_key() {
+            errors.push(
+                Error::new(
+                    <span class="self">self</span>.keys.span(),
                     <span class="string">&quot;Only one key is possible when identity is specified.&quot;</span>,
                 )
-                .<span class="ident">to_compile_error</span>(),
+                .to_compile_error(),
             );
         }
 
-        <span class="ident">vec</span>
+        vec
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_identity_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="op">!</span><span class="self">self</span>.<span class="ident">identity</span>.<span class="ident">is_empty</span>()
-            <span class="op">&amp;&amp;</span> <span class="self">self</span>
-                .<span class="ident">keys_internal</span>()
-                .<span class="ident">iter</span>()
-                .<span class="ident">any</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">to_lowercase</span>() <span class="op">==</span> <span class="self">self</span>.<span class="ident">identity</span>.<span class="ident">to_lowercase</span>())
+    <span class="kw">pub fn </span>is_identity_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        !<span class="self">self</span>.identity.is_empty()
+            &amp;&amp; <span class="self">self
+                </span>.keys_internal()
+                .iter()
+                .any(|v| v.to_lowercase() == <span class="self">self</span>.identity.to_lowercase())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">keys_internal</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">keys</span>.<span class="ident">split</span>(<span class="string">&#39;,&#39;</span>).<span class="ident">filter</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="op">!</span><span class="ident">s</span>.<span class="ident">is_empty</span>()).<span class="ident">collect</span>()
+    <span class="kw">pub fn </span>keys_internal(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>str&gt; {
+        <span class="self">self</span>.keys.split(<span class="string">&#39;,&#39;</span>).filter(|s| !s.is_empty()).collect()
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">provider</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">LitStr</span> {
-        <span class="ident">LitStr::new</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">provider</span>, <span class="ident">Span::call_site</span>())
+    <span class="kw">pub fn </span>provider(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; LitStr {
+        LitStr::new(<span class="kw-2">&amp;</span><span class="self">self</span>.provider, Span::call_site())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reload_on_upsert</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">reload_on_upsert</span> <span class="op">|</span><span class="op">|</span> (<span class="op">!</span><span class="self">self</span>.<span class="ident">identity</span>.<span class="ident">is_empty</span>() <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">is_identity_key</span>())
+    <span class="kw">pub fn </span>reload_on_upsert(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.reload_on_upsert || (!<span class="self">self</span>.identity.is_empty() &amp;&amp; !<span class="self">self</span>.is_identity_key())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reload_on_upsert_or_identity</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">reload_on_upsert</span> <span class="op">|</span><span class="op">|</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">identity</span>.<span class="ident">is_empty</span>()
+    <span class="kw">pub fn </span>reload_on_upsert_or_identity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.reload_on_upsert || !<span class="self">self</span>.identity.is_empty()
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">translate_keys</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">errors</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TokenStream</span><span class="op">&gt;</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">translate_table</span>.<span class="ident">is_empty</span>() {
-            <span class="kw">return</span> <span class="ident">Vec::new</span>();
+    <span class="kw">pub fn </span>translate_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, errors: <span class="kw-2">&amp;mut </span>Vec&lt;TokenStream&gt;) -&gt; Vec&lt;<span class="kw-2">&amp;</span>str&gt; {
+        <span class="kw">if </span><span class="self">self</span>.translate_table.is_empty() {
+            <span class="kw">return </span>Vec::new();
         }
 
-        <span class="kw">let</span> <span class="ident">keys</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">keys_internal</span>();
+        <span class="kw">let </span>keys = <span class="self">self</span>.keys_internal();
 
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">translate_keys</span>.<span class="ident">is_empty</span>() {
-            <span class="kw">return</span> <span class="ident">keys</span>;
+        <span class="kw">if </span><span class="self">self</span>.translate_keys.is_empty() {
+            <span class="kw">return </span>keys;
         }
 
-        <span class="kw">let</span> <span class="ident">translate_keys</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">translate_keys_internal</span>();
+        <span class="kw">let </span>translate_keys = <span class="self">self</span>.translate_keys_internal();
 
-        <span class="kw">if</span> <span class="ident">translate_keys</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">keys</span>.<span class="ident">len</span>() {
-            <span class="ident">errors</span>.<span class="ident">push</span>(
-                <span class="ident">Error::new</span>(
-                    <span class="self">self</span>.<span class="ident">translate_keys</span>.<span class="ident">span</span>(),
+        <span class="kw">if </span>translate_keys.len() != keys.len() {
+            errors.push(
+                Error::new(
+                    <span class="self">self</span>.translate_keys.span(),
                     <span class="string">&quot;translate_keys must have the same keys count.&quot;</span>,
                 )
-                .<span class="ident">to_compile_error</span>(),
+                .to_compile_error(),
             );
         }
 
-        <span class="ident">translate_keys</span>
+        translate_keys
     }
 
-    <span class="kw">fn</span> <span class="ident">translate_keys_internal</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">translate_keys</span>
-            .<span class="ident">split</span>(<span class="string">&#39;,&#39;</span>)
-            .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="op">!</span><span class="ident">s</span>.<span class="ident">is_empty</span>())
-            .<span class="ident">collect</span>()
+    <span class="kw">fn </span>translate_keys_internal(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>str&gt; {
+        <span class="self">self</span>.translate_keys
+            .split(<span class="string">&#39;,&#39;</span>)
+            .filter(|s| !s.is_empty())
+            .collect()
     }
 }
 
-<span class="kw">const</span> <span class="ident">SKIP_IS_INCOMPATIBLE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;`skip` is incompatible.&quot;</span>;
+<span class="kw">const </span>SKIP_IS_INCOMPATIBLE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;`skip` is incompatible.&quot;</span>;
 
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">check_empty</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">IsEmpty</span><span class="op">&gt;</span>(
-    <span class="ident">v</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">SpannedValue</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">errors</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TokenStream</span><span class="op">&gt;</span>,
-) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">SpannedValue</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="op">!</span><span class="ident">v</span>.<span class="ident">is_empty</span>() {
-        <span class="ident">errors</span>.<span class="ident">push</span>(<span class="ident">Error::new</span>(<span class="ident">v</span>.<span class="ident">span</span>(), <span class="string">&quot;Expected to be empty.&quot;</span>).<span class="ident">to_compile_error</span>());
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>check_empty&lt;<span class="lifetime">&#39;a</span>, T: IsEmpty&gt;(
+    v: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SpannedValue&lt;T&gt;,
+    errors: <span class="kw-2">&amp;mut </span>Vec&lt;TokenStream&gt;,
+) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SpannedValue&lt;T&gt; {
+    <span class="kw">if </span>!v.is_empty() {
+        errors.push(Error::new(v.span(), <span class="string">&quot;Expected to be empty.&quot;</span>).to_compile_error());
     }
 
-    <span class="ident">v</span>
+    v
 }
 
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">check_required</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">IsEmpty</span><span class="op">&gt;</span>(
-    <span class="ident">v</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">SpannedValue</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">errors</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TokenStream</span><span class="op">&gt;</span>,
-) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">SpannedValue</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="ident">v</span>.<span class="ident">is_empty</span>() {
-        <span class="ident">errors</span>.<span class="ident">push</span>(<span class="ident">Error::new</span>(<span class="ident">v</span>.<span class="ident">span</span>(), <span class="string">&quot;Expected a value.&quot;</span>).<span class="ident">to_compile_error</span>());
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>check_required&lt;<span class="lifetime">&#39;a</span>, T: IsEmpty&gt;(
+    v: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SpannedValue&lt;T&gt;,
+    errors: <span class="kw-2">&amp;mut </span>Vec&lt;TokenStream&gt;,
+) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SpannedValue&lt;T&gt; {
+    <span class="kw">if </span>v.is_empty() {
+        errors.push(Error::new(v.span(), <span class="string">&quot;Expected a value.&quot;</span>).to_compile_error());
     }
 
-    <span class="ident">v</span>
+    v
 }
 
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">trait</span> <span class="ident">IsEmpty</span> {
-    <span class="kw">fn</span> <span class="ident">is_empty</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span>;
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">trait </span>IsEmpty {
+    <span class="kw">fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool;
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">IsEmpty</span><span class="op">&gt;</span> <span class="ident">IsEmpty</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">T</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">IsEmpty</span>,
+<span class="kw">impl</span>&lt;T: IsEmpty&gt; IsEmpty <span class="kw">for </span><span class="kw-2">&amp;</span>T
+<span class="kw">where
+    </span>T: IsEmpty,
 {
-    <span class="kw">fn</span> <span class="ident">is_empty</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        (<span class="kw-2">*</span><span class="kw-2">*</span><span class="self">self</span>).<span class="ident">is_empty</span>()
+    <span class="kw">fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        (<span class="kw-2">**</span><span class="self">self</span>).is_empty()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">IsEmpty</span> <span class="kw">for</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">is_empty</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">is_none</span>()
+<span class="kw">impl</span>&lt;T&gt; IsEmpty <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;T&gt; {
+    <span class="kw">fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.is_none()
     }
 }
 
-<span class="kw">impl</span> <span class="ident">IsEmpty</span> <span class="kw">for</span> <span class="ident">str</span> {
-    <span class="kw">fn</span> <span class="ident">is_empty</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">is_empty</span>()
+<span class="kw">impl </span>IsEmpty <span class="kw">for </span>str {
+    <span class="kw">fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.is_empty()
     }
 }
 
-<span class="kw">impl</span> <span class="ident">IsEmpty</span> <span class="kw">for</span> <span class="ident">String</span> {
-    <span class="kw">fn</span> <span class="ident">is_empty</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">is_empty</span>()
+<span class="kw">impl </span>IsEmpty <span class="kw">for </span>String {
+    <span class="kw">fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.is_empty()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">IsEmpty</span> <span class="kw">for</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">is_empty</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">is_empty</span>()
+<span class="kw">impl</span>&lt;T&gt; IsEmpty <span class="kw">for </span>Vec&lt;T&gt; {
+    <span class="kw">fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.is_empty()
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="storm_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="storm_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

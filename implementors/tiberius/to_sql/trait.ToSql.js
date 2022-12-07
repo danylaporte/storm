@@ -1,3 +1,3 @@
-(function() {var implementors = {};
-implementors["storm_mssql"] = [{"text":"impl&lt;'a&gt; ToSql for <a class=\"struct\" href=\"storm_mssql/struct.Parameter.html\" title=\"struct storm_mssql::Parameter\">Parameter</a>&lt;'a&gt;","synthetic":false,"types":["storm_mssql::parameter::Parameter"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
+(function() {var implementors = {
+"storm_mssql":[["impl&lt;'a&gt; ToSql for <a class=\"struct\" href=\"storm_mssql/struct.Parameter.html\" title=\"struct storm_mssql::Parameter\">Parameter</a>&lt;'a&gt;"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

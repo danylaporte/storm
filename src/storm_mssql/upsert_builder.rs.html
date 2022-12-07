@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_mssql/src/upsert_builder.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>upsert_builder.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm_mssql/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm_mssql/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm_mssql/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_mssql/src/upsert_builder.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>upsert_builder.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../storm_mssql/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../storm_mssql/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../storm_mssql/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -254,176 +254,176 @@
 <span id="254">254</span>
 <span id="255">255</span>
 <span id="256">256</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Error</span>, <span class="ident">Execute</span>, <span class="ident">FromSql</span>, <span class="ident">Parameter</span>, <span class="ident">QueryRows</span>, <span class="prelude-ty">Result</span>, <span class="ident">ToSql</span>};
-<span class="kw">use</span> <span class="ident">storm::IsDefined</span>;
-<span class="kw">use</span> <span class="ident">tiberius::ColumnData</span>;
-<span class="kw">use</span> <span class="ident">tracing::error</span>;
+</pre><pre class="rust"><code><span class="kw">use crate</span>::{Error, Execute, FromSql, Parameter, QueryRows, <span class="prelude-ty">Result</span>, ToSql};
+<span class="kw">use </span>storm::IsDefined;
+<span class="kw">use </span>tiberius::ColumnData;
+<span class="kw">use </span>tracing::error;
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UpsertBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="ident">insert_fields</span>: <span class="ident">String</span>,
-    <span class="ident">insert_values</span>: <span class="ident">String</span>,
-    <span class="ident">params</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Parameter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">update_setters</span>: <span class="ident">String</span>,
-    <span class="ident">update_wheres</span>: <span class="ident">String</span>,
-    <span class="ident">upsert_mode</span>: <span class="ident">UpsertMode</span>,
-    <span class="ident">table</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>,
+<span class="kw">pub struct </span>UpsertBuilder&lt;<span class="lifetime">&#39;a</span>&gt; {
+    insert_fields: String,
+    insert_values: String,
+    params: Vec&lt;Parameter&lt;<span class="lifetime">&#39;a</span>&gt;&gt;,
+    update_setters: String,
+    update_wheres: String,
+    upsert_mode: UpsertMode,
+    table: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">UpsertBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">table</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">insert_fields</span>: <span class="ident">String::new</span>(),
-            <span class="ident">insert_values</span>: <span class="ident">String::new</span>(),
-            <span class="ident">params</span>: <span class="ident">Vec::new</span>(),
-            <span class="ident">update_setters</span>: <span class="ident">String::new</span>(),
-            <span class="ident">update_wheres</span>: <span class="ident">String::new</span>(),
-            <span class="ident">upsert_mode</span>: <span class="ident">UpsertMode::InsertThanUpdate</span>,
-            <span class="ident">table</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; UpsertBuilder&lt;<span class="lifetime">&#39;a</span>&gt; {
+    <span class="kw">pub fn </span>new(table: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            insert_fields: String::new(),
+            insert_values: String::new(),
+            params: Vec::new(),
+            update_setters: String::new(),
+            update_wheres: String::new(),
+            upsert_mode: UpsertMode::InsertThanUpdate,
+            table,
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">add_field</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
-        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">insert_fields</span>.<span class="ident">is_empty</span>() {
-            <span class="self">self</span>.<span class="ident">insert_fields</span>.<span class="ident">push</span>(<span class="string">&#39;,&#39;</span>);
-            <span class="self">self</span>.<span class="ident">insert_values</span>.<span class="ident">push</span>(<span class="string">&#39;,&#39;</span>);
-            <span class="self">self</span>.<span class="ident">update_setters</span>.<span class="ident">push</span>(<span class="string">&#39;,&#39;</span>);
+    <span class="kw">fn </span>add_field(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) {
+        <span class="kw">if </span>!<span class="self">self</span>.insert_fields.is_empty() {
+            <span class="self">self</span>.insert_fields.push(<span class="string">&#39;,&#39;</span>);
+            <span class="self">self</span>.insert_values.push(<span class="string">&#39;,&#39;</span>);
+            <span class="self">self</span>.update_setters.push(<span class="string">&#39;,&#39;</span>);
         }
 
-        <span class="kw">let</span> <span class="ident">param</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">param</span>();
+        <span class="kw">let </span>param = <span class="kw-2">&amp;</span><span class="self">self</span>.param();
 
-        <span class="self">self</span>.<span class="ident">insert_fields</span>.<span class="ident">push_str</span>(<span class="ident">name</span>);
-        <span class="self">self</span>.<span class="ident">insert_values</span>.<span class="ident">push_str</span>(<span class="ident">param</span>);
+        <span class="self">self</span>.insert_fields.push_str(name);
+        <span class="self">self</span>.insert_values.push_str(param);
 
-        <span class="self">self</span>.<span class="ident">update_setters</span>.<span class="ident">push_str</span>(<span class="ident">name</span>);
-        <span class="self">self</span>.<span class="ident">update_setters</span>.<span class="ident">push</span>(<span class="string">&#39;=&#39;</span>);
-        <span class="self">self</span>.<span class="ident">update_setters</span>.<span class="ident">push_str</span>(<span class="ident">param</span>);
+        <span class="self">self</span>.update_setters.push_str(name);
+        <span class="self">self</span>.update_setters.push(<span class="string">&#39;=&#39;</span>);
+        <span class="self">self</span>.update_setters.push_str(param);
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_field_identity</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">IsDefined</span> <span class="op">+</span> <span class="ident">ToSql</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">value</span>: <span class="ident">T</span>) {
-        <span class="kw">if</span> <span class="ident">value</span>.<span class="ident">is_defined</span>() {
-            <span class="self">self</span>.<span class="ident">upsert_mode</span> <span class="op">=</span> <span class="ident">UpsertMode::Update</span>;
-            <span class="self">self</span>.<span class="ident">params</span>.<span class="ident">push</span>(<span class="ident">Parameter::from_owned</span>(<span class="ident">value</span>));
-            <span class="self">self</span>.<span class="ident">add_field</span>(<span class="ident">name</span>);
-        } <span class="kw">else</span> {
-            <span class="self">self</span>.<span class="ident">upsert_mode</span> <span class="op">=</span> <span class="ident">UpsertMode::Insert</span>;
+    <span class="kw">pub fn </span>add_field_identity&lt;T: IsDefined + ToSql&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, value: T) {
+        <span class="kw">if </span>value.is_defined() {
+            <span class="self">self</span>.upsert_mode = UpsertMode::Update;
+            <span class="self">self</span>.params.push(Parameter::from_owned(value));
+            <span class="self">self</span>.add_field(name);
+        } <span class="kw">else </span>{
+            <span class="self">self</span>.upsert_mode = UpsertMode::Insert;
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_field_owned</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">ToSql</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">value</span>: <span class="ident">T</span>) {
-        <span class="self">self</span>.<span class="ident">params</span>.<span class="ident">push</span>(<span class="ident">Parameter::from_owned</span>(<span class="ident">value</span>));
-        <span class="self">self</span>.<span class="ident">add_field</span>(<span class="ident">name</span>);
+    <span class="kw">pub fn </span>add_field_owned&lt;T: ToSql&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, value: T) {
+        <span class="self">self</span>.params.push(Parameter::from_owned(value));
+        <span class="self">self</span>.add_field(name);
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_field_ref</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">ToSql</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">value</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span>) {
-        <span class="self">self</span>.<span class="ident">params</span>.<span class="ident">push</span>(<span class="ident">Parameter::from_ref</span>(<span class="ident">value</span>));
-        <span class="self">self</span>.<span class="ident">add_field</span>(<span class="ident">name</span>);
+    <span class="kw">pub fn </span>add_field_ref&lt;T: ToSql&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T) {
+        <span class="self">self</span>.params.push(Parameter::from_ref(value));
+        <span class="self">self</span>.add_field(name);
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_key_identity</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">IsDefined</span> <span class="op">+</span> <span class="ident">ToSql</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">value</span>: <span class="ident">T</span>) {
-        <span class="kw">if</span> <span class="ident">value</span>.<span class="ident">is_defined</span>() {
-            <span class="self">self</span>.<span class="ident">upsert_mode</span> <span class="op">=</span> <span class="ident">UpsertMode::Update</span>;
-        } <span class="kw">else</span> {
-            <span class="self">self</span>.<span class="ident">upsert_mode</span> <span class="op">=</span> <span class="ident">UpsertMode::Insert</span>;
+    <span class="kw">pub fn </span>add_key_identity&lt;T: IsDefined + ToSql&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, value: T) {
+        <span class="kw">if </span>value.is_defined() {
+            <span class="self">self</span>.upsert_mode = UpsertMode::Update;
+        } <span class="kw">else </span>{
+            <span class="self">self</span>.upsert_mode = UpsertMode::Insert;
         }
 
-        <span class="self">self</span>.<span class="ident">params</span>.<span class="ident">push</span>(<span class="ident">Parameter::from_owned</span>(<span class="ident">value</span>));
+        <span class="self">self</span>.params.push(Parameter::from_owned(value));
 
-        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">update_wheres</span>.<span class="ident">is_empty</span>() {
-            <span class="self">self</span>.<span class="ident">update_wheres</span>.<span class="ident">push_str</span>(<span class="string">&quot;AND&quot;</span>);
+        <span class="kw">if </span>!<span class="self">self</span>.update_wheres.is_empty() {
+            <span class="self">self</span>.update_wheres.push_str(<span class="string">&quot;AND&quot;</span>);
         }
 
-        <span class="kw">let</span> <span class="ident">param</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">param</span>();
+        <span class="kw">let </span>param = <span class="kw-2">&amp;</span><span class="self">self</span>.param();
 
-        <span class="self">self</span>.<span class="ident">add_wheres</span>(<span class="ident">name</span>, <span class="ident">param</span>);
+        <span class="self">self</span>.add_wheres(name, param);
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_key_ref</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">ToSql</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">value</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span>) {
-        <span class="self">self</span>.<span class="ident">params</span>.<span class="ident">push</span>(<span class="ident">Parameter::from_ref</span>(<span class="ident">value</span>));
+    <span class="kw">pub fn </span>add_key_ref&lt;T: ToSql&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T) {
+        <span class="self">self</span>.params.push(Parameter::from_ref(value));
 
-        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">insert_fields</span>.<span class="ident">is_empty</span>() {
-            <span class="self">self</span>.<span class="ident">insert_fields</span>.<span class="ident">push</span>(<span class="string">&#39;,&#39;</span>);
-            <span class="self">self</span>.<span class="ident">insert_values</span>.<span class="ident">push</span>(<span class="string">&#39;,&#39;</span>);
+        <span class="kw">if </span>!<span class="self">self</span>.insert_fields.is_empty() {
+            <span class="self">self</span>.insert_fields.push(<span class="string">&#39;,&#39;</span>);
+            <span class="self">self</span>.insert_values.push(<span class="string">&#39;,&#39;</span>);
         }
 
-        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">update_wheres</span>.<span class="ident">is_empty</span>() {
-            <span class="self">self</span>.<span class="ident">update_wheres</span>.<span class="ident">push_str</span>(<span class="string">&quot;AND&quot;</span>);
+        <span class="kw">if </span>!<span class="self">self</span>.update_wheres.is_empty() {
+            <span class="self">self</span>.update_wheres.push_str(<span class="string">&quot;AND&quot;</span>);
         }
 
-        <span class="kw">let</span> <span class="ident">param</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">param</span>();
+        <span class="kw">let </span>param = <span class="kw-2">&amp;</span><span class="self">self</span>.param();
 
-        <span class="self">self</span>.<span class="ident">insert_fields</span>.<span class="ident">push_str</span>(<span class="ident">name</span>);
-        <span class="self">self</span>.<span class="ident">insert_values</span>.<span class="ident">push_str</span>(<span class="ident">param</span>);
+        <span class="self">self</span>.insert_fields.push_str(name);
+        <span class="self">self</span>.insert_values.push_str(param);
 
-        <span class="self">self</span>.<span class="ident">add_wheres</span>(<span class="ident">name</span>, <span class="ident">param</span>);
+        <span class="self">self</span>.add_wheres(name, param);
     }
 
-    <span class="kw">fn</span> <span class="ident">add_wheres</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">param</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
-        <span class="self">self</span>.<span class="ident">update_wheres</span>.<span class="ident">push</span>(<span class="string">&#39;(&#39;</span>);
-        <span class="self">self</span>.<span class="ident">update_wheres</span>.<span class="ident">push_str</span>(<span class="ident">name</span>);
-        <span class="self">self</span>.<span class="ident">update_wheres</span>.<span class="ident">push</span>(<span class="string">&#39;=&#39;</span>);
-        <span class="self">self</span>.<span class="ident">update_wheres</span>.<span class="ident">push_str</span>(<span class="ident">param</span>);
-        <span class="self">self</span>.<span class="ident">update_wheres</span>.<span class="ident">push</span>(<span class="string">&#39;)&#39;</span>);
+    <span class="kw">fn </span>add_wheres(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str, param: <span class="kw-2">&amp;</span>str) {
+        <span class="self">self</span>.update_wheres.push(<span class="string">&#39;(&#39;</span>);
+        <span class="self">self</span>.update_wheres.push_str(name);
+        <span class="self">self</span>.update_wheres.push(<span class="string">&#39;=&#39;</span>);
+        <span class="self">self</span>.update_wheres.push_str(param);
+        <span class="self">self</span>.update_wheres.push(<span class="string">&#39;)&#39;</span>);
     }
 
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">execute</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">Execute</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">provider</span>: <span class="kw-2">&amp;</span><span class="ident">P</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">sql</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">sql</span>();
-        <span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">params</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span> <span class="kw">as</span> <span class="kw">_</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-        <span class="ident">provider</span>.<span class="ident">execute</span>(<span class="ident">sql</span>, <span class="ident">params</span>.<span class="ident">as_slice</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">pub async fn </span>execute&lt;P: Execute&gt;(<span class="self">self</span>, provider: <span class="kw-2">&amp;</span>P) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="kw">let </span>sql = <span class="self">self</span>.sql();
+        <span class="kw">let </span>params = <span class="self">self</span>.params.iter().map(|v| v <span class="kw">as _</span>).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+        provider.execute(sql, params.as_slice()).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">execute_identity</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">P</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">provider</span>: <span class="kw-2">&amp;</span><span class="ident">P</span>, <span class="ident">key</span>: <span class="kw-2">&amp;mut</span> <span class="ident">K</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">K</span>: <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> <span class="ident">FromSql</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ToSql</span> <span class="op">+</span> <span class="ident">Send</span>,
-        <span class="ident">P</span>: <span class="ident">Execute</span> <span class="op">+</span> <span class="ident">QueryRows</span>,
+    <span class="kw">pub async fn </span>execute_identity&lt;K, P&gt;(<span class="self">self</span>, provider: <span class="kw-2">&amp;</span>P, key: <span class="kw-2">&amp;mut </span>K) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;
+    <span class="kw">where
+        </span>K: <span class="kw">for</span>&lt;<span class="lifetime">&#39;b</span>&gt; FromSql&lt;<span class="lifetime">&#39;b</span>&gt; + ToSql + Send,
+        P: Execute + QueryRows,
     {
-        <span class="kw">let</span> <span class="ident">sql</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">sql</span>();
-        <span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">params</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span> <span class="kw">as</span> <span class="kw">_</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+        <span class="kw">let </span>sql = <span class="self">self</span>.sql();
+        <span class="kw">let </span>params = <span class="self">self</span>.params.iter().map(|v| v <span class="kw">as _</span>).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-        <span class="ident">provider</span>.<span class="ident">execute</span>(<span class="ident">sql</span>, <span class="ident">params</span>.<span class="ident">as_slice</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
+        provider.execute(sql, params.as_slice()).<span class="kw">await</span><span class="question-mark">?</span>;
 
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">upsert_mode</span> <span class="op">==</span> <span class="ident">UpsertMode::Insert</span> {
-            <span class="kw">let</span> <span class="ident">cast_ty</span> <span class="op">=</span> <span class="ident">column_data_to_sql_type</span>(<span class="ident">key</span>.<span class="ident">to_sql</span>())<span class="question-mark">?</span>;
+        <span class="kw">if </span><span class="self">self</span>.upsert_mode == UpsertMode::Insert {
+            <span class="kw">let </span>cast_ty = column_data_to_sql_type(key.to_sql())<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">one</span>: <span class="ident">OneValue</span><span class="op">&lt;</span><span class="ident">K</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">provider</span>
-                .<span class="ident">query_rows</span>(
-                    <span class="macro">format!</span>(<span class="string">&quot;SELECT CAST(@@IDENTITY as {})&quot;</span>, <span class="ident">cast_ty</span>),
+            <span class="kw">let </span>one: OneValue&lt;K&gt; = provider
+                .query_rows(
+                    <span class="macro">format!</span>(<span class="string">&quot;SELECT CAST(@@IDENTITY as {})&quot;</span>, cast_ty),
                     <span class="kw-2">&amp;</span>[],
-                    <span class="op">|</span><span class="ident">row</span><span class="op">|</span> <span class="ident">K::from_sql</span>(<span class="ident">row</span>.<span class="ident">get</span>(<span class="number">0</span>)),
+                    |row| K::from_sql(row.get(<span class="number">0</span>)),
                     <span class="bool-val">true</span>,
                 )
                 .<span class="kw">await</span><span class="question-mark">?</span>;
 
-            <span class="kw-2">*</span><span class="ident">key</span> <span class="op">=</span> <span class="ident">one</span>.<span class="number">0</span>.<span class="ident">ok_or</span>(<span class="ident">storm::Error::EntityNotFound</span>)<span class="question-mark">?</span>;
+            <span class="kw-2">*</span>key = one.<span class="number">0</span>.ok_or(storm::Error::EntityNotFound)<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">insert_sql</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">String</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">insert_fields</span>.<span class="ident">is_empty</span>() {
-            <span class="comment">// when there is no fields in the table except an identity column.</span>
-            <span class="macro">format!</span>(<span class="string">&quot;INSERT INTO {} DEFAULT VALUES&quot;</span>, <span class="self">self</span>.<span class="ident">table</span>)
-        } <span class="kw">else</span> {
+    <span class="kw">fn </span>insert_sql(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+        <span class="kw">if </span><span class="self">self</span>.insert_fields.is_empty() {
+            <span class="comment">// when there is no fields in the table except an identity column.
+            </span><span class="macro">format!</span>(<span class="string">&quot;INSERT INTO {} DEFAULT VALUES&quot;</span>, <span class="self">self</span>.table)
+        } <span class="kw">else </span>{
             <span class="macro">format!</span>(
                 <span class="string">&quot;INSERT INTO {} ({}) VALUES ({})&quot;</span>,
-                <span class="self">self</span>.<span class="ident">table</span>, <span class="self">self</span>.<span class="ident">insert_fields</span>, <span class="self">self</span>.<span class="ident">insert_values</span>
+                <span class="self">self</span>.table, <span class="self">self</span>.insert_fields, <span class="self">self</span>.insert_values
             )
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">param</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">String</span> {
-        <span class="macro">format!</span>(<span class="string">&quot;@p{}&quot;</span>, <span class="self">self</span>.<span class="ident">params</span>.<span class="ident">len</span>())
+    <span class="kw">fn </span>param(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+        <span class="macro">format!</span>(<span class="string">&quot;@p{}&quot;</span>, <span class="self">self</span>.params.len())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">sql</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">String</span> {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">upsert_mode</span> {
-            <span class="ident">UpsertMode::Insert</span> =&gt; <span class="self">self</span>.<span class="ident">insert_sql</span>(),
-            <span class="ident">UpsertMode::InsertThanUpdate</span> =&gt; {
-                <span class="kw">let</span> <span class="ident">update</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">update_sql</span>();
-                <span class="kw">let</span> <span class="ident">insert</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">insert_sql</span>();
+    <span class="kw">pub fn </span>sql(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+        <span class="kw">match </span><span class="self">self</span>.upsert_mode {
+            UpsertMode::Insert =&gt; <span class="self">self</span>.insert_sql(),
+            UpsertMode::InsertThanUpdate =&gt; {
+                <span class="kw">let </span>update = <span class="self">self</span>.update_sql();
+                <span class="kw">let </span>insert = <span class="self">self</span>.insert_sql();
 
-                <span class="kw">if</span> <span class="ident">update</span>.<span class="ident">is_empty</span>() {
+                <span class="kw">if </span>update.is_empty() {
                     <span class="macro">format!</span>(
                         <span class="string">&quot;
                         BEGIN TRY
@@ -433,9 +433,9 @@
                             IF ERROR_NUMBER() NOT IN (2601, 2627) THROW;
                         END CATCH
                         &quot;</span>,
-                        <span class="ident">insert</span>
+                        insert
                     )
-                } <span class="kw">else</span> {
+                } <span class="kw">else </span>{
                     <span class="macro">format!</span>(
                         <span class="string">&quot;
                         {update}
@@ -454,61 +454,61 @@
                             END CATCH
                         END
                     &quot;</span>,
-                        <span class="ident">insert</span> <span class="op">=</span> <span class="ident">insert</span>,
-                        <span class="ident">update</span> <span class="op">=</span> <span class="ident">update</span>,
+                        insert = insert,
+                        update = update,
                     )
                 }
             }
-            <span class="ident">UpsertMode::Update</span> =&gt; <span class="self">self</span>.<span class="ident">update_sql</span>(),
+            UpsertMode::Update =&gt; <span class="self">self</span>.update_sql(),
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">update_sql</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">String</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">update_setters</span>.<span class="ident">is_empty</span>() {
-            <span class="ident">String::new</span>()
-        } <span class="kw">else</span> {
+    <span class="kw">fn </span>update_sql(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+        <span class="kw">if </span><span class="self">self</span>.update_setters.is_empty() {
+            String::new()
+        } <span class="kw">else </span>{
             <span class="macro">format!</span>(
                 <span class="string">&quot;UPDATE {} SET {} WHERE {}&quot;</span>,
-                <span class="self">self</span>.<span class="ident">table</span>, <span class="self">self</span>.<span class="ident">update_setters</span>, <span class="self">self</span>.<span class="ident">update_wheres</span>
+                <span class="self">self</span>.table, <span class="self">self</span>.update_setters, <span class="self">self</span>.update_wheres
             )
         }
     }
 }
 
-<span class="kw">struct</span> <span class="ident">OneValue</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>);
+<span class="kw">struct </span>OneValue&lt;T&gt;(<span class="prelude-ty">Option</span>&lt;T&gt;);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">OneValue</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident">OneValue</span>(<span class="prelude-val">None</span>)
+<span class="kw">impl</span>&lt;T&gt; Default <span class="kw">for </span>OneValue&lt;T&gt; {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        OneValue(<span class="prelude-val">None</span>)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">OneValue</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">extend</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">I</span>) {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">is_none</span>() {
-            <span class="self">self</span>.<span class="number">0</span> <span class="op">=</span> <span class="ident">iter</span>.<span class="ident">into_iter</span>().<span class="ident">next</span>();
+<span class="kw">impl</span>&lt;T&gt; Extend&lt;T&gt; <span class="kw">for </span>OneValue&lt;T&gt; {
+    <span class="kw">fn </span>extend&lt;I: IntoIterator&lt;Item = T&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iter: I) {
+        <span class="kw">if </span><span class="self">self</span>.<span class="number">0</span>.is_none() {
+            <span class="self">self</span>.<span class="number">0 </span>= iter.into_iter().next();
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">enum</span> <span class="ident">UpsertMode</span> {
-    <span class="ident">InsertThanUpdate</span>,
-    <span class="ident">Insert</span>,
-    <span class="ident">Update</span>,
+<span class="attribute">#[derive(Clone, Copy, Eq, PartialEq)]
+</span><span class="kw">enum </span>UpsertMode {
+    InsertThanUpdate,
+    Insert,
+    Update,
 }
 
-<span class="kw">fn</span> <span class="ident">column_data_to_sql_type</span>(<span class="ident">data</span>: <span class="ident">ColumnData</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> {
-    <span class="kw">match</span> <span class="ident">data</span> {
-        <span class="ident">ColumnData::I16</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="string">&quot;smallint&quot;</span>),
-        <span class="ident">ColumnData::I32</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="string">&quot;int&quot;</span>),
-        <span class="ident">ColumnData::I64</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="string">&quot;bigint&quot;</span>),
-        <span class="ident">ColumnData::U8</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="string">&quot;tinyint&quot;</span>),
-        <span class="kw">_</span> =&gt; {
+<span class="kw">fn </span>column_data_to_sql_type(data: ColumnData&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">match </span>data {
+        ColumnData::I16(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="string">&quot;smallint&quot;</span>),
+        ColumnData::I32(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="string">&quot;int&quot;</span>),
+        ColumnData::I64(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="string">&quot;bigint&quot;</span>),
+        ColumnData::U8(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="string">&quot;tinyint&quot;</span>),
+        <span class="kw">_ </span>=&gt; {
             <span class="macro">error!</span>(<span class="string">&quot;key type is not supported as identity.&quot;</span>);
-            <span class="prelude-val">Err</span>(<span class="ident">Error::Internal</span>)
+            <span class="prelude-val">Err</span>(Error::Internal)
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm_mssql" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm_mssql" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>
