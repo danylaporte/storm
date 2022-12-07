@@ -1,4 +1,4 @@
-use crate::{Entity, Log};
+use crate::{Entity, Log, OnRemove};
 use attached::Var;
 use parking_lot::RwLock;
 
@@ -32,12 +32,14 @@ fn register_deps(deps: &'static Deps, f: Box<dyn Fn(&mut Vars) + Send + Sync + '
     deps.write().push(f);
 }
 
-pub trait EntityAccessor: Sized + 'static {
+pub trait EntityAccessor: Entity + Sized + 'static {
     type Tbl: Send + Sync;
 
     fn entity_var() -> &'static TblVar<Self::Tbl>;
 
     fn entity_deps() -> &'static Deps;
+
+    fn on_remove() -> &'static OnRemove<Self>;
 }
 
 pub trait LogAccessor: Entity + Sized + 'static {

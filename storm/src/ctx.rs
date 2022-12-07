@@ -940,6 +940,18 @@ where
     fn remove<'c>(&'c mut self, k: E::Key, track: &'c E::TrackCtx) -> BoxFuture<'c, Result<()>> {
         Box::pin(
             async move {
+                if log::<E>(&self.ctx.log_ctx)
+                    .get(&k)
+                    .map_or(false, |e| match e {
+                        LogState::Inserted(_) => false,
+                        LogState::Removed => true,
+                    })
+                {
+                    return Ok(());
+                }
+
+                E::on_remove().__call(self.ctx, &k, track).await?;
+
                 self.ctx.provider.delete(&k).await?;
 
                 log_mut::<E>(&mut self.ctx.log_ctx).remove(&k);
@@ -1065,6 +1077,10 @@ where
 }
 
 struct EntityLogApplier<E: Entity + EntityAccessor + LogAccessor>(PhantomData<E>);
+
+fn log<E: Entity + LogAccessor>(logs: &LogsVar) -> &Log<E> {
+    logs.get_or_init(E::log_var(), Default::default)
+}
 
 fn log_mut<E: Entity + LogAccessor>(logs: &mut LogsVar) -> &mut Log<E> {
     logs.get_or_init_mut(E::log_var(), Default::default)

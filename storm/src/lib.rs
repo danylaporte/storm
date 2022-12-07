@@ -24,6 +24,7 @@ mod iterator_ext;
 mod length;
 mod logs;
 pub mod mem;
+mod on_remove;
 mod one_to_many;
 pub mod prelude;
 pub mod provider;
@@ -63,6 +64,7 @@ pub use iterator_ext::*;
 pub use logs::Logs;
 #[cfg(feature = "telemetry")]
 pub use metrics;
+pub use on_remove::{OnRemove, RemovingHandler};
 pub use once_cell::sync::OnceCell;
 pub use one_to_many::{OneToMany, OneToManyFromIter};
 pub use parking_lot;

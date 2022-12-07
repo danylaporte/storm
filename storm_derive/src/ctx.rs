@@ -33,7 +33,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         #vis type #table_alias = #coll_ty;
 
         #[static_init::dynamic]
-        static #tbl_var: (storm::TblVar<#table_alias>, storm::Deps) = {
+        static #tbl_var: (storm::TblVar<#table_alias>, storm::Deps, storm::OnRemove<#entity>) = {
             #gc_collect
             Default::default()
         };
@@ -55,6 +55,11 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             #[inline]
             fn entity_deps() -> &'static storm::Deps {
                 &#tbl_var.1
+            }
+
+            #[inline]
+            fn on_remove() -> &'static storm::OnRemove<Self> {
+                &#tbl_var.2
             }
         }
 
