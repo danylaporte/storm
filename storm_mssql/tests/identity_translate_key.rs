@@ -76,7 +76,7 @@ async fn identity_translate_key() -> storm::Result<()> {
 
         assert_eq!(v.name.en, "english");
 
-        println!("{:?}", v);
+        println!("{v:?}");
         Ok(())
     })
     .await
@@ -142,7 +142,7 @@ impl<'a> FromSql<'a> for Culture {
         match col {
             Some(0) => Ok(Culture::Fr),
             Some(1) => Ok(Culture::En),
-            Some(v) => Err(Error::ConvertFailed(format!("Culture `{}` invalid.", v))),
+            Some(v) => Err(Error::ConvertFailed(format!("Culture `{v}` invalid."))),
             None => Err(Error::ColumnNull),
         }
     }

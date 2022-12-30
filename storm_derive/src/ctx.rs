@@ -23,50 +23,53 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let table_name_lit = LitStr::new(&entity_name, entity.span());
     let table_alias = Ident::new(&table_name, entity.span());
 
-    let screaming_snake_case = entity_name.to_screaming_snake_case();
-    let tbl_var = Ident::new(&format!("{}_TBL", screaming_snake_case), input.ident.span());
-    let log_var = Ident::new(&format!("{}_TRX", screaming_snake_case), input.ident.span());
+    let tbl_var = Ident::new(
+        &format!("___{}_tbl", entity_name.to_snake_case()),
+        input.ident.span(),
+    );
     let coll_ty = args.collection.ty(entity);
     let (gc, gc_collect) = gc(input)?;
 
     Ok(quote! {
         #vis type #table_alias = #coll_ty;
 
-        #[static_init::dynamic]
-        static #tbl_var: (storm::TblVar<#table_alias>, storm::Deps, storm::OnRemove<#entity>) = {
-            #gc_collect
-            Default::default()
-        };
+        fn #tbl_var() -> &'static (storm::TblVar<#table_alias>, storm::Deps, storm::OnRemove<#entity>) {
+            static CELL: storm::OnceCell<(storm::TblVar<#table_alias>, storm::Deps, storm::OnRemove<#entity>)> = storm::OnceCell::new();
 
-        #[static_init::dynamic]
-        static #log_var: storm::LogVar<storm::Log<#entity>> = {
-            storm::register_apply_log::<#entity>();
-            Default::default()
-        };
+            CELL.get_or_init(|| {
+                #gc_collect
+                Default::default()
+            })
+        }
 
         impl storm::EntityAccessor for #entity {
             type Tbl = #table_alias;
 
             #[inline]
             fn entity_var() -> &'static storm::TblVar<Self::Tbl> {
-                &#tbl_var.0
+                &#tbl_var().0
             }
 
             #[inline]
             fn entity_deps() -> &'static storm::Deps {
-                &#tbl_var.1
+                &#tbl_var().1
             }
 
             #[inline]
             fn on_remove() -> &'static storm::OnRemove<Self> {
-                &#tbl_var.2
+                &#tbl_var().2
             }
         }
 
         impl storm::LogAccessor for #entity {
             #[inline]
             fn log_var() -> &'static storm::LogVar<storm::Log<Self>> {
-                &#log_var
+                static CELL: storm::OnceCell<storm::LogVar<storm::Log<#entity>>> = storm::OnceCell::new();
+
+                CELL.get_or_init(|| {
+                    storm::register_apply_log::<#entity>();
+                    storm::LogVar::default()
+                })
             }
         }
 

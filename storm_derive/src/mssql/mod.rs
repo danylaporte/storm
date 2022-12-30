@@ -65,7 +65,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let mut load = LoadFields::new(ident, &attrs);
     let mut translated = LoadTranslated::new(ident, &attrs);
     let table_name = LitStr::new(&attrs.table, attrs.table.span());
-    let enum_fields_ident = Ident::new(&format!("{}Fields", ident), ident.span());
+    let enum_fields_ident = Ident::new(&format!("{ident}Fields"), ident.span());
 
     for key in attrs.keys(&mut errors) {
         filter_sql.add_filter(key);
@@ -182,7 +182,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let identity_col = attrs.identity.to_lowercase();
     let table_name = LitStr::new(&attrs.table, attrs.table.span());
     let mut enum_fields = Vec::new();
-    let enum_fields_ident = Ident::new(&format!("{}Fields", ident), ident.span());
+    let enum_fields_ident = Ident::new(&format!("{ident}Fields"), ident.span());
     let vis = &input.vis;
 
     let keys = attrs.keys(&mut errors);
@@ -225,7 +225,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
 
         if is_translated(&field.ty) {
             translated.add_field(field, column);
-            let name_bk = Ident::new(&format!("{}_bk", ident), Span::call_site());
+            let name_bk = Ident::new(&format!("{ident}_bk"), Span::call_site());
             translated_backup.push(
                 quote! { let #name_bk = std::mem::replace(&mut v.#ident, Default::default()); },
             );

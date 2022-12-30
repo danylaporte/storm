@@ -248,15 +248,17 @@ gc!(tuple A:0,B:1,C:2,D:3,E:4,F:5,G:6,H:7,I:8,J:9);
 
 #[allow(clippy::type_complexity)]
 pub mod collectables {
-    use crate::Ctx;
+    use crate::{Ctx, OnceCell};
     use parking_lot::RwLock;
 
-    #[static_init::dynamic]
-    static FUNCS: RwLock<Vec<Box<dyn Fn(&mut Ctx) + Send + Sync>>> = Default::default();
+    fn funcs() -> &'static RwLock<Vec<Box<dyn Fn(&mut Ctx) + Send + Sync>>> {
+        static CELL: OnceCell<RwLock<Vec<Box<dyn Fn(&mut Ctx) + Send + Sync>>>> = OnceCell::new();
+        CELL.get_or_init(Default::default)
+    }
 
     #[tracing::instrument(level = "debug", skip(ctx))]
     pub fn collect(ctx: &mut Ctx) {
-        FUNCS.read().iter().for_each(|f| f(ctx));
+        funcs().read().iter().for_each(|f| f(ctx));
     }
 
     pub fn register<F>(f: F)
@@ -267,6 +269,6 @@ pub mod collectables {
     }
 
     fn register_impl(f: Box<dyn Fn(&mut Ctx) + Send + Sync>) {
-        FUNCS.write().push(f);
+        funcs().write().push(f);
     }
 }

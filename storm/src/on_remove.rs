@@ -2,28 +2,28 @@ use crate::{BoxFuture, CtxTransaction, Entity, Result};
 use std::sync::Arc;
 
 pub trait RemovingHandler<E: Entity> {
-    fn handle_removing<'a, 'b>(
-        &'b self,
-        trx: &'b mut CtxTransaction<'a>,
-        key: &'b E::Key,
-        track_ctx: &'b E::TrackCtx,
-    ) -> BoxFuture<'b, Result<()>>;
+    fn handle_removing<'a>(
+        &'a self,
+        trx: &'a mut CtxTransaction<'_>,
+        key: &'a E::Key,
+        track_ctx: &'a E::TrackCtx,
+    ) -> BoxFuture<'a, Result<()>>;
 }
 
 impl<E: Entity, T> RemovingHandler<E> for T
 where
-    T: for<'a, 'b> Fn(
-        &'b mut CtxTransaction<'a>,
-        &'b E::Key,
-        &'b E::TrackCtx,
-    ) -> BoxFuture<'b, Result<()>>,
+    T: for<'a> Fn(
+        &'a mut CtxTransaction<'_>,
+        &'a E::Key,
+        &'a E::TrackCtx,
+    ) -> BoxFuture<'a, Result<()>>,
 {
-    fn handle_removing<'a, 'b>(
-        &'b self,
-        trx: &'b mut CtxTransaction<'a>,
-        key: &'b <E as Entity>::Key,
-        track_ctx: &'b <E as Entity>::TrackCtx,
-    ) -> BoxFuture<'b, Result<()>> {
+    fn handle_removing<'a>(
+        &'a self,
+        trx: &'a mut CtxTransaction<'_>,
+        key: &'a <E as Entity>::Key,
+        track_ctx: &'a <E as Entity>::TrackCtx,
+    ) -> BoxFuture<'a, Result<()>> {
         (self)(trx, key, track_ctx)
     }
 }
@@ -34,9 +34,9 @@ pub struct OnRemove<E>(parking_lot::Mutex<Arc<Box<[ArcRemovingHandler<E>]>>>);
 
 impl<E: Entity> OnRemove<E> {
     #[doc(hidden)]
-    pub fn __call<'a, 'b>(
+    pub fn __call<'b>(
         &'b self,
-        trx: &'b mut CtxTransaction<'a>,
+        trx: &'b mut CtxTransaction<'_>,
         key: &'b E::Key,
         track_ctx: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<()>> {

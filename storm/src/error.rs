@@ -51,7 +51,7 @@ impl Display for Error {
             Self::AsyncCellLock(e) => Display::fmt(e, f),
             Self::ClientInError => f.write_str("Client in error state."),
             Self::ColumnNull => f.write_str("Column is null."),
-            Self::ConvertFailed(s) => f.write_str(&format!("Convert failed: `{}`", s)),
+            Self::ConvertFailed(s) => f.write_str(&format!("Convert failed: `{s}`")),
             Self::EntityNotFound => f.write_str("Entity not found."),
             Self::Internal => f.write_str("Internal."),
             Self::NotInTransaction => f.write_str("Not in transaction."),

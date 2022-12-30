@@ -37,8 +37,10 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
     let index_name = Ident::new(name_str, name.span());
     let index_name_lit = LitStr::new(name_str, name.span());
 
-    let screaming_snake = name.to_string().to_screaming_snake_case();
-    let static_var = Ident::new(&format!("{}_VAR", screaming_snake), name.span());
+    let static_var = Ident::new(
+        &format!("___{}_var", name.to_string().to_snake_case()),
+        name.span(),
+    );
 
     let ty = match &f.sig.output {
         ReturnType::Type(_, t) => t,
@@ -69,7 +71,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
 
     for (index, arg) in args.iter().enumerate() {
         let ty = unref(&arg.ty);
-        let ident = Ident::new(&format!("var{}", index), arg.span());
+        let ident = Ident::new(&format!("var{index}"), arg.span());
 
         if ty.is_storm_ctx() {
             as_ref_decl.push(quote!(let #ident = self.ctx;));
@@ -104,24 +106,26 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
     let (gc, gc_collect) = gc(&index_name, ty);
 
     quote! {
-        #[static_init::dynamic]
-        static #static_var: (storm::TblVar<#index_name>, storm::Deps) = {
-            #(#deps)*
-            #gc_collect
-            Default::default()
-        };
+        fn #static_var() -> &'static (storm::TblVar<#index_name>, storm::Deps) {
+            static CELL: storm::OnceCell<(storm::TblVar<#index_name>, storm::Deps)> = storm::OnceCell::new();
+            CELL.get_or_init(|| {
+                #(#deps)*
+                #gc_collect
+                Default::default()
+            })
+        }
 
         #vis struct #index_name(#ty, storm::VersionTag);
 
         impl storm::Accessor for #index_name {
             #[inline]
             fn var() -> &'static storm::TblVar<Self> {
-                &#static_var.0
+                &#static_var().0
             }
 
             #[inline]
             fn deps() -> &'static storm::Deps {
-                &#static_var.1
+                &#static_var().1
             }
         }
 

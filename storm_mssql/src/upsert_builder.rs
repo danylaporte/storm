@@ -131,7 +131,7 @@ impl<'a> UpsertBuilder<'a> {
 
             let one: OneValue<K> = provider
                 .query_rows(
-                    format!("SELECT CAST(@@IDENTITY as {})", cast_ty),
+                    format!("SELECT CAST(@@IDENTITY as {cast_ty})"),
                     &[],
                     |row| K::from_sql(row.get(0)),
                     true,
@@ -171,13 +171,12 @@ impl<'a> UpsertBuilder<'a> {
                     format!(
                         "
                         BEGIN TRY
-                        {}
+                        {insert}
                         END TRY
                         BEGIN CATCH
                             IF ERROR_NUMBER() NOT IN (2601, 2627) THROW;
                         END CATCH
-                        ",
-                        insert
+                        "
                     )
                 } else {
                     format!(
@@ -197,9 +196,7 @@ impl<'a> UpsertBuilder<'a> {
                                     THROW;
                             END CATCH
                         END
-                    ",
-                        insert = insert,
-                        update = update,
+                    "
                     )
                 }
             }

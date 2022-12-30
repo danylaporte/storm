@@ -74,7 +74,7 @@ async fn translated_flow() -> storm::Result<()> {
         let ctx = ctx.read().await?;
         let v = ctx.tbl_of::<Label>().await?.get(&id);
 
-        println!("{:?}", v);
+        println!("{v:?}");
         Ok(())
     })
     .await
@@ -176,7 +176,7 @@ impl<'a> FromSql<'a> for Culture {
         match col {
             Some(0) => Ok(Culture::Fr),
             Some(1) => Ok(Culture::En),
-            Some(v) => Err(Error::ConvertFailed(format!("Culture `{}` invalid.", v))),
+            Some(v) => Err(Error::ConvertFailed(format!("Culture `{v}` invalid."))),
             None => Err(Error::ColumnNull),
         }
     }

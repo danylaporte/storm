@@ -153,7 +153,7 @@ impl SelectBuilder {
         let where_clause = if where_clause.is_empty() {
             where_clause
         } else {
-            wc = format!(" WHERE {}", where_clause);
+            wc = format!(" WHERE {where_clause}");
             &wc
         };
 
