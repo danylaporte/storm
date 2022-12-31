@@ -1,8 +1,6 @@
 use crate::Gc;
-use fxhash::FxHashSet;
-use rayon::iter::ParallelIterator;
 use std::{cmp::Ordering, hash::Hash, iter::FromIterator, ops::Index};
-use vec_map::VecMap;
+use vec_map::{Entry, VecMap};
 
 pub struct OneToMany<ONE, MANY>(VecMap<ONE, Box<[MANY]>>);
 
@@ -27,7 +25,7 @@ where
     const SUPPORT_GC: bool = MANY::SUPPORT_GC;
 
     fn gc(&mut self, ctx: &crate::GcCtx) {
-        self.0.par_iter_mut().for_each(|(_, item)| item.gc(ctx));
+        self.0.iter_mut().for_each(|(_, item)| item.gc(ctx));
     }
 }
 
@@ -61,14 +59,9 @@ where
     MANY: Eq + Hash,
 {
     fn from_iter<T: IntoIterator<Item = (ONE, MANY)>>(iter: T) -> Self {
-        let mut map = VecMap::new();
-
-        for (one, many) in iter {
-            map.entry(one).or_insert_with(Vec::default).push(many);
-        }
-
         Self(
-            map.into_iter()
+            collect_vec_map(iter.into_iter())
+                .into_iter()
                 .map(|(one, many)| (one, many.into_boxed_slice()))
                 .collect(),
         )
@@ -79,29 +72,6 @@ pub trait OneToManyFromIter<ONE, MANY>: IntoIterator<Item = (ONE, MANY)> + Sized
 where
     ONE: Clone + From<usize> + Into<usize>,
 {
-    /// Collect and dedup items using an FxHashSet internally.
-    fn collect_dedup(self) -> OneToMany<ONE, MANY>
-    where
-        MANY: Eq + Hash,
-    {
-        let mut map = VecMap::new();
-
-        for (one, many) in self {
-            map.entry(one)
-                .or_insert_with(FxHashSet::default)
-                .insert(many);
-        }
-
-        OneToMany(
-            map.into_iter()
-                .map(|(one, many)| {
-                    let many = many.into_iter().collect::<Vec<_>>();
-                    (one, many.into_boxed_slice())
-                })
-                .collect(),
-        )
-    }
-
     /// Collect the items and sort them.
     fn collect_sort<F>(self) -> OneToMany<ONE, MANY>
     where
@@ -115,14 +85,9 @@ where
     where
         F: Fn(&MANY, &MANY) -> Ordering,
     {
-        let mut map = VecMap::new();
-
-        for (one, many) in self {
-            map.entry(one).or_insert_with(Vec::default).push(many);
-        }
-
         OneToMany(
-            map.into_iter()
+            collect_vec_map(self.into_iter())
+                .into_iter()
                 .map(|(one, mut many)| {
                     many.sort_unstable_by(&cmp);
                     (one, many.into_boxed_slice())
@@ -153,17 +118,12 @@ where
     where
         F: Fn(&MANY, &MANY) -> Ordering,
     {
-        let mut map = VecMap::new();
-
-        for (one, many) in self {
-            map.entry(one).or_insert_with(Vec::default).push(many);
-        }
-
         OneToMany(
-            map.into_iter()
+            collect_vec_map(self.into_iter())
+                .into_iter()
                 .map(|(one, mut many)| {
                     many.sort_unstable_by(&cmp);
-                    many.dedup_by(|a, b| cmp(a, b) == Ordering::Equal);
+                    many.dedup_by(|a, b| cmp(a, b).is_eq());
                     (one, many.into_boxed_slice())
                 })
                 .collect(),
@@ -186,4 +146,23 @@ where
     T: IntoIterator<Item = (ONE, MANY)> + Sized,
     ONE: Clone + From<usize> + Into<usize>,
 {
+}
+
+fn collect_vec_map<ONE, MANY, I>(iter: I) -> VecMap<ONE, Vec<MANY>>
+where
+    I: Iterator<Item = (ONE, MANY)>,
+    ONE: Clone + Into<usize>,
+{
+    iter.fold(VecMap::<ONE, Vec<MANY>>::new(), |mut map, (one, many)| {
+        match map.entry(one) {
+            Entry::Occupied(mut o) => {
+                o.get_mut().push(many);
+            }
+            Entry::Vacant(v) => {
+                v.insert(vec![many]);
+            }
+        }
+
+        map
+    })
 }
