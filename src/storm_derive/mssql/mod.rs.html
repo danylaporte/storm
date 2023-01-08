@@ -530,6 +530,15 @@
 <span id="530">530</span>
 <span id="531">531</span>
 <span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
 </pre><pre class="rust"><code><span class="kw">mod </span>attrs;
 <span class="kw">mod </span>builders;
 <span class="kw">mod </span>delete;
@@ -566,7 +575,7 @@
             <span class="attribute">#[tracing::instrument(name = <span class="string">&quot;delete&quot;</span>, level = <span class="string">&quot;debug&quot;</span>, skip(<span class="self">self</span>, k), fields(table = #table_name))]
             </span><span class="kw">fn </span>delete&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>&lt;#ident <span class="kw">as </span>storm::Entity&gt;::Key) -&gt; storm::BoxFuture&lt;<span class="lifetime">&#39;a</span>, storm::Result&lt;()&gt;&gt; {
                 Box::pin(<span class="kw">async move </span>{
-                    <span class="kw">let </span>provider: <span class="kw-2">&amp;</span>storm_mssql::MssqlProvider = <span class="self">self</span>.container().provide(#provider).<span class="kw">await</span><span class="question-mark">?</span>;
+                    <span class="kw">let </span>provider: <span class="kw-2">&amp;</span>storm_mssql::MssqlProvider = <span class="macro">storm::tri!</span>(<span class="self">self</span>.container().provide(#provider).<span class="kw">await</span>);
 
                     #metrics_start
 
@@ -585,6 +594,8 @@
     <span class="kw">let </span>ident = <span class="kw-2">&amp;</span>input.ident;
     <span class="kw">let </span>attrs = <span class="macro">try_ts!</span>(TypeAttrs::from_derive_input(input).map_err(|e| e.write_errors()));
     <span class="kw">let </span>rename_all = attrs.rename_all;
+
+    <span class="kw">let </span>load_fn = Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;__load_{ident}&quot;</span>), Span::call_site());
 
     <span class="kw">let </span>load_test = Ident::new(
         <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;test_{}_load&quot;</span>, ident.to_string().to_snake_case()),
@@ -650,8 +661,8 @@
             <span class="attribute">#[cfg(test)]
             #[tokio::test]
             </span><span class="kw">async fn </span>#load_test() -&gt; storm::Result&lt;()&gt; {
-                <span class="kw">let </span>provider = storm_mssql::create_provider_container_from_env(<span class="string">&quot;DB&quot;</span>, #provider)<span class="question-mark">?</span>;
-                storm::provider::LoadAll::&lt;#ident, <span class="kw">_</span>, storm::provider::LoadNothing&gt;::load_all(<span class="kw-2">&amp;</span>provider, <span class="kw-2">&amp;</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
+                <span class="kw">let </span>provider = <span class="macro">storm::tri!</span>(storm_mssql::create_provider_container_from_env(<span class="string">&quot;DB&quot;</span>, #provider));
+                <span class="macro">storm::tri!</span>(storm::provider::LoadAll::&lt;#ident, <span class="kw">_</span>, storm::provider::LoadNothing&gt;::load_all(<span class="kw-2">&amp;</span>provider, <span class="kw-2">&amp;</span>()).<span class="kw">await</span>);
                 <span class="prelude-val">Ok</span>(())
             }
         }
@@ -662,23 +673,30 @@
             <span class="macro">tracing::debug_span!</span>(<span class="string">&quot;load_all&quot;</span>, args = <span class="question-mark">?</span>args, table = #table_name, err = tracing::field::Empty)
         }
 
+        <span class="kw">fn </span>#load_fn&lt;<span class="lifetime">&#39;a</span>, C&gt;(provider: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>storm::provider::ProviderContainer, sql: std::borrow::Cow&lt;<span class="lifetime">&#39;a</span>, str&gt;, params: std::borrow::Cow&lt;<span class="lifetime">&#39;a</span>, [<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>storm_mssql::ToSql]&gt;, args: storm::provider::LoadArgs) -&gt; storm::BoxFuture&lt;<span class="lifetime">&#39;a</span>, storm::Result&lt;C&gt;&gt;
+        <span class="kw">where
+            </span>C: Default + Extend&lt;(&lt;#ident <span class="kw">as </span>storm::Entity&gt;::Key, #ident)&gt; #translated_where + Send + <span class="lifetime">&#39;static</span>,
+        {
+            <span class="kw">let </span>span = #instrument_ident(<span class="kw-2">&amp;</span>args);
+
+            Box::pin(storm::InstrumentErr::instrument_err(<span class="kw">async move </span>{
+                <span class="kw">let </span>provider: <span class="kw-2">&amp;</span>storm_mssql::MssqlProvider = <span class="macro">storm::tri!</span>(provider.provide(#provider).<span class="kw">await</span>);
+                #metrics_start
+                #load
+                #translated
+                #metrics_end
+                <span class="prelude-val">Ok</span>(map)
+            }, span))
+        }
+
         <span class="kw">impl</span>&lt;C, FILTER&gt; storm::provider::LoadAll&lt;#ident, FILTER, C&gt; <span class="kw">for </span>storm::provider::ProviderContainer
         <span class="kw">where
             </span>C: Default + Extend&lt;(&lt;#ident <span class="kw">as </span>storm::Entity&gt;::Key, #ident)&gt; #translated_where + Send + <span class="lifetime">&#39;static</span>,
             FILTER: storm_mssql::FilterSql,
         {
             <span class="kw">fn </span>load_all_with_args&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, filter: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>FILTER, args: storm::provider::LoadArgs) -&gt; storm::BoxFuture&lt;<span class="lifetime">&#39;a</span>, storm::Result&lt;C&gt;&gt; {
-                <span class="kw">let </span>span = #instrument_ident(<span class="kw-2">&amp;</span>args);
-
-                Box::pin(storm::InstrumentErr::instrument_err(<span class="kw">async move </span>{
-                    <span class="kw">let </span>provider: <span class="kw-2">&amp;</span>storm_mssql::MssqlProvider = <span class="self">self</span>.provide(#provider).<span class="kw">await</span><span class="question-mark">?</span>;
-                    <span class="kw">let </span>(sql, params) = storm_mssql::FilterSql::filter_sql(filter, <span class="number">0</span>);
-                    #metrics_start
-                    #load
-                    #translated
-                    #metrics_end
-                    <span class="prelude-val">Ok</span>(map)
-                }, span))
+                <span class="kw">let </span>(sql, params) = storm_mssql::FilterSql::filter_sql(filter, <span class="number">0</span>);
+                #load_fn(<span class="self">self</span>, sql, params, args)
             }
         }
 
@@ -687,7 +705,7 @@
             </span><span class="kw">fn </span>load_one_with_args&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>&lt;#ident <span class="kw">as </span>Entity&gt;::Key, args: storm::provider::LoadArgs) -&gt; storm::BoxFuture&lt;<span class="lifetime">&#39;a</span>, storm::Result&lt;<span class="prelude-ty">Option</span>&lt;#ident&gt;&gt;&gt; {
                 Box::pin(<span class="kw">async move </span>{
                     <span class="kw">let </span>filter = #filter_sql;
-                    <span class="kw">let </span>v: storm::provider::LoadOneInternal&lt;#ident&gt; = storm::provider::LoadAll::load_all_with_args(<span class="self">self</span>, <span class="kw-2">&amp;</span>filter, args).<span class="kw">await</span><span class="question-mark">?</span>;
+                    <span class="kw">let </span>v: storm::provider::LoadOneInternal&lt;#ident&gt; = <span class="macro">storm::tri!</span>(storm::provider::LoadAll::load_all_with_args(<span class="self">self</span>, <span class="kw-2">&amp;</span>filter, args).<span class="kw">await</span>);
                     <span class="prelude-val">Ok</span>(v.into_inner())
                 })
             }
@@ -872,7 +890,7 @@
 
         <span class="macro">quote! </span>{
             #backup
-            <span class="kw-2">*</span>v = storm::provider::LoadOne::&lt;#ident&gt;::load_one_with_args(<span class="self">self</span>.container(), <span class="kw-2">&amp;</span>k, storm::provider::LoadArgs { use_transaction: <span class="bool-val">true </span>}).<span class="kw">await</span><span class="question-mark">?</span>.ok_or(storm::Error::EntityNotFound)<span class="question-mark">?</span>;
+            <span class="kw-2">*</span>v = <span class="macro">storm::tri!</span>(storm::provider::LoadOne::&lt;#ident&gt;::load_one_with_args(<span class="self">self</span>.container(), <span class="kw-2">&amp;</span>k, storm::provider::LoadArgs { use_transaction: <span class="bool-val">true </span>}).<span class="kw">await</span>.and_then(|v| v.ok_or(storm::Error::EntityNotFound)));
             #restore
         }
     } <span class="kw">else </span>{
@@ -880,9 +898,9 @@
     };
 
     <span class="kw">let </span>builder_invoke = <span class="kw">if </span>is_identity_key {
-        <span class="macro">quote!</span>(builder.execute_identity(provider, k).<span class="kw">await</span><span class="question-mark">?</span>;)
+        <span class="macro">quote!</span>(<span class="macro">storm::tri!</span>(builder.execute_identity(provider, k).<span class="kw">await</span>);)
     } <span class="kw">else </span>{
-        <span class="macro">quote!</span>(builder.execute(provider).<span class="kw">await</span><span class="question-mark">?</span>;)
+        <span class="macro">quote!</span>(<span class="macro">storm::tri!</span>(builder.execute(provider).<span class="kw">await</span>);)
     };
 
     <span class="kw">let </span>save_part = save_part.ts();
@@ -898,7 +916,7 @@
             <span class="attribute">#[tracing::instrument(name = <span class="string">&quot;upsert&quot;</span>, level = <span class="string">&quot;debug&quot;</span>, skip(<span class="self">self</span>, k, v), fields(table = #table_name))]
             </span>#upsert_sig {
                 Box::pin(<span class="kw">async move </span>{
-                    <span class="kw">let </span>provider: <span class="kw-2">&amp;</span>storm_mssql::MssqlProvider = <span class="self">self</span>.container().provide(#provider).<span class="kw">await</span><span class="question-mark">?</span>;
+                    <span class="kw">let </span>provider: <span class="kw-2">&amp;</span>storm_mssql::MssqlProvider = <span class="macro">storm::tri!</span>(<span class="self">self</span>.container().provide(#provider).<span class="kw">await</span>);
                     <span class="kw">let </span><span class="kw-2">mut </span>builder = storm_mssql::UpsertBuilder::new(#table);
 
                     #metrics_start
@@ -1030,13 +1048,13 @@
 <span class="kw">fn </span>load_diff_field(diff: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;Vec&lt;TokenStream&gt;&gt;, field: <span class="kw-2">&amp;</span>Ident, enum_fields_ident: <span class="kw-2">&amp;</span>Ident) {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff.as_mut() {
         <span class="kw">let </span>name = Ident::new(<span class="kw-2">&amp;</span>field.to_string().to_pascal_case(), field.span());
-        diff.push(<span class="macro">quote! </span>{storm_mssql::_replace_field_diff(<span class="kw-2">&amp;mut </span><span class="self">self</span>.#field, #enum_fields_ident::#name, diff)<span class="question-mark">?</span>;});
+        diff.push(<span class="macro">quote! </span>{<span class="macro">storm::tri!</span>(storm_mssql::_replace_field_diff(<span class="kw-2">&amp;mut </span><span class="self">self</span>.#field, #enum_fields_ident::#name, diff));});
     }
 }
 
 <span class="kw">fn </span>read_row(column_index: usize) -&gt; TokenStream {
     <span class="kw">let </span>l = LitInt::new(<span class="kw-2">&amp;</span>column_index.to_string(), Span::call_site());
-    <span class="macro">quote!</span>(storm_mssql::_macro_load_field(<span class="kw-2">&amp;</span>row, #l)<span class="question-mark">?</span>)
+    <span class="macro">quote!</span>(<span class="macro">storm::tri!</span>(storm_mssql::_macro_load_field(<span class="kw-2">&amp;</span>row, #l)))
 }
 
 <span class="kw">fn </span>enum_fields_impl(

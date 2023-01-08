@@ -14,9 +14,30 @@
 <span id="14">14</span>
 <span id="15">15</span>
 <span id="16">16</span>
-</pre><pre class="rust"><code><span class="kw">use </span>async_cell_lock::QueueRwLockReadGuard;
-
-<span class="kw">use crate</span>::{BoxFuture, <span class="prelude-ty">Result</span>};
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+</pre><pre class="rust"><code><span class="kw">use crate</span>::{BoxFuture, Ctx, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>async_cell_lock::QueueRwLockReadGuard;
 
 <span class="kw">pub trait </span>AsRefAsync&lt;T&gt; {
     <span class="kw">fn </span>as_ref_async(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>T&gt;&gt;;
@@ -29,6 +50,29 @@
     <span class="kw">fn </span>as_ref_async(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>T&gt;&gt; {
         (<span class="kw-2">**</span><span class="self">self</span>).as_ref_async()
     }
+}
+
+<span class="attribute">#[allow(clippy::type_complexity)]
+</span><span class="kw">pub fn </span>async_ref_block5&lt;A, B, C, D, E&gt;(
+    ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>Ctx,
+) -&gt; BoxFuture&lt;<span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span>&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>A, <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>B, <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>C, <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>D, <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>E)&gt;&gt;
+<span class="kw">where
+    </span>Ctx: AsRefAsync&lt;A&gt; + AsRefAsync&lt;B&gt; + AsRefAsync&lt;C&gt; + AsRefAsync&lt;D&gt; + AsRefAsync&lt;E&gt;,
+    A: Sync,
+    B: Sync,
+    C: Sync,
+    D: Sync,
+    E: Sync,
+{
+    Box::pin(<span class="kw">async move </span>{
+        <span class="kw">let </span>a = ctx.as_ref_async().<span class="kw">await</span>;
+        <span class="kw">let </span>b = ctx.as_ref_async().<span class="kw">await</span>;
+        <span class="kw">let </span>c = ctx.as_ref_async().<span class="kw">await</span>;
+        <span class="kw">let </span>d = ctx.as_ref_async().<span class="kw">await</span>;
+        <span class="kw">let </span>e = ctx.as_ref_async().<span class="kw">await</span>;
+
+        a.and_then(|a| b.and_then(|b| c.and_then(|c| d.and_then(|d| e.map(|e| (a, b, c, d, e))))))
+    })
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0 (69f9c33d7 2022-12-12)" ></div></body></html>

@@ -149,7 +149,7 @@
         <span class="kw">let </span>sql = delete.to_sql_lit(table);
 
         tokens.append_all(<span class="macro">quote! </span>{
-            storm_mssql::Execute::execute(provider, #sql, #params).<span class="kw">await</span><span class="question-mark">?</span>;
+            <span class="macro">storm::tri!</span>(storm_mssql::Execute::execute(provider, #sql, #params).<span class="kw">await</span>);
             #(#errors)*
         });
     }

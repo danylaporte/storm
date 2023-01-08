@@ -266,8 +266,9 @@
             as_ref_args.push(ident);
         } <span class="kw">else </span>{
             as_ref_decl.push(<span class="macro">quote!</span>(<span class="kw">let </span>#ident = <span class="self">self</span>.as_ref();));
-            as_ref_decl_async
-                .push(<span class="macro">quote!</span>(<span class="kw">let </span>#ident = storm::AsRefAsync::as_ref_async(<span class="self">self</span>).<span class="kw">await</span><span class="question-mark">?</span>;));
+            as_ref_decl_async.push(
+                <span class="macro">quote!</span>(<span class="kw">let </span>#ident = <span class="macro">storm::tri!</span>(storm::AsRefAsync::as_ref_async(<span class="self">self</span>).<span class="kw">await</span>);),
+            );
             as_ref_tag.push(<span class="macro">quote!</span>(storm::Tag::tag(#ident)));
             as_ref_args.push(ident);
             deps.push(<span class="macro">quote!</span>(&lt;#ty <span class="kw">as </span>storm::Accessor&gt;::register_deps(&lt;#index_name <span class="kw">as </span>storm::Accessor&gt;::clear);));
@@ -350,8 +351,7 @@
         }
 
         <span class="kw">impl </span>storm::Tag <span class="kw">for </span>#index_name {
-            <span class="attribute">#[inline]
-            </span><span class="kw">fn </span>tag(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; storm::VersionTag {
+            <span class="kw">fn </span>tag(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; storm::VersionTag {
                 <span class="self">self</span>.<span class="number">1
             </span>}
         }

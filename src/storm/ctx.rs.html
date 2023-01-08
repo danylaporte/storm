@@ -1098,11 +1098,6 @@
 <span id="1098">1098</span>
 <span id="1099">1099</span>
 <span id="1100">1100</span>
-<span id="1101">1101</span>
-<span id="1102">1102</span>
-<span id="1103">1103</span>
-<span id="1104">1104</span>
-<span id="1105">1105</span>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{
     length::Length,
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
@@ -1228,8 +1223,7 @@
     E::Key: Eq + Hash,
     ProviderContainer: LoadAll&lt;E, (), E::Tbl&gt;,
 {
-    <span class="attribute">#[inline]
-    </span><span class="kw">fn </span>as_ref_async(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>E::Tbl&gt;&gt; {
+    <span class="kw">fn </span>as_ref_async(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>E::Tbl&gt;&gt; {
         table_as_ref_async::&lt;E, <span class="kw">_</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>.vars, <span class="kw-2">&amp;</span><span class="self">self</span>.provider)
     }
 }
@@ -1240,8 +1234,7 @@
     E::Key: Into&lt;usize&gt;,
     ProviderContainer: LoadAll&lt;E, (), E::Tbl&gt;,
 {
-    <span class="attribute">#[inline]
-    </span><span class="kw">fn </span>as_ref_async(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>E::Tbl&gt;&gt; {
+    <span class="kw">fn </span>as_ref_async(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>E::Tbl&gt;&gt; {
         table_as_ref_async::&lt;E, <span class="kw">_</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>.vars, <span class="kw-2">&amp;</span><span class="self">self</span>.provider)
     }
 }
@@ -1307,8 +1300,7 @@
 <span class="kw">where
     </span>L: Tag,
 {
-    <span class="attribute">#[inline]
-    </span><span class="kw">fn </span>tag(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VersionTag {
+    <span class="kw">fn </span>tag(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VersionTag {
         <span class="self">self</span>.locks.tag()
     }
 }
@@ -1317,8 +1309,7 @@
 <span class="kw">where
     </span>L: AsyncTryFrom&lt;<span class="lifetime">&#39;a</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Ctx&gt;,
 {
-    <span class="attribute">#[inline]
-    </span><span class="kw">fn </span>async_try_from(ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Ctx) -&gt; BoxFuture&lt;<span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt;&gt; {
+    <span class="kw">fn </span>async_try_from(ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Ctx) -&gt; BoxFuture&lt;<span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt;&gt; {
         Box::pin(<span class="kw">async move </span>{
             <span class="prelude-val">Ok</span>(CtxLocks {
                 ctx,
@@ -1657,8 +1648,7 @@
 <span class="kw">where
     </span>Ctx: AsRefAsync&lt;T&gt;,
 {
-    <span class="attribute">#[inline]
-    </span><span class="kw">fn </span>as_ref_async(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>T&gt;&gt; {
+    <span class="kw">fn </span>as_ref_async(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>T&gt;&gt; {
         <span class="self">self</span>.ctx.as_ref_async()
     }
 }

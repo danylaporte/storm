@@ -139,7 +139,7 @@
 
             tokens.append_all(<span class="macro">quote! </span>{
                 <span class="kw">for </span><span class="kw-2">&amp;</span>culture <span class="kw">in </span>Culture::DB_CULTURES.iter() {
-                    storm_mssql::Execute::execute(provider, #sql, #params).<span class="kw">await</span><span class="question-mark">?</span>;
+                    <span class="macro">storm::tri!</span>(storm_mssql::Execute::execute(provider, #sql, #params).<span class="kw">await</span>);
                 }
             });
         }

@@ -153,7 +153,7 @@
         };
 
         <span class="kw">let </span>read = <span class="kw">match </span>attrs.load_with.as_ref() {
-            <span class="prelude-val">Some</span>(f) =&gt; <span class="macro">quote!</span>(#f(<span class="kw-2">&amp;</span>row)<span class="question-mark">?</span>),
+            <span class="prelude-val">Some</span>(f) =&gt; <span class="macro">quote!</span>(<span class="macro">storm::tri!</span>(#f(<span class="kw-2">&amp;</span>row))),
             <span class="prelude-val">None </span><span class="kw">if </span>skip_load =&gt; <span class="macro">quote!</span>(Default::default()),
             <span class="prelude-val">None </span>=&gt; read_row(column_index),
         };
@@ -206,7 +206,7 @@
                 ))
             }
 
-            <span class="kw">let </span><span class="kw-2">mut </span>map: C = storm_mssql::QueryRows::query_rows(provider, load_sql, <span class="kw-2">&amp;*</span>params, load_row, args.use_transaction).<span class="kw">await</span><span class="question-mark">?</span>;
+            <span class="kw">let </span><span class="kw-2">mut </span>map: C = <span class="macro">storm::tri!</span>(storm_mssql::QueryRows::query_rows(provider, load_sql, <span class="kw-2">&amp;*</span>params, load_row, args.use_transaction).<span class="kw">await</span>);
         });
 
         tokens.append_all(<span class="macro">quote!</span>(#(#errors)<span class="kw-2">*</span>));

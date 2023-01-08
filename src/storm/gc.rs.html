@@ -265,15 +265,7 @@
 <span id="265">265</span>
 <span id="266">266</span>
 <span id="267">267</span>
-<span id="268">268</span>
-<span id="269">269</span>
-<span id="270">270</span>
-<span id="271">271</span>
-<span id="272">272</span>
-<span id="273">273</span>
-<span id="274">274</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::Ctx;
-<span class="kw">use </span>rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 <span class="kw">use </span>std::{
     borrow::Cow,
     collections::{HashMap, HashSet},
@@ -363,7 +355,7 @@
     <span class="kw">const </span>SUPPORT_GC: bool = V::SUPPORT_GC;
 
     <span class="kw">fn </span>gc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: <span class="kw-2">&amp;</span>GcCtx) {
-        <span class="self">self</span>.par_iter_mut().for_each(|(<span class="kw">_</span>, v)| v.gc(ctx));
+        <span class="self">self</span>.iter_mut().for_each(|(<span class="kw">_</span>, v)| v.gc(ctx));
     }
 }
 
@@ -415,7 +407,7 @@
     <span class="kw">const </span>SUPPORT_GC: bool = T::SUPPORT_GC;
 
     <span class="kw">fn </span>gc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: <span class="kw-2">&amp;</span>GcCtx) {
-        <span class="self">self</span>.par_iter_mut().for_each(|v| v.gc(ctx));
+        <span class="self">self</span>.iter_mut().for_each(|v| v.gc(ctx));
     }
 }
 
@@ -427,7 +419,7 @@
     <span class="kw">const </span>SUPPORT_GC: bool = V::SUPPORT_GC;
 
     <span class="kw">fn </span>gc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: <span class="kw-2">&amp;</span>GcCtx) {
-        <span class="self">self</span>.par_iter_mut().for_each(|(<span class="kw">_</span>, v)| v.gc(ctx));
+        <span class="self">self</span>.iter_mut().for_each(|(<span class="kw">_</span>, v)| v.gc(ctx));
     }
 }
 
@@ -480,12 +472,6 @@
 <span class="macro">gc!</span>(u64);
 <span class="macro">gc!</span>(u8);
 <span class="macro">gc!</span>(usize);
-
-<span class="attribute">#[cfg(feature = <span class="string">&quot;chrono&quot;</span>)]
-</span><span class="macro">gc!</span>(chrono::Date&lt;chrono::FixedOffset&gt;);
-
-<span class="attribute">#[cfg(feature = <span class="string">&quot;chrono&quot;</span>)]
-</span><span class="macro">gc!</span>(chrono::Date&lt;chrono::Utc&gt;);
 
 <span class="attribute">#[cfg(feature = <span class="string">&quot;chrono&quot;</span>)]
 </span><span class="macro">gc!</span>(chrono::DateTime&lt;chrono::FixedOffset&gt;);

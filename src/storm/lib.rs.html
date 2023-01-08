@@ -126,6 +126,16 @@
 <span id="126">126</span>
 <span id="127">127</span>
 <span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
 </pre><pre class="rust"><code><span class="attribute">#[macro_use]
 </span><span class="kw">mod </span>version_deps;
 
@@ -167,7 +177,7 @@
 
 <span class="kw">pub use </span>accessor::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>apply_log::ApplyLog;
-<span class="kw">pub use </span>as_ref_async::AsRefAsync;
+<span class="kw">pub use </span>as_ref_async::{async_ref_block5, AsRefAsync};
 <span class="kw">pub use </span>as_ref_opt::{AsRefOpt, FromRefOpt};
 <span class="kw">pub use </span>async_cell_lock::{<span class="self">self</span>, AsyncOnceCell, QueueRwLock};
 <span class="kw">pub use </span>async_try_from::AsyncTryFrom;
@@ -253,6 +263,16 @@
             <span class="macro">describe_gauge!</span>(<span class="string">&quot;storm.table.rows&quot;</span>, Unit::Count, <span class="string">&quot;row count of a table&quot;</span>);
         });
     }
+}
+
+<span class="attribute">#[macro_export]
+</span><span class="macro">macro_rules! </span>tri {
+    (<span class="macro-nonterminal">$e</span>:expr) =&gt; {
+        <span class="kw">match </span><span class="macro-nonterminal">$e </span>{
+            <span class="prelude-val">Ok</span>(v) =&gt; v,
+            <span class="prelude-val">Err</span>(e) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(e),
+        }
+    };
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="storm" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0 (69f9c33d7 2022-12-12)" ></div></body></html>
