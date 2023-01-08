@@ -52,7 +52,7 @@ impl<'a> ToTokens for SaveTranslated<'a> {
 
             tokens.append_all(quote! {
                 for &culture in Culture::DB_CULTURES.iter() {
-                    storm_mssql::Execute::execute(provider, #sql, #params).await?;
+                    storm::tri!(storm_mssql::Execute::execute(provider, #sql, #params).await);
                 }
             });
         }

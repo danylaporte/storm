@@ -81,7 +81,7 @@ impl<'a> ToTokens for LoadTranslated<'a> {
                     true => TRANSLATED_SQL.to_string(),
                 };
 
-                let _: storm::provider::LoadDoNothing = storm_mssql::QueryRows::query_rows(provider, translated_sql, &*params, |row| {
+                let _: storm::provider::LoadDoNothing = storm::tri!(storm_mssql::QueryRows::query_rows(provider, translated_sql, &*params, |row| {
                     let key: <#entity as storm::Entity>::Key = #keys;
                     let culture = #culture;
 
@@ -90,7 +90,7 @@ impl<'a> ToTokens for LoadTranslated<'a> {
                     }
 
                     Ok(())
-                }, /*use_transaction*/ true).await?;
+                }, /*use_transaction*/ true).await);
             });
         }
 

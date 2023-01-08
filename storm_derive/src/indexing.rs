@@ -79,8 +79,9 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
             as_ref_args.push(ident);
         } else {
             as_ref_decl.push(quote!(let #ident = self.as_ref();));
-            as_ref_decl_async
-                .push(quote!(let #ident = storm::AsRefAsync::as_ref_async(self).await?;));
+            as_ref_decl_async.push(
+                quote!(let #ident = storm::tri!(storm::AsRefAsync::as_ref_async(self).await);),
+            );
             as_ref_tag.push(quote!(storm::Tag::tag(#ident)));
             as_ref_args.push(ident);
             deps.push(quote!(<#ty as storm::Accessor>::register_deps(<#index_name as storm::Accessor>::clear);));
@@ -163,7 +164,6 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         }
 
         impl storm::Tag for #index_name {
-            #[inline]
             fn tag(&self) -> storm::VersionTag {
                 self.1
             }

@@ -123,7 +123,6 @@ where
     E::Key: Eq + Hash,
     ProviderContainer: LoadAll<E, (), E::Tbl>,
 {
-    #[inline]
     fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ E::Tbl>> {
         table_as_ref_async::<E, _>(&self.vars, &self.provider)
     }
@@ -135,7 +134,6 @@ where
     E::Key: Into<usize>,
     ProviderContainer: LoadAll<E, (), E::Tbl>,
 {
-    #[inline]
     fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ E::Tbl>> {
         table_as_ref_async::<E, _>(&self.vars, &self.provider)
     }
@@ -202,7 +200,6 @@ impl<'a, L> Tag for CtxLocks<'a, L>
 where
     L: Tag,
 {
-    #[inline]
     fn tag(&self) -> VersionTag {
         self.locks.tag()
     }
@@ -212,7 +209,6 @@ impl<'a, L> AsyncTryFrom<'a, &'a Ctx> for CtxLocks<'a, L>
 where
     L: AsyncTryFrom<'a, &'a Ctx>,
 {
-    #[inline]
     fn async_try_from(ctx: &'a Ctx) -> BoxFuture<'a, Result<Self>> {
         Box::pin(async move {
             Ok(CtxLocks {
@@ -552,7 +548,6 @@ impl<'a, T> AsRefAsync<T> for CtxTransaction<'a>
 where
     Ctx: AsRefAsync<T>,
 {
-    #[inline]
     fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ T>> {
         self.ctx.as_ref_async()
     }

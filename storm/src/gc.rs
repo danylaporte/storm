@@ -1,5 +1,4 @@
 use crate::Ctx;
-use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use std::{
     borrow::Cow,
     collections::{HashMap, HashSet},
@@ -89,7 +88,7 @@ where
     const SUPPORT_GC: bool = V::SUPPORT_GC;
 
     fn gc(&mut self, ctx: &GcCtx) {
-        self.par_iter_mut().for_each(|(_, v)| v.gc(ctx));
+        self.iter_mut().for_each(|(_, v)| v.gc(ctx));
     }
 }
 
@@ -141,7 +140,7 @@ where
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
     fn gc(&mut self, ctx: &GcCtx) {
-        self.par_iter_mut().for_each(|v| v.gc(ctx));
+        self.iter_mut().for_each(|v| v.gc(ctx));
     }
 }
 
@@ -153,7 +152,7 @@ where
     const SUPPORT_GC: bool = V::SUPPORT_GC;
 
     fn gc(&mut self, ctx: &GcCtx) {
-        self.par_iter_mut().for_each(|(_, v)| v.gc(ctx));
+        self.iter_mut().for_each(|(_, v)| v.gc(ctx));
     }
 }
 
@@ -206,12 +205,6 @@ gc!(u32);
 gc!(u64);
 gc!(u8);
 gc!(usize);
-
-#[cfg(feature = "chrono")]
-gc!(chrono::Date<chrono::FixedOffset>);
-
-#[cfg(feature = "chrono")]
-gc!(chrono::Date<chrono::Utc>);
 
 #[cfg(feature = "chrono")]
 gc!(chrono::DateTime<chrono::FixedOffset>);

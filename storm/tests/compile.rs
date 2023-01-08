@@ -70,6 +70,15 @@ async fn transaction() -> Result<()> {
     .await
 }
 
+#[derive(storm::LocksAwait)]
+struct Locks<'a> {
+    e1: &'a Entity1s,
+    e2: &'a Entity2s,
+    e3: &'a Entity3s,
+    e4: &'a Entity4s,
+    e5: &'a Entity5s,
+}
+
 macro_rules! entity {
     ($n:ident) => {
         #[derive(Ctx, Default, NoopDelete, NoopLoad, NoopSave)]
@@ -87,3 +96,6 @@ macro_rules! entity {
 
 entity!(Entity1);
 entity!(Entity2);
+entity!(Entity3);
+entity!(Entity4);
+entity!(Entity5);

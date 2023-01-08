@@ -34,7 +34,7 @@ impl<'a> LoadFields<'a> {
         };
 
         let read = match attrs.load_with.as_ref() {
-            Some(f) => quote!(#f(&row)?),
+            Some(f) => quote!(storm::tri!(#f(&row))),
             None if skip_load => quote!(Default::default()),
             None => read_row(column_index),
         };
@@ -87,7 +87,7 @@ impl<'a> ToTokens for LoadFields<'a> {
                 ))
             }
 
-            let mut map: C = storm_mssql::QueryRows::query_rows(provider, load_sql, &*params, load_row, args.use_transaction).await?;
+            let mut map: C = storm::tri!(storm_mssql::QueryRows::query_rows(provider, load_sql, &*params, load_row, args.use_transaction).await);
         });
 
         tokens.append_all(quote!(#(#errors)*));

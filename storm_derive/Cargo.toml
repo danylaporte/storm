@@ -11,8 +11,9 @@ publish = false
 proc-macro = true
 
 [dependencies]
-darling = "0.14"
 Inflector = "0.11"
+darling = "0.14"
+itertools = "0.10"
 proc-macro2 = "1"
 quote = "1"
 syn = "1"

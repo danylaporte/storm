@@ -21,7 +21,7 @@ pin-project-lite = "0.2"
 rayon = "1"
 serde = { version = "1", features = ["derive"] }
 storm_derive = { path = "../storm_derive", optional = true }
-tiberius = { version = "0.11", optional = true }
+tiberius = { version = "0.11", default_features = false, optional = true }
 tokio = { version = "1", features = ["parking_lot", "sync"], default-features = false }
 tracing = "0.1"
 uuid = { version = "1", optional = true, features = ["v4", "serde"] }
