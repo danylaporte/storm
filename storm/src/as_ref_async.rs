@@ -14,9 +14,10 @@ where
     }
 }
 
-pub fn async_ref_block5<'a, A, B, C, D, E>(
-    ctx: &'a Ctx,
-) -> BoxFuture<'a, Result<(&'a A, &'a B, &'a C, &'a D, &'a E)>>
+#[allow(clippy::type_complexity)]
+pub fn async_ref_block5<A, B, C, D, E>(
+    ctx: &'_ Ctx,
+) -> BoxFuture<'_, Result<(&'_ A, &'_ B, &'_ C, &'_ D, &'_ E)>>
 where
     Ctx: AsRefAsync<A> + AsRefAsync<B> + AsRefAsync<C> + AsRefAsync<D> + AsRefAsync<E>,
     A: Sync,

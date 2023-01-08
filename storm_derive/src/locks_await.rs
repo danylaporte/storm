@@ -4,6 +4,7 @@ use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{DeriveInput, Ident, LitInt, LitStr, Type};
 
+#[allow(clippy::expect_used)]
 pub(crate) fn locks_await(input: &DeriveInput) -> TokenStream {
     let type_ident = &input.ident;
     let from_ctx = LitStr::new(&format!("{}::from_ctx", &type_ident), type_ident.span());
