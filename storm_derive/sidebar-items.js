@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"attr":[["indexing",""]],"derive":[["Ctx",""],["LocksAwait",""],["MssqlDelete",""],["MssqlLoad",""],["MssqlSave",""],["NoopDelete",""],["NoopLoad",""],["NoopSave",""]]};
+window.SIDEBAR_ITEMS = {"attr":["indexing"],"derive":["Ctx","LocksAwait","MssqlDelete","MssqlLoad","MssqlSave","NoopDelete","NoopLoad","NoopSave"]};
