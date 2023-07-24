@@ -16,7 +16,7 @@ futures = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 storm = { path = "../storm", features = ["mssql"] }
-tiberius = { version = "0.11", default_features = false, features = ["chrono", "sql-browser-tokio", "tds73", "winauth"] }
+tiberius = { version = "0.12", default_features = false, features = ["chrono", "sql-browser-tokio", "tds73", "winauth"] }
 tokio = { version = "1", default-features = false }
 tokio-util = { version = "0.7", features = ["compat"] }
 tracing = "0.1"
