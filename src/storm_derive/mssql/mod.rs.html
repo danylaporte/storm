@@ -539,6 +539,9 @@
 <a href="#539" id="539">539</a>
 <a href="#540" id="540">540</a>
 <a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
 </pre></div><pre class="rust"><code><span class="kw">mod </span>attrs;
 <span class="kw">mod </span>builders;
 <span class="kw">mod </span>delete;
@@ -595,7 +598,10 @@
     <span class="kw">let </span>attrs = <span class="macro">try_ts!</span>(TypeAttrs::from_derive_input(input).map_err(|e| e.write_errors()));
     <span class="kw">let </span>rename_all = attrs.rename_all;
 
-    <span class="kw">let </span>load_fn = Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;__load_{}&quot;</span>, ident.to_string().to_snake_case()), Span::call_site());
+    <span class="kw">let </span>load_fn = Ident::new(
+        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;__load_{}&quot;</span>, ident.to_string().to_snake_case()),
+        Span::call_site(),
+    );
 
     <span class="kw">let </span>load_test = Ident::new(
         <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;test_{}_load&quot;</span>, ident.to_string().to_snake_case()),
