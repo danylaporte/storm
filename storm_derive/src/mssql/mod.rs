@@ -54,7 +54,10 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let attrs = try_ts!(TypeAttrs::from_derive_input(input).map_err(|e| e.write_errors()));
     let rename_all = attrs.rename_all;
 
-    let load_fn = Ident::new(&format!("__load_{}", ident.to_string().to_snake_case()), Span::call_site());
+    let load_fn = Ident::new(
+        &format!("__load_{}", ident.to_string().to_snake_case()),
+        Span::call_site(),
+    );
 
     let load_test = Ident::new(
         &format!("test_{}_load", ident.to_string().to_snake_case()),
