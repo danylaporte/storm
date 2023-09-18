@@ -1,11 +1,12 @@
 use crate::{
-    provider::LoadAll, Accessor, ApplyLog, BoxFuture, CtxTypeInfo, Deps, Entity, EntityAccessor,
-    EntityOf, Gc, GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag, Result, Tag, TblVar,
+    on_changed::Changed, provider::LoadAll, Accessor, ApplyLog, BoxFuture, CtxTypeInfo, Deps,
+    Entity, EntityAccessor, EntityOf, Gc, GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag,
+    Result, Tag, TblVar,
 };
 use rayon::iter::IntoParallelIterator;
 use std::ops::Deref;
 use tracing::instrument;
-use vec_map::{Iter, Keys, ParIter, Values, VecMap};
+use vec_map::{Entry, Iter, Keys, ParIter, Values, VecMap};
 use version_tag::VersionTag;
 
 pub struct VecTable<E: Entity> {
@@ -62,7 +63,7 @@ where
 
 impl<E> ApplyLog<Log<E>> for VecTable<E>
 where
-    E: CtxTypeInfo + Entity,
+    E: CtxTypeInfo + Entity + EntityAccessor,
     E::Key: Clone + Into<usize>,
 {
     fn apply_log(&mut self, log: Log<E>) -> bool {
@@ -72,11 +73,28 @@ where
 
         for (k, state) in log {
             match state {
-                LogState::Inserted(v) => {
-                    self.map.insert(k, v);
-                }
+                LogState::Inserted(new) => match self.map.entry(k) {
+                    Entry::Occupied(mut o) => {
+                        let entity = Changed::Inserted {
+                            old: Some(o.get()),
+                            new: &new,
+                        };
+                        E::on_changed().__call(o.key(), entity);
+                        o.insert(new);
+                    }
+                    Entry::Vacant(v) => {
+                        let entity = Changed::Inserted {
+                            old: None,
+                            new: &new,
+                        };
+                        E::on_changed().__call(v.key(), entity);
+                        v.insert(new);
+                    }
+                },
                 LogState::Removed => {
-                    self.map.remove(&k);
+                    if let Some(old) = self.map.remove(&k) {
+                        E::on_changed().__call(&k, Changed::Removed { old: &old });
+                    }
                 }
             }
         }
