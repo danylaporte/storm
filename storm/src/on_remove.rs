@@ -51,17 +51,8 @@ impl<E: Entity> OnRemove<E> {
         })
     }
 
-    pub fn register<EV: RemovingHandler<E> + Send + Sync + 'static>(&self, ev: EV) {
-        let mut gate = self.0.lock();
-
-        let vec = gate
-            .iter()
-            .map(Arc::clone)
-            .chain(std::iter::once(Arc::new(ev) as _))
-            .collect::<Vec<_>>()
-            .into_boxed_slice();
-
-        *gate = Arc::new(vec);
+    pub fn register<H: RemovingHandler<E> + Send + Sync + 'static>(&self, handler: H) {
+        self.register_impl(Arc::new(handler));
     }
 
     pub fn register_fn<F>(&self, f: F)
@@ -76,6 +67,16 @@ impl<E: Entity> OnRemove<E> {
             + 'static,
     {
         self.register(f);
+    }
+
+    fn register_impl(&self, handler: ArcRemovingHandler<E>) {
+        let mut gate = self.0.lock();
+        let mut vec = Vec::with_capacity(gate.len() + 1);
+
+        vec.extend(gate.iter().cloned());
+        vec.push(handler);
+
+        *gate = Arc::new(vec.into_boxed_slice());
     }
 }
 

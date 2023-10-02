@@ -33,8 +33,8 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     Ok(quote! {
         #vis type #table_alias = #coll_ty;
 
-        fn #tbl_var() -> &'static (storm::TblVar<#table_alias>, storm::Deps, storm::OnRemove<#entity>) {
-            static CELL: storm::OnceCell<(storm::TblVar<#table_alias>, storm::Deps, storm::OnRemove<#entity>)> = storm::OnceCell::new();
+        fn #tbl_var() -> &'static (storm::TblVar<#table_alias>, storm::Deps, storm::OnChanged<#entity>, storm::OnRemove<#entity>) {
+            static CELL: storm::OnceCell<(storm::TblVar<#table_alias>, storm::Deps, storm::OnChanged<#entity>, storm::OnRemove<#entity>)> = storm::OnceCell::new();
 
             CELL.get_or_init(|| {
                 #gc_collect
@@ -56,8 +56,13 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             }
 
             #[inline]
-            fn on_remove() -> &'static storm::OnRemove<Self> {
+            fn on_changed() -> &'static storm::OnChanged<Self> {
                 &#tbl_var().2
+            }
+
+            #[inline]
+            fn on_remove() -> &'static storm::OnRemove<Self> {
+                &#tbl_var().3
             }
         }
 
