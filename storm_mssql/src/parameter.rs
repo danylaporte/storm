@@ -84,3 +84,41 @@ impl<'a> tiberius::ToSql for Parameter<'a> {
         }
     }
 }
+
+pub fn into_column_data_static(data: &ColumnData<'_>) -> ColumnData<'static> {
+    fn copy<T: Copy>(o: &Option<T>) -> Option<T> {
+        o.as_ref().copied()
+    }
+
+    fn cow<T: ?Sized + ToOwned>(o: &Option<Cow<T>>) -> Option<Cow<'static, T>>
+    where
+        T::Owned: Clone,
+    {
+        match o {
+            Some(Cow::Borrowed(v)) => Some(Cow::Owned((*v).to_owned())),
+            Some(Cow::Owned(v)) => Some(Cow::Owned(v.clone())),
+            None => None,
+        }
+    }
+
+    match data {
+        ColumnData::Binary(v) => ColumnData::Binary(cow(v)),
+        ColumnData::Bit(v) => ColumnData::Bit(copy(v)),
+        ColumnData::Date(v) => ColumnData::Date(copy(v)),
+        ColumnData::DateTime(v) => ColumnData::DateTime(copy(v)),
+        ColumnData::DateTime2(v) => ColumnData::DateTime2(copy(v)),
+        ColumnData::DateTimeOffset(v) => ColumnData::DateTimeOffset(copy(v)),
+        ColumnData::F32(v) => ColumnData::F32(copy(v)),
+        ColumnData::F64(v) => ColumnData::F64(copy(v)),
+        ColumnData::Guid(v) => ColumnData::Guid(copy(v)),
+        ColumnData::I16(v) => ColumnData::I16(copy(v)),
+        ColumnData::I32(v) => ColumnData::I32(copy(v)),
+        ColumnData::I64(v) => ColumnData::I64(copy(v)),
+        ColumnData::Numeric(v) => ColumnData::Numeric(copy(v)),
+        ColumnData::SmallDateTime(v) => ColumnData::SmallDateTime(copy(v)),
+        ColumnData::String(v) => ColumnData::String(cow(v)),
+        ColumnData::Time(v) => ColumnData::Time(copy(v)),
+        ColumnData::U8(v) => ColumnData::U8(copy(v)),
+        ColumnData::Xml(v) => ColumnData::Xml(cow(v)),
+    }
+}

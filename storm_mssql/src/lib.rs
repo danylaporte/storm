@@ -21,7 +21,7 @@ pub use filter_sql::*;
 pub use from_sql::{FromSql, _macro_load_field};
 pub use mssql_factory::MssqlFactory;
 pub use mssql_provider::MssqlProvider;
-pub use parameter::Parameter;
+pub use parameter::{into_column_data_static, Parameter};
 pub use query_rows::QueryRows;
 pub use save_entity_part::SaveEntityPart;
 pub use serde_json;
