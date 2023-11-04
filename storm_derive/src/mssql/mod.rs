@@ -173,6 +173,10 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             }
         }
 
+        impl storm_mssql::MssqlMeta for #ident {
+            const TABLE: &'static str = #table_name;
+        }
+
         #diff
         #test
     }
