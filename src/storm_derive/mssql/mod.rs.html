@@ -546,6 +546,8 @@
 <a href="#546" id="546">546</a>
 <a href="#547" id="547">547</a>
 <a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
 </pre></div><pre class="rust"><code><span class="kw">mod </span>attrs;
 <span class="kw">mod </span>builders;
 <span class="kw">mod </span>delete;
@@ -618,6 +620,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>load = LoadFields::new(ident, <span class="kw-2">&amp;</span>attrs);
     <span class="kw">let </span><span class="kw-2">mut </span>translated = LoadTranslated::new(ident, <span class="kw-2">&amp;</span>attrs);
     <span class="kw">let </span>table_name = LitStr::new(<span class="kw-2">&amp;</span>attrs.table, attrs.table.span());
+    <span class="kw">let </span>translated_table_name = LitStr::new(<span class="kw-2">&amp;</span>attrs.translate_table, attrs.translate_table.span());
     <span class="kw">let </span>enum_fields_ident = Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{ident}Fields&quot;</span>), ident.span());
 
     <span class="kw">for </span>key <span class="kw">in </span>attrs.keys(<span class="kw-2">&amp;mut </span>errors) {
@@ -723,6 +726,7 @@
 
         <span class="kw">impl </span>storm_mssql::MssqlMeta <span class="kw">for </span>#ident {
             <span class="kw">const </span>TABLE: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = #table_name;
+            <span class="kw">const </span>TRANSLATED_TABLE: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = #translated_table_name;
         }
 
         #diff
