@@ -542,6 +542,10 @@
 <a href="#542" id="542">542</a>
 <a href="#543" id="543">543</a>
 <a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
 </pre></div><pre class="rust"><code><span class="kw">mod </span>attrs;
 <span class="kw">mod </span>builders;
 <span class="kw">mod </span>delete;
@@ -715,6 +719,10 @@
                     <span class="prelude-val">Ok</span>(v.into_inner())
                 })
             }
+        }
+
+        <span class="kw">impl </span>storm_mssql::MssqlMeta <span class="kw">for </span>#ident {
+            <span class="kw">const </span>TABLE: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = #table_name;
         }
 
         #diff
