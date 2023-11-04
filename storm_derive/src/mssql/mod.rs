@@ -70,6 +70,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let mut load = LoadFields::new(ident, &attrs);
     let mut translated = LoadTranslated::new(ident, &attrs);
     let table_name = LitStr::new(&attrs.table, attrs.table.span());
+    let translated_table_name = LitStr::new(&attrs.translate_table, attrs.translate_table.span());
     let enum_fields_ident = Ident::new(&format!("{ident}Fields"), ident.span());
 
     for key in attrs.keys(&mut errors) {
@@ -175,6 +176,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
 
         impl storm_mssql::MssqlMeta for #ident {
             const TABLE: &'static str = #table_name;
+            const TRANSLATED_TABLE: &'static str = #translated_table_name;
         }
 
         #diff
