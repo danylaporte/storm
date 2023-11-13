@@ -11,6 +11,8 @@ pub enum Error {
     NotInTransaction,
     ProviderNotFound,
     Std(StdError),
+    Str(&'static str),
+    String(String),
 
     #[cfg(feature = "mssql")]
     Mssql(tiberius::error::Error),
@@ -35,6 +37,8 @@ impl Debug for Error {
         match self {
             Self::AsyncCellLock(e) => Debug::fmt(e, f),
             Self::Std(e) => Debug::fmt(e, f),
+            Self::Str(e) => write!(f, "storm::Error::Str({e})"),
+            Self::String(e) => write!(f, "storm::Error::Str({e})"),
 
             #[cfg(feature = "mssql")]
             Self::Mssql(e) => Debug::fmt(e, f),
@@ -60,6 +64,8 @@ impl Display for Error {
             #[cfg(feature = "mssql")]
             Self::Mssql(e) => Display::fmt(e, f),
 
+            Self::Str(e) => Display::fmt(e, f),
+            Self::String(e) => Display::fmt(e, f),
             Self::Std(e) => Display::fmt(e, f),
         }
     }
