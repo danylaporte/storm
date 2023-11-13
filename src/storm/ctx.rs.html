@@ -1086,18 +1086,6 @@
 <a href="#1086" id="1086">1086</a>
 <a href="#1087" id="1087">1087</a>
 <a href="#1088" id="1088">1088</a>
-<a href="#1089" id="1089">1089</a>
-<a href="#1090" id="1090">1090</a>
-<a href="#1091" id="1091">1091</a>
-<a href="#1092" id="1092">1092</a>
-<a href="#1093" id="1093">1093</a>
-<a href="#1094" id="1094">1094</a>
-<a href="#1095" id="1095">1095</a>
-<a href="#1096" id="1096">1096</a>
-<a href="#1097" id="1097">1097</a>
-<a href="#1098" id="1098">1098</a>
-<a href="#1099" id="1099">1099</a>
-<a href="#1100" id="1100">1100</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     length::Length,
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
@@ -2029,18 +2017,14 @@
 <span class="kw">where
     for</span>&lt;<span class="lifetime">&#39;c</span>&gt; TransactionProvider&lt;<span class="lifetime">&#39;c</span>&gt;: Delete&lt;E&gt;,
     E: Entity + EntityAccessor + LogAccessor,
-    E::Key: Eq + Hash,
+    E::Key: Clone + Eq + Hash,
     E::Tbl: Accessor + Get&lt;E&gt;,
 {
     <span class="kw">fn </span>remove&lt;<span class="lifetime">&#39;c</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>, k: E::Key, track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>E::TrackCtx) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
         Box::pin(
             <span class="kw">async move </span>{
-                <span class="kw">if </span>log::&lt;E&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>.ctx.log_ctx)
-                    .get(<span class="kw-2">&amp;</span>k)
-                    .map_or(<span class="bool-val">false</span>, |e| <span class="kw">match </span>e {
-                        LogState::Inserted(<span class="kw">_</span>) =&gt; <span class="bool-val">false</span>,
-                        LogState::Removed =&gt; <span class="bool-val">true</span>,
-                    })
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(LogState::Removed) =
+                    log_mut::&lt;E&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>.ctx.log_ctx).insert(k.clone(), LogState::Removed)
                 {
                     <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                 }
@@ -2056,10 +2040,6 @@
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(old) = <span class="self">self</span>.tbl.get(<span class="kw-2">&amp;</span>k) {
                     result = old.track_remove(<span class="kw-2">&amp;</span>k, <span class="self">self</span>.ctx, track).<span class="kw">await</span>;
                 }
-
-                log_mut::&lt;E&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>.ctx.log_ctx)
-                    .entry(k)
-                    .or_insert(LogState::Removed);
 
                 result
             }
@@ -2172,10 +2152,6 @@
 }
 
 <span class="kw">struct </span>EntityLogApplier&lt;E: Entity + EntityAccessor + LogAccessor&gt;(PhantomData&lt;E&gt;);
-
-<span class="kw">fn </span>log&lt;E: Entity + LogAccessor&gt;(logs: <span class="kw-2">&amp;</span>LogsVar) -&gt; <span class="kw-2">&amp;</span>Log&lt;E&gt; {
-    logs.get_or_init(E::log_var(), Default::default)
-}
 
 <span class="kw">fn </span>log_mut&lt;E: Entity + LogAccessor&gt;(logs: <span class="kw-2">&amp;mut </span>LogsVar) -&gt; <span class="kw-2">&amp;mut </span>Log&lt;E&gt; {
     logs.get_or_init_mut(E::log_var(), Default::default)
