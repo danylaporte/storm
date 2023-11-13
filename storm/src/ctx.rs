@@ -929,18 +929,14 @@ impl<'a, 'b, E> Remove<E> for TblTransaction<'a, 'b, E>
 where
     for<'c> TransactionProvider<'c>: Delete<E>,
     E: Entity + EntityAccessor + LogAccessor,
-    E::Key: Eq + Hash,
+    E::Key: Clone + Eq + Hash,
     E::Tbl: Accessor + Get<E>,
 {
     fn remove<'c>(&'c mut self, k: E::Key, track: &'c E::TrackCtx) -> BoxFuture<'c, Result<()>> {
         Box::pin(
             async move {
-                if log::<E>(&self.ctx.log_ctx)
-                    .get(&k)
-                    .map_or(false, |e| match e {
-                        LogState::Inserted(_) => false,
-                        LogState::Removed => true,
-                    })
+                if let Some(LogState::Removed) =
+                    log_mut::<E>(&mut self.ctx.log_ctx).insert(k.clone(), LogState::Removed)
                 {
                     return Ok(());
                 }
@@ -956,10 +952,6 @@ where
                 if let Some(old) = self.tbl.get(&k) {
                     result = old.track_remove(&k, self.ctx, track).await;
                 }
-
-                log_mut::<E>(&mut self.ctx.log_ctx)
-                    .entry(k)
-                    .or_insert(LogState::Removed);
 
                 result
             }
@@ -1072,10 +1064,6 @@ where
 }
 
 struct EntityLogApplier<E: Entity + EntityAccessor + LogAccessor>(PhantomData<E>);
-
-fn log<E: Entity + LogAccessor>(logs: &LogsVar) -> &Log<E> {
-    logs.get_or_init(E::log_var(), Default::default)
-}
 
 fn log_mut<E: Entity + LogAccessor>(logs: &mut LogsVar) -> &mut Log<E> {
     logs.get_or_init_mut(E::log_var(), Default::default)
