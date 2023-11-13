@@ -87,6 +87,12 @@
 <a href="#87" id="87">87</a>
 <a href="#88" id="88">88</a>
 <a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt::{<span class="self">self</span>, Debug, Display};
 
 <span class="kw">pub enum </span>Error {
@@ -100,6 +106,8 @@
     NotInTransaction,
     ProviderNotFound,
     Std(StdError),
+    Str(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str),
+    String(String),
 
     <span class="attr">#[cfg(feature = <span class="string">&quot;mssql&quot;</span>)]
     </span>Mssql(tiberius::error::Error),
@@ -124,6 +132,8 @@
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::AsyncCellLock(e) =&gt; Debug::fmt(e, f),
             <span class="self">Self</span>::Std(e) =&gt; Debug::fmt(e, f),
+            <span class="self">Self</span>::Str(e) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;storm::Error::Str({e})&quot;</span>),
+            <span class="self">Self</span>::String(e) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;storm::Error::Str({e})&quot;</span>),
 
             <span class="attr">#[cfg(feature = <span class="string">&quot;mssql&quot;</span>)]
             </span><span class="self">Self</span>::Mssql(e) =&gt; Debug::fmt(e, f),
@@ -149,6 +159,8 @@
             <span class="attr">#[cfg(feature = <span class="string">&quot;mssql&quot;</span>)]
             </span><span class="self">Self</span>::Mssql(e) =&gt; Display::fmt(e, f),
 
+            <span class="self">Self</span>::Str(e) =&gt; Display::fmt(e, f),
+            <span class="self">Self</span>::String(e) =&gt; Display::fmt(e, f),
             <span class="self">Self</span>::Std(e) =&gt; Display::fmt(e, f),
         }
     }
