@@ -943,14 +943,14 @@ where
 
                 E::on_remove().__call(self.ctx, &k, track).await?;
 
-                self.ctx.provider.delete(&k).await?;
-
-                log_mut::<E>(&mut self.ctx.log_ctx).remove(&k);
-
                 let mut result = Ok(());
 
-                if let Some(old) = self.tbl.get(&k) {
-                    result = old.track_remove(&k, self.ctx, track).await;
+                if let Some(LogState::Removed) = log::<E>(&self.ctx.log_ctx).get(&k) {
+                    self.ctx.provider.delete(&k).await?;
+
+                    if let Some(old) = self.tbl.get(&k) {
+                        result = old.track_remove(&k, self.ctx, track).await;
+                    }
                 }
 
                 result
@@ -1064,6 +1064,10 @@ where
 }
 
 struct EntityLogApplier<E: Entity + EntityAccessor + LogAccessor>(PhantomData<E>);
+
+fn log<E: Entity + LogAccessor>(logs: &LogsVar) -> &Log<E> {
+    logs.get_or_init(E::log_var(), Default::default)
+}
 
 fn log_mut<E: Entity + LogAccessor>(logs: &mut LogsVar) -> &mut Log<E> {
     logs.get_or_init_mut(E::log_var(), Default::default)

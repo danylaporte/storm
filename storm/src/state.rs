@@ -1,7 +1,4 @@
-use std::{
-    fmt::{self, Debug, Formatter},
-    mem::discriminant,
-};
+use std::fmt::{self, Debug, Formatter};
 
 pub enum LogState<T> {
     Inserted(T),
@@ -30,7 +27,8 @@ impl<T: PartialEq> PartialEq for LogState<T> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Inserted(l), Self::Inserted(r)) => l == r,
-            _ => discriminant(self) == discriminant(other),
+            (Self::Removed, Self::Removed) => true,
+            _ => false,
         }
     }
 }
