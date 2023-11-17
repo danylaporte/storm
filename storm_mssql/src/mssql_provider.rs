@@ -3,6 +3,7 @@ use futures::{Stream, StreamExt, TryStreamExt};
 use std::{
     borrow::Cow,
     fmt::Debug,
+    ops::{Deref, DerefMut},
     pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering::Relaxed},
@@ -37,6 +38,17 @@ impl MssqlProvider {
     /// This operation is safe but the returning client is not constrained by the lock and can modify the database without storm's knowledge.
     pub async unsafe fn create_client(&self) -> Result<Client> {
         self.0.state.lock().await.create_client().await
+    }
+
+    /// Creates a new [Client](Client) instance.
+    /// # Safety
+    /// This operation is safe but the returning client is not constrained by the lock and can modify the database without storm's knowledge.
+    pub async unsafe fn get_transaction_client(&self) -> Option<MssqlTransactionGuard<'_>> {
+        let guard = self.0.state.lock().await;
+        guard
+            .transaction
+            .is_some()
+            .then_some(MssqlTransactionGuard(guard))
     }
 }
 
@@ -322,4 +334,22 @@ fn adapt_params<'a>(
 ) {
     intermediate.extend(input.iter().map(|p| Parameter(p.to_sql())));
     output.extend(intermediate.iter().map(|p| p as &dyn tiberius::ToSql));
+}
+
+pub struct MssqlTransactionGuard<'a>(MutexGuard<'a, State>);
+
+impl<'a> Deref for MssqlTransactionGuard<'a> {
+    type Target = Client;
+
+    #[allow(clippy::expect_used)]
+    fn deref(&self) -> &Self::Target {
+        self.0.transaction.as_ref().expect("Transaction")
+    }
+}
+
+impl<'a> DerefMut for MssqlTransactionGuard<'a> {
+    #[allow(clippy::expect_used)]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.0.transaction.as_mut().expect("Transaction")
+    }
 }

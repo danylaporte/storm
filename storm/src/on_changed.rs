@@ -36,7 +36,10 @@ pub struct OnChanged<E>(parking_lot::Mutex<Arc<Box<[ArcChangedHandler<E>]>>>);
 impl<E: Entity> OnChanged<E> {
     #[doc(hidden)]
     pub fn __call(&self, key: &E::Key, entity: Changed<&E>) {
-        let vec = Arc::clone(&self.0.lock());
+        let guard = self.0.lock();
+        let vec = Arc::clone(&guard);
+
+        drop(guard);
 
         for handler in vec.iter() {
             handler.handle_changed(key, entity);

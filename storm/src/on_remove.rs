@@ -40,7 +40,10 @@ impl<E: Entity> OnRemove<E> {
         key: &'b E::Key,
         track_ctx: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<()>> {
-        let vec = Arc::clone(&self.0.lock());
+        let guard = self.0.lock();
+        let vec = Arc::clone(&guard);
+
+        drop(guard);
 
         Box::pin(async move {
             for handler in vec.iter() {
