@@ -1,4 +1,4 @@
-use crate::FromSqlError;
+use crate::{Error, FromSqlError};
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use std::{borrow::Cow, sync::Arc};
 use tiberius::Uuid;
@@ -165,9 +165,14 @@ pub fn _macro_load_field<'a, T: FromSql<'a>>(
     table: &'static str,
 ) -> storm::Result<T> {
     row.try_get(index)
-        .map_err(crate::Error::unknown)
+        .map_err(Error::unknown)
         .and_then(|col| {
-            FromSql::from_sql(col).map_err(|err| crate::Error::from_sql(err, column, table))
+            FromSql::from_sql(col).map_err(|source| Error::FromSql {
+                column,
+                source,
+                table,
+                ty: std::any::type_name::<T>(),
+            })
         })
         .map_err(Into::into)
 }

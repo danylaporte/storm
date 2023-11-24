@@ -1,4 +1,4 @@
-use std::{env::VarError, io};
+use std::{env::VarError, fmt::Display, io};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -26,6 +26,7 @@ pub enum Error {
         column: &'static str,
         source: FromSqlError,
         table: &'static str,
+        ty: &'static str,
     },
 
     #[error("identity type not supported on {table}")]
@@ -51,18 +52,6 @@ pub enum Error {
 }
 
 impl Error {
-    pub(crate) fn from_sql(
-        source: FromSqlError,
-        column: &'static str,
-        table: &'static str,
-    ) -> Self {
-        Self::FromSql {
-            column,
-            source,
-            table,
-        }
-    }
-
     pub(crate) fn unknown<E: std::error::Error + Send + Sync + 'static>(error: E) -> Self {
         Self::Unknown(Box::new(error))
     }
@@ -97,18 +86,42 @@ pub enum FromSqlError {
     #[error("column is null")]
     ColumnNull,
 
+    #[error("{0}")]
+    Custom(String),
+
     #[error("failed deserialize json, {0}")]
     DeJson(#[source] serde_json::Error),
 
-    #[error("unexpected {value} for {ty}")]
-    Unexpected { ty: &'static str, value: String },
+    #[error("unexpected {0}")]
+    Unexpected(String),
 
     #[error(transparent)]
     Unknown(Box<dyn std::error::Error + Send + Sync>),
+
+    #[error("value: {value}, {source}")]
+    UnknownWithVal {
+        source: Box<dyn std::error::Error + Send + Sync>,
+        value: String,
+    },
 }
 
 impl FromSqlError {
+    pub fn unexpected<V: Display>(value: V) -> Self {
+        Self::Unexpected(value.to_string())
+    }
+
     pub fn unknown<E: std::error::Error + Send + Sync + 'static>(e: E) -> Self {
         Self::Unknown(Box::new(e))
+    }
+
+    pub fn unknown_with_val<E, V>(source: E, val: V) -> Self
+    where
+        E: std::error::Error + Send + Sync + 'static,
+        V: Display,
+    {
+        Self::UnknownWithVal {
+            source: Box::new(source),
+            value: val.to_string(),
+        }
     }
 }

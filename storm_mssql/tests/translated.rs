@@ -178,10 +178,7 @@ impl<'a> FromSql<'a> for Culture {
         match col {
             Some(0) => Ok(Culture::Fr),
             Some(1) => Ok(Culture::En),
-            Some(v) => Err(FromSqlError::Unexpected {
-                ty: "Culture",
-                value: v.to_string(),
-            }),
+            Some(v) => Err(FromSqlError::unexpected(v)),
             None => Err(FromSqlError::ColumnNull),
         }
     }
