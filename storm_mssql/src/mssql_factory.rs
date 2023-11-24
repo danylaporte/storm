@@ -1,6 +1,6 @@
-use crate::MssqlProvider;
+use crate::{Error, MssqlProvider};
 use std::{env::var, ffi::OsStr};
-use storm::{provider::ProviderFactory, BoxFuture, Error, Result};
+use storm::{provider::ProviderFactory, BoxFuture, Result};
 use tiberius::Config;
 
 pub struct MssqlFactory(pub Config);
@@ -10,9 +10,16 @@ impl MssqlFactory {
     where
         K: AsRef<OsStr>,
     {
-        Ok(Self(Config::from_ado_string(
-            &var(var_name).map_err(Error::std)?,
-        )?))
+        let name = var_name.as_ref();
+
+        let conn_str = var(name).map_err(|source| Error::Var {
+            name: name.to_string_lossy().to_string(),
+            source,
+        })?;
+
+        let config = Config::from_ado_string(&conn_str).map_err(Error::ParseAdoConnStr)?;
+
+        Ok(Self(config))
     }
 }
 

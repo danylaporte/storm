@@ -1,8 +1,8 @@
-use crate::{execute::ExecuteArgs, Client, ClientFactory, Execute, Parameter, QueryRows, ToSql};
+use crate::{
+    execute::ExecuteArgs, Client, ClientFactory, Error, Execute, Parameter, QueryRows, ToSql,
+};
 use futures::{Stream, StreamExt, TryStreamExt};
 use std::{
-    borrow::Cow,
-    fmt::Debug,
     ops::{Deref, DerefMut},
     pin::Pin,
     sync::{
@@ -11,10 +11,10 @@ use std::{
     },
     task::{Context, Poll},
 };
-use storm::{provider, BoxFuture, Error, InstrumentErr, Result};
+use storm::{provider, BoxFuture, Result};
 use tiberius::Row;
 use tokio::sync::{Mutex, MutexGuard};
-use tracing::{debug_span, instrument, Instrument, Span};
+use tracing::{info_span, instrument, Instrument};
 
 pub struct MssqlProvider(Arc<Inner>);
 
@@ -53,21 +53,13 @@ impl MssqlProvider {
 }
 
 impl Execute for MssqlProvider {
-    #[instrument(
-        level = "debug",
-        name = "MssqlProvider::execute",
-        skip(self, params),
-        err
-    )]
-    fn execute_with_args<'a, S>(
+    #[instrument(name = "MssqlProvider::execute", skip_all, err)]
+    fn execute_with_args<'a>(
         &'a self,
-        statement: S,
+        statement: String,
         params: &'a [&'a (dyn ToSql)],
         args: ExecuteArgs,
-    ) -> BoxFuture<'a, Result<u64>>
-    where
-        S: ?Sized + Debug + Into<Cow<'a, str>> + Send + 'a,
-    {
+    ) -> BoxFuture<'a, Result<u64>> {
         Box::pin(async move {
             let mut intermediate = Vec::new();
             let mut output = Vec::new();
@@ -86,7 +78,13 @@ impl Execute for MssqlProvider {
                 client_ref = &mut guard.client;
             };
 
-            let count = client.execute(statement, &output).await?.total();
+            let sql = statement.clone();
+
+            let count = client
+                .execute(statement, &output)
+                .await
+                .map_err(|source| Error::Query { source, sql })?
+                .total();
 
             *client_ref = Some(client);
             Ok(count)
@@ -119,7 +117,7 @@ impl provider::Provider for MssqlProvider {
             async move {
                 let _ = p.state().await;
             }
-            .instrument(debug_span!(parent: span, "rollback_transaction")),
+            .instrument(info_span!(parent: span, "rollback_transaction")),
         );
     }
 
@@ -129,9 +127,10 @@ impl provider::Provider for MssqlProvider {
 }
 
 impl QueryRows for MssqlProvider {
-    fn query_rows<'a, S, M, R, C>(
+    #[instrument(name = "MssqlProvider::query", skip_all, err)]
+    fn query_rows<'a, M, R, C>(
         &'a self,
-        statement: S,
+        sql: String,
         params: &'a [&'a (dyn ToSql)],
         mut mapper: M,
         use_transaction: bool,
@@ -140,47 +139,32 @@ impl QueryRows for MssqlProvider {
         C: Default + Extend<R> + Send,
         M: FnMut(Row) -> Result<R> + Send + 'a,
         R: Send,
-        S: ?Sized + Debug + for<'b> Into<Cow<'b, str>> + Send + 'a,
     {
-        let sql = statement.into();
-        let span = instrument_query_rows(&sql);
+        Box::pin(async move {
+            let mut conn = QueryConn::new(self, use_transaction).await?;
+            let mut query = conn.query(sql, params).await?;
+            let mut vec = Vec::with_capacity(10);
+            let mut coll = C::default();
 
-        Box::pin(
-            async move {
-                let mut conn = QueryConn::new(self, use_transaction).await?;
-                let mut query = conn.query(sql, params).await?;
-                let mut vec = Vec::with_capacity(10);
-                let mut coll = C::default();
+            while let Some(row) = query.try_next().await? {
+                vec.push(mapper(row)?);
 
-                while let Some(row) = query.try_next().await? {
-                    vec.push(mapper(row)?);
-
-                    if vec.len() == 10 {
-                        #[allow(clippy::iter_with_drain)]
-                        coll.extend(vec.drain(..));
-                    }
+                if vec.len() == 10 {
+                    #[allow(clippy::iter_with_drain)]
+                    coll.extend(vec.drain(..));
                 }
-
-                if !vec.is_empty() {
-                    coll.extend(vec);
-                }
-
-                query.complete().await?;
-                conn.complete();
-
-                Ok(coll)
             }
-            .instrument_err(span),
-        )
-    }
-}
 
-fn instrument_query_rows(sql: &str) -> Span {
-    debug_span!(
-        "MssqlProvider::query_rows",
-        sql,
-        err = tracing::field::Empty
-    )
+            if !vec.is_empty() {
+                coll.extend(vec);
+            }
+
+            query.complete().await?;
+            conn.complete();
+
+            Ok(coll)
+        })
+    }
 }
 
 struct QueryConn<'a> {
@@ -214,7 +198,7 @@ impl<'a> QueryConn<'a> {
 
     async fn query<'b>(
         &'b mut self,
-        sql: Cow<'b, str>,
+        statement: String,
         params: &'b [&'b (dyn ToSql)],
     ) -> Result<QueryStream<'b>> {
         let mut intermediate = Vec::new();
@@ -222,7 +206,13 @@ impl<'a> QueryConn<'a> {
 
         adapt_params(params, &mut intermediate, &mut output);
 
-        let stream = self.client.query(sql, &output[..]).await?;
+        let sql = statement.clone();
+
+        let stream = self
+            .client
+            .query(statement, &output[..])
+            .await
+            .map_err(|source| Error::Query { source, sql })?;
 
         Ok(QueryStream(stream))
     }
@@ -232,7 +222,7 @@ struct QueryStream<'a>(tiberius::QueryStream<'a>);
 
 impl<'a> QueryStream<'a> {
     async fn complete(self) -> Result<()> {
-        self.0.into_results().await?;
+        self.0.into_results().await.map_err(Error::unknown)?;
         Ok(())
     }
 }
@@ -246,7 +236,7 @@ impl<'a> Stream for QueryStream<'a> {
                 Poll::Pending => Poll::Pending,
                 Poll::Ready(Some(Ok(tiberius::QueryItem::Metadata(_)))) => continue,
                 Poll::Ready(Some(Ok(tiberius::QueryItem::Row(r)))) => Poll::Ready(Some(Ok(r))),
-                Poll::Ready(Some(Err(e))) => Poll::Ready(Some(Err(e.into()))),
+                Poll::Ready(Some(Err(e))) => Poll::Ready(Some(Err(Error::unknown(e).into()))),
                 Poll::Ready(None) => Poll::Ready(None),
             };
         }
@@ -274,7 +264,10 @@ impl State {
 
     async fn cancel_or_commit(&mut self, statement: &'static str) -> Result<()> {
         if let Some(mut client) = self.transaction.take() {
-            client.simple_query(statement).await.map_err(Error::Mssql)?;
+            client
+                .simple_query(statement)
+                .await
+                .map_err(Error::unknown)?;
 
             if self.client.is_none() {
                 self.client = Some(client);
@@ -319,7 +312,7 @@ impl State {
                 client
                     .simple_query("BEGIN TRAN")
                     .await
-                    .map_err(Error::Mssql)?;
+                    .map_err(Error::unknown)?;
 
                 Ok(client)
             }

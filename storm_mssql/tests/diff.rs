@@ -11,6 +11,7 @@ fn create_ctx() -> QueueRwLock<Ctx> {
 fn provider() -> ProviderContainer {
     let mut config = Config::default();
     config.database("master");
+
     #[cfg(target_os = "windows")]
     config.authentication(tiberius::AuthMethod::Integrated);
     config.trust_cert();
@@ -58,7 +59,7 @@ async fn diff_insert() -> Result<()> {
 
         provider
             .execute_with_args(
-                "CREATE TABLE ##Tbl (Id INT NOT NULL, V Int NOT NULL);",
+                "CREATE TABLE ##Tbl (Id INT NOT NULL, V Int NOT NULL);".to_string(),
                 &[],
                 ExecuteArgs {
                     use_transaction: false,

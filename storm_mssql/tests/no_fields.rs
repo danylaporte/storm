@@ -28,7 +28,7 @@ async fn no_fields() -> Result<()> {
 
         provider
             .execute_with_args(
-                "CREATE TABLE ##Tbl (Id INT NOT NULL);",
+                "CREATE TABLE ##Tbl (Id INT NOT NULL);".to_string(),
                 &[],
                 ExecuteArgs {
                     use_transaction: false,

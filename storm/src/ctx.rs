@@ -265,7 +265,7 @@ where
         k: &'b E::Key,
         args: LoadArgs,
     ) -> BoxFuture<'b, Result<Option<E>>> {
-        self.ctx.load_one_with_args(k, args)
+        LoadOne::<E>::load_one_with_args(self.ctx, k, args)
     }
 }
 

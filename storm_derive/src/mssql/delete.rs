@@ -44,7 +44,7 @@ where
         let sql = delete.to_sql_lit(table);
 
         tokens.append_all(quote! {
-            storm::tri!(storm_mssql::Execute::execute(provider, #sql, #params).await);
+            storm::tri!(storm_mssql::Execute::execute(provider, #sql.to_string(), #params).await);
             #(#errors)*
         });
     }

@@ -1,5 +1,5 @@
-use crate::{Client, ClientFactory, MssqlFactory, MssqlProvider};
-use storm::{provider::ProviderFactory, BoxFuture, Error, Result};
+use crate::{Client, ClientFactory, Error, MssqlFactory, MssqlProvider};
+use storm::{provider::ProviderFactory, BoxFuture, Result};
 
 /// This can wrap a ClientFactory and creates a transaction for each Client that are returned.
 /// It is useful for integration tests making sure that all items are rollback once the test
@@ -31,7 +31,7 @@ where
             client
                 .simple_query("BEGIN TRAN")
                 .await
-                .map_err(Error::Mssql)?;
+                .map_err(Error::unknown)?;
 
             Ok(client)
         })

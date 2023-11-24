@@ -28,7 +28,7 @@ async fn identity_key_crud() -> Result<()> {
 
         provider
             .execute_with_args(
-                "CREATE TABLE ##Tbl (Id INT NOT NULL IDENTITY, Name NVARCHAR(100) NOT NULL, Other INT NULL);",
+                "CREATE TABLE ##Tbl (Id INT NOT NULL IDENTITY, Name NVARCHAR(100) NOT NULL, Other INT NULL);".to_string(),
                 &[],
                 ExecuteArgs {
                     use_transaction: false,

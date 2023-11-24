@@ -1,5 +1,5 @@
-use crate::{Error, Execute, FromSql, Parameter, QueryRows, Result, ToSql};
-use storm::IsDefined;
+use crate::{Error, Execute, FromSql, Parameter, QueryRows, ToSql};
+use storm::{IsDefined, Result};
 use tiberius::ColumnData;
 use tracing::error;
 
@@ -10,11 +10,11 @@ pub struct UpsertBuilder<'a> {
     update_setters: String,
     update_wheres: String,
     upsert_mode: UpsertMode,
-    table: &'a str,
+    table: &'static str,
 }
 
 impl<'a> UpsertBuilder<'a> {
-    pub fn new(table: &'a str) -> Self {
+    pub fn new(table: &'static str) -> Self {
         Self {
             insert_fields: String::new(),
             insert_values: String::new(),
@@ -127,18 +127,26 @@ impl<'a> UpsertBuilder<'a> {
         provider.execute(sql, params.as_slice()).await?;
 
         if self.upsert_mode == UpsertMode::Insert {
-            let cast_ty = column_data_to_sql_type(key.to_sql())?;
+            let cast_ty = column_data_to_sql_type(key.to_sql(), self.table)?;
 
-            let one: OneValue<K> = provider
+            let mut rows: Vec<K> = provider
                 .query_rows(
                     format!("SELECT CAST(@@IDENTITY as {cast_ty})"),
                     &[],
-                    |row| K::from_sql(row.get(0)),
+                    |row| {
+                        K::from_sql(row.get(0))
+                            .map_err(|source| Error::FromSql {
+                                column: "@@IDENTITY",
+                                source,
+                                table: self.table,
+                            })
+                            .map_err(storm::Error::from)
+                    },
                     true,
                 )
                 .await?;
 
-            *key = one.0.ok_or(storm::Error::EntityNotFound)?;
+            *key = rows.pop().ok_or(Error::FetchIdentify)?;
         }
 
         Ok(())
@@ -216,22 +224,6 @@ impl<'a> UpsertBuilder<'a> {
     }
 }
 
-struct OneValue<T>(Option<T>);
-
-impl<T> Default for OneValue<T> {
-    fn default() -> Self {
-        OneValue(None)
-    }
-}
-
-impl<T> Extend<T> for OneValue<T> {
-    fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
-        if self.0.is_none() {
-            self.0 = iter.into_iter().next();
-        }
-    }
-}
-
 #[derive(Clone, Copy, Eq, PartialEq)]
 enum UpsertMode {
     InsertThanUpdate,
@@ -239,7 +231,7 @@ enum UpsertMode {
     Update,
 }
 
-fn column_data_to_sql_type(data: ColumnData<'_>) -> Result<&'static str> {
+fn column_data_to_sql_type(data: ColumnData<'_>, table: &'static str) -> Result<&'static str> {
     match data {
         ColumnData::I16(_) => Ok("smallint"),
         ColumnData::I32(_) => Ok("int"),
@@ -247,7 +239,7 @@ fn column_data_to_sql_type(data: ColumnData<'_>) -> Result<&'static str> {
         ColumnData::U8(_) => Ok("tinyint"),
         _ => {
             error!("key type is not supported as identity.");
-            Err(Error::Internal)
+            Err(crate::Error::IdentityType { table }.into())
         }
     }
 }

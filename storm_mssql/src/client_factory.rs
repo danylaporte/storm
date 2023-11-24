@@ -1,5 +1,5 @@
-use crate::Client;
-use storm::{BoxFuture, Error, Result};
+use crate::{Client, Error};
+use storm::{BoxFuture, Result};
 use tiberius::{Config, SqlBrowser};
 use tokio::net::TcpStream;
 use tokio_util::compat::TokioAsyncWriteCompatExt;
@@ -25,11 +25,15 @@ impl ClientFactory for Config {
     fn create_client(&self) -> BoxFuture<'_, Result<Client>> {
         Box::pin(async move {
             // named instance only available in windows.
-            let tcp = TcpStream::connect_named(self).await.map_err(Error::std)?;
-            tcp.set_nodelay(true).map_err(Error::std)?;
+            let tcp = TcpStream::connect_named(self)
+                .await
+                .map_err(Error::ConnectNamed)?;
+
+            tcp.set_nodelay(true).map_err(Error::Io)?;
 
             Client::connect(self.clone(), tcp.compat_write())
                 .await
+                .map_err(Error::CreateClient)
                 .map_err(Into::into)
         })
     }

@@ -29,7 +29,7 @@ impl<'a> LoadTranslated<'a> {
     pub fn add_field(&mut self, field: &Field, column: &str) {
         let ident = &field.ident;
         let index = self.select.add_field(column);
-        let read = read_row(index);
+        let read = read_row(index, &self.attrs.translate_table, column);
 
         self.fields.push(quote! {
             let v: Option<&str> = #read;
@@ -64,7 +64,7 @@ impl<'a> ToTokens for LoadTranslated<'a> {
             let mut conds = joins.inner_join(&self.attrs.table, Some("t"));
 
             let keys = add_keys(self.attrs, &mut conds, &mut select, &mut errors);
-            let culture = read_row(select.add_field("Culture"));
+            let culture = read_row(select.add_field("Culture"), &self.attrs.table, "Culture");
             let sql = select.to_sql_lit(&self.attrs.translate_table, &self.attrs.where_clause);
 
             let joins = format!("{{}} {} WHERE {{}}", joins.to_sql());
@@ -104,10 +104,11 @@ fn add_key(
     joins: &mut JoinConditions,
     select: &mut SelectBuilder,
     key_ts: &mut Vec<TokenStream>,
+    table: &str,
 ) {
     let column_index = select.add_field(translate_key);
 
-    key_ts.push(read_row(column_index));
+    key_ts.push(read_row(column_index, table, key));
     joins.add((Some("a"), translate_key), (Some("t"), key));
 }
 
@@ -122,7 +123,14 @@ fn add_keys(
     let mut ts = Vec::new();
 
     for (translate_key, key) in translate_keys.iter().zip(&keys) {
-        add_key(translate_key, key, joins, select, &mut ts);
+        add_key(
+            translate_key,
+            key,
+            joins,
+            select,
+            &mut ts,
+            &type_attrs.translate_table,
+        );
     }
 
     if keys.len() == 1 {

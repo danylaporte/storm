@@ -94,14 +94,26 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             translated.add_field(field, &column);
 
             if !attrs.skip_diff() {
-                load_diff_field(&mut diff, field_ident, &enum_fields_ident);
+                load_diff_field(
+                    &mut diff,
+                    field_ident,
+                    &enum_fields_ident,
+                    &table_name,
+                    &column,
+                );
             }
         } else {
             let column = continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
             load.add_field(field, &attrs, &column);
 
             if !attrs.skip_save() && !attrs.skip_diff() {
-                load_diff_field(&mut diff, field_ident, &enum_fields_ident);
+                load_diff_field(
+                    &mut diff,
+                    field_ident,
+                    &enum_fields_ident,
+                    &table_name,
+                    &column,
+                );
             }
         }
     }
@@ -358,7 +370,13 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
 
         quote! {
             #backup
-            *v = storm::tri!(storm::provider::LoadOne::<#ident>::load_one_with_args(self.container(), &k, storm::provider::LoadArgs { use_transaction: true }).await.and_then(|v| v.ok_or(storm::Error::EntityNotFound)));
+            *v = storm::tri!(storm::provider::LoadOne::<#ident>::load_one_with_args(
+                self.container(),
+                &k,
+                storm::provider::LoadArgs { use_transaction: true })
+                    .await
+                    .and_then(|v| v.ok_or_else(|| storm::Error::from(storm_mssql::Error::EntityNotFound { table: #table_name })))
+            );
             #restore
         }
     } else {
@@ -488,7 +506,7 @@ fn apply_entity_diff(diff: Option<Vec<TokenStream>>, ident: &Ident) -> TokenStre
     if let Some(diff) = diff {
         quote! {
             impl storm_mssql::ApplyEntityDiff for #ident {
-                fn apply_entity_diff<S: std::hash::BuildHasher>(&mut self, diff: &std::collections::HashMap<storm::FieldsOrStr<<Self as storm::EntityFields>::Fields>, storm_mssql::serde_json::Value, S>) -> storm_mssql::Result<()> {
+                fn apply_entity_diff<S: std::hash::BuildHasher>(&mut self, diff: &std::collections::HashMap<storm::FieldsOrStr<<Self as storm::EntityFields>::Fields>, storm_mssql::serde_json::Value, S>) -> storm::Result<()> {
                     #(#diff)*
                     Ok(())
                 }
@@ -513,16 +531,36 @@ fn entity_diff(ident: &Ident, diff: Option<Vec<TokenStream>>) -> TokenStream {
     }
 }
 
-fn load_diff_field(diff: &mut Option<Vec<TokenStream>>, field: &Ident, enum_fields_ident: &Ident) {
+fn load_diff_field(
+    diff: &mut Option<Vec<TokenStream>>,
+    field: &Ident,
+    enum_fields_ident: &Ident,
+    table: &LitStr,
+    column: &str,
+) {
     if let Some(diff) = diff.as_mut() {
         let name = Ident::new(&field.to_string().to_pascal_case(), field.span());
-        diff.push(quote! {storm::tri!(storm_mssql::_replace_field_diff(&mut self.#field, #enum_fields_ident::#name, diff));});
+        let column = LitStr::new(column, Span::call_site());
+
+        diff.push(quote! {
+            storm::tri!(
+                storm_mssql::_replace_field_diff(
+                    &mut self.#field,
+                    #enum_fields_ident::#name,
+                    diff,
+                    #table,
+                    #column
+                )
+            );
+        });
     }
 }
 
-fn read_row(column_index: usize) -> TokenStream {
+fn read_row(column_index: usize, table: &str, column: &str) -> TokenStream {
     let l = LitInt::new(&column_index.to_string(), Span::call_site());
-    quote!(storm::tri!(storm_mssql::_macro_load_field(&row, #l)))
+    let table = LitStr::new(table, Span::call_site());
+    let column = LitStr::new(column, Span::call_site());
+    quote!(storm::tri!(storm_mssql::_macro_load_field(&row, #l, #table, #column)))
 }
 
 fn enum_fields_impl(

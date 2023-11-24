@@ -36,7 +36,7 @@ impl<'a> LoadFields<'a> {
         let read = match attrs.load_with.as_ref() {
             Some(f) => quote!(storm::tri!(#f(&row))),
             None if skip_load => quote!(Default::default()),
-            None => read_row(column_index),
+            None => read_row(column_index, &self.attrs.table, column),
         };
 
         self.fields.push(quote!(#ident: #read,));
@@ -94,9 +94,9 @@ impl<'a> ToTokens for LoadFields<'a> {
     }
 }
 
-fn add_key(key: &str, select: &mut SelectBuilder, key_ts: &mut Vec<TokenStream>) {
+fn add_key(key: &str, select: &mut SelectBuilder, key_ts: &mut Vec<TokenStream>, table: &str) {
     let column_index = select.add_field(key);
-    key_ts.push(read_row(column_index));
+    key_ts.push(read_row(column_index, table, key));
 }
 
 fn add_keys(
@@ -108,7 +108,7 @@ fn add_keys(
     let mut ts = Vec::new();
 
     for key in &keys {
-        add_key(key, select, &mut ts);
+        add_key(key, select, &mut ts, &type_attrs.table);
     }
 
     if keys.len() == 1 {

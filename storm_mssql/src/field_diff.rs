@@ -1,4 +1,4 @@
-use crate::{Error, Result};
+use crate::FieldDiffError;
 use chrono::{FixedOffset, Local, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -7,6 +7,8 @@ use std::{
     hash::{BuildHasher, Hash},
 };
 use storm::FieldsOrStr;
+
+type Result<T> = std::result::Result<T, FieldDiffError>;
 
 /// Create the field from the diff value.
 pub trait FromFieldDiff: Sized {
@@ -39,9 +41,17 @@ pub fn _replace_field_diff<K: Eq + Hash, T: ApplyFieldDiff, S: BuildHasher>(
     field: &mut T,
     name: K,
     map: &HashMap<FieldsOrStr<K>, Value, S>,
-) -> Result<()> {
+    table: &'static str,
+    column: &'static str,
+) -> storm::Result<()> {
     if let Some(old) = map.get(&FieldsOrStr::Fields(name)) {
-        field.apply_field_diff(old.clone())?;
+        field
+            .apply_field_diff(old.clone())
+            .map_err(|source| crate::Error::FieldDiff {
+                column,
+                source,
+                table,
+            })?;
     }
 
     Ok(())
@@ -81,7 +91,7 @@ impl<T: PartialEq + Serialize> FieldDiff for Option<T> {
 }
 
 pub fn from_field_diff_impl<T: for<'de> Deserialize<'de>>(value: Value) -> Result<T> {
-    serde_json::from_value(value).map_err(Error::std)
+    serde_json::from_value(value).map_err(FieldDiffError::DeJson)
 }
 
 macro_rules! diff {

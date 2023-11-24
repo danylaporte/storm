@@ -3,6 +3,7 @@ use crate::{BoxFuture, Error, Result};
 use async_cell_lock::AsyncOnceCell;
 use std::{
     any::TypeId,
+    borrow::Cow,
     marker::PhantomData,
     sync::atomic::{AtomicU64, Ordering::Relaxed},
 };
@@ -64,8 +65,15 @@ impl ProviderContainer {
 
     fn find_record<'a>(&'a self, type_id: TypeId, name: &str) -> Result<&'a Rec> {
         match self.find_index(type_id, name) {
-            Ok(index) => self.records.get(index).ok_or(Error::ProviderNotFound),
-            Err(_) => Err(Error::ProviderNotFound),
+            Ok(index) => self
+                .records
+                .get(index)
+                .ok_or_else(|| Error::ProviderNotFound {
+                    provider: name.to_string(),
+                }),
+            Err(_) => Err(Error::ProviderNotFound {
+                provider: name.to_string(),
+            }),
         }
     }
 
@@ -104,7 +112,10 @@ impl ProviderContainer {
 
             castable.downcast().ok_or_else(|| {
                 error!("invalid cast for provider {name}");
-                Error::Internal
+
+                Error::InvalidProviderType {
+                    provider: Cow::Owned(name.to_string()),
+                }
             })
         })
     }

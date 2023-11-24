@@ -1,6 +1,8 @@
 use std::borrow::Cow;
-use storm::{prelude::*, Error, MssqlLoad, MssqlSave, Result};
-use storm_mssql::{Execute, ExecuteArgs, FromSql, MssqlFactory, MssqlProvider, ToSql, ToSqlNull};
+use storm::{prelude::*, MssqlLoad, MssqlSave};
+use storm_mssql::{
+    Execute, ExecuteArgs, FromSql, FromSqlError, MssqlFactory, MssqlProvider, ToSql, ToSqlNull,
+};
 use tiberius::Config;
 
 fn create_ctx() -> QueueRwLock<Ctx> {
@@ -33,14 +35,14 @@ async fn translated_flow() -> storm::Result<()> {
 
         provider
             .execute_with_args(
-                "CREATE TABLE ##Labels (Id Int PRIMARY KEY NOT NULL);",
+                "CREATE TABLE ##Labels (Id Int PRIMARY KEY NOT NULL);".to_string(),
                 &[],
                 no_transaction,
             )
             .await?;
 
         provider.execute_with_args(
-            "CREATE TABLE ##LabelsTranslatedValues (Id2 Int NOT NULL, Culture Int NOT NULL, Name NVARCHAR(50) NOT NULL);",
+            "CREATE TABLE ##LabelsTranslatedValues (Id2 Int NOT NULL, Culture Int NOT NULL, Name NVARCHAR(50) NOT NULL);".to_string(),
             &[],
             no_transaction,
         )
@@ -103,10 +105,10 @@ pub struct LabelId(i32);
 impl<'a> FromSql<'a> for LabelId {
     type Column = i32;
 
-    fn from_sql(col: Option<Self::Column>) -> Result<Self> {
+    fn from_sql(col: Option<Self::Column>) -> std::result::Result<Self, FromSqlError> {
         match col {
             Some(col) => Ok(LabelId(col)),
-            None => Err(Error::ColumnNull),
+            None => Err(FromSqlError::ColumnNull),
         }
     }
 }
@@ -172,12 +174,15 @@ impl Culture {
 impl<'a> FromSql<'a> for Culture {
     type Column = i32;
 
-    fn from_sql(col: Option<Self::Column>) -> Result<Self> {
+    fn from_sql(col: Option<Self::Column>) -> std::result::Result<Self, FromSqlError> {
         match col {
             Some(0) => Ok(Culture::Fr),
             Some(1) => Ok(Culture::En),
-            Some(v) => Err(Error::ConvertFailed(format!("Culture `{v}` invalid."))),
-            None => Err(Error::ColumnNull),
+            Some(v) => Err(FromSqlError::Unexpected {
+                ty: "Culture",
+                value: v.to_string(),
+            }),
+            None => Err(FromSqlError::ColumnNull),
         }
     }
 }

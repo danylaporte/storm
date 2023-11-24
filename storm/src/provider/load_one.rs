@@ -13,7 +13,7 @@ pub trait LoadOne<E: Entity>: Send + Sync {
     }
 
     fn load_one_ok<'a>(&'a self, k: &'a E::Key) -> BoxFuture<'a, Result<E>> {
-        Box::pin(async move { self.load_one(k).await?.ok_or(Error::EntityNotFound) })
+        Box::pin(async move { self.load_one(k).await?.ok_or(Error::LoadOneNotFound) })
     }
 }
 

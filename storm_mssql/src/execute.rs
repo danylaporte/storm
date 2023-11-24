@@ -1,26 +1,20 @@
 use crate::ToSql;
-use std::{borrow::Cow, fmt::Debug};
 use storm::{BoxFuture, Result};
 
 pub trait Execute {
-    fn execute_with_args<'a, S>(
+    fn execute_with_args<'a>(
         &'a self,
-        statement: S,
+        statement: String,
         params: &'a [&'a (dyn ToSql)],
         args: ExecuteArgs,
-    ) -> BoxFuture<'a, Result<u64>>
-    where
-        S: ?Sized + Debug + Into<Cow<'a, str>> + Send + 'a;
+    ) -> BoxFuture<'a, Result<u64>>;
 
     #[inline]
-    fn execute<'a, S>(
+    fn execute<'a>(
         &'a self,
-        statement: S,
+        statement: String,
         params: &'a [&'a (dyn ToSql)],
-    ) -> BoxFuture<'a, Result<u64>>
-    where
-        S: ?Sized + Debug + Into<Cow<'a, str>> + Send + 'a,
-    {
+    ) -> BoxFuture<'a, Result<u64>> {
         self.execute_with_args(statement, params, ExecuteArgs::default())
     }
 }
