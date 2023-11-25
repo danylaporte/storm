@@ -134,10 +134,10 @@ impl<'a> UpsertBuilder<'a> {
                     format!("SELECT CAST(@@IDENTITY as {cast_ty})"),
                     &[],
                     |row| {
-                        K::from_sql(row.get(0)).map_err(|source| {
+                        K::from_sql(row.get(0)).map_err(|error| {
                             storm::Error::from(Error::FromSql {
                                 column: "@@IDENTITY",
-                                source,
+                                error,
                                 table: self.table,
                                 ty: std::any::type_name::<K>(),
                             })

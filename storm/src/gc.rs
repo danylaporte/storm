@@ -14,7 +14,7 @@ use vec_map::VecMap;
 pub struct GcCtx;
 
 impl Ctx {
-    #[instrument(level = "debug", skip(self))]
+    #[instrument(skip(self))]
     pub fn gc(&mut self) {
         #[cfg(feature = "telemetry")]
         crate::telemetry::inc_storm_gc();
@@ -249,7 +249,6 @@ pub mod collectables {
         CELL.get_or_init(Default::default)
     }
 
-    #[tracing::instrument(level = "debug", skip(ctx))]
     pub fn collect(ctx: &mut Ctx) {
         funcs().read().iter().for_each(|f| f(ctx));
     }

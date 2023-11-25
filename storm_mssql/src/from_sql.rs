@@ -1,6 +1,7 @@
-use crate::{Error, FromSqlError};
+use crate::Error;
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
-use std::{borrow::Cow, sync::Arc};
+use serde::Deserialize;
+use std::{any::type_name, borrow::Cow, fmt::Display, sync::Arc};
 use tiberius::Uuid;
 
 pub trait FromSql<'a>: Sized {
@@ -156,6 +157,112 @@ impl<'a, 'b> FromSql<'a> for Cow<'b, str> {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum FromSqlError {
+    #[error("column is null")]
+    ColumnNull,
+
+    #[error("failed convert from {value}, {error}")]
+    ConvertFrom {
+        #[source]
+        error: Box<dyn std::error::Error + Send + Sync>,
+        value: String,
+    },
+
+    #[error("{0}")]
+    Custom(String),
+
+    #[error("failed decrypt {0}")]
+    Decrypt(#[source] Box<dyn std::error::Error + Send + Sync>),
+
+    #[error("failed deserialize json, {error}\n{payload}")]
+    Dejson {
+        #[source]
+        error: serde_json::Error,
+        payload: String,
+    },
+
+    #[error("failed deserialize {0}")]
+    Deserialize(#[source] Box<dyn std::error::Error + Send + Sync>),
+
+    #[error("invalid value {0}")]
+    InvalidValue(String),
+
+    #[error("invalid value {value}, {error}")]
+    InvalidValueWithErr {
+        #[source]
+        error: Box<dyn std::error::Error + Send + Sync>,
+        value: String,
+    },
+
+    #[error(transparent)]
+    Unknown(Box<dyn std::error::Error + Send + Sync>),
+}
+
+impl FromSqlError {
+    pub fn decrypt<E>(error: E) -> FromSqlError
+    where
+        E: std::error::Error + Send + Sync + 'static,
+    {
+        Self::Decrypt(Box::new(error))
+    }
+
+    pub fn deserialize<E>(error: E) -> FromSqlError
+    where
+        E: std::error::Error + Send + Sync + 'static,
+    {
+        Self::Deserialize(Box::new(error))
+    }
+
+    pub fn invalid_value<V: Display>(value: V) -> Self {
+        Self::InvalidValue(value.to_string())
+    }
+
+    pub fn invalid_value_with_err<V, E>(value: V, error: E) -> Self
+    where
+        E: std::error::Error + Send + Sync + 'static,
+        V: Display,
+    {
+        Self::InvalidValueWithErr {
+            error: Box::new(error),
+            value: value.to_string(),
+        }
+    }
+
+    pub fn unknown<E: std::error::Error + Send + Sync + 'static>(e: E) -> Self {
+        Self::Unknown(Box::new(e))
+    }
+}
+
+pub fn convert_from_copy<S, T>(val: S) -> Result<T, FromSqlError>
+where
+    S: Copy + Display,
+    T: TryFrom<S>,
+    T::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
+{
+    match TryFrom::try_from(val) {
+        Ok(v) => Ok(v),
+        Err(e) => Err(FromSqlError::ConvertFrom {
+            error: e.into(),
+            value: val.to_string(),
+        }),
+    }
+}
+
+/// Deserialize a column content in json wrapping the error for maximum tracability.
+pub fn dejson<T>(s: &str) -> Result<T, FromSqlError>
+where
+    T: for<'de> Deserialize<'de>,
+{
+    match serde_json::from_str(s) {
+        Ok(v) => Ok(v),
+        Err(error) => Err(FromSqlError::Dejson {
+            error,
+            payload: s.to_string(),
+        }),
+    }
+}
+
 /// Internal used for macros
 #[doc(hidden)]
 pub fn _macro_load_field<'a, T: FromSql<'a>>(
@@ -167,11 +274,11 @@ pub fn _macro_load_field<'a, T: FromSql<'a>>(
     row.try_get(index)
         .map_err(Error::unknown)
         .and_then(|col| {
-            FromSql::from_sql(col).map_err(|source| Error::FromSql {
+            FromSql::from_sql(col).map_err(|error| Error::FromSql {
                 column,
-                source,
+                error,
                 table,
-                ty: std::any::type_name::<T>(),
+                ty: type_name::<T>(),
             })
         })
         .map_err(Into::into)

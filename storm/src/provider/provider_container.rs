@@ -3,12 +3,11 @@ use crate::{BoxFuture, Error, Result};
 use async_cell_lock::AsyncOnceCell;
 use std::{
     any::TypeId,
-    borrow::Cow,
     marker::PhantomData,
     sync::atomic::{AtomicU64, Ordering::Relaxed},
 };
 use tokio::sync::{Mutex, MutexGuard};
-use tracing::{error, instrument};
+use tracing::error;
 
 /// Last recent use counter
 type Lru = AtomicU64;
@@ -83,7 +82,6 @@ impl ProviderContainer {
 
     /// A method to garbage collect all unused provider. This is intended to close database
     /// connections and release resources.
-    #[instrument(level = "debug", skip(self))]
     pub fn gc(&mut self) {
         let last_gc = self.last_gc;
         let new_gc = *self.lru.get_mut();
@@ -114,7 +112,8 @@ impl ProviderContainer {
                 error!("invalid cast for provider {name}");
 
                 Error::InvalidProviderType {
-                    provider: Cow::Owned(name.to_string()),
+                    name: name.to_string(),
+                    ty: std::any::type_name::<P>(),
                 }
             })
         })

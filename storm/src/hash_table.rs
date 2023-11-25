@@ -13,7 +13,6 @@ use std::{
     hash::Hash,
     ops::Deref,
 };
-use tracing::instrument;
 use version_tag::VersionTag;
 
 pub struct HashTable<E: Entity> {
@@ -160,13 +159,12 @@ where
 
 impl<E> Gc for HashTable<E>
 where
-    E: CtxTypeInfo + Entity + Gc,
+    E: Entity + Gc,
     E::Key: Eq + Hash,
 {
     const SUPPORT_GC: bool = E::SUPPORT_GC;
 
     #[inline]
-    #[instrument(level = "debug", fields(name = <E as CtxTypeInfo>::NAME, obj = crate::OBJ_TABLE), skip_all)]
     fn gc(&mut self, ctx: &GcCtx) {
         self.map.gc(ctx);
     }

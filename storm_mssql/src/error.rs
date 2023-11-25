@@ -1,4 +1,5 @@
-use std::{env::VarError, fmt::Display, io};
+use crate::from_sql::FromSqlError;
+use std::{env::VarError, io};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -21,10 +22,12 @@ pub enum Error {
         table: &'static str,
     },
 
-    #[error("from_sql error on {table}.{column}; {source}")]
+    #[error("from_sql error in {ty} on {table}.{column}, {error}")]
     FromSql {
+        #[source]
+        error: FromSqlError,
+
         column: &'static str,
-        source: FromSqlError,
         table: &'static str,
         ty: &'static str,
     },
@@ -47,8 +50,8 @@ pub enum Error {
     #[error(transparent)]
     Unknown(Box<dyn std::error::Error + Send + Sync>),
 
-    #[error("failed accessing env var {name}; {source}")]
-    Var { name: String, source: VarError },
+    #[error("failed accessing env var {name}, {error}")]
+    Var { error: VarError, name: String },
 }
 
 impl Error {
@@ -59,7 +62,7 @@ impl Error {
 
 impl From<Error> for storm::Error {
     fn from(value: Error) -> Self {
-        storm::Error::Std(Box::new(value))
+        storm::Error::Unknown(value.into())
     }
 }
 
@@ -78,50 +81,5 @@ pub enum FieldDiffError {
 impl FieldDiffError {
     pub fn unknown<E: std::error::Error + Send + Sync + 'static>(e: E) -> Self {
         Self::Unknown(Box::new(e))
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum FromSqlError {
-    #[error("column is null")]
-    ColumnNull,
-
-    #[error("{0}")]
-    Custom(String),
-
-    #[error("failed deserialize json, {0}")]
-    DeJson(#[source] serde_json::Error),
-
-    #[error("unexpected {0}")]
-    Unexpected(String),
-
-    #[error(transparent)]
-    Unknown(Box<dyn std::error::Error + Send + Sync>),
-
-    #[error("value: {value}, {source}")]
-    UnknownWithVal {
-        source: Box<dyn std::error::Error + Send + Sync>,
-        value: String,
-    },
-}
-
-impl FromSqlError {
-    pub fn unexpected<V: Display>(value: V) -> Self {
-        Self::Unexpected(value.to_string())
-    }
-
-    pub fn unknown<E: std::error::Error + Send + Sync + 'static>(e: E) -> Self {
-        Self::Unknown(Box::new(e))
-    }
-
-    pub fn unknown_with_val<E, V>(source: E, val: V) -> Self
-    where
-        E: std::error::Error + Send + Sync + 'static,
-        V: Display,
-    {
-        Self::UnknownWithVal {
-            source: Box::new(source),
-            value: val.to_string(),
-        }
     }
 }

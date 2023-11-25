@@ -8,6 +8,7 @@ repository = "https://github.com/danylaporte/storm"
 publish = false
 
 [dependencies]
+anyhow = "1"
 async-cell-lock = { git = "https://github.com/danylaporte/async-cell-lock.git" }
 attached = { git = "https://github.com/danylaporte/attached.git" }
 cache = { git = "https://github.com/danylaporte/cache.git", optional = true }

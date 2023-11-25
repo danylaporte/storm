@@ -8,8 +8,8 @@ use crate::{
 };
 use fxhash::FxHashMap;
 use parking_lot::RwLock;
-use std::{hash::Hash, marker::PhantomData};
-use tracing::{debug_span, instrument, Span};
+use std::{any::type_name, hash::Hash, marker::PhantomData};
+use tracing::{debug, debug_span, trace, Span};
 use version_tag::VersionTag;
 
 pub struct Ctx {
@@ -38,12 +38,12 @@ impl Ctx {
     }
 
     #[doc(hidden)]
-    #[instrument(level = "debug", fields(name = <I as CtxTypeInfo>::NAME, obj = crate::OBJ_INDEX), skip(self))]
     pub fn index_gc<I>(&mut self)
     where
         I: Accessor + CtxTypeInfo + Gc,
     {
         if let Some(idx) = self.vars.get_mut(I::var()) {
+            trace!(name = type_name::<I>(), "gc index");
             idx.gc(&self.gc);
         }
     }
@@ -95,13 +95,13 @@ impl Ctx {
     }
 
     #[doc(hidden)]
-    #[instrument(level = "debug", fields(name = <E as CtxTypeInfo>::NAME, obj = crate::OBJ_TABLE), skip(self))]
     pub fn tbl_gc<E>(&mut self)
     where
         E: CtxTypeInfo + Entity + EntityAccessor,
         E::Tbl: Accessor + NotifyTag + Gc,
     {
         if let Some(tbl) = self.vars.get_mut(E::entity_var()) {
+            trace!(entity = type_name::<E>(), "gc table");
             tbl.gc(&self.gc);
         }
     }
@@ -276,9 +276,9 @@ pub struct CtxTransaction<'a> {
 }
 
 impl<'a> CtxTransaction<'a> {
-    #[instrument(level = "debug", skip(self), err)]
     pub fn commit(self) -> BoxFuture<'a, Result<Logs>> {
         Box::pin(async move {
+            debug!("commit");
             self.provider.commit().await?;
             Ok(Logs(self.log_ctx))
         })

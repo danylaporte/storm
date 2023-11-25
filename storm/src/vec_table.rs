@@ -5,7 +5,6 @@ use crate::{
 };
 use rayon::iter::IntoParallelIterator;
 use std::ops::Deref;
-use tracing::instrument;
 use vec_map::{Entry, Iter, Keys, ParIter, Values, VecMap};
 use version_tag::VersionTag;
 
@@ -163,12 +162,11 @@ where
 
 impl<E> Gc for VecTable<E>
 where
-    E: Entity + CtxTypeInfo + Gc,
+    E: Entity + Gc,
     E::Key: From<usize>,
 {
     const SUPPORT_GC: bool = E::SUPPORT_GC;
 
-    #[instrument(level = "debug", fields(name = <E as CtxTypeInfo>::NAME, obj = crate::OBJ_TABLE), skip_all)]
     #[inline]
     fn gc(&mut self, ctx: &GcCtx) {
         self.map.gc(ctx);

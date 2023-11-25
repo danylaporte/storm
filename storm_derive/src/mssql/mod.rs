@@ -136,7 +136,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             #[cfg(test)]
             #[tokio::test]
             async fn #load_test() -> storm::Result<()> {
-                let provider = storm::tri!(storm_mssql::create_provider_container_from_env("DB", #provider));
+                let provider = storm::tri!(storm_mssql::create_provider_container_from_env_with_trust("DB", #provider, true));
                 storm::tri!(storm::provider::LoadAll::<#ident, _, storm::provider::LoadNothing>::load_all(&provider, &()).await);
                 Ok(())
             }

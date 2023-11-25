@@ -12,8 +12,15 @@ pub trait LoadOne<E: Entity>: Send + Sync {
         self.load_one_with_args(k, LoadArgs::default())
     }
 
-    fn load_one_ok<'a>(&'a self, k: &'a E::Key) -> BoxFuture<'a, Result<E>> {
-        Box::pin(async move { self.load_one(k).await?.ok_or(Error::LoadOneNotFound) })
+    fn load_one_ok<'a>(&'a self, k: &'a E::Key) -> BoxFuture<'a, Result<E>>
+    where
+        E::Key: std::fmt::Debug,
+    {
+        Box::pin(async move {
+            self.load_one(k)
+                .await?
+                .ok_or_else(|| Error::load_one_not_found::<_, E>(k))
+        })
     }
 }
 
