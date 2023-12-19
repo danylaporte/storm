@@ -11,10 +11,10 @@ use std::{
     },
     task::{Context, Poll},
 };
-use storm::{provider, BoxFuture, Error, InstrumentErr, Result};
+use storm::{provider, BoxFuture, Error, Result};
 use tiberius::Row;
 use tokio::sync::{Mutex, MutexGuard};
-use tracing::{debug_span, instrument, Instrument, Span};
+use tracing::{info_span, Instrument};
 
 pub struct MssqlProvider(Arc<Inner>);
 
@@ -53,12 +53,6 @@ impl MssqlProvider {
 }
 
 impl Execute for MssqlProvider {
-    #[instrument(
-        level = "debug",
-        name = "MssqlProvider::execute",
-        skip(self, params),
-        err
-    )]
     fn execute_with_args<'a, S>(
         &'a self,
         statement: S,
@@ -119,7 +113,7 @@ impl provider::Provider for MssqlProvider {
             async move {
                 let _ = p.state().await;
             }
-            .instrument(debug_span!(parent: span, "rollback_transaction")),
+            .instrument(info_span!(parent: span, "rollback_transaction")),
         );
     }
 
@@ -143,44 +137,32 @@ impl QueryRows for MssqlProvider {
         S: ?Sized + Debug + for<'b> Into<Cow<'b, str>> + Send + 'a,
     {
         let sql = statement.into();
-        let span = instrument_query_rows(&sql);
 
-        Box::pin(
-            async move {
-                let mut conn = QueryConn::new(self, use_transaction).await?;
-                let mut query = conn.query(sql, params).await?;
-                let mut vec = Vec::with_capacity(10);
-                let mut coll = C::default();
+        Box::pin(async move {
+            let mut conn = QueryConn::new(self, use_transaction).await?;
+            let mut query = conn.query(sql, params).await?;
+            let mut vec = Vec::with_capacity(10);
+            let mut coll = C::default();
 
-                while let Some(row) = query.try_next().await? {
-                    vec.push(mapper(row)?);
+            while let Some(row) = query.try_next().await? {
+                vec.push(mapper(row)?);
 
-                    if vec.len() == 10 {
-                        #[allow(clippy::iter_with_drain)]
-                        coll.extend(vec.drain(..));
-                    }
+                if vec.len() == 10 {
+                    #[allow(clippy::iter_with_drain)]
+                    coll.extend(vec.drain(..));
                 }
-
-                if !vec.is_empty() {
-                    coll.extend(vec);
-                }
-
-                query.complete().await?;
-                conn.complete();
-
-                Ok(coll)
             }
-            .instrument_err(span),
-        )
-    }
-}
 
-fn instrument_query_rows(sql: &str) -> Span {
-    debug_span!(
-        "MssqlProvider::query_rows",
-        sql,
-        err = tracing::field::Empty
-    )
+            if !vec.is_empty() {
+                coll.extend(vec);
+            }
+
+            query.complete().await?;
+            conn.complete();
+
+            Ok(coll)
+        })
+    }
 }
 
 struct QueryConn<'a> {

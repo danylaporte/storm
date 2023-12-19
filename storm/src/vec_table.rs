@@ -5,7 +5,6 @@ use crate::{
 };
 use rayon::iter::IntoParallelIterator;
 use std::ops::Deref;
-use tracing::instrument;
 use vec_map::{Entry, Iter, Keys, ParIter, Values, VecMap};
 use version_tag::VersionTag;
 
@@ -168,7 +167,6 @@ where
 {
     const SUPPORT_GC: bool = E::SUPPORT_GC;
 
-    #[instrument(level = "debug", fields(name = <E as CtxTypeInfo>::NAME, obj = crate::OBJ_TABLE), skip_all)]
     #[inline]
     fn gc(&mut self, ctx: &GcCtx) {
         self.map.gc(ctx);

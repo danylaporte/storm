@@ -1,15 +1,15 @@
 use crate::{
     length::Length,
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
-    register_metrics, Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity,
-    EntityAccessor, Gc, GcCtx, Get, HashTable, Insert, InsertIfChanged, InsertMut,
-    InsertMutIfChanged, InstrumentErr, Log, LogAccessor, LogState, Logs, LogsVar, NotifyTag,
-    OnceCell, ProviderContainer, Remove, Result, Tag, Transaction, Vars, VecTable,
+    Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity, EntityAccessor,
+    Gc, GcCtx, Get, HashTable, Insert, InsertIfChanged, InsertMut, InsertMutIfChanged,
+    InstrumentErr, Log, LogAccessor, LogState, Logs, LogsVar, NotifyTag, OnceCell,
+    ProviderContainer, Remove, Result, Tag, Transaction, Vars, VecTable,
 };
 use fxhash::FxHashMap;
 use parking_lot::RwLock;
 use std::{hash::Hash, marker::PhantomData};
-use tracing::{debug_span, instrument, Span};
+use tracing::{info_span, instrument, Span};
 use version_tag::VersionTag;
 
 pub struct Ctx {
@@ -20,7 +20,6 @@ pub struct Ctx {
 
 impl Ctx {
     pub fn new(provider: ProviderContainer) -> Self {
-        register_metrics();
         Ctx {
             gc: Default::default(),
             provider,
@@ -38,7 +37,6 @@ impl Ctx {
     }
 
     #[doc(hidden)]
-    #[instrument(level = "debug", fields(name = <I as CtxTypeInfo>::NAME, obj = crate::OBJ_INDEX), skip(self))]
     pub fn index_gc<I>(&mut self)
     where
         I: Accessor + CtxTypeInfo + Gc,
@@ -95,7 +93,6 @@ impl Ctx {
     }
 
     #[doc(hidden)]
-    #[instrument(level = "debug", fields(name = <E as CtxTypeInfo>::NAME, obj = crate::OBJ_TABLE), skip(self))]
     pub fn tbl_gc<E>(&mut self)
     where
         E: CtxTypeInfo + Entity + EntityAccessor,
@@ -276,7 +273,7 @@ pub struct CtxTransaction<'a> {
 }
 
 impl<'a> CtxTransaction<'a> {
-    #[instrument(level = "debug", skip(self), err)]
+    #[instrument(skip(self), err)]
     pub fn commit(self) -> BoxFuture<'a, Result<Logs>> {
         Box::pin(async move {
             self.provider.commit().await?;
@@ -817,7 +814,7 @@ where
 }
 
 fn insert_tbl_transaction_span() -> Span {
-    debug_span!("TblTransaction::insert", err = tracing::field::Empty)
+    info_span!("TblTransaction::insert", err = tracing::field::Empty)
 }
 
 impl<'a, 'b, E> InsertMut<E> for TblTransaction<'a, 'b, E>
@@ -922,7 +919,7 @@ where
 }
 
 fn insert_mut_tbl_transaction_span() -> Span {
-    debug_span!("TblTransaction::insert_mut", err = tracing::field::Empty)
+    info_span!("TblTransaction::insert_mut", err = tracing::field::Empty)
 }
 
 impl<'a, 'b, E> Remove<E> for TblTransaction<'a, 'b, E>
@@ -983,7 +980,7 @@ where
 }
 
 fn remove_tbl_transaction_span() -> Span {
-    debug_span!("TblTransaction::remove", err = tracing::field::Empty)
+    info_span!("TblTransaction::remove", err = tracing::field::Empty)
 }
 
 impl<'a> ApplyLog<Logs> for async_cell_lock::QueueRwLockWriteGuard<'a, Ctx> {

@@ -93,42 +93,6 @@ pub use storm_derive::{indexing, Ctx, LocksAwait, NoopDelete, NoopLoad, NoopSave
 #[cfg(feature = "mssql")]
 pub use storm_derive::{MssqlDelete, MssqlLoad, MssqlSave};
 
-fn register_metrics() {
-    #[cfg(feature = "telemetry")]
-    {
-        use metrics::{describe_counter, describe_gauge, Unit};
-        use std::sync::Once;
-
-        static START: Once = Once::new();
-
-        START.call_once(|| {
-            describe_gauge!(
-                "storm.execute.count",
-                Unit::Count,
-                "Operation execution time per type."
-            );
-
-            describe_gauge!(
-                "storm.execute.time",
-                Unit::Nanoseconds,
-                "Operation execution time per type."
-            );
-
-            #[cfg(feature = "cache")]
-            {
-                describe_counter!(
-                    "storm.cache.island.gc",
-                    Unit::Count,
-                    "cache island collected"
-                );
-            }
-
-            describe_counter!("storm.gc", Unit::Count, "storm gc run");
-            describe_gauge!("storm.table.rows", Unit::Count, "row count of a table");
-        });
-    }
-}
-
 #[macro_export]
 macro_rules! tri {
     ($e:expr) => {

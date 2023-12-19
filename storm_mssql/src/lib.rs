@@ -4,6 +4,8 @@ mod execute;
 mod field_diff;
 mod filter_sql;
 mod from_sql;
+#[doc(hidden)]
+pub mod metrics_helper;
 mod mssql_factory;
 mod mssql_meta;
 mod mssql_provider;

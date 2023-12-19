@@ -7,7 +7,7 @@ use std::{
     sync::atomic::{AtomicU64, Ordering::Relaxed},
 };
 use tokio::sync::{Mutex, MutexGuard};
-use tracing::{error, instrument};
+use tracing::error;
 
 /// Last recent use counter
 type Lru = AtomicU64;
@@ -75,7 +75,6 @@ impl ProviderContainer {
 
     /// A method to garbage collect all unused provider. This is intended to close database
     /// connections and release resources.
-    #[instrument(level = "debug", skip(self))]
     pub fn gc(&mut self) {
         let last_gc = self.last_gc;
         let new_gc = *self.lru.get_mut();
