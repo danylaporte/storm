@@ -69,6 +69,7 @@
 <a href="#69" id="69">69</a>
 <a href="#70" id="70">70</a>
 <a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt::Display;
 <span class="kw">use </span>std::future::Future;
 <span class="kw">use </span>std::pin::Pin;
@@ -98,7 +99,8 @@
     op_wrap(f, table, <span class="string">&quot;load&quot;</span>)
 }
 
-<span class="attr">#[doc(hidden)]
+<span class="attr">#[allow(clippy::redundant_async_block)]
+#[doc(hidden)]
 #[instrument(name = <span class="string">&quot;storm_mssql::op&quot;</span>, skip(f), err)]
 </span><span class="kw">fn </span>op_wrap&lt;<span class="lifetime">&#39;a</span>, F, T, E&gt;(
     f: F,
@@ -115,7 +117,7 @@
             <span class="kw">let </span>d = std::time::Instant::now();
             <span class="kw">let </span>r = f.<span class="kw">await</span>;
             <span class="kw">let </span>d = d.elapsed();
-
+        
             <span class="macro">metrics::counter!</span>(<span class="string">&quot;storm_mssql_count&quot;</span>, <span class="number">1</span>, <span class="string">&quot;table&quot; </span>=&gt; table, <span class="string">&quot;op&quot; </span>=&gt; op);
             <span class="macro">metrics::counter!</span>(<span class="string">&quot;storm_mssql_ms&quot;</span>, d.as_millis() <span class="kw">as </span>u64, <span class="string">&quot;table&quot; </span>=&gt; table, <span class="string">&quot;op&quot; </span>=&gt; op);
 
