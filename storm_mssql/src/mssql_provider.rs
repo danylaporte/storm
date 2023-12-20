@@ -256,7 +256,14 @@ impl State {
 
     async fn cancel_or_commit(&mut self, statement: &'static str) -> Result<()> {
         if let Some(mut client) = self.transaction.take() {
-            client.simple_query(statement).await.map_err(Error::Mssql)?;
+            let r = client.simple_query(statement).await.map_err(Error::Mssql);
+
+            #[cfg(feature = "telemetry")]
+            {
+                metrics::decrement_gauge!("storm_mssql_transaction_count", 1.0);
+            }
+
+            r?;
 
             if self.client.is_none() {
                 self.client = Some(client);
@@ -298,10 +305,17 @@ impl State {
             None => {
                 let mut client = self.client().await?;
 
-                client
+                let r = client
                     .simple_query("BEGIN TRAN")
                     .await
-                    .map_err(Error::Mssql)?;
+                    .map_err(Error::Mssql);
+
+                #[cfg(feature = "telemetry")]
+                {
+                    metrics::increment_gauge!("storm_mssql_transaction_count", 1.0);
+                }
+
+                r?;
 
                 Ok(client)
             }

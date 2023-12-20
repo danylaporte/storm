@@ -27,6 +27,7 @@ where
     op_wrap(f, table, "load")
 }
 
+#[allow(clippy::redundant_async_block)]
 #[doc(hidden)]
 #[instrument(name = "storm_mssql::op", skip(f), err)]
 fn op_wrap<'a, F, T, E>(
@@ -44,7 +45,7 @@ where
             let d = std::time::Instant::now();
             let r = f.await;
             let d = d.elapsed();
-
+        
             metrics::counter!("storm_mssql_count", 1, "table" => table, "op" => op);
             metrics::counter!("storm_mssql_ms", d.as_millis() as u64, "table" => table, "op" => op);
 

@@ -35,4 +35,4 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"], default-featu
 default = ["cache", "chrono", "dec19x5", "derive", "uuid"]
 derive = ["storm_derive"]
 mssql = ["storm_derive/mssql", "tiberius"]
-telemetry = ["metrics", "storm_derive/telemetry"]
+telemetry = ["metrics", "storm_derive/telemetry", "async-cell-lock/telemetry"]
