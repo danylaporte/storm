@@ -118,8 +118,8 @@
             <span class="kw">let </span>r = f.<span class="kw">await</span>;
             <span class="kw">let </span>d = d.elapsed();
         
-            <span class="macro">metrics::counter!</span>(<span class="string">&quot;storm_mssql_count&quot;</span>, <span class="number">1</span>, <span class="string">&quot;table&quot; </span>=&gt; table, <span class="string">&quot;op&quot; </span>=&gt; op);
-            <span class="macro">metrics::counter!</span>(<span class="string">&quot;storm_mssql_ms&quot;</span>, d.as_millis() <span class="kw">as </span>u64, <span class="string">&quot;table&quot; </span>=&gt; table, <span class="string">&quot;op&quot; </span>=&gt; op);
+            <span class="macro">metrics::counter!</span>(<span class="string">&quot;storm_mssql_count&quot;</span>, <span class="string">&quot;table&quot; </span>=&gt; table, <span class="string">&quot;op&quot; </span>=&gt; op).increment(<span class="number">1</span>);
+            <span class="macro">metrics::counter!</span>(<span class="string">&quot;storm_mssql_ms&quot;</span>, <span class="string">&quot;table&quot; </span>=&gt; table, <span class="string">&quot;op&quot; </span>=&gt; op).increment(d.as_millis() <span class="kw">as </span>u64);
 
             r
         }

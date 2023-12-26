@@ -611,7 +611,7 @@
 
             <span class="attr">#[cfg(feature = <span class="string">&quot;telemetry&quot;</span>)]
             </span>{
-                <span class="macro">metrics::decrement_gauge!</span>(<span class="string">&quot;storm_mssql_transaction_count&quot;</span>, <span class="number">1.0</span>);
+                <span class="macro">metrics::gauge!</span>(<span class="string">&quot;storm_mssql_transaction_count&quot;</span>).decrement(<span class="number">1.0</span>);
             }
 
             r<span class="question-mark">?</span>;
@@ -663,7 +663,7 @@
 
                 <span class="attr">#[cfg(feature = <span class="string">&quot;telemetry&quot;</span>)]
                 </span>{
-                    <span class="macro">metrics::increment_gauge!</span>(<span class="string">&quot;storm_mssql_transaction_count&quot;</span>, <span class="number">1.0</span>);
+                    <span class="macro">metrics::gauge!</span>(<span class="string">&quot;storm_mssql_transaction_count&quot;</span>).increment(<span class="number">1.0</span>);
                 }
 
                 r<span class="question-mark">?</span>;
