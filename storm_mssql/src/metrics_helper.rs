@@ -46,8 +46,8 @@ where
             let r = f.await;
             let d = d.elapsed();
         
-            metrics::counter!("storm_mssql_count", 1, "table" => table, "op" => op);
-            metrics::counter!("storm_mssql_ms", d.as_millis() as u64, "table" => table, "op" => op);
+            metrics::counter!("storm_mssql_count", "table" => table, "op" => op).increment(1);
+            metrics::counter!("storm_mssql_ms", "table" => table, "op" => op).increment(d.as_millis() as u64);
 
             r
         }

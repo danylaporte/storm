@@ -260,7 +260,7 @@ impl State {
 
             #[cfg(feature = "telemetry")]
             {
-                metrics::decrement_gauge!("storm_mssql_transaction_count", 1.0);
+                metrics::gauge!("storm_mssql_transaction_count").decrement(1.0);
             }
 
             r?;
@@ -312,7 +312,7 @@ impl State {
 
                 #[cfg(feature = "telemetry")]
                 {
-                    metrics::increment_gauge!("storm_mssql_transaction_count", 1.0);
+                    metrics::gauge!("storm_mssql_transaction_count").increment(1.0);
                 }
 
                 r?;
