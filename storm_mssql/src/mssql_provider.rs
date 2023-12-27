@@ -14,7 +14,6 @@ use std::{
 use storm::{provider, BoxFuture, Result};
 use tiberius::Row;
 use tokio::sync::{Mutex, MutexGuard};
-use tracing::{info_span, instrument, Instrument};
 
 pub struct MssqlProvider(Arc<Inner>);
 
@@ -53,7 +52,6 @@ impl MssqlProvider {
 }
 
 impl Execute for MssqlProvider {
-    #[instrument(name = "MssqlProvider::execute", skip_all, err)]
     fn execute_with_args<'a>(
         &'a self,
         statement: String,
@@ -110,15 +108,11 @@ impl provider::Provider for MssqlProvider {
     fn cancel(&self) {
         self.0.cancel_transaction.store(true, Relaxed);
 
-        let span = tracing::Span::current();
         let p = Self(Arc::clone(&self.0));
 
-        tokio::spawn(
-            async move {
-                let _ = p.state().await;
-            }
-            .instrument(info_span!(parent: span, "rollback_transaction")),
-        );
+        tokio::spawn(async move {
+            let _ = p.state().await;
+        });
     }
 
     fn commit(&self) -> BoxFuture<'_, Result<()>> {
@@ -127,7 +121,6 @@ impl provider::Provider for MssqlProvider {
 }
 
 impl QueryRows for MssqlProvider {
-    #[instrument(name = "MssqlProvider::query", skip_all, err)]
     fn query_rows<'a, M, R, C>(
         &'a self,
         sql: String,
@@ -264,10 +257,14 @@ impl State {
 
     async fn cancel_or_commit(&mut self, statement: &'static str) -> Result<()> {
         if let Some(mut client) = self.transaction.take() {
-            client
-                .simple_query(statement)
-                .await
-                .map_err(Error::unknown)?;
+            let r = client.simple_query(statement).await.map_err(Error::unknown);
+
+            #[cfg(feature = "telemetry")]
+            {
+                metrics::gauge!("storm_mssql_transaction_count").decrement(1.0);
+            }
+
+            r?;
 
             if self.client.is_none() {
                 self.client = Some(client);
@@ -309,10 +306,17 @@ impl State {
             None => {
                 let mut client = self.client().await?;
 
-                client
+                let r = client
                     .simple_query("BEGIN TRAN")
                     .await
-                    .map_err(Error::unknown)?;
+                    .map_err(Error::unknown);
+
+                #[cfg(feature = "telemetry")]
+                {
+                    metrics::gauge!("storm_mssql_transaction_count").increment(1.0);
+                }
+
+                r?;
 
                 Ok(client)
             }

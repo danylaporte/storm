@@ -27,23 +27,18 @@ pub(crate) fn delete(input: &DeriveInput) -> TokenStream {
     let table_name = LitStr::new(&attrs.table, attrs.table.span());
 
     let provider = attrs.provider();
-    let (metrics_start, metrics_end) = metrics(ident, "delete");
 
     quote! {
         impl storm::provider::Delete<#ident> for storm::provider::TransactionProvider<'_> {
-            #[tracing::instrument(name = "delete", level = "debug", skip(self, k), fields(table = #table_name))]
             fn delete<'a>(&'a self, k: &'a <#ident as storm::Entity>::Key) -> storm::BoxFuture<'a, storm::Result<()>> {
-                Box::pin(async move {
+                storm_mssql::metrics_helper::delete_wrap(async move {
                     let provider: &storm_mssql::MssqlProvider = storm::tri!(self.container().provide(#provider).await);
-
-                    #metrics_start
 
                     #translate
                     #normal
 
-                    #metrics_end
                     Ok(())
-                })
+                }, #table_name)
             }
         }
     }
@@ -122,12 +117,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
 
     let translated_where = translated.to_where_clause();
     let provider = attrs.provider();
-    let (metrics_start, metrics_end) = metrics(ident, "load");
     let diff = apply_entity_diff(diff, ident);
-    let instrument_ident = Ident::new(
-        &format!("{}_load_all_inst", ident.to_string().to_snake_case()),
-        ident.span(),
-    );
 
     let test = if attrs.no_test {
         quote!()
@@ -144,24 +134,16 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     };
 
     quote! {
-        fn #instrument_ident(args: &storm::provider::LoadArgs) -> tracing::Span {
-            tracing::debug_span!("load_all", args = ?args, table = #table_name, err = tracing::field::Empty)
-        }
-
         fn #load_fn<'a, C>(provider: &'a storm::provider::ProviderContainer, sql: std::borrow::Cow<'a, str>, params: std::borrow::Cow<'a, [&'a dyn storm_mssql::ToSql]>, args: storm::provider::LoadArgs) -> storm::BoxFuture<'a, storm::Result<C>>
         where
             C: Default + Extend<(<#ident as storm::Entity>::Key, #ident)> #translated_where + Send + 'static,
         {
-            let span = #instrument_ident(&args);
-
-            Box::pin(storm::InstrumentErr::instrument_err(async move {
+            storm_mssql::metrics_helper::load_wrap(async move {
                 let provider: &storm_mssql::MssqlProvider = storm::tri!(provider.provide(#provider).await);
-                #metrics_start
                 #load
                 #translated
-                #metrics_end
                 Ok(map)
-            }, span))
+            }, #table_name)
         }
 
         impl<C, FILTER> storm::provider::LoadAll<#ident, FILTER, C> for storm::provider::ProviderContainer
@@ -176,7 +158,6 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
         }
 
         impl storm::provider::LoadOne<#ident> for storm::provider::ProviderContainer {
-            #[tracing::instrument(name = "load_one", level = "debug", skip(self, k), fields(table = #table_name))]
             fn load_one_with_args<'a>(&'a self, k: &'a <#ident as Entity>::Key, args: storm::provider::LoadArgs) -> storm::BoxFuture<'a, storm::Result<Option<#ident>>> {
                 Box::pin(async move {
                     let filter = #filter_sql;
@@ -393,19 +374,15 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let wheres = wheres.ts();
     let table = LitStr::new(&attrs.table, ident.span());
     let provider = attrs.provider();
-    let (metrics_start, metrics_end) = metrics(ident, "upsert");
     let diff = entity_diff(ident, diff);
     let enum_fields = enum_fields_impl(vis, ident, enum_fields, &enum_fields_ident, attrs.diff);
 
     quote! {
         impl #upsert_trait for storm::provider::TransactionProvider<'_> {
-            #[tracing::instrument(name = "upsert", level = "debug", skip(self, k, v), fields(table = #table_name))]
             #upsert_sig {
-                Box::pin(async move {
+                storm_mssql::metrics_helper::upsert_wrap(async move {
                     let provider: &storm_mssql::MssqlProvider = storm::tri!(self.container().provide(#provider).await);
                     let mut builder = storm_mssql::UpsertBuilder::new(#table);
-
-                    #metrics_start
 
                     let entity_part_key = #entity_part_key;
                     storm_mssql::SaveEntityPart::save_entity_part(v, entity_part_key, &mut builder);
@@ -415,9 +392,8 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
                     #reload_entity
                     #translated
 
-                    #metrics_end
                     Ok(())
-                })
+                }, #table_name)
             }
         }
 
@@ -442,27 +418,6 @@ fn is_translated(t: &Type) -> bool {
             .map_or(false, |s| &s.ident == "Translated"),
         _ => false,
     }
-}
-
-#[cfg(not(feature = "telemetry"))]
-fn metrics(_ident: &Ident, _ops: &str) -> (TokenStream, TokenStream) {
-    (quote!(), quote!())
-}
-
-#[cfg(feature = "telemetry")]
-fn metrics(ident: &Ident, op: &str) -> (TokenStream, TokenStream) {
-    let start = quote! {
-        let instant = std::time::Instant::now();
-    };
-
-    let op = LitStr::new(op, Span::call_site());
-    let ty = LitStr::new(&ident.to_string(), ident.span());
-
-    let end = quote! {
-        storm::telemetry::inc_storm_execute_time(instant, #op, #ty);
-    };
-
-    (start, end)
 }
 
 /// Creates a where clauses and parameters for the load sql query.

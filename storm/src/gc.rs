@@ -7,14 +7,12 @@ use std::{
     rc::Rc,
     sync::Arc,
 };
-use tracing::instrument;
 use vec_map::VecMap;
 
 #[derive(Default)]
 pub struct GcCtx;
 
 impl Ctx {
-    #[instrument(skip(self))]
     pub fn gc(&mut self) {
         #[cfg(feature = "telemetry")]
         crate::telemetry::inc_storm_gc();
@@ -241,16 +239,13 @@ gc!(tuple A:0,B:1,C:2,D:3,E:4,F:5,G:6,H:7,I:8,J:9);
 
 #[allow(clippy::type_complexity)]
 pub mod collectables {
-    use crate::{Ctx, OnceCell};
+    use crate::Ctx;
     use parking_lot::RwLock;
 
-    fn funcs() -> &'static RwLock<Vec<Box<dyn Fn(&mut Ctx) + Send + Sync>>> {
-        static CELL: OnceCell<RwLock<Vec<Box<dyn Fn(&mut Ctx) + Send + Sync>>>> = OnceCell::new();
-        CELL.get_or_init(Default::default)
-    }
+    static FUNCS: RwLock<Vec<Box<dyn Fn(&mut Ctx) + Send + Sync>>> = RwLock::new(Vec::new());
 
     pub fn collect(ctx: &mut Ctx) {
-        funcs().read().iter().for_each(|f| f(ctx));
+        FUNCS.read().iter().for_each(|f| f(ctx));
     }
 
     pub fn register<F>(f: F)
@@ -261,6 +256,6 @@ pub mod collectables {
     }
 
     fn register_impl(f: Box<dyn Fn(&mut Ctx) + Send + Sync>) {
-        funcs().write().push(f);
+        FUNCS.write().push(f);
     }
 }

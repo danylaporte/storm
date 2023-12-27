@@ -1,6 +1,6 @@
 [package]
 name = "storm_mssql"
-version = "0.27.2"
+version = "0.29.2"
 authors = ["Dany Laporte <dany_laporte@hotmail.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -8,11 +8,11 @@ repository = "https://github.com/danylaporte/storm"
 publish = false
 
 [dependencies]
-async-cell-lock = { git = "https://github.com/danylaporte/async-cell-lock.git" }
 cache_crate = { package = "cache", git = "https://github.com/danylaporte/cache.git", optional = true }
 chrono = { version = "0.4", features = ["serde"] }
 dec19x5crate = { git = "https://github.com/danylaporte/dec19x5.git", features = ["serde", "tiberius"], optional = true, package = "dec19x5" }
 futures = "0.3"
+metrics = { version = "0.22", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 storm = { path = "../storm", features = ["mssql"] }
@@ -24,8 +24,10 @@ tracing = "0.1"
 uuid = { version = "1", features = ["v4", "serde"] }
 
 [dev-dependencies]
+async-cell-lock = { git = "https://github.com/danylaporte/async-cell-lock.git" }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"], default-features = false }
 
 [features]
 cache = ["cache_crate", "storm/cache"]
 dec19x5 = ["dec19x5crate"]
+telemetry = ["metrics"]

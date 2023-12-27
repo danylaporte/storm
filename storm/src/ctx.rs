@@ -1,15 +1,15 @@
 use crate::{
     length::Length,
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
-    register_metrics, Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity,
-    EntityAccessor, Gc, GcCtx, Get, HashTable, Insert, InsertIfChanged, InsertMut,
-    InsertMutIfChanged, InstrumentErr, Log, LogAccessor, LogState, Logs, LogsVar, NotifyTag,
-    OnceCell, ProviderContainer, Remove, Result, Tag, Transaction, Vars, VecTable,
+    Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity, EntityAccessor,
+    Gc, GcCtx, Get, HashTable, Insert, InsertIfChanged, InsertMut, InsertMutIfChanged,
+    InstrumentErr, Log, LogAccessor, LogState, Logs, LogsVar, NotifyTag, ProviderContainer, Remove,
+    Result, Tag, Transaction, Vars, VecTable,
 };
 use fxhash::FxHashMap;
 use parking_lot::RwLock;
-use std::{any::type_name, hash::Hash, marker::PhantomData};
-use tracing::{debug, debug_span, trace, Span};
+use std::{hash::Hash, marker::PhantomData};
+use tracing::{debug, info_span, Span};
 use version_tag::VersionTag;
 
 pub struct Ctx {
@@ -20,7 +20,6 @@ pub struct Ctx {
 
 impl Ctx {
     pub fn new(provider: ProviderContainer) -> Self {
-        register_metrics();
         Ctx {
             gc: Default::default(),
             provider,
@@ -43,7 +42,6 @@ impl Ctx {
         I: Accessor + CtxTypeInfo + Gc,
     {
         if let Some(idx) = self.vars.get_mut(I::var()) {
-            trace!(name = type_name::<I>(), "gc index");
             idx.gc(&self.gc);
         }
     }
@@ -101,7 +99,6 @@ impl Ctx {
         E::Tbl: Accessor + NotifyTag + Gc,
     {
         if let Some(tbl) = self.vars.get_mut(E::entity_var()) {
-            trace!(entity = type_name::<E>(), "gc table");
             tbl.gc(&self.gc);
         }
     }
@@ -817,7 +814,7 @@ where
 }
 
 fn insert_tbl_transaction_span() -> Span {
-    debug_span!("TblTransaction::insert", err = tracing::field::Empty)
+    info_span!("TblTransaction::insert", err = tracing::field::Empty)
 }
 
 impl<'a, 'b, E> InsertMut<E> for TblTransaction<'a, 'b, E>
@@ -922,7 +919,7 @@ where
 }
 
 fn insert_mut_tbl_transaction_span() -> Span {
-    debug_span!("TblTransaction::insert_mut", err = tracing::field::Empty)
+    info_span!("TblTransaction::insert_mut", err = tracing::field::Empty)
 }
 
 impl<'a, 'b, E> Remove<E> for TblTransaction<'a, 'b, E>
@@ -983,12 +980,12 @@ where
 }
 
 fn remove_tbl_transaction_span() -> Span {
-    debug_span!("TblTransaction::remove", err = tracing::field::Empty)
+    info_span!("TblTransaction::remove", err = tracing::field::Empty)
 }
 
 impl<'a> ApplyLog<Logs> for async_cell_lock::QueueRwLockWriteGuard<'a, Ctx> {
     fn apply_log(&mut self, mut log: Logs) -> bool {
-        let appliers = log_appliers().read();
+        let appliers = LOG_APPLIERS.read();
         let mut changed = false;
 
         for applier in &*appliers {
@@ -1083,10 +1080,7 @@ where
 }
 
 fn register_apply_log_dyn(app: Box<dyn LogApplier>) {
-    log_appliers().write().push(app);
+    LOG_APPLIERS.write().push(app);
 }
 
-fn log_appliers() -> &'static RwLock<Vec<Box<dyn LogApplier>>> {
-    static CELL: OnceCell<RwLock<Vec<Box<dyn LogApplier>>>> = OnceCell::new();
-    CELL.get_or_init(Default::default)
-}
+static LOG_APPLIERS: RwLock<Vec<Box<dyn LogApplier>>> = RwLock::new(Vec::new());
