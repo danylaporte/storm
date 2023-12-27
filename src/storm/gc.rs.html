@@ -259,9 +259,6 @@
 <a href="#259" id="259">259</a>
 <a href="#260" id="260">260</a>
 <a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
-<a href="#263" id="263">263</a>
-<a href="#264" id="264">264</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::Ctx;
 <span class="kw">use </span>std::{
     borrow::Cow,
@@ -503,16 +500,13 @@
 
 <span class="attr">#[allow(clippy::type_complexity)]
 </span><span class="kw">pub mod </span>collectables {
-    <span class="kw">use crate</span>::{Ctx, OnceCell};
+    <span class="kw">use </span><span class="kw">crate</span>::Ctx;
     <span class="kw">use </span>parking_lot::RwLock;
 
-    <span class="kw">fn </span>funcs() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>RwLock&lt;Vec&lt;Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Ctx) + Send + Sync&gt;&gt;&gt; {
-        <span class="kw">static </span>CELL: OnceCell&lt;RwLock&lt;Vec&lt;Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Ctx) + Send + Sync&gt;&gt;&gt;&gt; = OnceCell::new();
-        CELL.get_or_init(Default::default)
-    }
+    <span class="kw">static </span>FUNCS: RwLock&lt;Vec&lt;Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Ctx) + Send + Sync&gt;&gt;&gt; = RwLock::new(Vec::new());
 
     <span class="kw">pub fn </span>collect(ctx: <span class="kw-2">&amp;mut </span>Ctx) {
-        funcs().read().iter().for_each(|f| f(ctx));
+        FUNCS.read().iter().for_each(|f| f(ctx));
     }
 
     <span class="kw">pub fn </span>register&lt;F&gt;(f: F)
@@ -523,7 +517,7 @@
     }
 
     <span class="kw">fn </span>register_impl(f: Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Ctx) + Send + Sync&gt;) {
-        funcs().write().push(f);
+        FUNCS.write().push(f);
     }
 }
 </code></pre></div></section></main></body></html>
