@@ -3,7 +3,7 @@ use crate::{
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
     Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity, EntityAccessor,
     Gc, GcCtx, Get, HashTable, Insert, InsertIfChanged, InsertMut, InsertMutIfChanged,
-    InstrumentErr, Log, LogAccessor, LogState, Logs, LogsVar, NotifyTag, OnceCell,
+    InstrumentErr, Log, LogAccessor, LogState, Logs, LogsVar, NotifyTag,
     ProviderContainer, Remove, Result, Tag, Transaction, Vars, VecTable,
 };
 use fxhash::FxHashMap;
@@ -985,7 +985,7 @@ fn remove_tbl_transaction_span() -> Span {
 
 impl<'a> ApplyLog<Logs> for async_cell_lock::QueueRwLockWriteGuard<'a, Ctx> {
     fn apply_log(&mut self, mut log: Logs) -> bool {
-        let appliers = log_appliers().read();
+        let appliers = LOG_APPLIERS.read();
         let mut changed = false;
 
         for applier in &*appliers {
@@ -1080,10 +1080,7 @@ where
 }
 
 fn register_apply_log_dyn(app: Box<dyn LogApplier>) {
-    log_appliers().write().push(app);
+    LOG_APPLIERS.write().push(app);
 }
 
-fn log_appliers() -> &'static RwLock<Vec<Box<dyn LogApplier>>> {
-    static CELL: OnceCell<RwLock<Vec<Box<dyn LogApplier>>>> = OnceCell::new();
-    CELL.get_or_init(Default::default)
-}
+static LOG_APPLIERS: RwLock<Vec<Box<dyn LogApplier>>> = RwLock::new(Vec::new());
