@@ -27,12 +27,12 @@ where
     E: Sync,
 {
     Box::pin(async move {
-        let a = ctx.as_ref_async().await;
-        let b = ctx.as_ref_async().await;
-        let c = ctx.as_ref_async().await;
-        let d = ctx.as_ref_async().await;
-        let e = ctx.as_ref_async().await;
-
-        a.and_then(|a| b.and_then(|b| c.and_then(|c| d.and_then(|d| e.map(|e| (a, b, c, d, e))))))
+        Ok((
+            crate::tri!(ctx.as_ref_async().await),
+            crate::tri!(ctx.as_ref_async().await),
+            crate::tri!(ctx.as_ref_async().await),
+            crate::tri!(ctx.as_ref_async().await),
+            crate::tri!(ctx.as_ref_async().await),
+        ))
     })
 }
