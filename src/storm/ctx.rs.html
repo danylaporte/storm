@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm/src/ctx.rs`."><title>ctx.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="storm" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.1 (a28077b28 2023-12-04)" data-channel="1.74.1" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../storm/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm/src/ctx.rs`."><title>ctx.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="storm" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1138,7 +1139,7 @@
     }
 
     <span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>ref_as&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>T&gt;&gt;
+    </span><span class="kw">pub fn </span>ref_as&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">'_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'_ </span>T&gt;&gt;
     <span class="kw">where
         </span><span class="self">Self</span>: AsRefAsync&lt;T&gt;,
     {
@@ -1146,7 +1147,7 @@
     }
 
     <span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>tbl_of&lt;E&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>E::Tbl&gt;&gt;
+    </span><span class="kw">pub fn </span>tbl_of&lt;E&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">'_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'_ </span>E::Tbl&gt;&gt;
     <span class="kw">where
         </span>E: Entity + EntityAccessor,
         <span class="self">Self</span>: AsRefAsync&lt;E::Tbl&gt;,
@@ -1206,7 +1207,7 @@
     E::Key: Eq + Hash,
     ProviderContainer: LoadAll&lt;E, (), E::Tbl&gt;,
 {
-    <span class="kw">fn </span>as_ref_async(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>E::Tbl&gt;&gt; {
+    <span class="kw">fn </span>as_ref_async(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">'_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'_ </span>E::Tbl&gt;&gt; {
         table_as_ref_async::&lt;E, <span class="kw">_</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>.vars, <span class="kw-2">&amp;</span><span class="self">self</span>.provider)
     }
 }
@@ -1217,7 +1218,7 @@
     E::Key: Into&lt;usize&gt;,
     ProviderContainer: LoadAll&lt;E, (), E::Tbl&gt;,
 {
-    <span class="kw">fn </span>as_ref_async(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>E::Tbl&gt;&gt; {
+    <span class="kw">fn </span>as_ref_async(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">'_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'_ </span>E::Tbl&gt;&gt; {
         table_as_ref_async::&lt;E, <span class="kw">_</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>.vars, <span class="kw-2">&amp;</span><span class="self">self</span>.provider)
     }
 }
@@ -1236,7 +1237,7 @@
     ProviderContainer: LoadAll&lt;E, F, C&gt;,
 {
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>load_all_with_args&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, filter: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>F, args: LoadArgs) -&gt; BoxFuture&lt;<span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span>&lt;C&gt;&gt; {
+    </span><span class="kw">fn </span>load_all_with_args&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, filter: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>F, args: LoadArgs) -&gt; BoxFuture&lt;<span class="lifetime">'a</span>, <span class="prelude-ty">Result</span>&lt;C&gt;&gt; {
         <span class="self">self</span>.provider.load_all_with_args(filter, args)
     }
 }
@@ -1247,21 +1248,21 @@
     ProviderContainer: LoadOne&lt;E&gt;,
 {
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>load_one_with_args&lt;<span class="lifetime">&#39;a</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>,
-        k: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>E::Key,
+    </span><span class="kw">fn </span>load_one_with_args&lt;<span class="lifetime">'a</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>,
+        k: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>E::Key,
         args: LoadArgs,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;E&gt;&gt;&gt; {
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'a</span>, <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;E&gt;&gt;&gt; {
         <span class="self">self</span>.provider.load_one_with_args(k, args)
     }
 }
 
-<span class="kw">pub struct </span>CtxLocks&lt;<span class="lifetime">&#39;a</span>, L&gt; {
-    <span class="kw">pub </span>ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Ctx,
+<span class="kw">pub struct </span>CtxLocks&lt;<span class="lifetime">'a</span>, L&gt; {
+    <span class="kw">pub </span>ctx: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Ctx,
     <span class="kw">pub </span>locks: L,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, L&gt; CtxLocks&lt;<span class="lifetime">&#39;a</span>, L&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, L&gt; CtxLocks&lt;<span class="lifetime">'a</span>, L&gt; {
     <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>ref_as&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>T
     <span class="kw">where
@@ -1271,7 +1272,7 @@
     }
 
     <span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>ref_as_async&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>T&gt;&gt;
+    </span><span class="kw">pub fn </span>ref_as_async&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">'_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'_ </span>T&gt;&gt;
     <span class="kw">where
         </span><span class="self">Self</span>: AsRefAsync&lt;T&gt;,
     {
@@ -1279,7 +1280,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, L&gt; Tag <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">&#39;a</span>, L&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, L&gt; Tag <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">'a</span>, L&gt;
 <span class="kw">where
     </span>L: Tag,
 {
@@ -1288,11 +1289,11 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, L&gt; AsyncTryFrom&lt;<span class="lifetime">&#39;a</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Ctx&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">&#39;a</span>, L&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, L&gt; AsyncTryFrom&lt;<span class="lifetime">'a</span>, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Ctx&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">'a</span>, L&gt;
 <span class="kw">where
-    </span>L: AsyncTryFrom&lt;<span class="lifetime">&#39;a</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Ctx&gt;,
+    </span>L: AsyncTryFrom&lt;<span class="lifetime">'a</span>, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Ctx&gt;,
 {
-    <span class="kw">fn </span>async_try_from(ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Ctx) -&gt; BoxFuture&lt;<span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt;&gt; {
+    <span class="kw">fn </span>async_try_from(ctx: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Ctx) -&gt; BoxFuture&lt;<span class="lifetime">'a</span>, <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt;&gt; {
         Box::pin(<span class="kw">async move </span>{
             <span class="prelude-val">Ok</span>(CtxLocks {
                 ctx,
@@ -1302,7 +1303,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, E: Entity, L&gt; AsRef&lt;HashTable&lt;E&gt;&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">&#39;a</span>, L&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, E: Entity, L&gt; AsRef&lt;HashTable&lt;E&gt;&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">'a</span>, L&gt;
 <span class="kw">where
     </span>L: AsRef&lt;HashTable&lt;E&gt;&gt;,
 {
@@ -1312,7 +1313,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, E: Entity, L&gt; AsRef&lt;VecTable&lt;E&gt;&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">&#39;a</span>, L&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, E: Entity, L&gt; AsRef&lt;VecTable&lt;E&gt;&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">'a</span>, L&gt;
 <span class="kw">where
     </span>L: AsRef&lt;VecTable&lt;E&gt;&gt;,
 {
@@ -1322,7 +1323,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, E, F, C, L&gt; LoadAll&lt;E, F, C&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">&#39;a</span>, L&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, E, F, C, L&gt; LoadAll&lt;E, F, C&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">'a</span>, L&gt;
 <span class="kw">where
     </span>E: Entity,
     C: Default + Extend&lt;(E::Key, E)&gt; + Send,
@@ -1331,36 +1332,36 @@
     ProviderContainer: LoadAll&lt;E, F, C&gt;,
 {
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>load_all_with_args&lt;<span class="lifetime">&#39;b</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="self">self</span>, filter: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>F, args: LoadArgs) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;C&gt;&gt; {
+    </span><span class="kw">fn </span>load_all_with_args&lt;<span class="lifetime">'b</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="self">self</span>, filter: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>F, args: LoadArgs) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;C&gt;&gt; {
         <span class="self">self</span>.ctx.load_all_with_args(filter, args)
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, E, L&gt; LoadOne&lt;E&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">&#39;a</span>, L&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, E, L&gt; LoadOne&lt;E&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">'a</span>, L&gt;
 <span class="kw">where
     </span>E: Entity,
     L: Send + Sync,
     ProviderContainer: LoadOne&lt;E&gt;,
 {
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>load_one_with_args&lt;<span class="lifetime">&#39;b</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="self">self</span>,
-        k: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>E::Key,
+    </span><span class="kw">fn </span>load_one_with_args&lt;<span class="lifetime">'b</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="self">self</span>,
+        k: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>E::Key,
         args: LoadArgs,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;E&gt;&gt;&gt; {
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;E&gt;&gt;&gt; {
         <span class="self">self</span>.ctx.load_one_with_args(k, args)
     }
 }
 
-<span class="kw">pub struct </span>CtxTransaction&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">pub struct </span>CtxTransaction&lt;<span class="lifetime">'a</span>&gt; {
     log_ctx: LogsVar,
-    provider: TransactionProvider&lt;<span class="lifetime">&#39;a</span>&gt;,
-    <span class="kw">pub </span>ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Ctx,
+    provider: TransactionProvider&lt;<span class="lifetime">'a</span>&gt;,
+    <span class="kw">pub </span>ctx: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Ctx,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; CtxTransaction&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; CtxTransaction&lt;<span class="lifetime">'a</span>&gt; {
     <span class="attr">#[instrument(skip(<span class="self">self</span>), err)]
-    </span><span class="kw">pub fn </span>commit(<span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span>&lt;Logs&gt;&gt; {
+    </span><span class="kw">pub fn </span>commit(<span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">'a</span>, <span class="prelude-ty">Result</span>&lt;Logs&gt;&gt; {
         Box::pin(<span class="kw">async move </span>{
             <span class="self">self</span>.provider.commit().<span class="kw">await</span><span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(Logs(<span class="self">self</span>.log_ctx))
@@ -1368,16 +1369,16 @@
     }
 
     <span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>provider(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>TransactionProvider&lt;<span class="lifetime">&#39;a</span>&gt; {
+    </span><span class="kw">pub fn </span>provider(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>TransactionProvider&lt;<span class="lifetime">'a</span>&gt; {
         <span class="kw-2">&amp;</span><span class="self">self</span>.provider
     }
 
-    <span class="kw">pub fn </span>insert&lt;<span class="lifetime">&#39;b</span>, E&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">pub fn </span>insert&lt;<span class="lifetime">'b</span>, E&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span><span class="self">self</span>,
         k: E::Key,
         v: E,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt;
     <span class="kw">where
         </span>E: Entity,
         <span class="self">Self</span>: Insert&lt;E&gt;,
@@ -1385,26 +1386,26 @@
         Insert::insert(<span class="self">self</span>, k, v, track)
     }
 
-    <span class="kw">pub fn </span>insert_all&lt;<span class="lifetime">&#39;b</span>, E, I&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">pub fn </span>insert_all&lt;<span class="lifetime">'b</span>, E, I&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span><span class="self">self</span>,
         iter: I,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
     <span class="kw">where
         </span>E: Entity,
-        I: IntoIterator&lt;Item = (E::Key, E)&gt; + Send + <span class="lifetime">&#39;b</span>,
+        I: IntoIterator&lt;Item = (E::Key, E)&gt; + Send + <span class="lifetime">'b</span>,
         I::IntoIter: Send,
         <span class="self">Self</span>: Insert&lt;E&gt;,
     {
         Insert::insert_all(<span class="self">self</span>, iter, track)
     }
 
-    <span class="kw">pub fn </span>insert_mut&lt;<span class="lifetime">&#39;b</span>, E&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">pub fn </span>insert_mut&lt;<span class="lifetime">'b</span>, E&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span><span class="self">self</span>,
         k: E::Key,
         v: E,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;E::Key&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;E::Key&gt;&gt;
     <span class="kw">where
         </span>E: Entity,
         <span class="self">Self</span>: InsertMut&lt;E&gt;,
@@ -1412,14 +1413,14 @@
         InsertMut::insert_mut(<span class="self">self</span>, k, v, track)
     }
 
-    <span class="kw">pub fn </span>insert_mut_all&lt;<span class="lifetime">&#39;b</span>, E, I&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">pub fn </span>insert_mut_all&lt;<span class="lifetime">'b</span>, E, I&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span><span class="self">self</span>,
         iter: I,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
     <span class="kw">where
         </span>E: Entity,
-        I: IntoIterator&lt;Item = (E::Key, E)&gt; + Send + <span class="lifetime">&#39;b</span>,
+        I: IntoIterator&lt;Item = (E::Key, E)&gt; + Send + <span class="lifetime">'b</span>,
         I::IntoIter: Send,
         <span class="self">Self</span>: InsertMut&lt;E&gt;,
     {
@@ -1427,18 +1428,18 @@
     }
 
     <span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>ref_as&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>T&gt;&gt;
+    </span><span class="kw">pub fn </span>ref_as&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">'_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'_ </span>T&gt;&gt;
     <span class="kw">where
         </span><span class="self">Self</span>: AsRefAsync&lt;T&gt;,
     {
         <span class="self">self</span>.as_ref_async()
     }
 
-    <span class="kw">pub fn </span>remove&lt;<span class="lifetime">&#39;b</span>, E&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">pub fn </span>remove&lt;<span class="lifetime">'b</span>, E&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span><span class="self">self</span>,
         k: E::Key,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt;
     <span class="kw">where
         </span>E: Entity,
         <span class="self">Self</span>: Remove&lt;E&gt;,
@@ -1446,21 +1447,21 @@
         Remove::remove(<span class="self">self</span>, k, track)
     }
 
-    <span class="kw">pub fn </span>remove_all&lt;<span class="lifetime">&#39;b</span>, E, K&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">pub fn </span>remove_all&lt;<span class="lifetime">'b</span>, E, K&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span><span class="self">self</span>,
         keys: K,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
     <span class="kw">where
         </span>E: Entity,
-        K: IntoIterator&lt;Item = E::Key&gt; + Send + <span class="lifetime">&#39;b</span>,
+        K: IntoIterator&lt;Item = E::Key&gt; + Send + <span class="lifetime">'b</span>,
         K::IntoIter: Send,
         <span class="self">Self</span>: Remove&lt;E&gt;,
     {
         Remove::remove_all(<span class="self">self</span>, keys, track)
     }
 
-    <span class="kw">pub fn </span>tbl_of&lt;<span class="lifetime">&#39;b</span>, E&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;TblTransaction&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt;&gt;&gt;
+    <span class="kw">pub fn </span>tbl_of&lt;<span class="lifetime">'b</span>, E&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;&gt;&gt;
     <span class="kw">where
         </span>E: Entity + EntityAccessor + LogAccessor,
         Ctx: AsRefAsync&lt;E::Tbl&gt;,
@@ -1472,46 +1473,46 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, E&gt; Insert&lt;E&gt; <span class="kw">for </span>CtxTransaction&lt;<span class="lifetime">&#39;a</span>&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, E&gt; Insert&lt;E&gt; <span class="kw">for </span>CtxTransaction&lt;<span class="lifetime">'a</span>&gt;
 <span class="kw">where
     </span>Ctx: AsRefAsync&lt;E::Tbl&gt;,
     E: Entity + EntityAccessor + LogAccessor,
-    <span class="kw">for</span>&lt;<span class="lifetime">&#39;b</span>&gt; TblTransaction&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt;: Insert&lt;E&gt;,
+    <span class="kw">for</span>&lt;<span class="lifetime">'b</span>&gt; TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;: Insert&lt;E&gt;,
 {
-    <span class="kw">fn </span>insert&lt;<span class="lifetime">&#39;c</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>insert&lt;<span class="lifetime">'c</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>,
         k: E::Key,
         v: E,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
         Box::pin(<span class="kw">async move </span>{ <span class="self">self</span>.tbl_of::&lt;E&gt;().<span class="kw">await</span><span class="question-mark">?</span>.insert(k, v, track).<span class="kw">await </span>})
     }
 
-    <span class="kw">fn </span>insert_all&lt;<span class="lifetime">&#39;b</span>, I&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>insert_all&lt;<span class="lifetime">'b</span>, I&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span><span class="self">self</span>,
         iter: I,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
     <span class="kw">where
-        </span>I: IntoIterator&lt;Item = (&lt;E <span class="kw">as </span>Entity&gt;::Key, E)&gt; + Send + <span class="lifetime">&#39;b</span>,
+        </span>I: IntoIterator&lt;Item = (&lt;E <span class="kw">as </span>Entity&gt;::Key, E)&gt; + Send + <span class="lifetime">'b</span>,
         I::IntoIter: Send,
     {
         Box::pin(<span class="kw">async move </span>{ <span class="self">self</span>.tbl_of::&lt;E&gt;().<span class="kw">await</span><span class="question-mark">?</span>.insert_all(iter, track).<span class="kw">await </span>})
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, E&gt; InsertIfChanged&lt;E&gt; <span class="kw">for </span>CtxTransaction&lt;<span class="lifetime">&#39;a</span>&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, E&gt; InsertIfChanged&lt;E&gt; <span class="kw">for </span>CtxTransaction&lt;<span class="lifetime">'a</span>&gt;
 <span class="kw">where
     </span>Ctx: AsRefAsync&lt;E::Tbl&gt;,
     E: Entity + EntityAccessor + LogAccessor,
-    <span class="kw">for</span>&lt;<span class="lifetime">&#39;b</span>&gt; TblTransaction&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt;: InsertIfChanged&lt;E&gt;,
+    <span class="kw">for</span>&lt;<span class="lifetime">'b</span>&gt; TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;: InsertIfChanged&lt;E&gt;,
 {
-    <span class="kw">fn </span>insert_if_changed&lt;<span class="lifetime">&#39;b</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>insert_if_changed&lt;<span class="lifetime">'b</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span><span class="self">self</span>,
         k: E::Key,
         v: E,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
         Box::pin(<span class="kw">async move </span>{
             <span class="self">self</span>.tbl_of::&lt;E&gt;()
                 .<span class="kw">await</span><span class="question-mark">?
@@ -1520,13 +1521,13 @@
         </span>})
     }
 
-    <span class="kw">fn </span>insert_all_if_changed&lt;<span class="lifetime">&#39;b</span>, I&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>insert_all_if_changed&lt;<span class="lifetime">'b</span>, I&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span><span class="self">self</span>,
         iter: I,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
     <span class="kw">where
-        </span>I: IntoIterator&lt;Item = (E::Key, E)&gt; + Send + <span class="lifetime">&#39;b</span>,
+        </span>I: IntoIterator&lt;Item = (E::Key, E)&gt; + Send + <span class="lifetime">'b</span>,
         I::IntoIter: Send,
     {
         Box::pin(<span class="kw">async move </span>{
@@ -1538,46 +1539,46 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, E&gt; InsertMut&lt;E&gt; <span class="kw">for </span>CtxTransaction&lt;<span class="lifetime">&#39;a</span>&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, E&gt; InsertMut&lt;E&gt; <span class="kw">for </span>CtxTransaction&lt;<span class="lifetime">'a</span>&gt;
 <span class="kw">where
     </span>Ctx: AsRefAsync&lt;E::Tbl&gt;,
     E: Entity + EntityAccessor + LogAccessor,
-    <span class="kw">for</span>&lt;<span class="lifetime">&#39;b</span>&gt; TblTransaction&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt;: InsertMut&lt;E&gt;,
+    <span class="kw">for</span>&lt;<span class="lifetime">'b</span>&gt; TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;: InsertMut&lt;E&gt;,
 {
-    <span class="kw">fn </span>insert_mut&lt;<span class="lifetime">&#39;b</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>insert_mut&lt;<span class="lifetime">'b</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span><span class="self">self</span>,
         k: E::Key,
         v: E,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;E::Key&gt;&gt; {
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;E::Key&gt;&gt; {
         Box::pin(<span class="kw">async move </span>{ <span class="self">self</span>.tbl_of::&lt;E&gt;().<span class="kw">await</span><span class="question-mark">?</span>.insert_mut(k, v, track).<span class="kw">await </span>})
     }
 
-    <span class="kw">fn </span>insert_mut_all&lt;<span class="lifetime">&#39;b</span>, I&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>insert_mut_all&lt;<span class="lifetime">'b</span>, I&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span><span class="self">self</span>,
         iter: I,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
     <span class="kw">where
-        </span>I: IntoIterator&lt;Item = (&lt;E <span class="kw">as </span>Entity&gt;::Key, E)&gt; + Send + <span class="lifetime">&#39;b</span>,
+        </span>I: IntoIterator&lt;Item = (&lt;E <span class="kw">as </span>Entity&gt;::Key, E)&gt; + Send + <span class="lifetime">'b</span>,
         I::IntoIter: Send,
     {
         Box::pin(<span class="kw">async move </span>{ <span class="self">self</span>.tbl_of::&lt;E&gt;().<span class="kw">await</span><span class="question-mark">?</span>.insert_mut_all(iter, track).<span class="kw">await </span>})
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, E&gt; InsertMutIfChanged&lt;E&gt; <span class="kw">for </span>CtxTransaction&lt;<span class="lifetime">&#39;a</span>&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, E&gt; InsertMutIfChanged&lt;E&gt; <span class="kw">for </span>CtxTransaction&lt;<span class="lifetime">'a</span>&gt;
 <span class="kw">where
     </span>Ctx: AsRefAsync&lt;E::Tbl&gt;,
     E: Entity + EntityAccessor + LogAccessor,
-    <span class="kw">for</span>&lt;<span class="lifetime">&#39;b</span>&gt; TblTransaction&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt;: InsertMutIfChanged&lt;E&gt;,
+    <span class="kw">for</span>&lt;<span class="lifetime">'b</span>&gt; TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;: InsertMutIfChanged&lt;E&gt;,
 {
-    <span class="kw">fn </span>insert_mut_if_changed&lt;<span class="lifetime">&#39;b</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>insert_mut_if_changed&lt;<span class="lifetime">'b</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span><span class="self">self</span>,
         k: E::Key,
         v: E,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;E::Key&gt;&gt; {
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;E::Key&gt;&gt; {
         Box::pin(<span class="kw">async move </span>{
             <span class="self">self</span>.tbl_of::&lt;E&gt;()
                 .<span class="kw">await</span><span class="question-mark">?
@@ -1586,13 +1587,13 @@
         </span>})
     }
 
-    <span class="kw">fn </span>insert_mut_all_if_changed&lt;<span class="lifetime">&#39;b</span>, I&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>insert_mut_all_if_changed&lt;<span class="lifetime">'b</span>, I&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span><span class="self">self</span>,
         iter: I,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
     <span class="kw">where
-        </span>I: IntoIterator&lt;Item = (E::Key, E)&gt; + Send + <span class="lifetime">&#39;b</span>,
+        </span>I: IntoIterator&lt;Item = (E::Key, E)&gt; + Send + <span class="lifetime">'b</span>,
         I::IntoIter: Send,
     {
         Box::pin(<span class="kw">async move </span>{
@@ -1604,44 +1605,44 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, E&gt; Remove&lt;E&gt; <span class="kw">for </span>CtxTransaction&lt;<span class="lifetime">&#39;a</span>&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, E&gt; Remove&lt;E&gt; <span class="kw">for </span>CtxTransaction&lt;<span class="lifetime">'a</span>&gt;
 <span class="kw">where
     </span>Ctx: AsRefAsync&lt;E::Tbl&gt;,
     E: Entity + EntityAccessor + LogAccessor,
-    <span class="kw">for</span>&lt;<span class="lifetime">&#39;b</span>&gt; TblTransaction&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt;: Remove&lt;E&gt;,
+    <span class="kw">for</span>&lt;<span class="lifetime">'b</span>&gt; TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;: Remove&lt;E&gt;,
 {
-    <span class="kw">fn </span>remove&lt;<span class="lifetime">&#39;b</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>, k: E::Key, track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>E::TrackCtx) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
+    <span class="kw">fn </span>remove&lt;<span class="lifetime">'b</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span><span class="self">self</span>, k: E::Key, track: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>E::TrackCtx) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
         Box::pin(<span class="kw">async move </span>{ <span class="self">self</span>.tbl_of::&lt;E&gt;().<span class="kw">await</span><span class="question-mark">?</span>.remove(k, track).<span class="kw">await </span>})
     }
 
-    <span class="kw">fn </span>remove_all&lt;<span class="lifetime">&#39;b</span>, K&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>remove_all&lt;<span class="lifetime">'b</span>, K&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span><span class="self">self</span>,
         keys: K,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;b</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
     <span class="kw">where
-        </span>K: IntoIterator&lt;Item = &lt;E <span class="kw">as </span>Entity&gt;::Key&gt; + Send + <span class="lifetime">&#39;b</span>,
+        </span>K: IntoIterator&lt;Item = &lt;E <span class="kw">as </span>Entity&gt;::Key&gt; + Send + <span class="lifetime">'b</span>,
         K::IntoIter: Send,
     {
         Box::pin(<span class="kw">async move </span>{ <span class="self">self</span>.tbl_of::&lt;E&gt;().<span class="kw">await</span><span class="question-mark">?</span>.remove_all(keys, track).<span class="kw">await </span>})
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T&gt; AsRefAsync&lt;T&gt; <span class="kw">for </span>CtxTransaction&lt;<span class="lifetime">&#39;a</span>&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; AsRefAsync&lt;T&gt; <span class="kw">for </span>CtxTransaction&lt;<span class="lifetime">'a</span>&gt;
 <span class="kw">where
     </span>Ctx: AsRefAsync&lt;T&gt;,
 {
-    <span class="kw">fn </span>as_ref_async(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">&#39;_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>T&gt;&gt; {
+    <span class="kw">fn </span>as_ref_async(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">'_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'_ </span>T&gt;&gt; {
         <span class="self">self</span>.ctx.as_ref_async()
     }
 }
 
-<span class="kw">pub struct </span>TblTransaction&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E: Entity + EntityAccessor&gt; {
-    ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span>CtxTransaction&lt;<span class="lifetime">&#39;a</span>&gt;,
-    tbl: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>E::Tbl,
+<span class="kw">pub struct </span>TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E: Entity + EntityAccessor&gt; {
+    ctx: <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span>CtxTransaction&lt;<span class="lifetime">'a</span>&gt;,
+    tbl: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>E::Tbl,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt; TblTransaction&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt; TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;
 <span class="kw">where
     </span>E: Entity + EntityAccessor,
     E::Key: Eq + Hash,
@@ -1658,57 +1659,57 @@
         Get::get(<span class="self">self</span>, k)
     }
 
-    <span class="kw">pub fn </span>insert&lt;<span class="lifetime">&#39;c</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">pub fn </span>insert&lt;<span class="lifetime">'c</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>,
         k: E::Key,
         v: E,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt;
     <span class="kw">where
         </span><span class="self">Self</span>: Insert&lt;E&gt;,
     {
         Insert::insert(<span class="self">self</span>, k, v, track)
     }
 
-    <span class="kw">pub fn </span>insert_all&lt;<span class="lifetime">&#39;c</span>, I&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">pub fn </span>insert_all&lt;<span class="lifetime">'c</span>, I&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>,
         iter: I,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
     <span class="kw">where
-        </span>I: IntoIterator&lt;Item = (E::Key, E)&gt; + Send + <span class="lifetime">&#39;a</span>,
+        </span>I: IntoIterator&lt;Item = (E::Key, E)&gt; + Send + <span class="lifetime">'a</span>,
         I::IntoIter: Send,
         <span class="self">Self</span>: Insert&lt;E&gt;,
     {
         Insert::&lt;E&gt;::insert_all(<span class="self">self</span>, iter, track)
     }
 
-    <span class="kw">pub fn </span>insert_mut&lt;<span class="lifetime">&#39;c</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">pub fn </span>insert_mut&lt;<span class="lifetime">'c</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>,
         k: E::Key,
         v: E,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;E::Key&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;E::Key&gt;&gt;
     <span class="kw">where
         </span><span class="self">Self</span>: InsertMut&lt;E&gt;,
     {
         InsertMut::insert_mut(<span class="self">self</span>, k, v, track)
     }
 
-    <span class="kw">pub fn </span>insert_mut_all&lt;<span class="lifetime">&#39;c</span>, I&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">pub fn </span>insert_mut_all&lt;<span class="lifetime">'c</span>, I&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>,
         iter: I,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
     <span class="kw">where
-        </span>I: IntoIterator&lt;Item = (E::Key, E)&gt; + Send + <span class="lifetime">&#39;a</span>,
+        </span>I: IntoIterator&lt;Item = (E::Key, E)&gt; + Send + <span class="lifetime">'a</span>,
         I::IntoIter: Send,
         <span class="self">Self</span>: InsertMut&lt;E&gt;,
     {
         InsertMut::&lt;E&gt;::insert_mut_all(<span class="self">self</span>, iter, track)
     }
 
-    <span class="kw">pub fn </span>into_ref(<span class="self">self</span>, k: <span class="kw-2">&amp;</span>E::Key) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>E&gt;
+    <span class="kw">pub fn </span>into_ref(<span class="self">self</span>, k: <span class="kw-2">&amp;</span>E::Key) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'b </span>E&gt;
     <span class="kw">where
         </span>E: Entity + EntityAccessor + LogAccessor,
         E::Key: Eq + Hash,
@@ -1728,32 +1729,32 @@
         <span class="self">self</span>.ctx.log_ctx.get(E::log_var())
     }
 
-    <span class="kw">pub fn </span>remove&lt;<span class="lifetime">&#39;c</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>, k: E::Key, track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>E::TrackCtx) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt;
+    <span class="kw">pub fn </span>remove&lt;<span class="lifetime">'c</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>, k: E::Key, track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::TrackCtx) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt;
     <span class="kw">where
         </span><span class="self">Self</span>: Remove&lt;E&gt;,
     {
         Remove::&lt;E&gt;::remove(<span class="self">self</span>, k, track)
     }
 
-    <span class="kw">pub fn </span>remove_all&lt;<span class="lifetime">&#39;c</span>, K&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">pub fn </span>remove_all&lt;<span class="lifetime">'c</span>, K&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>,
         keys: K,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
     <span class="kw">where
         </span><span class="self">Self</span>: Remove&lt;E&gt;,
-        K: IntoIterator&lt;Item = E::Key&gt; + Send + <span class="lifetime">&#39;c</span>,
+        K: IntoIterator&lt;Item = E::Key&gt; + Send + <span class="lifetime">'c</span>,
         K::IntoIter: Send,
     {
         Remove::&lt;E&gt;::remove_all(<span class="self">self</span>, keys, track)
     }
 
-    <span class="kw">pub fn </span>tbl(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>E::Tbl {
+    <span class="kw">pub fn </span>tbl(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>E::Tbl {
         <span class="self">self</span>.tbl
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt; Get&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt; Get&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;
 <span class="kw">where
     </span>E: Entity + EntityAccessor + LogAccessor,
     E::Key: Eq + Hash,
@@ -1768,7 +1769,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt; Length <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt; Length <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;
 <span class="kw">where
     </span>E: Entity + EntityAccessor + LogAccessor,
     E::Key: Eq + Hash,
@@ -1798,19 +1799,19 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt; Insert&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt; Insert&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;
 <span class="kw">where
-    for</span>&lt;<span class="lifetime">&#39;c</span>&gt; TransactionProvider&lt;<span class="lifetime">&#39;c</span>&gt;: Upsert&lt;E&gt;,
+    for</span>&lt;<span class="lifetime">'c</span>&gt; TransactionProvider&lt;<span class="lifetime">'c</span>&gt;: Upsert&lt;E&gt;,
     E: Entity + EntityAccessor + LogAccessor,
     E::Key: Eq + Hash,
     E::Tbl: Get&lt;E&gt;,
 {
-    <span class="kw">fn </span>insert&lt;<span class="lifetime">&#39;c</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>insert&lt;<span class="lifetime">'c</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>,
         k: E::Key,
         v: E,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
         Box::pin(
             <span class="kw">async move </span>{
                 <span class="self">self</span>.ctx.provider.upsert(<span class="kw-2">&amp;</span>k, <span class="kw-2">&amp;</span>v).<span class="kw">await</span><span class="question-mark">?</span>;
@@ -1833,13 +1834,13 @@
         )
     }
 
-    <span class="kw">fn </span>insert_all&lt;<span class="lifetime">&#39;c</span>, I&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>insert_all&lt;<span class="lifetime">'c</span>, I&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>,
         iter: I,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
     <span class="kw">where
-        </span>I: IntoIterator&lt;Item = (&lt;E <span class="kw">as </span>Entity&gt;::Key, E)&gt; + Send + <span class="lifetime">&#39;c</span>,
+        </span>I: IntoIterator&lt;Item = (&lt;E <span class="kw">as </span>Entity&gt;::Key, E)&gt; + Send + <span class="lifetime">'c</span>,
         I::IntoIter: Send,
     {
         Box::pin(<span class="kw">async move </span>{
@@ -1855,17 +1856,17 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt; InsertIfChanged&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt; InsertIfChanged&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;
 <span class="kw">where
     </span>E: Entity + EntityAccessor + PartialEq,
     <span class="self">Self</span>: Get&lt;E&gt; + Insert&lt;E&gt;,
 {
-    <span class="kw">fn </span>insert_if_changed&lt;<span class="lifetime">&#39;c</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>insert_if_changed&lt;<span class="lifetime">'c</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>,
         k: E::Key,
         v: E,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
         Box::pin(<span class="kw">async move </span>{
             <span class="kw">if </span><span class="self">self</span>.get(<span class="kw-2">&amp;</span>k).map_or(<span class="bool-val">true</span>, |old| old != <span class="kw-2">&amp;</span>v) {
                 <span class="self">self</span>.insert(k, v, track).<span class="kw">await
@@ -1875,13 +1876,13 @@
         })
     }
 
-    <span class="kw">fn </span>insert_all_if_changed&lt;<span class="lifetime">&#39;c</span>, I&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>insert_all_if_changed&lt;<span class="lifetime">'c</span>, I&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>,
         iter: I,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
     <span class="kw">where
-        </span>I: IntoIterator&lt;Item = (E::Key, E)&gt; + Send + <span class="lifetime">&#39;c</span>,
+        </span>I: IntoIterator&lt;Item = (E::Key, E)&gt; + Send + <span class="lifetime">'c</span>,
         I::IntoIter: Send,
     {
         Box::pin(<span class="kw">async move </span>{
@@ -1900,22 +1901,22 @@
 }
 
 <span class="kw">fn </span>insert_tbl_transaction_span() -&gt; Span {
-    <span class="macro">info_span!</span>(<span class="string">&quot;TblTransaction::insert&quot;</span>, err = tracing::field::Empty)
+    <span class="macro">info_span!</span>(<span class="string">"TblTransaction::insert"</span>, err = tracing::field::Empty)
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt; InsertMut&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt; InsertMut&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;
 <span class="kw">where
-    for</span>&lt;<span class="lifetime">&#39;c</span>&gt; TransactionProvider&lt;<span class="lifetime">&#39;c</span>&gt;: UpsertMut&lt;E&gt;,
+    for</span>&lt;<span class="lifetime">'c</span>&gt; TransactionProvider&lt;<span class="lifetime">'c</span>&gt;: UpsertMut&lt;E&gt;,
     E: Entity + EntityAccessor + LogAccessor,
     E::Key: Clone + Eq + Hash,
     E::Tbl: Get&lt;E&gt;,
 {
-    <span class="kw">fn </span>insert_mut&lt;<span class="lifetime">&#39;c</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>insert_mut&lt;<span class="lifetime">'c</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>,
         <span class="kw-2">mut </span>k: E::Key,
         <span class="kw-2">mut </span>v: E,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;E::Key&gt;&gt; {
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;E::Key&gt;&gt; {
         Box::pin(
             <span class="kw">async move </span>{
                 <span class="self">self</span>.ctx.provider.upsert_mut(<span class="kw-2">&amp;mut </span>k, <span class="kw-2">&amp;mut </span>v).<span class="kw">await</span><span class="question-mark">?</span>;
@@ -1938,13 +1939,13 @@
         )
     }
 
-    <span class="kw">fn </span>insert_mut_all&lt;<span class="lifetime">&#39;c</span>, I&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>insert_mut_all&lt;<span class="lifetime">'c</span>, I&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>,
         iter: I,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
     <span class="kw">where
-        </span>I: IntoIterator&lt;Item = (&lt;E <span class="kw">as </span>Entity&gt;::Key, E)&gt; + Send + <span class="lifetime">&#39;c</span>,
+        </span>I: IntoIterator&lt;Item = (&lt;E <span class="kw">as </span>Entity&gt;::Key, E)&gt; + Send + <span class="lifetime">'c</span>,
         I::IntoIter: Send,
     {
         Box::pin(<span class="kw">async move </span>{
@@ -1960,17 +1961,17 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt; InsertMutIfChanged&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt; InsertMutIfChanged&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;
 <span class="kw">where
     </span>E: Entity + EntityAccessor + PartialEq,
     <span class="self">Self</span>: Get&lt;E&gt; + InsertMut&lt;E&gt;,
 {
-    <span class="kw">fn </span>insert_mut_if_changed&lt;<span class="lifetime">&#39;c</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>insert_mut_if_changed&lt;<span class="lifetime">'c</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>,
         k: E::Key,
         v: E,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;E::Key&gt;&gt; {
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;E::Key&gt;&gt; {
         Box::pin(<span class="kw">async move </span>{
             <span class="kw">if </span><span class="self">self</span>.get(<span class="kw-2">&amp;</span>k).map_or(<span class="bool-val">true</span>, |old| old != <span class="kw-2">&amp;</span>v) {
                 <span class="self">self</span>.insert_mut(k, v, track).<span class="kw">await
@@ -1980,13 +1981,13 @@
         })
     }
 
-    <span class="kw">fn </span>insert_mut_all_if_changed&lt;<span class="lifetime">&#39;c</span>, I&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>insert_mut_all_if_changed&lt;<span class="lifetime">'c</span>, I&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>,
         iter: I,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>E::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
     <span class="kw">where
-        </span>I: IntoIterator&lt;Item = (E::Key, E)&gt; + Send + <span class="lifetime">&#39;c</span>,
+        </span>I: IntoIterator&lt;Item = (E::Key, E)&gt; + Send + <span class="lifetime">'c</span>,
         I::IntoIter: Send,
     {
         Box::pin(<span class="kw">async move </span>{
@@ -2005,17 +2006,17 @@
 }
 
 <span class="kw">fn </span>insert_mut_tbl_transaction_span() -&gt; Span {
-    <span class="macro">info_span!</span>(<span class="string">&quot;TblTransaction::insert_mut&quot;</span>, err = tracing::field::Empty)
+    <span class="macro">info_span!</span>(<span class="string">"TblTransaction::insert_mut"</span>, err = tracing::field::Empty)
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt; Remove&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, E&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt; Remove&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;
 <span class="kw">where
-    for</span>&lt;<span class="lifetime">&#39;c</span>&gt; TransactionProvider&lt;<span class="lifetime">&#39;c</span>&gt;: Delete&lt;E&gt;,
+    for</span>&lt;<span class="lifetime">'c</span>&gt; TransactionProvider&lt;<span class="lifetime">'c</span>&gt;: Delete&lt;E&gt;,
     E: Entity + EntityAccessor + LogAccessor,
     E::Key: Clone + Eq + Hash,
     E::Tbl: Accessor + Get&lt;E&gt;,
 {
-    <span class="kw">fn </span>remove&lt;<span class="lifetime">&#39;c</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>, k: E::Key, track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>E::TrackCtx) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
+    <span class="kw">fn </span>remove&lt;<span class="lifetime">'c</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>, k: E::Key, track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::TrackCtx) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
         Box::pin(
             <span class="kw">async move </span>{
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(LogState::Removed) =
@@ -2042,13 +2043,13 @@
         )
     }
 
-    <span class="kw">fn </span>remove_all&lt;<span class="lifetime">&#39;c</span>, K&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span><span class="kw-2">mut </span><span class="self">self</span>,
+    <span class="kw">fn </span>remove_all&lt;<span class="lifetime">'c</span>, K&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>,
         keys: K,
-        track: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
-    ) -&gt; BoxFuture&lt;<span class="lifetime">&#39;c</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
+        track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>&lt;E <span class="kw">as </span>Entity&gt;::TrackCtx,
+    ) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;usize&gt;&gt;
     <span class="kw">where
-        </span>K: <span class="lifetime">&#39;c</span>,
+        </span>K: <span class="lifetime">'c</span>,
         K: IntoIterator&lt;Item = &lt;E <span class="kw">as </span>Entity&gt;::Key&gt; + Send,
         K::IntoIter: Send,
     {
@@ -2066,10 +2067,10 @@
 }
 
 <span class="kw">fn </span>remove_tbl_transaction_span() -&gt; Span {
-    <span class="macro">info_span!</span>(<span class="string">&quot;TblTransaction::remove&quot;</span>, err = tracing::field::Empty)
+    <span class="macro">info_span!</span>(<span class="string">"TblTransaction::remove"</span>, err = tracing::field::Empty)
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; ApplyLog&lt;Logs&gt; <span class="kw">for </span>async_cell_lock::QueueRwLockWriteGuard&lt;<span class="lifetime">&#39;a</span>, Ctx&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ApplyLog&lt;Logs&gt; <span class="kw">for </span>async_cell_lock::QueueRwLockWriteGuard&lt;<span class="lifetime">'a</span>, Ctx&gt; {
     <span class="kw">fn </span>apply_log(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>log: Logs) -&gt; bool {
         <span class="kw">let </span>appliers = LOG_APPLIERS.read();
         <span class="kw">let </span><span class="kw-2">mut </span>changed = <span class="bool-val">false</span>;
@@ -2082,8 +2083,8 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Transaction <span class="kw">for </span>async_cell_lock::QueueRwLockQueueGuard&lt;<span class="lifetime">&#39;a</span>, Ctx&gt; {
-    <span class="kw">fn </span>transaction(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; CtxTransaction&lt;<span class="lifetime">&#39;_</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Transaction <span class="kw">for </span>async_cell_lock::QueueRwLockQueueGuard&lt;<span class="lifetime">'a</span>, Ctx&gt; {
+    <span class="kw">fn </span>transaction(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; CtxTransaction&lt;<span class="lifetime">'_</span>&gt; {
         CtxTransaction {
             ctx: <span class="self">self</span>,
             log_ctx: Default::default(),
@@ -2092,10 +2093,10 @@
     }
 }
 
-<span class="kw">fn </span>table_as_ref_async&lt;<span class="lifetime">&#39;a</span>, E, T&gt;(
-    ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Vars,
-    provider: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ProviderContainer,
-) -&gt; BoxFuture&lt;<span class="lifetime">&#39;a</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T&gt;&gt;
+<span class="kw">fn </span>table_as_ref_async&lt;<span class="lifetime">'a</span>, E, T&gt;(
+    ctx: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Vars,
+    provider: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ProviderContainer,
+) -&gt; BoxFuture&lt;<span class="lifetime">'a</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>T&gt;&gt;
 <span class="kw">where
     </span>T: Accessor + Default + Extend&lt;(E::Key, E)&gt; + Send + Sync,
     E: Entity + EntityAccessor&lt;Tbl = T&gt;,
