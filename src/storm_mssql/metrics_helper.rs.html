@@ -75,8 +75,24 @@
 <a href="#74" id="74">74</a>
 <a href="#75" id="75">75</a>
 <a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{fmt::Display, future::Future, pin::Pin};
-<span class="kw">use </span>tracing::instrument;
 
 <span class="attr">#[doc(hidden)]
 </span><span class="kw">pub fn </span>delete_wrap&lt;<span class="lifetime">'a</span>, F, T, E&gt;(
@@ -104,11 +120,10 @@
 
 <span class="attr">#[allow(clippy::redundant_async_block)]
 #[doc(hidden)]
-#[instrument(name = <span class="string">"storm_mssql::op"</span>, skip(f), err)]
 </span><span class="kw">fn </span>op_wrap&lt;<span class="lifetime">'a</span>, F, T, E&gt;(
     f: F,
-    table: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
-    op: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+    <span class="attr">#[allow(unused_variables)] </span>table: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+    <span class="attr">#[allow(unused_variables)] </span>op: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
 ) -&gt; Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = F::Output&gt; + Send + <span class="lifetime">'a</span>&gt;&gt;
 <span class="kw">where
     </span>F: Future&lt;Output = <span class="prelude-ty">Result</span>&lt;T, E&gt;&gt; + Send + <span class="lifetime">'a</span>,
@@ -119,8 +134,9 @@
         </span>{
             <span class="kw">let </span>d = std::time::Instant::now();
             <span class="kw">let </span>r = f.<span class="kw">await</span>;
+            <span class="kw">let </span>e = r.as_ref().err().map(|e| e.to_string());
 
-            counter_impl(table, op, d);
+            counter_impl(table, op, d, e);
 
             r
         }
@@ -133,11 +149,29 @@
 }
 
 <span class="attr">#[cfg(feature = <span class="string">"telemetry"</span>)]
-</span><span class="kw">fn </span>counter_impl(table: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, op: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, instant: std::time::Instant) {
-    <span class="kw">let </span>d = instant.elapsed();
-        
+</span><span class="kw">fn </span>counter_impl(
+    table: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+    op: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+    instant: std::time::Instant,
+    e: <span class="prelude-ty">Option</span>&lt;String&gt;,
+) {
+    <span class="kw">let </span>d = instant.elapsed().as_millis();
+
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(e) = e {
+        <span class="kw">let _ </span>= <span class="macro">tracing::error_span!</span>(
+            <span class="string">"error mssql op"</span>,
+            dur_ms = d,
+            table = table,
+            op = op,
+            error = e
+        )
+        .entered();
+    } <span class="kw">else if </span>d &gt;= <span class="number">500 </span>{
+        <span class="kw">let _ </span>= <span class="macro">tracing::warn_span!</span>(<span class="string">"slow mssql op"</span>, dur_ms = d, table = table, op = op).entered();
+    }
+
     <span class="macro">metrics::counter!</span>(<span class="string">"storm_mssql_count"</span>, <span class="string">"table" </span>=&gt; table, <span class="string">"op" </span>=&gt; op).increment(<span class="number">1</span>);
-    <span class="macro">metrics::counter!</span>(<span class="string">"storm_mssql_ms"</span>, <span class="string">"table" </span>=&gt; table, <span class="string">"op" </span>=&gt; op).increment(d.as_millis() <span class="kw">as </span>u64);
+    <span class="macro">metrics::counter!</span>(<span class="string">"storm_mssql_ms"</span>, <span class="string">"table" </span>=&gt; table, <span class="string">"op" </span>=&gt; op).increment(d <span class="kw">as </span>u64);
 }
 
 <span class="attr">#[doc(hidden)]
@@ -150,4 +184,5 @@
     E: Display,
 {
     op_wrap(f, table, <span class="string">"upsert"</span>)
-}</code></pre></div></section></main></body></html>
+}
+</code></pre></div></section></main></body></html>

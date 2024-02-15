@@ -345,11 +345,6 @@
 <a href="#344" id="344">344</a>
 <a href="#345" id="345">345</a>
 <a href="#346" id="346">346</a>
-<a href="#347" id="347">347</a>
-<a href="#348" id="348">348</a>
-<a href="#349" id="349">349</a>
-<a href="#350" id="350">350</a>
-<a href="#351" id="351">351</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{execute::ExecuteArgs, Client, ClientFactory, Execute, Parameter, QueryRows, ToSql};
 <span class="kw">use </span>futures::{Stream, StreamExt, TryStreamExt};
 <span class="kw">use </span>std::{
@@ -366,7 +361,6 @@
 <span class="kw">use </span>storm::{provider, BoxFuture, Error, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>tiberius::Row;
 <span class="kw">use </span>tokio::sync::{Mutex, MutexGuard};
-<span class="kw">use </span>tracing::{info_span, Instrument};
 
 <span class="kw">pub struct </span>MssqlProvider(Arc&lt;Inner&gt;);
 
@@ -458,15 +452,11 @@
     <span class="kw">fn </span>cancel(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="self">self</span>.<span class="number">0</span>.cancel_transaction.store(<span class="bool-val">true</span>, Relaxed);
 
-        <span class="kw">let </span>span = tracing::Span::current();
         <span class="kw">let </span>p = <span class="self">Self</span>(Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>));
 
-        tokio::spawn(
-            <span class="kw">async move </span>{
-                <span class="kw">let _ </span>= p.state().<span class="kw">await</span>;
-            }
-            .instrument(<span class="macro">info_span!</span>(parent: span, <span class="string">"rollback_transaction"</span>)),
-        );
+        tokio::spawn(<span class="kw">async move </span>{
+            <span class="kw">let _ </span>= p.state().<span class="kw">await</span>;
+        });
     }
 
     <span class="kw">fn </span>commit(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">'_</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt; {

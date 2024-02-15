@@ -612,7 +612,7 @@
     <span class="kw">let </span>translated_where = translated.to_where_clause();
     <span class="kw">let </span>provider = attrs.provider();
     <span class="kw">let </span>diff = apply_entity_diff(diff, ident);
-    
+
     <span class="kw">let </span>test = <span class="kw">if </span>attrs.no_test {
         <span class="macro">quote!</span>()
     } <span class="kw">else </span>{
