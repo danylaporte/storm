@@ -106,7 +106,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let translated_where = translated.to_where_clause();
     let provider = attrs.provider();
     let diff = apply_entity_diff(diff, ident);
-    
+
     let test = if attrs.no_test {
         quote!()
     } else {

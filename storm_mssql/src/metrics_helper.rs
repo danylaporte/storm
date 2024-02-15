@@ -1,5 +1,4 @@
 use std::{fmt::Display, future::Future, pin::Pin};
-use tracing::instrument;
 
 #[doc(hidden)]
 pub fn delete_wrap<'a, F, T, E>(
@@ -27,11 +26,10 @@ where
 
 #[allow(clippy::redundant_async_block)]
 #[doc(hidden)]
-#[instrument(name = "storm_mssql::op", skip(f), err)]
 fn op_wrap<'a, F, T, E>(
     f: F,
-    table: &'static str,
-    op: &'static str,
+    #[allow(unused_variables)] table: &'static str,
+    #[allow(unused_variables)] op: &'static str,
 ) -> Pin<Box<dyn Future<Output = F::Output> + Send + 'a>>
 where
     F: Future<Output = Result<T, E>> + Send + 'a,
@@ -42,8 +40,9 @@ where
         {
             let d = std::time::Instant::now();
             let r = f.await;
+            let e = r.as_ref().err().map(|e| e.to_string());
 
-            counter_impl(table, op, d);
+            counter_impl(table, op, d, e);
 
             r
         }
@@ -56,11 +55,29 @@ where
 }
 
 #[cfg(feature = "telemetry")]
-fn counter_impl(table: &'static str, op: &'static str, instant: std::time::Instant) {
-    let d = instant.elapsed();
-        
+fn counter_impl(
+    table: &'static str,
+    op: &'static str,
+    instant: std::time::Instant,
+    e: Option<String>,
+) {
+    let d = instant.elapsed().as_millis();
+
+    if let Some(e) = e {
+        let _ = tracing::error_span!(
+            "error mssql op",
+            dur_ms = d,
+            table = table,
+            op = op,
+            error = e
+        )
+        .entered();
+    } else if d >= 500 {
+        let _ = tracing::warn_span!("slow mssql op", dur_ms = d, table = table, op = op).entered();
+    }
+
     metrics::counter!("storm_mssql_count", "table" => table, "op" => op).increment(1);
-    metrics::counter!("storm_mssql_ms", "table" => table, "op" => op).increment(d.as_millis() as u64);
+    metrics::counter!("storm_mssql_ms", "table" => table, "op" => op).increment(d as u64);
 }
 
 #[doc(hidden)]

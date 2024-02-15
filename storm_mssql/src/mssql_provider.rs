@@ -14,7 +14,6 @@ use std::{
 use storm::{provider, BoxFuture, Error, Result};
 use tiberius::Row;
 use tokio::sync::{Mutex, MutexGuard};
-use tracing::{info_span, Instrument};
 
 pub struct MssqlProvider(Arc<Inner>);
 
@@ -106,15 +105,11 @@ impl provider::Provider for MssqlProvider {
     fn cancel(&self) {
         self.0.cancel_transaction.store(true, Relaxed);
 
-        let span = tracing::Span::current();
         let p = Self(Arc::clone(&self.0));
 
-        tokio::spawn(
-            async move {
-                let _ = p.state().await;
-            }
-            .instrument(info_span!(parent: span, "rollback_transaction")),
-        );
+        tokio::spawn(async move {
+            let _ = p.state().await;
+        });
     }
 
     fn commit(&self) -> BoxFuture<'_, Result<()>> {
