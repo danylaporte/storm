@@ -168,7 +168,7 @@
 <a href="#167" id="167">167</a>
 <a href="#168" id="168">168</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::Gc;
-<span class="kw">use </span>std::{cmp::Ordering, hash::Hash, iter::FromIterator, ops::Index};
+<span class="kw">use </span>std::{cmp::Ordering, hash::Hash, ops::Index};
 <span class="kw">use </span>vec_map::{Entry, VecMap};
 
 <span class="kw">pub struct </span>OneToMany&lt;ONE, MANY&gt;(VecMap&lt;ONE, Box&lt;[MANY]&gt;&gt;);
