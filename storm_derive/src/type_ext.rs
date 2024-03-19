@@ -3,10 +3,6 @@ use syn::{PathSegment, Type};
 pub trait TypeExt {
     fn is_type_of_segment(&self, idents: &[&str]) -> bool;
 
-    fn is_cache_island(&self) -> bool {
-        self.is_type_of_segment(&["cache", "CacheIsland"])
-    }
-
     fn is_storm_ctx(&self) -> bool {
         self.is_type_of_segment(&["storm", "Ctx"])
     }
