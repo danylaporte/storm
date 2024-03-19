@@ -1,5 +1,5 @@
 use crate::Gc;
-use std::{cmp::Ordering, hash::Hash, iter::FromIterator, ops::Index};
+use std::{cmp::Ordering, hash::Hash, ops::Index};
 use vec_map::{Entry, VecMap};
 
 pub struct OneToMany<ONE, MANY>(VecMap<ONE, Box<[MANY]>>);
