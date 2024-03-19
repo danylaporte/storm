@@ -243,6 +243,7 @@
 <a href="#242" id="242">242</a>
 <a href="#243" id="243">243</a>
 <a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     on_changed::Changed, provider::LoadAll, Accessor, ApplyLog, BoxFuture, CtxTypeInfo, Deps,
     Entity, EntityAccessor, EntityOf, Gc, GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag,
@@ -295,7 +296,7 @@
     </span>E: Entity + EntityAccessor&lt;Tbl = VecTable&lt;E&gt;&gt;,
 {
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>var() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>TblVar&lt;<span class="self">Self</span>&gt; {
+    </span><span class="kw">fn </span>var() -&gt; TblVar&lt;<span class="self">Self</span>&gt; {
         E::entity_var()
     }
 
@@ -308,7 +309,7 @@
 <span class="kw">impl</span>&lt;E&gt; ApplyLog&lt;Log&lt;E&gt;&gt; <span class="kw">for </span>VecTable&lt;E&gt;
 <span class="kw">where
     </span>E: CtxTypeInfo + Entity + EntityAccessor,
-    E::Key: Clone + Into&lt;usize&gt;,
+    E::Key: Copy + Into&lt;usize&gt;,
 {
     <span class="kw">fn </span>apply_log(<span class="kw-2">&amp;mut </span><span class="self">self</span>, log: Log&lt;E&gt;) -&gt; bool {
         <span class="kw">if </span>log.is_empty() {
@@ -359,6 +360,7 @@
 <span class="kw">impl</span>&lt;E&gt; Clone <span class="kw">for </span>VecTable&lt;E&gt;
 <span class="kw">where
     </span>E: Clone + Entity,
+    E::Key: Clone,
 {
     <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
@@ -391,7 +393,7 @@
 <span class="kw">impl</span>&lt;E&gt; Extend&lt;(E::Key, E)&gt; <span class="kw">for </span>VecTable&lt;E&gt;
 <span class="kw">where
     </span>E: CtxTypeInfo + Entity,
-    E::Key: Into&lt;usize&gt;,
+    E::Key: Copy + Into&lt;usize&gt;,
 {
     <span class="kw">fn </span>extend&lt;T&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, iter: T)
     <span class="kw">where
@@ -408,7 +410,7 @@
 <span class="kw">impl</span>&lt;E&gt; Gc <span class="kw">for </span>VecTable&lt;E&gt;
 <span class="kw">where
     </span>E: Entity + CtxTypeInfo + Gc,
-    E::Key: From&lt;usize&gt;,
+    E::Key: Copy + From&lt;usize&gt;,
 {
     <span class="kw">const </span>SUPPORT_GC: bool = E::SUPPORT_GC;
 
@@ -420,7 +422,7 @@
 
 <span class="kw">impl</span>&lt;E: Entity&gt; Get&lt;E&gt; <span class="kw">for </span>VecTable&lt;E&gt;
 <span class="kw">where
-    </span>E::Key: Clone + Into&lt;usize&gt;,
+    </span>E::Key: Copy + Into&lt;usize&gt;,
 {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, k: <span class="kw-2">&amp;</span>E::Key) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>E&gt; {
@@ -430,7 +432,7 @@
 
 <span class="kw">impl</span>&lt;E: Entity&gt; GetMut&lt;E&gt; <span class="kw">for </span>VecTable&lt;E&gt;
 <span class="kw">where
-    </span>E::Key: Clone + Into&lt;usize&gt;,
+    </span>E::Key: Copy + Into&lt;usize&gt;,
 {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span>E::Key) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>E&gt; {
@@ -441,7 +443,7 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, P, E&gt; Init&lt;<span class="lifetime">'a</span>, P&gt; <span class="kw">for </span>VecTable&lt;E&gt;
 <span class="kw">where
     </span>E: CtxTypeInfo + Entity + Send,
-    E::Key: Into&lt;usize&gt; + Send,
+    E::Key: Copy + Into&lt;usize&gt; + Send,
     P: Sync + LoadAll&lt;E, (), <span class="self">Self</span>&gt;,
 {
     <span class="attr">#[inline]
@@ -452,7 +454,7 @@
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, E: Entity&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span>VecTable&lt;E&gt;
 <span class="kw">where
-    </span>E::Key: From&lt;usize&gt;,
+    </span>E::Key: Copy + From&lt;usize&gt;,
 {
     <span class="kw">type </span>Item = (E::Key, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>E);
     <span class="kw">type </span>IntoIter = Iter&lt;<span class="lifetime">'a</span>, E::Key, E&gt;;
@@ -465,7 +467,7 @@
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, E: Entity&gt; IntoParallelIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span>VecTable&lt;E&gt;
 <span class="kw">where
-    </span>E::Key: From&lt;usize&gt;,
+    </span>E::Key: Copy + From&lt;usize&gt;,
 {
     <span class="kw">type </span>Item = (E::Key, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>E);
     <span class="kw">type </span>Iter = ParIter&lt;<span class="lifetime">'a</span>, E::Key, E&gt;;

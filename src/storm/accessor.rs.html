@@ -68,7 +68,7 @@
 <span class="kw">pub type </span>TblVar&lt;T&gt; = Var&lt;T, vars::Tbl&gt;;
 
 <span class="kw">pub trait </span>Accessor: Sized + <span class="lifetime">'static </span>{
-    <span class="kw">fn </span>var() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>TblVar&lt;<span class="self">Self</span>&gt;;
+    <span class="kw">fn </span>var() -&gt; TblVar&lt;<span class="self">Self</span>&gt;;
     <span class="kw">fn </span>deps() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Deps;
 
     <span class="kw">fn </span>clear(ctx: <span class="kw-2">&amp;mut </span>Vars) {
@@ -96,7 +96,7 @@
 <span class="kw">pub trait </span>EntityAccessor: Entity + Sized + <span class="lifetime">'static </span>{
     <span class="kw">type </span>Tbl: Send + Sync;
 
-    <span class="kw">fn </span>entity_var() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>TblVar&lt;<span class="self">Self</span>::Tbl&gt;;
+    <span class="kw">fn </span>entity_var() -&gt; TblVar&lt;<span class="self">Self</span>::Tbl&gt;;
 
     <span class="kw">fn </span>entity_deps() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Deps;
 
@@ -106,17 +106,17 @@
 }
 
 <span class="kw">pub trait </span>LogAccessor: Entity + Sized + <span class="lifetime">'static </span>{
-    <span class="kw">fn </span>log_var() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>LogVar&lt;Log&lt;<span class="self">Self</span>&gt;&gt;;
+    <span class="kw">fn </span>log_var() -&gt; LogVar&lt;Log&lt;<span class="self">Self</span>&gt;&gt;;
 }
 
 <span class="comment">// typed variable contexts
-</span><span class="kw">pub type </span>LogsVar = attached::Vars&lt;vars::Log&gt;;
-<span class="kw">pub type </span>Vars = attached::Vars&lt;vars::Tbl&gt;;
+</span><span class="kw">pub type </span>LogsVar = attached::Container&lt;vars::Log&gt;;
+<span class="kw">pub type </span>Vars = attached::Container&lt;vars::Tbl&gt;;
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>vars {
-    <span class="kw">use </span>attached::var_ctx;
+<span class="kw">pub mod </span>vars {
+    <span class="kw">use </span>attached::container;
 
-    <span class="macro">var_ctx!</span>(<span class="kw">pub </span>Tbl);
-    <span class="macro">var_ctx!</span>(<span class="kw">pub </span>Log);
+    <span class="macro">container!</span>(<span class="kw">pub </span>Tbl);
+    <span class="macro">container!</span>(<span class="kw">pub </span>Log);
 }
 </code></pre></div></section></main></body></html>

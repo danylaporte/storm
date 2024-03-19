@@ -138,6 +138,16 @@
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::derive_input_ext::DeriveInputExt;
 <span class="kw">use </span>darling::{FromDeriveInput, FromMeta};
 <span class="kw">use </span>inflector::Inflector;
@@ -163,58 +173,68 @@
     <span class="kw">let </span>table_name_lit = LitStr::new(<span class="kw-2">&amp;</span>entity_name, entity.span());
     <span class="kw">let </span>table_alias = Ident::new(<span class="kw-2">&amp;</span>table_name, entity.span());
 
-    <span class="kw">let </span>tbl_var = Ident::new(
-        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"___{}_tbl"</span>, entity_name.to_snake_case()),
-        input.ident.span(),
-    );
     <span class="kw">let </span>coll_ty = args.collection.ty(entity);
     <span class="kw">let </span>(gc, gc_collect) = gc(input)<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(<span class="macro">quote! </span>{
         #vis <span class="kw">type </span>#table_alias = #coll_ty;
 
-        <span class="kw">fn </span>#tbl_var() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>(storm::TblVar&lt;#table_alias&gt;, storm::Deps, storm::OnChanged&lt;#entity&gt;, storm::OnRemove&lt;#entity&gt;) {
-            <span class="kw">static </span>CELL: storm::OnceCell&lt;(storm::TblVar&lt;#table_alias&gt;, storm::Deps, storm::OnChanged&lt;#entity&gt;, storm::OnRemove&lt;#entity&gt;)&gt; = storm::OnceCell::new();
-
-            CELL.get_or_init(|| {
-                #gc_collect
-                Default::default()
-            })
-        }
-
         <span class="kw">impl </span>storm::EntityAccessor <span class="kw">for </span>#entity {
             <span class="kw">type </span>Tbl = #table_alias;
 
-            <span class="attr">#[inline]
-            </span><span class="kw">fn </span>entity_var() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>storm::TblVar&lt;<span class="self">Self</span>::Tbl&gt; {
-                <span class="kw-2">&amp;</span>#tbl_var().<span class="number">0
-            </span>}
+            <span class="attr">#[allow(non_camel_case_types)]
+            #[inline]
+            </span><span class="kw">fn </span>entity_var() -&gt; storm::TblVar&lt;<span class="self">Self</span>::Tbl&gt; {
+                <span class="kw">use </span>storm::attached::{<span class="self">self</span>, static_init};
+
+                <span class="macro">attached::var!</span>(T: #table_alias, storm::vars::Tbl);
+
+                <span class="comment">// Garbage collection static registering
+                </span><span class="attr">#[storm::attached::static_init::dynamic]
+                </span><span class="kw">static </span>G: () = {
+                    #gc_collect
+                    ()
+                };
+
+                <span class="kw-2">*</span>T
+            }
 
             <span class="attr">#[inline]
             </span><span class="kw">fn </span>entity_deps() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>storm::Deps {
-                <span class="kw-2">&amp;</span>#tbl_var().<span class="number">1
-            </span>}
+                <span class="kw">static </span>DEPS: storm::Deps = storm::parking_lot::RwLock::new(Vec::new());
+                <span class="kw-2">&amp;</span>DEPS
+            }
 
             <span class="attr">#[inline]
             </span><span class="kw">fn </span>on_changed() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>storm::OnChanged&lt;<span class="self">Self</span>&gt; {
-                <span class="kw-2">&amp;</span>#tbl_var().<span class="number">2
-            </span>}
+                <span class="kw">use </span>storm::attached::{<span class="self">self</span>, static_init};
+
+                <span class="attr">#[static_init::dynamic]
+                </span><span class="kw">static </span>E: storm::OnChanged&lt;#entity&gt; = Default::default();
+                <span class="kw-2">&amp;</span>E
+            }
 
             <span class="attr">#[inline]
             </span><span class="kw">fn </span>on_remove() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>storm::OnRemove&lt;<span class="self">Self</span>&gt; {
-                <span class="kw-2">&amp;</span>#tbl_var().<span class="number">3
-            </span>}
+                <span class="kw">use </span>storm::attached::{<span class="self">self</span>, static_init};
+
+                <span class="attr">#[static_init::dynamic]
+                </span><span class="kw">static </span>E: storm::OnRemove&lt;#entity&gt; = Default::default();
+                <span class="kw-2">&amp;</span>E
+            }
         }
 
         <span class="kw">impl </span>storm::LogAccessor <span class="kw">for </span>#entity {
             <span class="attr">#[inline]
-            </span><span class="kw">fn </span>log_var() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>storm::LogVar&lt;storm::Log&lt;<span class="self">Self</span>&gt;&gt; {
-                <span class="kw">static </span>CELL: storm::OnceCell&lt;storm::LogVar&lt;storm::Log&lt;#entity&gt;&gt;&gt; = storm::OnceCell::new();
+            </span><span class="kw">fn </span>log_var() -&gt; storm::LogVar&lt;storm::Log&lt;<span class="self">Self</span>&gt;&gt; {
+                <span class="kw">use </span>storm::attached::{<span class="self">self</span>, static_init};
 
-                CELL.get_or_init(|| {
-                    storm::register_apply_log::&lt;#entity&gt;();
-                    storm::LogVar::default()
-                })
+                <span class="macro">attached::var!</span>(L: storm::Log&lt;#entity&gt;, storm::vars::Log);
+
+                <span class="attr">#[static_init::dynamic]
+                </span><span class="kw">static </span>R: () = storm::register_apply_log::&lt;#entity&gt;();
+
+                <span class="kw-2">*</span>L
             }
         }
 

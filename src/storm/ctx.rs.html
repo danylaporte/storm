@@ -1191,7 +1191,7 @@
 <span class="kw">impl</span>&lt;E&gt; AsRefAsync&lt;VecTable&lt;E&gt;&gt; <span class="kw">for </span>Ctx
 <span class="kw">where
     </span>E: CtxTypeInfo + Entity + EntityAccessor&lt;Tbl = VecTable&lt;E&gt;&gt;,
-    E::Key: Into&lt;usize&gt;,
+    E::Key: Copy + Into&lt;usize&gt;,
     ProviderContainer: LoadAll&lt;E, (), E::Tbl&gt;,
 {
     <span class="kw">fn </span>as_ref_async(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">'_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'_ </span>E::Tbl&gt;&gt; {

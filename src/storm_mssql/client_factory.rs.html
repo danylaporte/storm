@@ -30,6 +30,8 @@
 <a href="#29" id="29">29</a>
 <a href="#30" id="30">30</a>
 <a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::Client;
 <span class="kw">use </span>storm::{BoxFuture, Error, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>tiberius::{Config, SqlBrowser};
@@ -48,17 +50,19 @@
 }
 
 <span class="kw">impl </span>ClientFactory <span class="kw">for </span>Config {
-    <span class="attr">#[instrument(name = <span class="string">"ClientFactory::create_client"</span>, skip(<span class="self">self</span>), err)]
-    </span><span class="kw">fn </span>create_client(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">'_</span>, <span class="prelude-ty">Result</span>&lt;Client&gt;&gt; {
-        Box::pin(<span class="kw">async move </span>{
-            <span class="comment">// named instance only available in windows.
-            </span><span class="kw">let </span>tcp = TcpStream::connect_named(<span class="self">self</span>).<span class="kw">await</span>.map_err(Error::std)<span class="question-mark">?</span>;
-            tcp.set_nodelay(<span class="bool-val">true</span>).map_err(Error::std)<span class="question-mark">?</span>;
-
-            Client::connect(<span class="self">self</span>.clone(), tcp.compat_write())
-                .<span class="kw">await
-                </span>.map_err(Into::into)
-        })
+    <span class="kw">fn </span>create_client(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">'_</span>, <span class="prelude-ty">Result</span>&lt;Client&gt;&gt; {
+        Box::pin(config_create_client(<span class="self">self</span>))
     }
+}
+
+<span class="attr">#[instrument(name = <span class="string">"ClientFactory::create_client"</span>, skip(config), err)]
+</span><span class="kw">async fn </span>config_create_client(config: <span class="kw-2">&amp;</span>Config) -&gt; <span class="prelude-ty">Result</span>&lt;Client&gt; {
+    <span class="comment">// named instance only available in windows.
+    </span><span class="kw">let </span>tcp = TcpStream::connect_named(config).<span class="kw">await</span>.map_err(Error::std)<span class="question-mark">?</span>;
+    tcp.set_nodelay(<span class="bool-val">true</span>).map_err(Error::std)<span class="question-mark">?</span>;
+
+    Client::connect(config.clone(), tcp.compat_write())
+        .<span class="kw">await
+        </span>.map_err(Into::into)
 }
 </code></pre></div></section></main></body></html>

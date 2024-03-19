@@ -296,7 +296,7 @@
     </span>E: Entity + EntityAccessor&lt;Tbl = HashTable&lt;E&gt;&gt;,
 {
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>var() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>TblVar&lt;<span class="self">Self</span>&gt; {
+    </span><span class="kw">fn </span>var() -&gt; TblVar&lt;<span class="self">Self</span>&gt; {
         E::entity_var()
     }
 

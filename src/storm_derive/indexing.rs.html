@@ -185,7 +185,6 @@
 <a href="#184" id="184">184</a>
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::TypeExt;
 <span class="kw">use </span>inflector::Inflector;
 <span class="kw">use </span>proc_macro2::TokenStream;
@@ -224,11 +223,6 @@
     <span class="kw">let </span>name_str = <span class="kw-2">&amp;</span>name.to_string().to_pascal_case();
     <span class="kw">let </span>index_name = Ident::new(name_str, name.span());
     <span class="kw">let </span>index_name_lit = LitStr::new(name_str, name.span());
-
-    <span class="kw">let </span>static_var = Ident::new(
-        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"___{}_var"</span>, name.to_string().to_snake_case()),
-        name.span(),
-    );
 
     <span class="kw">let </span>ty = <span class="kw">match </span><span class="kw-2">&amp;</span>f.sig.output {
         ReturnType::Type(<span class="kw">_</span>, t) =&gt; t,
@@ -295,27 +289,31 @@
     <span class="kw">let </span>(gc, gc_collect) = gc(<span class="kw-2">&amp;</span>index_name, ty);
 
     <span class="macro">quote! </span>{
-        <span class="kw">fn </span>#static_var() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>(storm::TblVar&lt;#index_name&gt;, storm::Deps) {
-            <span class="kw">static </span>CELL: storm::OnceCell&lt;(storm::TblVar&lt;#index_name&gt;, storm::Deps)&gt; = storm::OnceCell::new();
-            CELL.get_or_init(|| {
-                #(#deps)*
-                #gc_collect
-                Default::default()
-            })
-        }
-
         #vis <span class="kw">struct </span>#index_name(#ty, storm::VersionTag);
 
         <span class="kw">impl </span>storm::Accessor <span class="kw">for </span>#index_name {
-            <span class="attr">#[inline]
-            </span><span class="kw">fn </span>var() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>storm::TblVar&lt;<span class="self">Self</span>&gt; {
-                <span class="kw-2">&amp;</span>#static_var().<span class="number">0
-            </span>}
+            <span class="attr">#[allow(non_camel_case_types)]
+            #[inline]
+            </span><span class="kw">fn </span>var() -&gt; storm::TblVar&lt;<span class="self">Self</span>&gt; {
+                <span class="kw">use </span>storm::attached::{<span class="self">self</span>, static_init};
+
+                <span class="macro">attached::var!</span>(T: #index_name, storm::vars::Tbl);
+
+                <span class="attr">#[storm::attached::static_init::dynamic]
+                </span><span class="kw">static </span>R: () = {
+                    #(#deps)*
+                    #gc_collect
+                    ()
+                };
+
+                <span class="kw-2">*</span>T
+            }
 
             <span class="attr">#[inline]
             </span><span class="kw">fn </span>deps() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>storm::Deps {
-                <span class="kw-2">&amp;</span>#static_var().<span class="number">1
-            </span>}
+                <span class="kw">static </span>DEPS: storm::Deps = storm::parking_lot::RwLock::new(Vec::new());
+                <span class="kw-2">&amp;</span>DEPS
+            }
         }
 
         <span class="kw">impl </span>std::ops::Deref <span class="kw">for </span>#index_name {

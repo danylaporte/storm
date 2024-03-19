@@ -406,7 +406,7 @@
 
 <span class="kw">impl</span>&lt;K, V&gt; Gc <span class="kw">for </span>VecMap&lt;K, V&gt;
 <span class="kw">where
-    </span>K: From&lt;usize&gt; + Send,
+    </span>K: Copy + From&lt;usize&gt; + Send,
     V: Gc + Send,
 {
     <span class="kw">const </span>SUPPORT_GC: bool = V::SUPPORT_GC;
