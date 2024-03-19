@@ -57,7 +57,7 @@ where
     E: Entity + EntityAccessor<Tbl = HashTable<E>>,
 {
     #[inline]
-    fn var() -> &'static TblVar<Self> {
+    fn var() -> TblVar<Self> {
         E::entity_var()
     }
 

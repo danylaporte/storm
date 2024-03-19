@@ -7,7 +7,7 @@ pub struct OneToMany<ONE, MANY>(VecMap<ONE, Box<[MANY]>>);
 impl<ONE, MANY> OneToMany<ONE, MANY> {
     pub fn get(&self, index: &ONE) -> &[MANY]
     where
-        ONE: Clone + Into<usize>,
+        ONE: Copy + Into<usize>,
     {
         self.0.get(index).map_or(&[], |v| &**v)
     }
@@ -19,7 +19,7 @@ impl<ONE, MANY> OneToMany<ONE, MANY> {
 
 impl<ONE, MANY> Gc for OneToMany<ONE, MANY>
 where
-    ONE: From<usize> + Send,
+    ONE: Copy + From<usize> + Send,
     MANY: Gc + Send + Sync,
 {
     const SUPPORT_GC: bool = MANY::SUPPORT_GC;
@@ -31,7 +31,7 @@ where
 
 impl<'a, ONE, MANY> IntoIterator for &'a OneToMany<ONE, MANY>
 where
-    ONE: From<usize>,
+    ONE: Copy + From<usize>,
 {
     type Item = (ONE, &'a Box<[MANY]>);
     type IntoIter = vec_map::Iter<'a, ONE, Box<[MANY]>>;
@@ -43,7 +43,7 @@ where
 
 impl<ONE, MANY> Index<&ONE> for OneToMany<ONE, MANY>
 where
-    ONE: Clone + Into<usize>,
+    ONE: Copy + Into<usize>,
 {
     type Output = [MANY];
 
@@ -55,7 +55,7 @@ where
 
 impl<ONE, MANY> FromIterator<(ONE, MANY)> for OneToMany<ONE, MANY>
 where
-    ONE: Clone + From<usize> + Into<usize>,
+    ONE: Copy + From<usize> + Into<usize>,
     MANY: Eq + Hash,
 {
     fn from_iter<T: IntoIterator<Item = (ONE, MANY)>>(iter: T) -> Self {
@@ -70,7 +70,7 @@ where
 
 pub trait OneToManyFromIter<ONE, MANY>: IntoIterator<Item = (ONE, MANY)> + Sized
 where
-    ONE: Clone + From<usize> + Into<usize>,
+    ONE: Copy + From<usize> + Into<usize>,
 {
     /// Collect the items and sort them.
     fn collect_sort<F>(self) -> OneToMany<ONE, MANY>
@@ -144,14 +144,14 @@ where
 impl<ONE, MANY, T> OneToManyFromIter<ONE, MANY> for T
 where
     T: IntoIterator<Item = (ONE, MANY)> + Sized,
-    ONE: Clone + From<usize> + Into<usize>,
+    ONE: Copy + From<usize> + Into<usize>,
 {
 }
 
 fn collect_vec_map<ONE, MANY, I>(iter: I) -> VecMap<ONE, Vec<MANY>>
 where
     I: Iterator<Item = (ONE, MANY)>,
-    ONE: Clone + Into<usize>,
+    ONE: Copy + Into<usize>,
 {
     iter.fold(VecMap::<ONE, Vec<MANY>>::new(), |mut map, (one, many)| {
         match map.entry(one) {

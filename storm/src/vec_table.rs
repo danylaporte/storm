@@ -50,7 +50,7 @@ where
     E: Entity + EntityAccessor<Tbl = VecTable<E>>,
 {
     #[inline]
-    fn var() -> &'static TblVar<Self> {
+    fn var() -> TblVar<Self> {
         E::entity_var()
     }
 
@@ -63,7 +63,7 @@ where
 impl<E> ApplyLog<Log<E>> for VecTable<E>
 where
     E: CtxTypeInfo + Entity + EntityAccessor,
-    E::Key: Clone + Into<usize>,
+    E::Key: Copy + Into<usize>,
 {
     fn apply_log(&mut self, log: Log<E>) -> bool {
         if log.is_empty() {
@@ -114,6 +114,7 @@ impl<E: Entity> AsRef<Self> for VecTable<E> {
 impl<E> Clone for VecTable<E>
 where
     E: Clone + Entity,
+    E::Key: Clone,
 {
     fn clone(&self) -> Self {
         Self {
@@ -146,7 +147,7 @@ impl<E: Entity> EntityOf for VecTable<E> {
 impl<E> Extend<(E::Key, E)> for VecTable<E>
 where
     E: CtxTypeInfo + Entity,
-    E::Key: Into<usize>,
+    E::Key: Copy + Into<usize>,
 {
     fn extend<T>(&mut self, iter: T)
     where
@@ -163,7 +164,7 @@ where
 impl<E> Gc for VecTable<E>
 where
     E: Entity + CtxTypeInfo + Gc,
-    E::Key: From<usize>,
+    E::Key: Copy + From<usize>,
 {
     const SUPPORT_GC: bool = E::SUPPORT_GC;
 
@@ -175,7 +176,7 @@ where
 
 impl<E: Entity> Get<E> for VecTable<E>
 where
-    E::Key: Clone + Into<usize>,
+    E::Key: Copy + Into<usize>,
 {
     #[inline]
     fn get(&self, k: &E::Key) -> Option<&E> {
@@ -185,7 +186,7 @@ where
 
 impl<E: Entity> GetMut<E> for VecTable<E>
 where
-    E::Key: Clone + Into<usize>,
+    E::Key: Copy + Into<usize>,
 {
     #[inline]
     fn get_mut(&mut self, k: &E::Key) -> Option<&mut E> {
@@ -196,7 +197,7 @@ where
 impl<'a, P, E> Init<'a, P> for VecTable<E>
 where
     E: CtxTypeInfo + Entity + Send,
-    E::Key: Into<usize> + Send,
+    E::Key: Copy + Into<usize> + Send,
     P: Sync + LoadAll<E, (), Self>,
 {
     #[inline]
@@ -207,7 +208,7 @@ where
 
 impl<'a, E: Entity> IntoIterator for &'a VecTable<E>
 where
-    E::Key: From<usize>,
+    E::Key: Copy + From<usize>,
 {
     type Item = (E::Key, &'a E);
     type IntoIter = Iter<'a, E::Key, E>;
@@ -220,7 +221,7 @@ where
 
 impl<'a, E: Entity> IntoParallelIterator for &'a VecTable<E>
 where
-    E::Key: From<usize>,
+    E::Key: Copy + From<usize>,
 {
     type Item = (E::Key, &'a E);
     type Iter = ParIter<'a, E::Key, E>;

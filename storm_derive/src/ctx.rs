@@ -23,58 +23,68 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let table_name_lit = LitStr::new(&entity_name, entity.span());
     let table_alias = Ident::new(&table_name, entity.span());
 
-    let tbl_var = Ident::new(
-        &format!("___{}_tbl", entity_name.to_snake_case()),
-        input.ident.span(),
-    );
     let coll_ty = args.collection.ty(entity);
     let (gc, gc_collect) = gc(input)?;
 
     Ok(quote! {
         #vis type #table_alias = #coll_ty;
 
-        fn #tbl_var() -> &'static (storm::TblVar<#table_alias>, storm::Deps, storm::OnChanged<#entity>, storm::OnRemove<#entity>) {
-            static CELL: storm::OnceCell<(storm::TblVar<#table_alias>, storm::Deps, storm::OnChanged<#entity>, storm::OnRemove<#entity>)> = storm::OnceCell::new();
-
-            CELL.get_or_init(|| {
-                #gc_collect
-                Default::default()
-            })
-        }
-
         impl storm::EntityAccessor for #entity {
             type Tbl = #table_alias;
 
+            #[allow(non_camel_case_types)]
             #[inline]
-            fn entity_var() -> &'static storm::TblVar<Self::Tbl> {
-                &#tbl_var().0
+            fn entity_var() -> storm::TblVar<Self::Tbl> {
+                use storm::attached::{self, static_init};
+
+                attached::var!(T: #table_alias, storm::vars::Tbl);
+
+                // Garbage collection static registering
+                #[storm::attached::static_init::dynamic]
+                static G: () = {
+                    #gc_collect
+                    ()
+                };
+
+                *T
             }
 
             #[inline]
             fn entity_deps() -> &'static storm::Deps {
-                &#tbl_var().1
+                static DEPS: storm::Deps = storm::parking_lot::RwLock::new(Vec::new());
+                &DEPS
             }
 
             #[inline]
             fn on_changed() -> &'static storm::OnChanged<Self> {
-                &#tbl_var().2
+                use storm::attached::{self, static_init};
+
+                #[static_init::dynamic]
+                static E: storm::OnChanged<#entity> = Default::default();
+                &E
             }
 
             #[inline]
             fn on_remove() -> &'static storm::OnRemove<Self> {
-                &#tbl_var().3
+                use storm::attached::{self, static_init};
+
+                #[static_init::dynamic]
+                static E: storm::OnRemove<#entity> = Default::default();
+                &E
             }
         }
 
         impl storm::LogAccessor for #entity {
             #[inline]
-            fn log_var() -> &'static storm::LogVar<storm::Log<Self>> {
-                static CELL: storm::OnceCell<storm::LogVar<storm::Log<#entity>>> = storm::OnceCell::new();
+            fn log_var() -> storm::LogVar<storm::Log<Self>> {
+                use storm::attached::{self, static_init};
 
-                CELL.get_or_init(|| {
-                    storm::register_apply_log::<#entity>();
-                    storm::LogVar::default()
-                })
+                attached::var!(L: storm::Log<#entity>, storm::vars::Log);
+
+                #[static_init::dynamic]
+                static R: () = storm::register_apply_log::<#entity>();
+
+                *L
             }
         }
 

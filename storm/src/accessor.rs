@@ -7,7 +7,7 @@ pub type LogVar<T> = Var<T, vars::Log>;
 pub type TblVar<T> = Var<T, vars::Tbl>;
 
 pub trait Accessor: Sized + 'static {
-    fn var() -> &'static TblVar<Self>;
+    fn var() -> TblVar<Self>;
     fn deps() -> &'static Deps;
 
     fn clear(ctx: &mut Vars) {
@@ -35,7 +35,7 @@ fn register_deps(deps: &'static Deps, f: Box<dyn Fn(&mut Vars) + Send + Sync + '
 pub trait EntityAccessor: Entity + Sized + 'static {
     type Tbl: Send + Sync;
 
-    fn entity_var() -> &'static TblVar<Self::Tbl>;
+    fn entity_var() -> TblVar<Self::Tbl>;
 
     fn entity_deps() -> &'static Deps;
 
@@ -45,16 +45,16 @@ pub trait EntityAccessor: Entity + Sized + 'static {
 }
 
 pub trait LogAccessor: Entity + Sized + 'static {
-    fn log_var() -> &'static LogVar<Log<Self>>;
+    fn log_var() -> LogVar<Log<Self>>;
 }
 
 // typed variable contexts
-pub type LogsVar = attached::Vars<vars::Log>;
-pub type Vars = attached::Vars<vars::Tbl>;
+pub type LogsVar = attached::Container<vars::Log>;
+pub type Vars = attached::Container<vars::Tbl>;
 
-pub(crate) mod vars {
-    use attached::var_ctx;
+pub mod vars {
+    use attached::container;
 
-    var_ctx!(pub Tbl);
-    var_ctx!(pub Log);
+    container!(pub Tbl);
+    container!(pub Log);
 }

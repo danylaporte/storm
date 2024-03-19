@@ -127,7 +127,7 @@ where
 impl<E> AsRefAsync<VecTable<E>> for Ctx
 where
     E: CtxTypeInfo + Entity + EntityAccessor<Tbl = VecTable<E>>,
-    E::Key: Into<usize>,
+    E::Key: Copy + Into<usize>,
     ProviderContainer: LoadAll<E, (), E::Tbl>,
 {
     fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ E::Tbl>> {

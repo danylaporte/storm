@@ -37,11 +37,6 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
     let index_name = Ident::new(name_str, name.span());
     let index_name_lit = LitStr::new(name_str, name.span());
 
-    let static_var = Ident::new(
-        &format!("___{}_var", name.to_string().to_snake_case()),
-        name.span(),
-    );
-
     let ty = match &f.sig.output {
         ReturnType::Type(_, t) => t,
         ReturnType::Default => {
@@ -107,26 +102,30 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
     let (gc, gc_collect) = gc(&index_name, ty);
 
     quote! {
-        fn #static_var() -> &'static (storm::TblVar<#index_name>, storm::Deps) {
-            static CELL: storm::OnceCell<(storm::TblVar<#index_name>, storm::Deps)> = storm::OnceCell::new();
-            CELL.get_or_init(|| {
-                #(#deps)*
-                #gc_collect
-                Default::default()
-            })
-        }
-
         #vis struct #index_name(#ty, storm::VersionTag);
 
         impl storm::Accessor for #index_name {
+            #[allow(non_camel_case_types)]
             #[inline]
-            fn var() -> &'static storm::TblVar<Self> {
-                &#static_var().0
+            fn var() -> storm::TblVar<Self> {
+                use storm::attached::{self, static_init};
+
+                attached::var!(T: #index_name, storm::vars::Tbl);
+
+                #[storm::attached::static_init::dynamic]
+                static R: () = {
+                    #(#deps)*
+                    #gc_collect
+                    ()
+                };
+
+                *T
             }
 
             #[inline]
             fn deps() -> &'static storm::Deps {
-                &#static_var().1
+                static DEPS: storm::Deps = storm::parking_lot::RwLock::new(Vec::new());
+                &DEPS
             }
         }
 

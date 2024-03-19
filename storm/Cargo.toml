@@ -20,6 +20,7 @@ parking_lot = "0.12"
 pin-project-lite = "0.2"
 rayon = "1"
 serde = { version = "1", features = ["derive"] }
+static_init = "1"
 storm_derive = { path = "../storm_derive", optional = true }
 tiberius = { version = "0.12", default_features = false, optional = true }
 tokio = { version = "1", features = ["parking_lot", "sync"], default-features = false }

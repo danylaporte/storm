@@ -16,16 +16,18 @@ pub trait ClientFactory: Send + Sync + 'static {
 }
 
 impl ClientFactory for Config {
-    #[instrument(name = "ClientFactory::create_client", skip(self), err)]
     fn create_client(&self) -> BoxFuture<'_, Result<Client>> {
-        Box::pin(async move {
-            // named instance only available in windows.
-            let tcp = TcpStream::connect_named(self).await.map_err(Error::std)?;
-            tcp.set_nodelay(true).map_err(Error::std)?;
-
-            Client::connect(self.clone(), tcp.compat_write())
-                .await
-                .map_err(Into::into)
-        })
+        Box::pin(config_create_client(self))
     }
+}
+
+#[instrument(name = "ClientFactory::create_client", skip(config), err)]
+async fn config_create_client(config: &Config) -> Result<Client> {
+    // named instance only available in windows.
+    let tcp = TcpStream::connect_named(config).await.map_err(Error::std)?;
+    tcp.set_nodelay(true).map_err(Error::std)?;
+
+    Client::connect(config.clone(), tcp.compat_write())
+        .await
+        .map_err(Into::into)
 }

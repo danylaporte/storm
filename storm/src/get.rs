@@ -52,7 +52,7 @@ where
 
 impl<E: Entity> Get<E> for VecMap<E::Key, E>
 where
-    E::Key: Clone + Into<usize>,
+    E::Key: Copy + Into<usize>,
 {
     fn get(&self, k: &E::Key) -> Option<&E> {
         VecMap::get(self, k)
