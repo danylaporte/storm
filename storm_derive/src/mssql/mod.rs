@@ -54,11 +54,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
         Span::call_site(),
     );
 
-    let load_test = Ident::new(
-        &format!("test_{}_load", ident.to_string().to_snake_case()),
-        ident.span(),
-    );
-
+    let no_test = attrs.no_test;
     let mut diff = attrs.diff.then(Vec::new);
     let mut errors = Vec::new();
     let mut filter_sql = FilterSqlImpl::default();
@@ -67,6 +63,8 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let table_name = LitStr::new(&attrs.table, attrs.table.span());
     let translated_table_name = LitStr::new(&attrs.translate_table, attrs.translate_table.span());
     let enum_fields_ident = Ident::new(&format!("{ident}Fields"), ident.span());
+    let mut max_lengths = Vec::new();
+    let mut check_entity_fields = Vec::new();
 
     for key in attrs.keys(&mut errors) {
         filter_sql.add_filter(key);
@@ -82,9 +80,9 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
 
         attrs.validate_load(&mut errors);
 
-        if is_translated(&field.ty) {
-            let column = continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
+        let column = continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
 
+        if is_translated(&field.ty) {
             load.skip_field(field, &attrs, &mut errors);
             translated.add_field(field, &column);
 
@@ -92,11 +90,22 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
                 load_diff_field(&mut diff, field_ident, &enum_fields_ident);
             }
         } else {
-            let column = continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
             load.add_field(field, &attrs, &column);
 
             if !attrs.skip_save() && !attrs.skip_diff() {
                 load_diff_field(&mut diff, field_ident, &enum_fields_ident);
+            }
+        }
+
+        if attrs.max_length > 0 {
+            let column_lit = LitStr::new(&column, ident.span());
+            let const_field_name = Ident::new(&format!("{field_ident}_MAX_LENGTH").to_screaming_snake_case(), field_ident.span());
+            let max_length = LitInt::new(&attrs.max_length.to_string(), field_ident.span());
+
+            max_lengths.push(quote! { pub const #const_field_name: usize = #max_length; });
+
+            if !no_test {
+                check_entity_fields.push(quote! { (#column_lit, #max_length) });
             }
         }
     }
@@ -106,10 +115,33 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let translated_where = translated.to_where_clause();
     let provider = attrs.provider();
     let diff = apply_entity_diff(diff, ident);
+    let max_lengths = if max_lengths.is_empty() { quote! {} } else { quote! { impl #ident { #(#max_lengths)* } } };
 
-    let test = if attrs.no_test {
+    let check_entity_fields = if check_entity_fields.is_empty() {
+        quote! {}
+    } else {
+        let check_entity_test = Ident::new(
+            &format!("test_{}_entity", ident.to_string().to_snake_case()),
+            ident.span(),
+        );
+
+        quote! {
+            #[cfg(test)]
+            #[tokio::test]
+            async fn #check_entity_test() {
+                storm_mssql::test_entity(#provider, #table_name, #translated_table_name, &[#(#check_entity_fields),*]).await;
+            }
+        }
+    };
+
+    let test = if no_test {
         quote!()
     } else {
+        let load_test = Ident::new(
+            &format!("test_{}_load", ident.to_string().to_snake_case()),
+            ident.span(),
+        );
+
         quote! {
             #[cfg(test)]
             #[tokio::test]
@@ -118,6 +150,8 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
                 storm::tri!(storm::provider::LoadAll::<#ident, _, storm::provider::LoadNothing>::load_all(&provider, &()).await);
                 Ok(())
             }
+
+            #check_entity_fields
         }
     };
 
@@ -160,6 +194,7 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             const TRANSLATED_TABLE: &'static str = #translated_table_name;
         }
 
+        #max_lengths
         #diff
         #test
     }

@@ -13,6 +13,9 @@ pub(super) struct FieldAttrs {
     pub load_with: SpannedValue<Option<Ident>>,
 
     #[darling(default)]
+    pub max_length: usize,
+
+    #[darling(default)]
     pub part: bool,
 
     #[darling(default)]
