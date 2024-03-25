@@ -1,5 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_derive/src/mssql/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="storm_derive" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_derive/src/mssql/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="storm_derive" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0 (aedd173a2 2024-03-17)" data-channel="1.77.0" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../storm_derive/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -504,6 +505,41 @@
 <a href="#503" id="503">503</a>
 <a href="#504" id="504">504</a>
 <a href="#505" id="505">505</a>
+<a href="#506" id="506">506</a>
+<a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
 </pre></div><pre class="rust"><code><span class="kw">mod </span>attrs;
 <span class="kw">mod </span>builders;
 <span class="kw">mod </span>delete;
@@ -560,11 +596,7 @@
         Span::call_site(),
     );
 
-    <span class="kw">let </span>load_test = Ident::new(
-        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"test_{}_load"</span>, ident.to_string().to_snake_case()),
-        ident.span(),
-    );
-
+    <span class="kw">let </span>no_test = attrs.no_test;
     <span class="kw">let </span><span class="kw-2">mut </span>diff = attrs.diff.then(Vec::new);
     <span class="kw">let </span><span class="kw-2">mut </span>errors = Vec::new();
     <span class="kw">let </span><span class="kw-2">mut </span>filter_sql = FilterSqlImpl::default();
@@ -573,6 +605,8 @@
     <span class="kw">let </span>table_name = LitStr::new(<span class="kw-2">&amp;</span>attrs.table, attrs.table.span());
     <span class="kw">let </span>translated_table_name = LitStr::new(<span class="kw-2">&amp;</span>attrs.translate_table, attrs.translate_table.span());
     <span class="kw">let </span>enum_fields_ident = Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{ident}Fields"</span>), ident.span());
+    <span class="kw">let </span><span class="kw-2">mut </span>max_lengths = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>check_entity_fields = Vec::new();
 
     <span class="kw">for </span>key <span class="kw">in </span>attrs.keys(<span class="kw-2">&amp;mut </span>errors) {
         filter_sql.add_filter(key);
@@ -588,9 +622,9 @@
 
         attrs.validate_load(<span class="kw-2">&amp;mut </span>errors);
 
-        <span class="kw">if </span>is_translated(<span class="kw-2">&amp;</span>field.ty) {
-            <span class="kw">let </span>column = <span class="macro">continue_ts!</span>(RenameAll::column(rename_all, <span class="kw-2">&amp;</span>attrs.column, field), errors);
+        <span class="kw">let </span>column = <span class="macro">continue_ts!</span>(RenameAll::column(rename_all, <span class="kw-2">&amp;</span>attrs.column, field), errors);
 
+        <span class="kw">if </span>is_translated(<span class="kw-2">&amp;</span>field.ty) {
             load.skip_field(field, <span class="kw-2">&amp;</span>attrs, <span class="kw-2">&amp;mut </span>errors);
             translated.add_field(field, <span class="kw-2">&amp;</span>column);
 
@@ -598,11 +632,22 @@
                 load_diff_field(<span class="kw-2">&amp;mut </span>diff, field_ident, <span class="kw-2">&amp;</span>enum_fields_ident);
             }
         } <span class="kw">else </span>{
-            <span class="kw">let </span>column = <span class="macro">continue_ts!</span>(RenameAll::column(rename_all, <span class="kw-2">&amp;</span>attrs.column, field), errors);
             load.add_field(field, <span class="kw-2">&amp;</span>attrs, <span class="kw-2">&amp;</span>column);
 
             <span class="kw">if </span>!attrs.skip_save() &amp;&amp; !attrs.skip_diff() {
                 load_diff_field(<span class="kw-2">&amp;mut </span>diff, field_ident, <span class="kw-2">&amp;</span>enum_fields_ident);
+            }
+        }
+
+        <span class="kw">if </span>attrs.max_length &gt; <span class="number">0 </span>{
+            <span class="kw">let </span>column_lit = LitStr::new(<span class="kw-2">&amp;</span>column, ident.span());
+            <span class="kw">let </span>const_field_name = Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{field_ident}_MAX_LENGTH"</span>).to_screaming_snake_case(), field_ident.span());
+            <span class="kw">let </span>max_length = LitInt::new(<span class="kw-2">&amp;</span>attrs.max_length.to_string(), field_ident.span());
+
+            max_lengths.push(<span class="macro">quote! </span>{ <span class="kw">pub const </span>#const_field_name: usize = #max_length; });
+
+            <span class="kw">if </span>!no_test {
+                check_entity_fields.push(<span class="macro">quote! </span>{ (#column_lit, #max_length) });
             }
         }
     }
@@ -612,10 +657,33 @@
     <span class="kw">let </span>translated_where = translated.to_where_clause();
     <span class="kw">let </span>provider = attrs.provider();
     <span class="kw">let </span>diff = apply_entity_diff(diff, ident);
+    <span class="kw">let </span>max_lengths = <span class="kw">if </span>max_lengths.is_empty() { <span class="macro">quote! </span>{} } <span class="kw">else </span>{ <span class="macro">quote! </span>{ <span class="kw">impl </span>#ident { #(#max_lengths)* } } };
 
-    <span class="kw">let </span>test = <span class="kw">if </span>attrs.no_test {
+    <span class="kw">let </span>check_entity_fields = <span class="kw">if </span>check_entity_fields.is_empty() {
+        <span class="macro">quote! </span>{}
+    } <span class="kw">else </span>{
+        <span class="kw">let </span>check_entity_test = Ident::new(
+            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"test_{}_entity"</span>, ident.to_string().to_snake_case()),
+            ident.span(),
+        );
+
+        <span class="macro">quote! </span>{
+            <span class="attr">#[cfg(test)]
+            #[tokio::test]
+            </span><span class="kw">async fn </span>#check_entity_test() {
+                storm_mssql::test_entity(#provider, #table_name, #translated_table_name, <span class="kw-2">&amp;</span>[#(#check_entity_fields),<span class="kw-2">*</span>]).<span class="kw">await</span>;
+            }
+        }
+    };
+
+    <span class="kw">let </span>test = <span class="kw">if </span>no_test {
         <span class="macro">quote!</span>()
     } <span class="kw">else </span>{
+        <span class="kw">let </span>load_test = Ident::new(
+            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"test_{}_load"</span>, ident.to_string().to_snake_case()),
+            ident.span(),
+        );
+
         <span class="macro">quote! </span>{
             <span class="attr">#[cfg(test)]
             #[tokio::test]
@@ -624,6 +692,8 @@
                 <span class="macro">storm::tri!</span>(storm::provider::LoadAll::&lt;#ident, <span class="kw">_</span>, storm::provider::LoadNothing&gt;::load_all(<span class="kw-2">&amp;</span>provider, <span class="kw-2">&amp;</span>()).<span class="kw">await</span>);
                 <span class="prelude-val">Ok</span>(())
             }
+
+            #check_entity_fields
         }
     };
 
@@ -666,6 +736,7 @@
             <span class="kw">const </span>TRANSLATED_TABLE: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = #translated_table_name;
         }
 
+        #max_lengths
         #diff
         #test
     }
