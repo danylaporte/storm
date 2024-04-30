@@ -99,7 +99,10 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
 
         if attrs.max_length > 0 {
             let column_lit = LitStr::new(&column, ident.span());
-            let const_field_name = Ident::new(&format!("{field_ident}_MAX_LENGTH").to_screaming_snake_case(), field_ident.span());
+            let const_field_name = Ident::new(
+                &format!("{field_ident}_MAX_LENGTH").to_screaming_snake_case(),
+                field_ident.span(),
+            );
             let max_length = LitInt::new(&attrs.max_length.to_string(), field_ident.span());
 
             max_lengths.push(quote! { pub const #const_field_name: usize = #max_length; });
@@ -115,7 +118,11 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let translated_where = translated.to_where_clause();
     let provider = attrs.provider();
     let diff = apply_entity_diff(diff, ident);
-    let max_lengths = if max_lengths.is_empty() { quote! {} } else { quote! { impl #ident { #(#max_lengths)* } } };
+    let max_lengths = if max_lengths.is_empty() {
+        quote! {}
+    } else {
+        quote! { impl #ident { #(#max_lengths)* } }
+    };
 
     let check_entity_fields = if check_entity_fields.is_empty() {
         quote! {}

@@ -108,15 +108,12 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
             #[allow(non_camel_case_types)]
             #[inline]
             fn var() -> storm::TblVar<Self> {
-                use storm::attached::{self, static_init};
+                storm::attached::var!(T: #index_name, storm::vars::Tbl);
 
-                attached::var!(T: #index_name, storm::vars::Tbl);
-
-                #[storm::attached::static_init::dynamic]
+                #[static_init::dynamic]
                 static R: () = {
                     #(#deps)*
                     #gc_collect
-                    ()
                 };
 
                 *T

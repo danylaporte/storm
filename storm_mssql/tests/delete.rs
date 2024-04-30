@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used)]
+
 use storm::{Entity, MssqlDelete};
 
 #[derive(MssqlDelete)]

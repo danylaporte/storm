@@ -1,5 +1,6 @@
-use std::future::ready;
+#![allow(clippy::unwrap_used)]
 
+use std::future::ready;
 use storm::{prelude::*, MssqlLoad, MssqlSave, Result};
 use storm_mssql::{Execute, ExecuteArgs, MssqlFactory, MssqlProvider};
 use tiberius::Config;

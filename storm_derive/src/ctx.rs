@@ -35,15 +35,12 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             #[allow(non_camel_case_types)]
             #[inline]
             fn entity_var() -> storm::TblVar<Self::Tbl> {
-                use storm::attached::{self, static_init};
-
-                attached::var!(T: #table_alias, storm::vars::Tbl);
+                storm::attached::var!(T: #table_alias, storm::vars::Tbl);
 
                 // Garbage collection static registering
-                #[storm::attached::static_init::dynamic]
+                #[static_init::dynamic]
                 static G: () = {
                     #gc_collect
-                    ()
                 };
 
                 *T
@@ -57,8 +54,6 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
             #[inline]
             fn on_changed() -> &'static storm::OnChanged<Self> {
-                use storm::attached::{self, static_init};
-
                 #[static_init::dynamic]
                 static E: storm::OnChanged<#entity> = Default::default();
                 &E
@@ -66,8 +61,6 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
             #[inline]
             fn on_remove() -> &'static storm::OnRemove<Self> {
-                use storm::attached::{self, static_init};
-
                 #[static_init::dynamic]
                 static E: storm::OnRemove<#entity> = Default::default();
                 &E
@@ -77,9 +70,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
         impl storm::LogAccessor for #entity {
             #[inline]
             fn log_var() -> storm::LogVar<storm::Log<Self>> {
-                use storm::attached::{self, static_init};
-
-                attached::var!(L: storm::Log<#entity>, storm::vars::Log);
+                storm::attached::var!(L: storm::Log<#entity>, storm::vars::Log);
 
                 #[static_init::dynamic]
                 static R: () = storm::register_apply_log::<#entity>();
@@ -107,6 +98,7 @@ fn gc(input: &DeriveInput) -> Result<(TokenStream, TokenStream), TokenStream> {
             impl storm::Gc for #ident {
                 const SUPPORT_GC: bool = #(<#types as storm::Gc>::SUPPORT_GC ||)* false;
 
+                #[allow(unused_variables)]
                 fn gc(&mut self, ctx: &storm::GcCtx) {
                     #(storm::Gc::gc(&mut self.#fields, ctx);)*
                 }

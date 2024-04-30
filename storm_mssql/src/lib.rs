@@ -16,7 +16,6 @@ mod to_sql;
 mod transaction_scoped;
 mod upsert_builder;
 
-
 use std::pin::Pin;
 
 pub use client_factory::ClientFactory;
@@ -32,13 +31,13 @@ pub use parameter::{into_column_data_static, Parameter};
 pub use query_rows::QueryRows;
 pub use save_entity_part::SaveEntityPart;
 pub use serde_json;
+use std::future::Future;
 use storm::ProviderContainer;
 pub use storm::{Error, Result};
 pub use tiberius;
 pub use to_sql::{ToSql, ToSqlNull};
 pub use transaction_scoped::TransactionScoped;
 pub use upsert_builder::UpsertBuilder;
-use std::future::Future;
 
 pub type Client = tiberius::Client<tokio_util::compat::Compat<tokio::net::TcpStream>>;
 
@@ -54,14 +53,27 @@ pub fn create_provider_container_from_env(env_var: &str, name: &str) -> Result<P
 type MaxLength = usize;
 
 #[doc(hidden)]
-pub fn test_entity<'a>(provider: &'a str, table: &'a str, translated_table: &'a str, expected: &'a [(&'a str, MaxLength)]) -> Pin<Box<dyn Future<Output = ()> + 'a>> {
+#[allow(clippy::expect_used)]
+#[allow(clippy::panic)]
+pub fn test_entity<'a>(
+    provider: &'a str,
+    table: &'a str,
+    translated_table: &'a str,
+    expected: &'a [(&'a str, MaxLength)],
+) -> Pin<Box<dyn Future<Output = ()> + 'a>> {
     Box::pin(async move {
-        let container = crate::create_provider_container_from_env("DB", provider).expect("container");
-        let provider = container.provide::<MssqlProvider>(provider).await.expect("provider");
-        
+        let container =
+            crate::create_provider_container_from_env("DB", provider).expect("container");
+        let provider = container
+            .provide::<MssqlProvider>(provider)
+            .await
+            .expect("provider");
 
         fn split_table_schema(table: &str) -> (&str, &str) {
-            let mut iter = table.split(".").map(|s| s.trim_matches('[').trim_matches(']')).filter(|s| !s.is_empty());
+            let mut iter = table
+                .split('.')
+                .map(|s| s.trim_matches('[').trim_matches(']'))
+                .filter(|s| !s.is_empty());
 
             match (iter.next(), iter.next()) {
                 (None, Some(t)) | (Some(t), None) => ("dbo", t),
@@ -71,7 +83,11 @@ pub fn test_entity<'a>(provider: &'a str, table: &'a str, translated_table: &'a 
         }
 
         let (schema1, table1) = split_table_schema(table);
-        let (schema2, table2) = if translated_table.is_empty() { ("dbo", table1) } else { split_table_schema(translated_table) };
+        let (schema2, table2) = if translated_table.is_empty() {
+            ("dbo", table1)
+        } else {
+            split_table_schema(translated_table)
+        };
 
         let sql = r"
         SELECT
@@ -86,20 +102,30 @@ pub fn test_entity<'a>(provider: &'a str, table: &'a str, translated_table: &'a 
             (t.name = @P1 AND t.schema_id = SCHEMA_ID(@P2))
             OR (t.name = @P3 AND t.schema_id = SCHEMA_ID(@P4))";
 
-        let mut actual: Vec<(String, i32)> = provider.query_rows(sql.to_string(), &[&table1, &schema1, &table2, &schema2], |row| {
-            let is_nchar = row.get::<bool, _>(2).unwrap_or_default();
-            let nchar_div = if is_nchar { 2 } else { 1 };
-            let mut max_length = row.get::<i32, _>(1).unwrap_or_default() / nchar_div;
+        let mut actual: Vec<(String, i32)> = provider
+            .query_rows(
+                sql.to_string(),
+                &[&table1, &schema1, &table2, &schema2],
+                |row| {
+                    let is_nchar = row.get::<bool, _>(2).unwrap_or_default();
+                    let nchar_div = if is_nchar { 2 } else { 1 };
+                    let mut max_length = row.get::<i32, _>(1).unwrap_or_default();
 
-            if max_length == -1 {
-                max_length = 0
-            }
+                    if max_length == -1 {
+                        max_length = 0
+                    } else {
+                        max_length /= nchar_div;
+                    }
 
-            Ok((
-                row.get::<&str, _>(0).unwrap_or_default().to_lowercase(),
-                max_length,
-            ))
-        }, false).await.expect("rows");
+                    Ok((
+                        row.get::<&str, _>(0).unwrap_or_default().to_lowercase(),
+                        max_length,
+                    ))
+                },
+                false,
+            )
+            .await
+            .expect("rows");
 
         actual.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
@@ -112,7 +138,10 @@ pub fn test_entity<'a>(provider: &'a str, table: &'a str, translated_table: &'a 
             };
 
             if expected.1 > 0 && expected.1 as i32 != actual.1 {
-                panic!("field maxlength {} differ, actual: {}, expected: {}", &expected.0, actual.1, expected.1);
+                panic!(
+                    "field maxlength {} differ, actual: {}, expected: {}",
+                    &expected.0, actual.1, expected.1
+                );
             }
         }
     })

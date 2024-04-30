@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used)]
+
 use std::borrow::Cow;
 use storm::{prelude::*, Error, MssqlLoad, MssqlSave, Result};
 use storm_mssql::{Execute, ExecuteArgs, FromSql, MssqlFactory, MssqlProvider, ToSql, ToSqlNull};
