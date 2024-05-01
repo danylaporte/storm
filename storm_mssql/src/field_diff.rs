@@ -128,4 +128,4 @@ diff!(u8);
 diff!(uuid::Uuid);
 
 #[cfg(feature = "dec19x5")]
-diff!(dec19x5crate::Decimal);
+diff!(dec19x5::Decimal);

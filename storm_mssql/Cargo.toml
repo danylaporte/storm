@@ -8,19 +8,20 @@ repository = "https://github.com/danylaporte/storm"
 publish = false
 
 [dependencies]
-cache_crate = { package = "cache", git = "https://github.com/danylaporte/cache.git", optional = true }
-chrono = { version = "0.4", features = ["serde"] }
-dec19x5crate = { git = "https://github.com/danylaporte/dec19x5.git", features = ["serde", "tiberius"], optional = true, package = "dec19x5" }
-futures = "0.3"
-metrics = { version = "0.22", optional = true }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+cache = { workspace = true, optional = true }
+chrono = { workspace = true, features = ["serde"] }
+dec19x5 = { workspace = true, features = ["serde", "tiberius"], optional = true }
+futures = { workspace = true }
+metrics = { workspace = true, optional = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 storm = { path = "../storm", features = ["mssql"] }
+str_utils = { workspace = true, optional = true }
 tiberius = { version = "0.12", default_features = false, features = ["chrono", "sql-browser-tokio", "tds73", "winauth"] }
-tokio = { version = "1", default-features = false }
-tokio-util = { version = "0.7", features = ["compat"] }
-tracing = "0.1"
-uuid = { version = "1", features = ["v4", "serde"] }
+tokio = { workspace = true, default-features = false }
+tokio-util = { workspace = true, features = ["compat"] }
+tracing = { workspace = true }
+uuid = { workspace = true, features = ["v4", "serde"] }
 
 [dev-dependencies]
 async-cell-lock = { git = "https://github.com/danylaporte/async-cell-lock.git" }
@@ -28,6 +29,4 @@ static_init = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"], default-features = false }
 
 [features]
-cache = ["cache_crate", "storm/cache"]
-dec19x5 = ["dec19x5crate"]
 telemetry = ["metrics"]

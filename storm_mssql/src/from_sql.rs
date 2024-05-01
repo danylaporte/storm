@@ -55,14 +55,27 @@ from_sql!(u8, u8);
 from_sql!(&'a [u8], &'a [u8]);
 
 #[cfg(feature = "dec19x5")]
-impl<'a> FromSql<'a> for dec19x5crate::Decimal {
-    type Column = dec19x5crate::Decimal;
+impl<'a> FromSql<'a> for dec19x5::Decimal {
+    type Column = dec19x5::Decimal;
 
     fn from_sql(col: Option<Self::Column>) -> Result<Self> {
         match col {
             Some(v) => Ok(v),
             None => Err(storm::Error::ColumnNull),
         }
+    }
+}
+
+#[cfg(feature = "str_utils")]
+impl<'a, F: Default + str_utils::form_str::Format> FromSql<'a> for str_utils::form_str::FormStr<F> {
+    type Column = &'a str;
+
+    fn from_sql(col: Option<Self::Column>) -> Result<Self> {
+        (match col {
+            Some(v) => str_utils::form_str::FormStr::new(v),
+            None => str_utils::form_str::FormStr::new(""),
+        })
+        .map_err(storm::Error::std)
     }
 }
 

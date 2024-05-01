@@ -6,7 +6,7 @@ pub trait SaveEntityPart: Entity {
 }
 
 #[cfg(feature = "cache")]
-impl<T> SaveEntityPart for cache_crate::CacheIsland<T>
+impl<T> SaveEntityPart for cache::CacheIsland<T>
 where
     T: SaveEntityPart,
 {

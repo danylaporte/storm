@@ -165,6 +165,13 @@ where
     }
 }
 
+#[cfg(feature = "str_utils")]
+impl<F> Gc for str_utils::form_str::FormStr<F> {
+    const SUPPORT_GC: bool = false;
+
+    fn gc(&mut self, _: &GcCtx) {}
+}
+
 macro_rules! gc {
     (tuple $($t:ident:$n:tt),*) => {
         impl<$($t: Gc),*> Gc for ($($t,)*) {
