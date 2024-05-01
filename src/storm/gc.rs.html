@@ -261,6 +261,13 @@
 <a href="#259" id="259">259</a>
 <a href="#260" id="260">260</a>
 <a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::Ctx;
 <span class="kw">use </span>std::{
     borrow::Cow,
@@ -426,6 +433,13 @@
     <span class="kw">fn </span>gc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: <span class="kw-2">&amp;</span>GcCtx) {
         <span class="self">self</span>.iter_mut().for_each(|v| v.gc(ctx));
     }
+}
+
+<span class="attr">#[cfg(feature = <span class="string">"str_utils"</span>)]
+</span><span class="kw">impl</span>&lt;F&gt; Gc <span class="kw">for </span>str_utils::form_str::FormStr&lt;F&gt; {
+    <span class="kw">const </span>SUPPORT_GC: bool = <span class="bool-val">false</span>;
+
+    <span class="kw">fn </span>gc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>GcCtx) {}
 }
 
 <span class="macro">macro_rules! </span>gc {
