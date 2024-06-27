@@ -17,7 +17,7 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 storm = { path = "../storm", features = ["mssql"] }
 str_utils = { workspace = true, optional = true }
-tiberius = { version = "0.12", default_features = false, features = ["chrono", "sql-browser-tokio", "tds73", "winauth"] }
+tiberius = { version = "0.12", default-features = false, features = ["chrono", "sql-browser-tokio", "tds73", "winauth"] }
 tokio = { workspace = true, default-features = false }
 tokio-util = { workspace = true, features = ["compat"] }
 tracing = { workspace = true }
