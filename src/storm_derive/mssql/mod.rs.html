@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_derive/src/mssql/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="storm_derive" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.2 (25ef9e3d8 2024-04-09)" data-channel="1.77.2" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../storm_derive/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm_derive/src/mssql/mod.rs`."><title>mod.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="storm_derive" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0 (129f3b996 2024-06-10)" data-channel="1.79.0" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../storm_derive/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -577,7 +575,7 @@
 
     <span class="kw">let </span>provider = attrs.provider();
 
-    <span class="macro">quote! </span>{
+    <span class="macro">quote!</span> {
         <span class="kw">impl </span>storm::provider::Delete&lt;#ident&gt; <span class="kw">for </span>storm::provider::TransactionProvider&lt;<span class="lifetime">'_</span>&gt; {
             <span class="kw">fn </span>delete&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>&lt;#ident <span class="kw">as </span>storm::Entity&gt;::Key) -&gt; storm::BoxFuture&lt;<span class="lifetime">'a</span>, storm::Result&lt;()&gt;&gt; {
                 storm_mssql::metrics_helper::delete_wrap(<span class="kw">async move </span>{
@@ -654,10 +652,10 @@
             );
             <span class="kw">let </span>max_length = LitInt::new(<span class="kw-2">&amp;</span>attrs.max_length.to_string(), field_ident.span());
 
-            max_lengths.push(<span class="macro">quote! </span>{ <span class="kw">pub const </span>#const_field_name: usize = #max_length; });
+            max_lengths.push(<span class="macro">quote!</span> { <span class="kw">pub const </span>#const_field_name: usize = #max_length; });
 
             <span class="kw">if </span>!no_test {
-                check_entity_fields.push(<span class="macro">quote! </span>{ (#column_lit, #max_length) });
+                check_entity_fields.push(<span class="macro">quote!</span> { (#column_lit, #max_length) });
             }
         }
     }
@@ -668,20 +666,20 @@
     <span class="kw">let </span>provider = attrs.provider();
     <span class="kw">let </span>diff = apply_entity_diff(diff, ident);
     <span class="kw">let </span>max_lengths = <span class="kw">if </span>max_lengths.is_empty() {
-        <span class="macro">quote! </span>{}
+        <span class="macro">quote!</span> {}
     } <span class="kw">else </span>{
-        <span class="macro">quote! </span>{ <span class="kw">impl </span>#ident { #(#max_lengths)* } }
+        <span class="macro">quote!</span> { <span class="kw">impl </span>#ident { #(#max_lengths)* } }
     };
 
     <span class="kw">let </span>check_entity_fields = <span class="kw">if </span>check_entity_fields.is_empty() {
-        <span class="macro">quote! </span>{}
+        <span class="macro">quote!</span> {}
     } <span class="kw">else </span>{
         <span class="kw">let </span>check_entity_test = Ident::new(
             <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"test_{}_entity"</span>, ident.to_string().to_snake_case()),
             ident.span(),
         );
 
-        <span class="macro">quote! </span>{
+        <span class="macro">quote!</span> {
             <span class="attr">#[cfg(test)]
             #[tokio::test]
             </span><span class="kw">async fn </span>#check_entity_test() {
@@ -698,7 +696,7 @@
             ident.span(),
         );
 
-        <span class="macro">quote! </span>{
+        <span class="macro">quote!</span> {
             <span class="attr">#[cfg(test)]
             #[tokio::test]
             </span><span class="kw">async fn </span>#load_test() -&gt; storm::Result&lt;()&gt; {
@@ -711,7 +709,7 @@
         }
     };
 
-    <span class="macro">quote! </span>{
+    <span class="macro">quote!</span> {
         <span class="kw">fn </span>#load_fn&lt;<span class="lifetime">'a</span>, C&gt;(provider: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>storm::provider::ProviderContainer, sql: std::borrow::Cow&lt;<span class="lifetime">'a</span>, str&gt;, params: std::borrow::Cow&lt;<span class="lifetime">'a</span>, [<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>storm_mssql::ToSql]&gt;, args: storm::provider::LoadArgs) -&gt; storm::BoxFuture&lt;<span class="lifetime">'a</span>, storm::Result&lt;C&gt;&gt;
         <span class="kw">where
             </span>C: Default + Extend&lt;(&lt;#ident <span class="kw">as </span>storm::Entity&gt;::Key, #ident)&gt; #translated_where + Send + <span class="lifetime">'static</span>,
@@ -817,12 +815,12 @@
             translated.add_field(field, column);
             <span class="kw">let </span>name_bk = Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{ident}_bk"</span>), Span::call_site());
             translated_backup.push(
-                <span class="macro">quote! </span>{ <span class="kw">let </span>#name_bk = std::mem::replace(<span class="kw-2">&amp;mut </span>v.#ident, Default::default()); },
+                <span class="macro">quote!</span> { <span class="kw">let </span>#name_bk = std::mem::replace(<span class="kw-2">&amp;mut </span>v.#ident, Default::default()); },
             );
-            translated_restore.push(<span class="macro">quote! </span>{ v.#ident = #name_bk; });
+            translated_restore.push(<span class="macro">quote!</span> { v.#ident = #name_bk; });
 
             <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff.as_mut().filter(|<span class="kw">_</span>| !attrs.skip_diff()) {
-                diff.push(<span class="macro">quote! </span>{
+                diff.push(<span class="macro">quote!</span> {
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = storm_mssql::FieldDiff::field_diff(<span class="kw-2">&amp;</span><span class="self">self</span>.#ident, <span class="kw-2">&amp;</span>old.#ident) {
                         map.insert(#enum_fields_ident::#field_pascal_ident, diff);
                     }
@@ -843,7 +841,7 @@
 
             <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff.as_mut().filter(|<span class="kw">_</span>| !attrs.skip_diff()) {
                 diff.push(
-                    <span class="macro">quote! </span>{ storm_mssql::EntityDiff::entity_diff(<span class="kw-2">&amp;</span><span class="self">self</span>.#ident, <span class="kw-2">&amp;</span>old.#ident, map);},
+                    <span class="macro">quote!</span> { storm_mssql::EntityDiff::entity_diff(<span class="kw-2">&amp;</span><span class="self">self</span>.#ident, <span class="kw-2">&amp;</span>old.#ident, map);},
                 );
 
                 <span class="comment">// Ignored for now.
@@ -855,7 +853,7 @@
                     save_part.push(<span class="macro">quote!</span>(builder.add_field_owned(#name, #f(k, <span class="self">self</span>));));
 
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff.as_mut().filter(|<span class="kw">_</span>| !attrs.skip_diff()) {
-                        diff.push(<span class="macro">quote! </span>{
+                        diff.push(<span class="macro">quote!</span> {
                             <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = storm_mssql::FieldDiff::field_diff(<span class="kw-2">&amp;</span>#f(k, <span class="self">self</span>), <span class="kw-2">&amp;</span>#f(k, old)) {
                                 map.insert(#enum_fields_ident::#field_pascal_ident, diff);
                             }
@@ -868,7 +866,7 @@
                     save_part.push(<span class="macro">quote!</span>(builder.add_field_ref(#name, <span class="kw-2">&amp;</span><span class="self">self</span>.#ident);));
 
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff.as_mut().filter(|<span class="kw">_</span>| !attrs.skip_diff()) {
-                        diff.push(<span class="macro">quote! </span>{
+                        diff.push(<span class="macro">quote!</span> {
                             <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = storm_mssql::FieldDiff::field_diff(<span class="kw-2">&amp;</span><span class="self">self</span>.#ident, <span class="kw-2">&amp;</span>old.#ident) {
                                 map.insert(#enum_fields_ident::#field_pascal_ident, diff);
                             }
@@ -899,10 +897,10 @@
         <span class="kw">let </span>k = <span class="kw">match </span>keys.len() &gt; <span class="number">1 </span>{
             <span class="bool-val">true </span>=&gt; {
                 <span class="kw">let </span>n = LitInt::new(<span class="kw-2">&amp;</span>index.to_string(), ident.span());
-                <span class="macro">quote! </span>{ <span class="kw-2">&amp;</span>k.#n }
+                <span class="macro">quote!</span> { <span class="kw-2">&amp;</span>k.#n }
             }
-            <span class="bool-val">false </span><span class="kw">if </span>is_identity_key =&gt; <span class="macro">quote! </span>{ <span class="kw-2">*</span>k },
-            <span class="bool-val">false </span>=&gt; <span class="macro">quote! </span>{ k },
+            <span class="bool-val">false </span><span class="kw">if </span>is_identity_key =&gt; <span class="macro">quote!</span> { <span class="kw-2">*</span>k },
+            <span class="bool-val">false </span>=&gt; <span class="macro">quote!</span> { k },
         };
 
         wheres.push(<span class="macro">quote!</span>(builder.#add_key_or_identity(#name, #k);));
@@ -928,7 +926,7 @@
         <span class="kw">let </span>backup = <span class="macro">quote!</span>(#(#translated_backup)<span class="kw-2">*</span>);
         <span class="kw">let </span>restore = <span class="macro">quote!</span>(#(#translated_restore)<span class="kw-2">*</span>);
 
-        <span class="macro">quote! </span>{
+        <span class="macro">quote!</span> {
             #backup
             <span class="kw-2">*</span>v = <span class="macro">storm::tri!</span>(storm::provider::LoadOne::&lt;#ident&gt;::load_one_with_args(<span class="self">self</span>.container(), <span class="kw-2">&amp;</span>k, storm::provider::LoadArgs { use_transaction: <span class="bool-val">true </span>}).<span class="kw">await</span>.and_then(|v| v.ok_or(storm::Error::EntityNotFound)));
             #restore
@@ -950,7 +948,7 @@
     <span class="kw">let </span>diff = entity_diff(ident, diff);
     <span class="kw">let </span>enum_fields = enum_fields_impl(vis, ident, enum_fields, <span class="kw-2">&amp;</span>enum_fields_ident, attrs.diff);
 
-    <span class="macro">quote! </span>{
+    <span class="macro">quote!</span> {
         <span class="kw">impl </span>#upsert_trait <span class="kw">for </span>storm::provider::TransactionProvider&lt;<span class="lifetime">'_</span>&gt; {
             #upsert_sig {
                 storm_mssql::metrics_helper::upsert_wrap(<span class="kw">async move </span>{
@@ -1032,7 +1030,7 @@
 
 <span class="kw">fn </span>apply_entity_diff(diff: <span class="prelude-ty">Option</span>&lt;Vec&lt;TokenStream&gt;&gt;, ident: <span class="kw-2">&amp;</span>Ident) -&gt; TokenStream {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff {
-        <span class="macro">quote! </span>{
+        <span class="macro">quote!</span> {
             <span class="kw">impl </span>storm_mssql::ApplyEntityDiff <span class="kw">for </span>#ident {
                 <span class="kw">fn </span>apply_entity_diff&lt;S: std::hash::BuildHasher&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, diff: <span class="kw-2">&amp;</span>std::collections::HashMap&lt;storm::FieldsOrStr&lt;&lt;<span class="self">Self </span><span class="kw">as </span>storm::EntityFields&gt;::Fields&gt;, storm_mssql::serde_json::Value, S&gt;) -&gt; storm_mssql::Result&lt;()&gt; {
                     #(#diff)*
@@ -1041,13 +1039,13 @@
             }
         }
     } <span class="kw">else </span>{
-        <span class="macro">quote! </span>{}
+        <span class="macro">quote!</span> {}
     }
 }
 
 <span class="kw">fn </span>entity_diff(ident: <span class="kw-2">&amp;</span>Ident, diff: <span class="prelude-ty">Option</span>&lt;Vec&lt;TokenStream&gt;&gt;) -&gt; TokenStream {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff {
-        <span class="macro">quote! </span>{
+        <span class="macro">quote!</span> {
             <span class="kw">impl </span>storm_mssql::EntityDiff <span class="kw">for </span>#ident {
                 <span class="kw">fn </span>entity_diff&lt;S: std::hash::BuildHasher&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, old: <span class="kw-2">&amp;</span><span class="self">Self</span>, map: <span class="kw-2">&amp;mut </span>std::collections::HashMap&lt;&lt;<span class="self">Self </span><span class="kw">as </span>storm::EntityFields&gt;::Fields, storm_mssql::serde_json::Value, S&gt;) {
                     #(#diff)*
@@ -1062,7 +1060,7 @@
 <span class="kw">fn </span>load_diff_field(diff: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;Vec&lt;TokenStream&gt;&gt;, field: <span class="kw-2">&amp;</span>Ident, enum_fields_ident: <span class="kw-2">&amp;</span>Ident) {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff.as_mut() {
         <span class="kw">let </span>name = Ident::new(<span class="kw-2">&amp;</span>field.to_string().to_pascal_case(), field.span());
-        diff.push(<span class="macro">quote! </span>{<span class="macro">storm::tri!</span>(storm_mssql::_replace_field_diff(<span class="kw-2">&amp;mut </span><span class="self">self</span>.#field, #enum_fields_ident::#name, diff));});
+        diff.push(<span class="macro">quote!</span> {<span class="macro">storm::tri!</span>(storm_mssql::_replace_field_diff(<span class="kw-2">&amp;mut </span><span class="self">self</span>.#field, #enum_fields_ident::#name, diff));});
     }
 }
 
@@ -1079,7 +1077,7 @@
     is_diff: bool,
 ) -&gt; TokenStream {
     <span class="kw">if </span>is_diff {
-        <span class="macro">quote! </span>{
+        <span class="macro">quote!</span> {
             <span class="attr">#[derive(Clone, Copy, Eq, Hash, PartialEq, serde::Deserialize, serde::Serialize)]
             #[serde(rename_all = <span class="string">"camelCase"</span>)]
             </span>#vis <span class="kw">enum </span>#enum_ident {
