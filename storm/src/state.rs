@@ -5,6 +5,18 @@ pub enum LogState<T> {
     Removed,
 }
 
+impl<T> LogState<T> {
+    pub fn is_eq<F>(&self, f: F) -> bool
+    where
+        F: FnOnce(&T) -> bool,
+    {
+        match self {
+            Self::Inserted(v) => f(v),
+            Self::Removed => false,
+        }
+    }
+}
+
 impl<T: Clone> Clone for LogState<T> {
     fn clone(&self) -> Self {
         match self {
