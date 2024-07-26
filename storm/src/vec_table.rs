@@ -206,11 +206,8 @@ where
     }
 }
 
-impl<'a, E: Entity> IntoIterator for &'a VecTable<E>
-where
-    E::Key: Copy + From<usize>,
-{
-    type Item = (E::Key, &'a E);
+impl<'a, E: Entity> IntoIterator for &'a VecTable<E> {
+    type Item = (&'a E::Key, &'a E);
     type IntoIter = Iter<'a, E::Key, E>;
 
     #[inline]
@@ -223,7 +220,7 @@ impl<'a, E: Entity> IntoParallelIterator for &'a VecTable<E>
 where
     E::Key: Copy + From<usize>,
 {
-    type Item = (E::Key, &'a E);
+    type Item = (&'a E::Key, &'a E);
     type Iter = ParIter<'a, E::Key, E>;
 
     #[inline]

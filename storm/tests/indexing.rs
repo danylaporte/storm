@@ -28,7 +28,7 @@ impl Entity for User {
 
 #[indexing]
 fn next_id(tbl: &Users) -> usize {
-    tbl.iter().map(|t| t.0).max().unwrap_or_default()
+    tbl.iter().map(|t| *t.0).max().unwrap_or_default()
 }
 
 #[indexing]

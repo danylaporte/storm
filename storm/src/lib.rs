@@ -20,7 +20,6 @@ mod init;
 mod insert;
 mod is_defined;
 mod iterator_ext;
-mod length;
 mod logs;
 pub mod mem;
 mod on_changed;
@@ -35,6 +34,7 @@ mod tag;
 #[doc(hidden)]
 pub mod telemetry;
 mod transaction;
+pub mod trx_iter;
 mod vec_table;
 
 pub use accessor::*;
@@ -74,6 +74,7 @@ pub use state::LogState;
 pub use tag::{NotifyTag, Tag};
 pub use tokio;
 pub use transaction::Transaction;
+pub use trx_iter::TrxIter;
 pub use vec_map::{self, VecMap};
 pub use vec_table::VecTable;
 pub use version_tag::{self, VersionTag};

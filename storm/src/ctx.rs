@@ -1,5 +1,4 @@
 use crate::{
-    length::Length,
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
     Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity, EntityAccessor,
     Gc, GcCtx, Get, HashTable, Insert, InsertIfChanged, InsertMut, InsertMutIfChanged, Log,
@@ -8,7 +7,7 @@ use crate::{
 };
 use fxhash::FxHashMap;
 use parking_lot::RwLock;
-use std::{hash::Hash, marker::PhantomData};
+use std::{borrow::Cow, hash::Hash, marker::PhantomData};
 use version_tag::VersionTag;
 
 pub struct Ctx {
@@ -372,6 +371,22 @@ impl<'a> CtxTransaction<'a> {
         Remove::remove_all(self, keys, track)
     }
 
+    pub async fn remove_filter<'b, E, F>(
+        &'b mut self,
+        filter: F,
+        track: &'b E::TrackCtx,
+    ) -> Result<()>
+    where
+        Ctx: AsRefAsync<E::Tbl>,
+        E: EntityAccessor + LogAccessor,
+        E::Key: Clone + Eq + Hash,
+        F: FnMut(&E::Key, &E) -> bool,
+        for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
+        TblTransaction<'a, 'b, E>: Remove<E>,
+    {
+        self.tbl_of::<E>().await?.remove_filter(filter, track).await
+    }
+
     pub fn tbl_of<'b, E>(&'b mut self) -> BoxFuture<'b, Result<TblTransaction<'a, 'b, E>>>
     where
         E: Entity + EntityAccessor + LogAccessor,
@@ -381,6 +396,37 @@ impl<'a> CtxTransaction<'a> {
             let tbl = self.ctx.tbl_of::<E>().await?;
             Ok(TblTransaction { tbl, ctx: self })
         })
+    }
+
+    pub async fn update_with<'b, E, F>(&'b mut self, updater: F, track: &E::TrackCtx) -> Result<()>
+    where
+        Ctx: AsRefAsync<E::Tbl>,
+        E: EntityAccessor + LogAccessor + ToOwned<Owned = E>,
+        E::Key: Clone + Eq + Hash,
+        F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>),
+        for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
+        TblTransaction<'a, 'b, E>: Insert<E>,
+    {
+        self.tbl_of::<E>().await?.update_with(updater, track).await
+    }
+
+    pub async fn update_mut_with<'b, E, F>(
+        &'b mut self,
+        updater: F,
+        track: &E::TrackCtx,
+    ) -> Result<()>
+    where
+        Ctx: AsRefAsync<E::Tbl>,
+        E: EntityAccessor + LogAccessor + ToOwned<Owned = E>,
+        E::Key: Clone + Eq + Hash,
+        F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>),
+        for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
+        TblTransaction<'a, 'b, E>: InsertMut<E>,
+    {
+        self.tbl_of::<E>()
+            .await?
+            .update_mut_with(updater, track)
+            .await
     }
 }
 
@@ -557,7 +603,6 @@ impl<'a, 'b, E> TblTransaction<'a, 'b, E>
 where
     E: Entity + EntityAccessor,
     E::Key: Eq + Hash,
-    E::Tbl: Get<E>,
 {
     /// gets a reference from the log or the underlying ctx.
     ///
@@ -660,8 +705,115 @@ where
         Remove::<E>::remove_all(self, keys, track)
     }
 
+    pub async fn remove_filter<F>(&mut self, mut filter: F, track: &E::TrackCtx) -> Result<()>
+    where
+        E: EntityAccessor + LogAccessor,
+        E::Key: Clone + Eq + Hash,
+        F: FnMut(&E::Key, &E) -> bool,
+        for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
+        Self: Remove<E>,
+    {
+        let ids = (&*self)
+            .into_iter()
+            .filter(|t| filter(t.0, t.1))
+            .map(|t| t.0.clone())
+            .collect::<Vec<E::Key>>();
+
+        for id in ids {
+            self.remove(id, track).await?;
+        }
+
+        Ok(())
+    }
+
     pub fn tbl(&self) -> &'a E::Tbl {
         self.tbl
+    }
+
+    pub async fn update_with<F>(&mut self, mut updater: F, track: &E::TrackCtx) -> Result<()>
+    where
+        E: EntityAccessor + LogAccessor + ToOwned<Owned = E>,
+        E::Key: Clone + Eq + Hash,
+        F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>),
+        for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
+        Self: Insert<E>,
+    {
+        let vec = self
+            .log()
+            .into_iter()
+            .flatten()
+            .filter_map(|(id, state)| {
+                if let LogState::Inserted(e) = state {
+                    let mut e = Cow::Borrowed(e);
+                    updater(id, &mut e);
+
+                    if let Cow::Owned(e) = e {
+                        return Some((id.clone(), e));
+                    }
+                }
+
+                None
+            })
+            .collect::<Vec<(E::Key, E)>>();
+
+        self.insert_all(vec, track).await?;
+
+        for (id, e) in self.tbl {
+            if self.log().map_or(false, |l| !l.contains_key(id)) {
+                let mut e = Cow::Borrowed(e);
+
+                updater(id, &mut e);
+
+                if let Cow::Owned(e) = e {
+                    self.insert(id.clone(), e, track).await?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    pub async fn update_mut_with<F>(&mut self, mut updater: F, track: &E::TrackCtx) -> Result<()>
+    where
+        E: EntityAccessor + LogAccessor + ToOwned<Owned = E>,
+        E::Key: Clone + Eq + Hash,
+        F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>),
+        for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
+        Self: InsertMut<E>,
+    {
+        let vec = self
+            .log()
+            .into_iter()
+            .flatten()
+            .filter_map(|(id, state)| {
+                if let LogState::Inserted(e) = state {
+                    let mut e = Cow::Borrowed(e);
+                    updater(id, &mut e);
+
+                    if let Cow::Owned(e) = e {
+                        return Some((id.clone(), e));
+                    }
+                }
+
+                None
+            })
+            .collect::<Vec<(E::Key, E)>>();
+
+        self.insert_mut_all(vec, track).await?;
+
+        for (id, e) in self.tbl {
+            if self.log().map_or(false, |l| !l.contains_key(id)) {
+                let mut e = Cow::Borrowed(e);
+
+                updater(id, &mut e);
+
+                if let Cow::Owned(e) = e {
+                    self.insert_mut(id.clone(), e, track).await?;
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -677,36 +829,6 @@ where
             Some(LogState::Removed) => None,
             None => self.tbl.get(k),
         }
-    }
-}
-
-impl<'a, 'b, E> Length for TblTransaction<'a, 'b, E>
-where
-    E: Entity + EntityAccessor + LogAccessor,
-    E::Key: Eq + Hash,
-    E::Tbl: Get<E> + Length,
-{
-    fn len(&self) -> usize {
-        let mut count = self.tbl.len();
-        let logs = self.ctx.log_ctx.get(E::log_var());
-        if let Some(logs) = logs {
-            logs.iter().for_each(|(id, log)| {
-                let is_present = self.get(id).is_some();
-                match log {
-                    LogState::Inserted(_) => {
-                        if !is_present {
-                            count += 1;
-                        }
-                    }
-                    LogState::Removed => {
-                        if is_present {
-                            count -= 1;
-                        }
-                    }
-                }
-            });
-        }
-        count
     }
 }
 

@@ -8,6 +8,7 @@ pub trait QueryRows {
     ///
     /// ## Parameters
     /// - use_transaction: make sure the query is run inside a transaction.
+    ///
     /// This is useful when loading we need to execute a query and then load the result
     /// from sql from the same transaction.
     fn query_rows<'a, S, M, R, C>(

@@ -29,11 +29,8 @@ where
     }
 }
 
-impl<'a, ONE, MANY> IntoIterator for &'a OneToMany<ONE, MANY>
-where
-    ONE: Copy + From<usize>,
-{
-    type Item = (ONE, &'a Box<[MANY]>);
+impl<'a, ONE, MANY> IntoIterator for &'a OneToMany<ONE, MANY> {
+    type Item = (&'a ONE, &'a Box<[MANY]>);
     type IntoIter = vec_map::Iter<'a, ONE, Box<[MANY]>>;
 
     fn into_iter(self) -> Self::IntoIter {
