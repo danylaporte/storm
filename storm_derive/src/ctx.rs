@@ -53,6 +53,13 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             }
 
             #[inline]
+            fn on_change() -> &'static storm::OnChange<Self> {
+                #[static_init::dynamic]
+                static E: storm::OnChange<#entity> = Default::default();
+                &E
+            }
+
+            #[inline]
             fn on_changed() -> &'static storm::OnChanged<Self> {
                 #[static_init::dynamic]
                 static E: storm::OnChanged<#entity> = Default::default();

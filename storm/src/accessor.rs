@@ -1,4 +1,4 @@
-use crate::{Entity, Log, OnChanged, OnRemove};
+use crate::{Entity, Log, OnChange, OnChanged, OnRemove};
 use attached::Var;
 use parking_lot::RwLock;
 
@@ -38,6 +38,8 @@ pub trait EntityAccessor: Entity + Sized + 'static {
     fn entity_var() -> TblVar<Self::Tbl>;
 
     fn entity_deps() -> &'static Deps;
+
+    fn on_change() -> &'static OnChange<Self>;
 
     fn on_changed() -> &'static OnChanged<Self>;
 

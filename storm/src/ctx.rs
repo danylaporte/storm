@@ -842,10 +842,12 @@ where
     fn insert<'c>(
         &'c mut self,
         k: E::Key,
-        v: E,
+        mut v: E,
         track: &'c E::TrackCtx,
     ) -> BoxFuture<'c, Result<()>> {
         Box::pin(async move {
+            E::on_change().__call(self.ctx, &k, &mut v, track).await?;
+
             self.ctx.provider.upsert(&k, &v).await?;
 
             // remove first because if the track change the entity, we want to keep only the latest version.
@@ -944,6 +946,8 @@ where
         track: &'c E::TrackCtx,
     ) -> BoxFuture<'c, Result<E::Key>> {
         Box::pin(async move {
+            E::on_change().__call(self.ctx, &k, &mut v, track).await?;
+
             self.ctx.provider.upsert_mut(&mut k, &mut v).await?;
 
             // remove first because if the track change the entity, we want to keep only the latest version.
