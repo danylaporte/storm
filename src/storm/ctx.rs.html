@@ -1183,6 +1183,10 @@
 <a href="#1183" id="1183">1183</a>
 <a href="#1184" id="1184">1184</a>
 <a href="#1185" id="1185">1185</a>
+<a href="#1186" id="1186">1186</a>
+<a href="#1187" id="1187">1187</a>
+<a href="#1188" id="1188">1188</a>
+<a href="#1189" id="1189">1189</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
     Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity, EntityAccessor,
@@ -2027,10 +2031,12 @@
     <span class="kw">fn </span>insert&lt;<span class="lifetime">'c</span>&gt;(
         <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span><span class="self">self</span>,
         k: E::Key,
-        v: E,
+        <span class="kw-2">mut </span>v: E,
         track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::TrackCtx,
     ) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
         Box::pin(<span class="kw">async move </span>{
+            E::on_change().__call(<span class="self">self</span>.ctx, <span class="kw-2">&amp;</span>k, <span class="kw-2">&amp;mut </span>v, track).<span class="kw">await</span><span class="question-mark">?</span>;
+
             <span class="self">self</span>.ctx.provider.upsert(<span class="kw-2">&amp;</span>k, <span class="kw-2">&amp;</span>v).<span class="kw">await</span><span class="question-mark">?</span>;
 
             <span class="comment">// remove first because if the track change the entity, we want to keep only the latest version.
@@ -2129,6 +2135,8 @@
         track: <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::TrackCtx,
     ) -&gt; BoxFuture&lt;<span class="lifetime">'c</span>, <span class="prelude-ty">Result</span>&lt;E::Key&gt;&gt; {
         Box::pin(<span class="kw">async move </span>{
+            E::on_change().__call(<span class="self">self</span>.ctx, <span class="kw-2">&amp;</span>k, <span class="kw-2">&amp;mut </span>v, track).<span class="kw">await</span><span class="question-mark">?</span>;
+
             <span class="self">self</span>.ctx.provider.upsert_mut(<span class="kw-2">&amp;mut </span>k, <span class="kw-2">&amp;mut </span>v).<span class="kw">await</span><span class="question-mark">?</span>;
 
             <span class="comment">// remove first because if the track change the entity, we want to keep only the latest version.

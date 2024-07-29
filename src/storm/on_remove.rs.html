@@ -91,8 +91,8 @@
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{BoxFuture, CtxTransaction, Entity, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>std::sync::Arc;
 
-<span class="kw">pub trait </span>RemovingHandler&lt;E: Entity&gt; {
-    <span class="kw">fn </span>handle_removing&lt;<span class="lifetime">'a</span>&gt;(
+<span class="kw">pub trait </span>RemoveHandler&lt;E: Entity&gt; {
+    <span class="kw">fn </span>handle_remove&lt;<span class="lifetime">'a</span>&gt;(
         <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>,
         trx: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>CtxTransaction&lt;<span class="lifetime">'_</span>&gt;,
         key: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>E::Key,
@@ -100,7 +100,7 @@
     ) -&gt; BoxFuture&lt;<span class="lifetime">'a</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt;;
 }
 
-<span class="kw">impl</span>&lt;E: Entity, T&gt; RemovingHandler&lt;E&gt; <span class="kw">for </span>T
+<span class="kw">impl</span>&lt;E: Entity, T&gt; RemoveHandler&lt;E&gt; <span class="kw">for </span>T
 <span class="kw">where
     </span>T: <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; Fn(
         <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>CtxTransaction&lt;<span class="lifetime">'_</span>&gt;,
@@ -108,7 +108,7 @@
         <span class="kw-2">&amp;</span><span class="lifetime">'a </span>E::TrackCtx,
     ) -&gt; BoxFuture&lt;<span class="lifetime">'a</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt;,
 {
-    <span class="kw">fn </span>handle_removing&lt;<span class="lifetime">'a</span>&gt;(
+    <span class="kw">fn </span>handle_remove&lt;<span class="lifetime">'a</span>&gt;(
         <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>,
         trx: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>CtxTransaction&lt;<span class="lifetime">'_</span>&gt;,
         key: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>&lt;E <span class="kw">as </span>Entity&gt;::Key,
@@ -118,9 +118,9 @@
     }
 }
 
-<span class="kw">type </span>ArcRemovingHandler&lt;E&gt; = Arc&lt;<span class="kw">dyn </span>RemovingHandler&lt;E&gt; + Send + Sync&gt;;
+<span class="kw">type </span>ArcRemoveHandler&lt;E&gt; = Arc&lt;<span class="kw">dyn </span>RemoveHandler&lt;E&gt; + Send + Sync&gt;;
 
-<span class="kw">pub struct </span>OnRemove&lt;E&gt;(parking_lot::Mutex&lt;Arc&lt;Box&lt;[ArcRemovingHandler&lt;E&gt;]&gt;&gt;&gt;);
+<span class="kw">pub struct </span>OnRemove&lt;E&gt;(parking_lot::Mutex&lt;Arc&lt;Box&lt;[ArcRemoveHandler&lt;E&gt;]&gt;&gt;&gt;);
 
 <span class="kw">impl</span>&lt;E: Entity&gt; OnRemove&lt;E&gt; {
     <span class="attr">#[doc(hidden)]
@@ -137,14 +137,14 @@
 
         Box::pin(<span class="kw">async move </span>{
             <span class="kw">for </span>handler <span class="kw">in </span>vec.iter() {
-                handler.handle_removing(trx, key, track_ctx).<span class="kw">await</span><span class="question-mark">?</span>;
+                handler.handle_remove(trx, key, track_ctx).<span class="kw">await</span><span class="question-mark">?</span>;
             }
 
             <span class="prelude-val">Ok</span>(())
         })
     }
 
-    <span class="kw">pub fn </span>register&lt;H: RemovingHandler&lt;E&gt; + Send + Sync + <span class="lifetime">'static</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, handler: H) {
+    <span class="kw">pub fn </span>register&lt;H: RemoveHandler&lt;E&gt; + Send + Sync + <span class="lifetime">'static</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, handler: H) {
         <span class="self">self</span>.register_impl(Arc::new(handler));
     }
 
@@ -162,7 +162,7 @@
         <span class="self">self</span>.register(f);
     }
 
-    <span class="kw">fn </span>register_impl(<span class="kw-2">&amp;</span><span class="self">self</span>, handler: ArcRemovingHandler&lt;E&gt;) {
+    <span class="kw">fn </span>register_impl(<span class="kw-2">&amp;</span><span class="self">self</span>, handler: ArcRemoveHandler&lt;E&gt;) {
         <span class="kw">let </span><span class="kw-2">mut </span>gate = <span class="self">self</span>.<span class="number">0</span>.lock();
         <span class="kw">let </span><span class="kw-2">mut </span>vec = Vec::with_capacity(gate.len() + <span class="number">1</span>);
 

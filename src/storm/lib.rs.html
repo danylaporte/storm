@@ -101,6 +101,8 @@
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
 <a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
 </pre></div><pre class="rust"><code><span class="attr">#[macro_use]
 </span><span class="kw">mod </span>version_deps;
 
@@ -125,6 +127,7 @@
 <span class="kw">mod </span>iterator_ext;
 <span class="kw">mod </span>logs;
 <span class="kw">pub mod </span>mem;
+<span class="kw">mod </span>on_change;
 <span class="kw">mod </span>on_changed;
 <span class="kw">mod </span>on_remove;
 <span class="kw">mod </span>one_to_many;
@@ -166,8 +169,9 @@
 <span class="kw">pub use </span>logs::Logs;
 <span class="attr">#[cfg(feature = <span class="string">"telemetry"</span>)]
 </span><span class="kw">pub use </span>metrics;
+<span class="kw">pub use </span>on_change::{ChangeHandler, OnChange};
 <span class="kw">pub use </span>on_changed::{Changed, ChangedHandler, OnChanged};
-<span class="kw">pub use </span>on_remove::{OnRemove, RemovingHandler};
+<span class="kw">pub use </span>on_remove::{OnRemove, RemoveHandler};
 <span class="kw">pub use </span>once_cell::sync::OnceCell;
 <span class="kw">pub use </span>one_to_many::{OneToMany, OneToManyFromIter};
 <span class="kw">pub use </span>parking_lot;

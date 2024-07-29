@@ -139,6 +139,13 @@
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
 <a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::derive_input_ext::DeriveInputExt;
 <span class="kw">use </span>darling::{FromDeriveInput, FromMeta};
 <span class="kw">use </span>inflector::Inflector;
@@ -191,6 +198,13 @@
             </span><span class="kw">fn </span>entity_deps() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>storm::Deps {
                 <span class="kw">static </span>DEPS: storm::Deps = storm::parking_lot::RwLock::new(Vec::new());
                 <span class="kw-2">&amp;</span>DEPS
+            }
+
+            <span class="attr">#[inline]
+            </span><span class="kw">fn </span>on_change() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>storm::OnChange&lt;<span class="self">Self</span>&gt; {
+                <span class="attr">#[static_init::dynamic]
+                </span><span class="kw">static </span>E: storm::OnChange&lt;#entity&gt; = Default::default();
+                <span class="kw-2">&amp;</span>E
             }
 
             <span class="attr">#[inline]

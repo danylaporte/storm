@@ -58,7 +58,9 @@
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
-</pre></div><pre class="rust"><code><span class="kw">use crate</span>::{Entity, Log, OnChanged, OnRemove};
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+</pre></div><pre class="rust"><code><span class="kw">use crate</span>::{Entity, Log, OnChange, OnChanged, OnRemove};
 <span class="kw">use </span>attached::Var;
 <span class="kw">use </span>parking_lot::RwLock;
 
@@ -98,6 +100,8 @@
     <span class="kw">fn </span>entity_var() -&gt; TblVar&lt;<span class="self">Self</span>::Tbl&gt;;
 
     <span class="kw">fn </span>entity_deps() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Deps;
+
+    <span class="kw">fn </span>on_change() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>OnChange&lt;<span class="self">Self</span>&gt;;
 
     <span class="kw">fn </span>on_changed() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>OnChanged&lt;<span class="self">Self</span>&gt;;
 
