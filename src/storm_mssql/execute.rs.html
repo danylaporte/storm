@@ -49,7 +49,7 @@
         args: ExecuteArgs,
     ) -&gt; BoxFuture&lt;<span class="lifetime">'a</span>, <span class="prelude-ty">Result</span>&lt;u64&gt;&gt;
     <span class="kw">where
-        </span>S: <span class="question-mark">?</span>Sized + Debug + Into&lt;Cow&lt;<span class="lifetime">'a</span>, str&gt;&gt; + Send + <span class="lifetime">'a</span>;
+        </span>S: Debug + Into&lt;Cow&lt;<span class="lifetime">'a</span>, str&gt;&gt; + Send + <span class="lifetime">'a</span>;
 
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>execute&lt;<span class="lifetime">'a</span>, S&gt;(
@@ -58,7 +58,7 @@
         params: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[<span class="kw-2">&amp;</span><span class="lifetime">'a </span>(<span class="kw">dyn </span>ToSql)],
     ) -&gt; BoxFuture&lt;<span class="lifetime">'a</span>, <span class="prelude-ty">Result</span>&lt;u64&gt;&gt;
     <span class="kw">where
-        </span>S: <span class="question-mark">?</span>Sized + Debug + Into&lt;Cow&lt;<span class="lifetime">'a</span>, str&gt;&gt; + Send + <span class="lifetime">'a</span>,
+        </span>S: Debug + Into&lt;Cow&lt;<span class="lifetime">'a</span>, str&gt;&gt; + Send + <span class="lifetime">'a</span>,
     {
         <span class="self">self</span>.execute_with_args(statement, params, ExecuteArgs::default())
     }

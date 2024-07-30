@@ -405,7 +405,7 @@
         args: ExecuteArgs,
     ) -&gt; BoxFuture&lt;<span class="lifetime">'a</span>, <span class="prelude-ty">Result</span>&lt;u64&gt;&gt;
     <span class="kw">where
-        </span>S: <span class="question-mark">?</span>Sized + Debug + Into&lt;Cow&lt;<span class="lifetime">'a</span>, str&gt;&gt; + Send + <span class="lifetime">'a</span>,
+        </span>S: Debug + Into&lt;Cow&lt;<span class="lifetime">'a</span>, str&gt;&gt; + Send + <span class="lifetime">'a</span>,
     {
         Box::pin(<span class="kw">async move </span>{
             <span class="kw">let </span><span class="kw-2">mut </span>intermediate = Vec::new();
@@ -475,7 +475,7 @@
         </span>C: Default + Extend&lt;R&gt; + Send,
         M: FnMut(Row) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt; + Send + <span class="lifetime">'a</span>,
         R: Send,
-        S: <span class="question-mark">?</span>Sized + Debug + <span class="kw">for</span>&lt;<span class="lifetime">'b</span>&gt; Into&lt;Cow&lt;<span class="lifetime">'b</span>, str&gt;&gt; + Send + <span class="lifetime">'a</span>,
+        S: Debug + <span class="kw">for</span>&lt;<span class="lifetime">'b</span>&gt; Into&lt;Cow&lt;<span class="lifetime">'b</span>, str&gt;&gt; + Send + <span class="lifetime">'a</span>,
     {
         <span class="kw">let </span>sql = statement.into();
 

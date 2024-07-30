@@ -69,7 +69,7 @@
         </span>C: Default + Extend&lt;R&gt; + Send,
         M: FnMut(Row) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt; + Send + <span class="lifetime">'a</span>,
         R: Send,
-        S: <span class="question-mark">?</span>Sized + Debug + <span class="kw">for</span>&lt;<span class="lifetime">'b</span>&gt; Into&lt;Cow&lt;<span class="lifetime">'b</span>, str&gt;&gt; + Send + <span class="lifetime">'a</span>;
+        S: Debug + <span class="kw">for</span>&lt;<span class="lifetime">'b</span>&gt; Into&lt;Cow&lt;<span class="lifetime">'b</span>, str&gt;&gt; + Send + <span class="lifetime">'a</span>;
 }
 
 <span class="kw">impl</span>&lt;P&gt; QueryRows <span class="kw">for </span><span class="kw-2">&amp;</span>P
@@ -87,7 +87,7 @@
         </span>C: Default + Extend&lt;R&gt; + Send,
         M: FnMut(Row) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt; + Send + <span class="lifetime">'a</span>,
         R: Send,
-        S: <span class="question-mark">?</span>Sized + Debug + <span class="kw">for</span>&lt;<span class="lifetime">'b</span>&gt; Into&lt;Cow&lt;<span class="lifetime">'b</span>, str&gt;&gt; + Send + <span class="lifetime">'a</span>,
+        S: Debug + <span class="kw">for</span>&lt;<span class="lifetime">'b</span>&gt; Into&lt;Cow&lt;<span class="lifetime">'b</span>, str&gt;&gt; + Send + <span class="lifetime">'a</span>,
     {
         (<span class="kw-2">**</span><span class="self">self</span>).query_rows(statement, params, mapper, use_transaction)
     }
