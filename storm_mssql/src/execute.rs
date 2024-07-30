@@ -10,7 +10,7 @@ pub trait Execute {
         args: ExecuteArgs,
     ) -> BoxFuture<'a, Result<u64>>
     where
-        S: ?Sized + Debug + Into<Cow<'a, str>> + Send + 'a;
+        S: Debug + Into<Cow<'a, str>> + Send + 'a;
 
     #[inline]
     fn execute<'a, S>(
@@ -19,7 +19,7 @@ pub trait Execute {
         params: &'a [&'a (dyn ToSql)],
     ) -> BoxFuture<'a, Result<u64>>
     where
-        S: ?Sized + Debug + Into<Cow<'a, str>> + Send + 'a,
+        S: Debug + Into<Cow<'a, str>> + Send + 'a,
     {
         self.execute_with_args(statement, params, ExecuteArgs::default())
     }

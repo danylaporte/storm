@@ -59,7 +59,7 @@ impl Execute for MssqlProvider {
         args: ExecuteArgs,
     ) -> BoxFuture<'a, Result<u64>>
     where
-        S: ?Sized + Debug + Into<Cow<'a, str>> + Send + 'a,
+        S: Debug + Into<Cow<'a, str>> + Send + 'a,
     {
         Box::pin(async move {
             let mut intermediate = Vec::new();
@@ -129,7 +129,7 @@ impl QueryRows for MssqlProvider {
         C: Default + Extend<R> + Send,
         M: FnMut(Row) -> Result<R> + Send + 'a,
         R: Send,
-        S: ?Sized + Debug + for<'b> Into<Cow<'b, str>> + Send + 'a,
+        S: Debug + for<'b> Into<Cow<'b, str>> + Send + 'a,
     {
         let sql = statement.into();
 

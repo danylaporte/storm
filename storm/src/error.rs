@@ -26,6 +26,16 @@ pub enum Error {
 }
 
 impl Error {
+    pub fn downcast<T>(self) -> Result<Box<T>, Self>
+    where
+        T: std::error::Error + 'static,
+    {
+        match self {
+            Self::Other(v) => v.downcast().map(|v| *v).map_err(Self::Other),
+            v => Err(v),
+        }
+    }
+
     pub fn downcast_ref<T>(&self) -> Option<&T>
     where
         T: std::error::Error + 'static,
@@ -110,16 +120,14 @@ impl Display for Error {
             Self::Others(e) => {
                 let mut found = false;
 
-                e.iter()
-                    .map(|s| {
-                        if found {
-                            write!(f, "\n{s}")
-                        } else {
-                            found = true;
-                            write!(f, "{s}")
-                        }
-                    })
-                    .collect()
+                e.iter().try_for_each(|s| {
+                    if found {
+                        write!(f, "\n{s}")
+                    } else {
+                        found = true;
+                        write!(f, "{s}")
+                    }
+                })
             }
             Self::NotInTransaction => f.write_str("Not in transaction."),
             Self::ProviderNotFound => f.write_str("Provider not found."),

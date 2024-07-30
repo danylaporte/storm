@@ -22,7 +22,7 @@ pub trait QueryRows {
         C: Default + Extend<R> + Send,
         M: FnMut(Row) -> Result<R> + Send + 'a,
         R: Send,
-        S: ?Sized + Debug + for<'b> Into<Cow<'b, str>> + Send + 'a;
+        S: Debug + for<'b> Into<Cow<'b, str>> + Send + 'a;
 }
 
 impl<P> QueryRows for &P
@@ -40,7 +40,7 @@ where
         C: Default + Extend<R> + Send,
         M: FnMut(Row) -> Result<R> + Send + 'a,
         R: Send,
-        S: ?Sized + Debug + for<'b> Into<Cow<'b, str>> + Send + 'a,
+        S: Debug + for<'b> Into<Cow<'b, str>> + Send + 'a,
     {
         (**self).query_rows(statement, params, mapper, use_transaction)
     }
