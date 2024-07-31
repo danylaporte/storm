@@ -1,8 +1,4 @@
-use std::{
-    fmt::{self, Debug, Display},
-    mem::{replace, swap},
-    ops::{Add, AddAssign},
-};
+use std::fmt::{self, Debug, Display};
 
 pub enum Error {
     AlreadyInTransaction,
@@ -13,6 +9,7 @@ pub enum Error {
     EntityNotFound,
     Internal,
     NotInTransaction,
+    Other(Box<dyn std::error::Error + Send + Sync>),
     ProviderNotFound,
     Std(StdError),
     Str(&'static str),
@@ -20,9 +17,6 @@ pub enum Error {
 
     #[cfg(feature = "mssql")]
     Mssql(tiberius::error::Error),
-
-    Other(Box<dyn std::error::Error + Send + Sync>),
-    Others(Vec<Error>),
 }
 
 impl Error {
@@ -59,35 +53,6 @@ impl Error {
     }
 }
 
-impl Add for Error {
-    type Output = Self;
-
-    fn add(mut self, rhs: Self) -> Self::Output {
-        self.add_assign(rhs);
-        self
-    }
-}
-
-impl AddAssign for Error {
-    fn add_assign(&mut self, rhs: Self) {
-        match (self, rhs) {
-            (Self::Others(l), Self::Others(mut r)) => {
-                if r.capacity() > l.capacity() {
-                    swap(l, &mut r);
-                }
-
-                l.extend(r);
-            }
-            (Self::Others(l), r) => l.push(r),
-            (l, Self::Others(mut r)) => {
-                r.push(replace(l, Self::Internal));
-                *l = Self::Others(r);
-            }
-            (l, r) => *l = Self::Others(vec![replace(l, Self::Internal), r]),
-        }
-    }
-}
-
 impl Debug for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -96,7 +61,6 @@ impl Debug for Error {
             Self::Str(e) => write!(f, "storm::Error::Str({e})"),
             Self::String(e) => write!(f, "storm::Error::Str({e})"),
             Self::Other(e) => Debug::fmt(e, f),
-            Self::Others(e) => Debug::fmt(e, f),
 
             #[cfg(feature = "mssql")]
             Self::Mssql(e) => Debug::fmt(e, f),
@@ -117,18 +81,6 @@ impl Display for Error {
             Self::EntityNotFound => f.write_str("Entity not found."),
             Self::Internal => f.write_str("Internal."),
             Self::Other(e) => Display::fmt(e, f),
-            Self::Others(e) => {
-                let mut found = false;
-
-                e.iter().try_for_each(|s| {
-                    if found {
-                        write!(f, "\n{s}")
-                    } else {
-                        found = true;
-                        write!(f, "{s}")
-                    }
-                })
-            }
             Self::NotInTransaction => f.write_str("Not in transaction."),
             Self::ProviderNotFound => f.write_str("Provider not found."),
 

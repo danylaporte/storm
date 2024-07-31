@@ -64,7 +64,7 @@ pub use iterator_ext::*;
 pub use logs::Logs;
 #[cfg(feature = "telemetry")]
 pub use metrics;
-pub use on_change::{ChangeHandler, OnChange};
+pub use on_change::{change_depth, ChangeHandler, OnChange};
 pub use on_changed::{Changed, ChangedHandler, OnChanged};
 pub use on_remove::{OnRemove, RemoveHandler};
 pub use once_cell::sync::OnceCell;
