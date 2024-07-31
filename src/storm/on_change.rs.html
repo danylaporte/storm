@@ -93,8 +93,22 @@
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{BoxFuture, CtxTransaction, Entity, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>tokio::task_local;
 
 <span class="kw">pub trait </span>ChangeHandler&lt;E: Entity&gt; {
     <span class="kw">fn </span>handle_change&lt;<span class="lifetime">'a</span>&gt;(
@@ -139,18 +153,19 @@
         new: <span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span>E,
         track_ctx: <span class="kw-2">&amp;</span><span class="lifetime">'b </span>E::TrackCtx,
     ) -&gt; BoxFuture&lt;<span class="lifetime">'b</span>, <span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
-        <span class="kw">let </span>guard = <span class="self">self</span>.<span class="number">0</span>.lock();
-        <span class="kw">let </span>vec = Arc::clone(<span class="kw-2">&amp;</span>guard);
+        <span class="kw">let </span>vec = {
+            <span class="kw">let </span>guard = <span class="self">self</span>.<span class="number">0</span>.lock();
+            Arc::clone(<span class="kw-2">&amp;</span>guard)
+        };
 
-        drop(guard);
-
-        Box::pin(<span class="kw">async move </span>{
+        <span class="kw">let </span>block = <span class="kw">async move </span>{
             <span class="kw">for </span>handler <span class="kw">in </span>vec.iter() {
                 handler.handle_change(trx, key, new, track_ctx).<span class="kw">await</span><span class="question-mark">?</span>;
             }
-
             <span class="prelude-val">Ok</span>(())
-        })
+        };
+
+        Box::pin(CHANGE_DEPTH.scope(change_depth() + <span class="number">1</span>, block))
     }
 
     <span class="kw">pub fn </span>register&lt;H: ChangeHandler&lt;E&gt; + Send + Sync + <span class="lifetime">'static</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, handler: H) {
@@ -187,5 +202,16 @@
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>(Default::default())
     }
+}
+
+<span class="macro">task_local!</span> {
+    <span class="kw">static </span>CHANGE_DEPTH: usize;
+}
+
+<span class="doccomment">/// Returns a stack depth level 1.. when run inside the on_change event.
+/// Each time the event is nested, the depth increase.
+/// When called oustide, will returns 0.
+</span><span class="kw">pub fn </span>change_depth() -&gt; usize {
+    CHANGE_DEPTH.try_with(|v| <span class="kw-2">*</span>v).unwrap_or_default()
 }
 </code></pre></div></section></main></body></html>
