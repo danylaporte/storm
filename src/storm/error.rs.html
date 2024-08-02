@@ -113,9 +113,6 @@
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt::{<span class="self">self</span>, Debug, Display};
 
 <span class="kw">pub enum </span>Error {
@@ -127,7 +124,6 @@
     EntityNotFound,
     Internal,
     NotInTransaction,
-    Other(Box&lt;<span class="kw">dyn </span>std::error::Error + Send + Sync&gt;),
     ProviderNotFound,
     Std(StdError),
     Str(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str),
@@ -143,7 +139,7 @@
         </span>T: std::error::Error + <span class="lifetime">'static</span>,
     {
         <span class="kw">match </span><span class="self">self </span>{
-            <span class="self">Self</span>::Other(v) =&gt; v.downcast().map(|v| <span class="kw-2">*</span>v).map_err(<span class="self">Self</span>::Other),
+            <span class="self">Self</span>::Std(v) =&gt; v.downcast().map(|v| <span class="kw-2">*</span>v).map_err(<span class="self">Self</span>::Std),
             v =&gt; <span class="prelude-val">Err</span>(v),
         }
     }
@@ -153,7 +149,7 @@
         </span>T: std::error::Error + <span class="lifetime">'static</span>,
     {
         <span class="kw">match </span><span class="self">self </span>{
-            <span class="self">Self</span>::Other(v) =&gt; v.downcast_ref(),
+            <span class="self">Self</span>::Std(v) =&gt; v.downcast_ref(),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
         }
     }
@@ -178,7 +174,6 @@
             <span class="self">Self</span>::Std(e) =&gt; Debug::fmt(e, f),
             <span class="self">Self</span>::Str(e) =&gt; <span class="macro">write!</span>(f, <span class="string">"storm::Error::Str({e})"</span>),
             <span class="self">Self</span>::String(e) =&gt; <span class="macro">write!</span>(f, <span class="string">"storm::Error::Str({e})"</span>),
-            <span class="self">Self</span>::Other(e) =&gt; Debug::fmt(e, f),
 
             <span class="attr">#[cfg(feature = <span class="string">"mssql"</span>)]
             </span><span class="self">Self</span>::Mssql(e) =&gt; Debug::fmt(e, f),
@@ -198,7 +193,6 @@
             <span class="self">Self</span>::ConvertFailed(s) =&gt; f.write_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Convert failed: `{s}`"</span>)),
             <span class="self">Self</span>::EntityNotFound =&gt; f.write_str(<span class="string">"Entity not found."</span>),
             <span class="self">Self</span>::Internal =&gt; f.write_str(<span class="string">"Internal."</span>),
-            <span class="self">Self</span>::Other(e) =&gt; Display::fmt(e, f),
             <span class="self">Self</span>::NotInTransaction =&gt; f.write_str(<span class="string">"Not in transaction."</span>),
             <span class="self">Self</span>::ProviderNotFound =&gt; f.write_str(<span class="string">"Provider not found."</span>),
 
