@@ -9,7 +9,6 @@ pub enum Error {
     EntityNotFound,
     Internal,
     NotInTransaction,
-    Other(Box<dyn std::error::Error + Send + Sync>),
     ProviderNotFound,
     Std(StdError),
     Str(&'static str),
@@ -25,7 +24,7 @@ impl Error {
         T: std::error::Error + 'static,
     {
         match self {
-            Self::Other(v) => v.downcast().map(|v| *v).map_err(Self::Other),
+            Self::Std(v) => v.downcast().map(|v| *v).map_err(Self::Std),
             v => Err(v),
         }
     }
@@ -35,7 +34,7 @@ impl Error {
         T: std::error::Error + 'static,
     {
         match self {
-            Self::Other(v) => v.downcast_ref(),
+            Self::Std(v) => v.downcast_ref(),
             _ => None,
         }
     }
@@ -60,7 +59,6 @@ impl Debug for Error {
             Self::Std(e) => Debug::fmt(e, f),
             Self::Str(e) => write!(f, "storm::Error::Str({e})"),
             Self::String(e) => write!(f, "storm::Error::Str({e})"),
-            Self::Other(e) => Debug::fmt(e, f),
 
             #[cfg(feature = "mssql")]
             Self::Mssql(e) => Debug::fmt(e, f),
@@ -80,7 +78,6 @@ impl Display for Error {
             Self::ConvertFailed(s) => f.write_str(&format!("Convert failed: `{s}`")),
             Self::EntityNotFound => f.write_str("Entity not found."),
             Self::Internal => f.write_str("Internal."),
-            Self::Other(e) => Display::fmt(e, f),
             Self::NotInTransaction => f.write_str("Not in transaction."),
             Self::ProviderNotFound => f.write_str("Provider not found."),
 
