@@ -759,7 +759,7 @@ where
         self.insert_all(vec, track).await?;
 
         for (id, e) in self.tbl {
-            if self.log().map_or(false, |l| !l.contains_key(id)) {
+            if self.log().map_or(true, |l| !l.contains_key(id)) {
                 let mut e = Cow::Borrowed(e);
 
                 updater(id, &mut e);
@@ -802,7 +802,7 @@ where
         self.insert_mut_all(vec, track).await?;
 
         for (id, e) in self.tbl {
-            if self.log().map_or(false, |l| !l.contains_key(id)) {
+            if self.log().map_or(true, |l| !l.contains_key(id)) {
                 let mut e = Cow::Borrowed(e);
 
                 updater(id, &mut e);
