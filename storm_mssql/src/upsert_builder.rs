@@ -168,33 +168,14 @@ impl<'a> UpsertBuilder<'a> {
                 let insert = self.insert_sql();
 
                 if update.is_empty() {
-                    format!(
-                        "
-                        BEGIN TRY
-                        {insert}
-                        END TRY
-                        BEGIN CATCH
-                            IF ERROR_NUMBER() NOT IN (2601, 2627) THROW;
-                        END CATCH
-                        "
-                    )
+                    insert
                 } else {
                     format!(
                         "
                         {update}
                         IF @@ROWCOUNT = 0
                         BEGIN
-                            BEGIN TRY
                             {insert}
-                            END TRY
-                            BEGIN CATCH
-                                IF ERROR_NUMBER() IN (2601, 2627)
-                                BEGIN
-                                {update}
-                                END
-                                ELSE
-                                    THROW;
-                            END CATCH
                         END
                     "
                     )

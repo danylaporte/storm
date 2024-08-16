@@ -3,7 +3,7 @@ use crate::{
     Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity, EntityAccessor,
     Gc, GcCtx, Get, HashTable, Insert, InsertIfChanged, InsertMut, InsertMutIfChanged, Log,
     LogAccessor, LogState, Logs, LogsVar, NotifyTag, ProviderContainer, Remove, Result, Tag,
-    Transaction, Vars, VecTable,
+    Transaction, TrxErrGate, Vars, VecTable,
 };
 use fxhash::FxHashMap;
 use parking_lot::RwLock;
@@ -265,6 +265,7 @@ where
 }
 
 pub struct CtxTransaction<'a> {
+    err_gate: TrxErrGate,
     log_ctx: LogsVar,
     provider: TransactionProvider<'a>,
     pub ctx: &'a Ctx,
@@ -273,6 +274,7 @@ pub struct CtxTransaction<'a> {
 impl<'a> CtxTransaction<'a> {
     pub fn commit(self) -> BoxFuture<'a, Result<Logs>> {
         Box::pin(async move {
+            self.err_gate.check()?;
             self.provider.commit().await?;
             Ok(Logs(self.log_ctx))
         })
@@ -846,6 +848,8 @@ where
         track: &'c E::TrackCtx,
     ) -> BoxFuture<'c, Result<()>> {
         Box::pin(async move {
+            let gate = self.ctx.err_gate.open()?;
+
             E::on_change().__call(self.ctx, &k, &mut v, track).await?;
 
             self.ctx.provider.upsert(&k, &v).await?;
@@ -861,6 +865,10 @@ where
             log_mut(&mut self.ctx.log_ctx)
                 .entry(k)
                 .or_insert(LogState::Inserted(v));
+
+            if result.is_ok() {
+                gate.close();
+            }
 
             result
         })
@@ -946,6 +954,8 @@ where
         track: &'c E::TrackCtx,
     ) -> BoxFuture<'c, Result<E::Key>> {
         Box::pin(async move {
+            let gate = self.ctx.err_gate.open()?;
+
             E::on_change().__call(self.ctx, &k, &mut v, track).await?;
 
             self.ctx.provider.upsert_mut(&mut k, &mut v).await?;
@@ -961,6 +971,10 @@ where
             log_mut(&mut self.ctx.log_ctx)
                 .entry(k.clone())
                 .or_insert(LogState::Inserted(v));
+
+            if result.is_ok() {
+                gate.close();
+            }
 
             result.map(|_| k)
         })
@@ -1041,9 +1055,12 @@ where
 {
     fn remove<'c>(&'c mut self, k: E::Key, track: &'c E::TrackCtx) -> BoxFuture<'c, Result<()>> {
         Box::pin(async move {
+            let gate = self.ctx.err_gate.open()?;
+
             if let Some(LogState::Removed) =
                 log_mut::<E>(&mut self.ctx.log_ctx).insert(k.clone(), LogState::Removed)
             {
+                gate.close();
                 return Ok(());
             }
 
@@ -1057,6 +1074,10 @@ where
                 if let Some(old) = self.tbl.get(&k) {
                     result = old.track_remove(&k, self.ctx, track).await;
                 }
+            }
+
+            if result.is_ok() {
+                gate.close();
             }
 
             result
@@ -1103,6 +1124,7 @@ impl<'a> Transaction for async_cell_lock::QueueRwLockQueueGuard<'a, Ctx> {
     fn transaction(&self) -> CtxTransaction<'_> {
         CtxTransaction {
             ctx: self,
+            err_gate: Default::default(),
             log_ctx: Default::default(),
             provider: self.provider.transaction(),
         }
