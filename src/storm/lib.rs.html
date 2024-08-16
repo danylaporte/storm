@@ -103,6 +103,8 @@
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
 </pre></div><pre class="rust"><code><span class="attr">#[macro_use]
 </span><span class="kw">mod </span>version_deps;
 
@@ -140,6 +142,7 @@
 #[doc(hidden)]
 </span><span class="kw">pub mod </span>telemetry;
 <span class="kw">mod </span>transaction;
+<span class="kw">mod </span>trx_err_gate;
 <span class="kw">pub mod </span>trx_iter;
 <span class="kw">mod </span>vec_table;
 
@@ -181,6 +184,7 @@
 <span class="kw">pub use </span>tag::{NotifyTag, Tag};
 <span class="kw">pub use </span>tokio;
 <span class="kw">pub use </span>transaction::Transaction;
+<span class="kw">use </span>trx_err_gate::TrxErrGate;
 <span class="kw">pub use </span>trx_iter::TrxIter;
 <span class="kw">pub use </span>vec_map::{<span class="self">self</span>, VecMap};
 <span class="kw">pub use </span>vec_table::VecTable;

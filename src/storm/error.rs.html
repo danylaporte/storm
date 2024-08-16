@@ -113,6 +113,8 @@
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt::{<span class="self">self</span>, Debug, Display};
 
 <span class="kw">pub enum </span>Error {
@@ -125,6 +127,7 @@
     Internal,
     NotInTransaction,
     ProviderNotFound,
+    TransactionError,
     Std(StdError),
     Str(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str),
     String(String),
@@ -192,6 +195,7 @@
             <span class="self">Self</span>::ColumnNull =&gt; f.write_str(<span class="string">"Column is null."</span>),
             <span class="self">Self</span>::ConvertFailed(s) =&gt; f.write_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Convert failed: `{s}`"</span>)),
             <span class="self">Self</span>::EntityNotFound =&gt; f.write_str(<span class="string">"Entity not found."</span>),
+            <span class="self">Self</span>::TransactionError =&gt; f.write_str(<span class="string">"Transaction error."</span>),
             <span class="self">Self</span>::Internal =&gt; f.write_str(<span class="string">"Internal."</span>),
             <span class="self">Self</span>::NotInTransaction =&gt; f.write_str(<span class="string">"Not in transaction."</span>),
             <span class="self">Self</span>::ProviderNotFound =&gt; f.write_str(<span class="string">"Provider not found."</span>),
