@@ -115,6 +115,33 @@
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt::{<span class="self">self</span>, Debug, Display};
 
 <span class="kw">pub enum </span>Error {
@@ -142,7 +169,10 @@
         </span>T: std::error::Error + <span class="lifetime">'static</span>,
     {
         <span class="kw">match </span><span class="self">self </span>{
-            <span class="self">Self</span>::Std(v) =&gt; v.downcast().map(|v| <span class="kw-2">*</span>v).map_err(<span class="self">Self</span>::Std),
+            <span class="self">Self</span>::Std(v) =&gt; v
+                .downcast()
+                .or_else(|v| v.downcast().map(|v| <span class="kw-2">*</span>v))
+                .map_err(<span class="self">Self</span>::Std),
             v =&gt; <span class="prelude-val">Err</span>(v),
         }
     }
@@ -232,4 +262,28 @@
 }
 
 <span class="kw">type </span>StdError = Box&lt;<span class="kw">dyn </span>std::error::Error + Send + Sync&gt;;
+
+<span class="attr">#[test]
+</span><span class="kw">fn </span>check_downcast() {
+    <span class="kw">use </span>std::fmt::{<span class="self">self</span>, Debug, Display, Formatter};
+    <span class="kw">struct </span>MyErr;
+
+    <span class="kw">impl </span>Debug <span class="kw">for </span>MyErr {
+        <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+            f.write_str(<span class="string">"MyErr"</span>)
+        }
+    }
+
+    <span class="kw">impl </span>Display <span class="kw">for </span>MyErr {
+        <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+            f.write_str(<span class="string">"MyErr"</span>)
+        }
+    }
+
+    <span class="kw">impl </span>std::error::Error <span class="kw">for </span>MyErr {}
+
+    <span class="kw">let </span>e = Error::std(Box::new(MyErr));
+
+    e.downcast::&lt;MyErr&gt;().unwrap();
+}
 </code></pre></div></section></main></body></html>
