@@ -25,7 +25,10 @@ impl Error {
         T: std::error::Error + 'static,
     {
         match self {
-            Self::Std(v) => v.downcast().map(|v| *v).map_err(Self::Std),
+            Self::Std(v) => v
+                .downcast()
+                .or_else(|v| v.downcast().map(|v| *v))
+                .map_err(Self::Std),
             v => Err(v),
         }
     }
@@ -115,3 +118,27 @@ impl From<tiberius::error::Error> for Error {
 }
 
 type StdError = Box<dyn std::error::Error + Send + Sync>;
+
+#[test]
+fn check_downcast() {
+    use std::fmt::{self, Debug, Display, Formatter};
+    struct MyErr;
+
+    impl Debug for MyErr {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+            f.write_str("MyErr")
+        }
+    }
+
+    impl Display for MyErr {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+            f.write_str("MyErr")
+        }
+    }
+
+    impl std::error::Error for MyErr {}
+
+    let e = Error::std(Box::new(MyErr));
+
+    e.downcast::<MyErr>().unwrap();
+}
