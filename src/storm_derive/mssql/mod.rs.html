@@ -545,6 +545,78 @@
 <a href="#545" id="545">545</a>
 <a href="#546" id="546">546</a>
 <a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
 </pre></div><pre class="rust"><code><span class="kw">mod </span>attrs;
 <span class="kw">mod </span>builders;
 <span class="kw">mod </span>delete;
@@ -760,6 +832,7 @@
     <span class="kw">let </span>rename_all = attrs.rename_all;
 
     <span class="kw">let </span><span class="kw-2">mut </span>diff = attrs.diff.then(Vec::new);
+    <span class="kw">let </span><span class="kw-2">mut </span>entity_validations = Vec::new();
     <span class="kw">let </span><span class="kw-2">mut </span>errors = Vec::new();
     <span class="kw">let </span><span class="kw-2">mut </span>save_part = Vec::new();
     <span class="kw">let </span><span class="kw-2">mut </span>wheres = Vec::new();
@@ -811,12 +884,23 @@
         <span class="kw">let </span>ident = <span class="macro">continue_ts!</span>(field.ident(), errors);
         <span class="kw">let </span>field_pascal_ident = Ident::new(<span class="kw-2">&amp;</span>ident.to_string().to_pascal_case(), ident.span());
 
+        <span class="kw">if </span>attrs.max_length &gt; <span class="number">0 </span>{
+            <span class="kw">let </span>expected = LitInt::new(<span class="kw-2">&amp;</span>attrs.max_length.to_string(), Span::call_site());
+
+            entity_validations.push(<span class="macro">quote!</span>(
+                storm::macro_check_max_len(storm::Len::len(<span class="kw-2">&amp;</span><span class="self">self</span>.#ident), #expected, #enum_fields_ident::#field_pascal_ident, error);
+            ));
+        }
+
         <span class="kw">if </span>is_translated(<span class="kw-2">&amp;</span>field.ty) {
             translated.add_field(field, column);
+
             <span class="kw">let </span>name_bk = Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{ident}_bk"</span>), Span::call_site());
+
             translated_backup.push(
                 <span class="macro">quote!</span> { <span class="kw">let </span>#name_bk = std::mem::replace(<span class="kw-2">&amp;mut </span>v.#ident, Default::default()); },
             );
+
             translated_restore.push(<span class="macro">quote!</span> { v.#ident = #name_bk; });
 
             <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff.as_mut().filter(|<span class="kw">_</span>| !attrs.skip_diff()) {
@@ -825,9 +909,9 @@
                         map.insert(#enum_fields_ident::#field_pascal_ident, diff);
                     }
                 });
-
-                enum_fields.push(<span class="macro">quote!</span>(#field_pascal_ident));
             }
+
+            enum_fields.push(field_pascal_ident);
 
             <span class="kw">continue</span>;
         }
@@ -839,14 +923,14 @@
                 <span class="macro">quote!</span>(storm_mssql::SaveEntityPart::save_entity_part(<span class="kw-2">&amp;</span><span class="self">self</span>.#ident, k, builder);),
             );
 
+            entity_validations
+                .push(<span class="macro">quote!</span>(storm::EntityValidate::entity_validate(<span class="kw-2">&amp;</span><span class="self">self</span>.#ident, error);));
+
             <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff.as_mut().filter(|<span class="kw">_</span>| !attrs.skip_diff()) {
                 diff.push(
                     <span class="macro">quote!</span> { storm_mssql::EntityDiff::entity_diff(<span class="kw-2">&amp;</span><span class="self">self</span>.#ident, <span class="kw-2">&amp;</span>old.#ident, map);},
                 );
-
-                <span class="comment">// Ignored for now.
-                // enum_fields.push(quote!(#ident()));
-            </span>}
+            }
         } <span class="kw">else </span>{
             <span class="kw">match </span>attrs.save_with.as_ref() {
                 <span class="prelude-val">Some</span>(f) =&gt; {
@@ -858,8 +942,6 @@
                                 map.insert(#enum_fields_ident::#field_pascal_ident, diff);
                             }
                         });
-
-                        enum_fields.push(<span class="macro">quote!</span>(#field_pascal_ident));
                     }
                 }
                 <span class="prelude-val">None </span>=&gt; {
@@ -871,11 +953,11 @@
                                 map.insert(#enum_fields_ident::#field_pascal_ident, diff);
                             }
                         });
-
-                        enum_fields.push(<span class="macro">quote!</span>(#field_pascal_ident));
                     }
                 }
             }
+
+            enum_fields.push(field_pascal_ident);
         };
     }
 
@@ -946,7 +1028,8 @@
     <span class="kw">let </span>table = LitStr::new(<span class="kw-2">&amp;</span>attrs.table, ident.span());
     <span class="kw">let </span>provider = attrs.provider();
     <span class="kw">let </span>diff = entity_diff(ident, diff);
-    <span class="kw">let </span>enum_fields = enum_fields_impl(vis, ident, enum_fields, <span class="kw-2">&amp;</span>enum_fields_ident, attrs.diff);
+    <span class="kw">let </span>enum_fields = enum_fields_impl(vis, ident, enum_fields, <span class="kw-2">&amp;</span>enum_fields_ident);
+    <span class="kw">let </span>entity_validate = entity_validate(entity_validations, ident);
 
     <span class="macro">quote!</span> {
         <span class="kw">impl </span>#upsert_trait <span class="kw">for </span>storm::provider::TransactionProvider&lt;<span class="lifetime">'_</span>&gt; {
@@ -954,8 +1037,8 @@
                 storm_mssql::metrics_helper::upsert_wrap(<span class="kw">async move </span>{
                     <span class="kw">let </span>provider: <span class="kw-2">&amp;</span>storm_mssql::MssqlProvider = <span class="macro">storm::tri!</span>(<span class="self">self</span>.container().provide(#provider).<span class="kw">await</span>);
                     <span class="kw">let </span><span class="kw-2">mut </span>builder = storm_mssql::UpsertBuilder::new(#table);
-
                     <span class="kw">let </span>entity_part_key = #entity_part_key;
+
                     storm_mssql::SaveEntityPart::save_entity_part(v, entity_part_key, <span class="kw-2">&amp;mut </span>builder);
 
                     #wheres
@@ -970,6 +1053,7 @@
 
         #diff
         #enum_fields
+        #entity_validate
 
         <span class="kw">impl </span>storm_mssql::SaveEntityPart <span class="kw">for </span>#ident {
             <span class="kw">fn </span>save_entity_part&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, k: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">Self</span>::Key, builder: <span class="kw-2">&amp;mut </span>storm_mssql::UpsertBuilder&lt;<span class="lifetime">'a</span>&gt;) {
@@ -1057,6 +1141,17 @@
     }
 }
 
+<span class="kw">fn </span>entity_validate(validations: Vec&lt;TokenStream&gt;, ident: <span class="kw-2">&amp;</span>Ident) -&gt; TokenStream {
+    <span class="macro">quote!</span> {
+        <span class="kw">impl </span>storm::EntityValidate <span class="kw">for </span>#ident {
+            <span class="attr">#[allow(unused)]
+            </span><span class="kw">fn </span>entity_validate(<span class="kw-2">&amp;</span><span class="self">self</span>, error: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;storm::Error&gt;) {
+                #(#validations)*
+            }
+        }
+    }
+}
+
 <span class="kw">fn </span>load_diff_field(diff: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;Vec&lt;TokenStream&gt;&gt;, field: <span class="kw-2">&amp;</span>Ident, enum_fields_ident: <span class="kw-2">&amp;</span>Ident) {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(diff) = diff.as_mut() {
         <span class="kw">let </span>name = Ident::new(<span class="kw-2">&amp;</span>field.to_string().to_pascal_case(), field.span());
@@ -1072,24 +1167,73 @@
 <span class="kw">fn </span>enum_fields_impl(
     vis: <span class="kw-2">&amp;</span>Visibility,
     ident: <span class="kw-2">&amp;</span>Ident,
-    items: Vec&lt;TokenStream&gt;,
+    fields: Vec&lt;Ident&gt;,
     enum_ident: <span class="kw-2">&amp;</span>Ident,
-    is_diff: bool,
 ) -&gt; TokenStream {
-    <span class="kw">if </span>is_diff {
-        <span class="macro">quote!</span> {
-            <span class="attr">#[derive(Clone, Copy, Eq, Hash, PartialEq, serde::Deserialize, serde::Serialize)]
-            #[serde(rename_all = <span class="string">"camelCase"</span>)]
-            </span>#vis <span class="kw">enum </span>#enum_ident {
-                #(#items,)*
-            }
+    <span class="kw">if </span>fields.is_empty() {
+        <span class="kw">return </span><span class="macro">quote!</span>();
+    }
 
-            <span class="kw">impl </span>storm::EntityFields <span class="kw">for </span>#ident {
-                <span class="kw">type </span>Fields = #enum_ident;
+    <span class="kw">let </span>names = fields
+        .iter()
+        .map(|i| LitStr::new(<span class="kw-2">&amp;</span>i.to_string().to_camel_case(), i.span()));
+
+    <span class="macro">quote!</span> {
+        <span class="attr">#[derive(Clone, Copy, Eq, serde::Deserialize)]
+        #[serde(rename_all = <span class="string">"camelCase"</span>)]
+        </span>#vis <span class="kw">enum </span>#enum_ident {
+            #(#fields,)*
+        }
+
+        <span class="kw">impl </span>AsRef&lt;str&gt; <span class="kw">for </span>#enum_ident {
+            <span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str {
+                <span class="kw">match </span><span class="self">self </span>{
+                    #(<span class="self">Self</span>::#fields =&gt; #names,)*
+                }
             }
         }
-    } <span class="kw">else </span>{
-        <span class="macro">quote!</span>()
+
+        <span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>#enum_ident {
+            <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+                f.write_str(<span class="self">self</span>.as_ref())
+            }
+        }
+
+        <span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>#enum_ident {
+            <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+                f.write_str(<span class="self">self</span>.as_ref())
+            }
+        }
+
+        <span class="kw">impl </span>std::hash::Hash <span class="kw">for </span>#enum_ident {
+            <span class="kw">fn </span>hash&lt;H&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>H)
+            <span class="kw">where
+                </span>H: std::hash::Hasher
+            {
+                (<span class="kw-2">*</span><span class="self">self </span><span class="kw">as </span>u16).hash(state);
+            }
+        }
+
+        <span class="kw">impl </span>std::cmp::PartialEq <span class="kw">for </span>#enum_ident {
+            <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+                <span class="kw-2">*</span><span class="self">self </span><span class="kw">as </span>u16 == <span class="kw-2">*</span>other <span class="kw">as </span>u16
+            }
+        }
+
+        <span class="kw">impl </span>serde::Serialize <span class="kw">for </span>#enum_ident {
+            <span class="kw">fn </span>serialize&lt;S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, serializer: S) -&gt; std::result::Result&lt;S::Ok, S::Error&gt;
+            <span class="kw">where
+                </span>S: serde::Serializer
+            {
+                <span class="self">self</span>.as_ref().serialize(serializer)
+            }
+        }
+
+        <span class="kw">impl </span>storm::Fields <span class="kw">for </span>#enum_ident {}
+
+        <span class="kw">impl </span>storm::EntityFields <span class="kw">for </span>#ident {
+            <span class="kw">type </span>Fields = #enum_ident;
+        }
     }
 }
 </code></pre></div></section></main></body></html>
