@@ -1,9 +1,9 @@
 use crate::{
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
     Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity, EntityAccessor,
-    Gc, GcCtx, Get, HashTable, Insert, InsertIfChanged, InsertMut, InsertMutIfChanged, Log,
-    LogAccessor, LogState, Logs, LogsVar, NotifyTag, ProviderContainer, Remove, Result, Tag,
-    Transaction, TrxErrGate, Vars, VecTable,
+    EntityValidate, Gc, GcCtx, Get, HashTable, Insert, InsertIfChanged, InsertMut,
+    InsertMutIfChanged, Log, LogAccessor, LogState, Logs, LogsVar, NotifyTag, ProviderContainer,
+    Remove, Result, Tag, Transaction, TrxErrGate, Vars, VecTable,
 };
 use fxhash::FxHashMap;
 use parking_lot::RwLock;
@@ -837,7 +837,7 @@ where
 impl<'a, 'b, E> Insert<E> for TblTransaction<'a, 'b, E>
 where
     for<'c> TransactionProvider<'c>: Upsert<E>,
-    E: Entity + EntityAccessor + LogAccessor,
+    E: Entity + EntityAccessor + EntityValidate + LogAccessor,
     E::Key: Eq + Hash,
     E::Tbl: Get<E>,
 {
@@ -850,8 +850,7 @@ where
         Box::pin(async move {
             let gate = self.ctx.err_gate.open()?;
 
-            E::on_change().__call(self.ctx, &k, &mut v, track).await?;
-
+            validate_on_change(self.ctx, &k, &mut v, track).await?;
             self.ctx.provider.upsert(&k, &v).await?;
 
             // remove first because if the track change the entity, we want to keep only the latest version.
@@ -943,7 +942,7 @@ where
 impl<'a, 'b, E> InsertMut<E> for TblTransaction<'a, 'b, E>
 where
     for<'c> TransactionProvider<'c>: UpsertMut<E>,
-    E: Entity + EntityAccessor + LogAccessor,
+    E: Entity + EntityAccessor + EntityValidate + LogAccessor,
     E::Key: Clone + Eq + Hash,
     E::Tbl: Get<E>,
 {
@@ -956,8 +955,7 @@ where
         Box::pin(async move {
             let gate = self.ctx.err_gate.open()?;
 
-            E::on_change().__call(self.ctx, &k, &mut v, track).await?;
-
+            validate_on_change(self.ctx, &k, &mut v, track).await?;
             self.ctx.provider.upsert_mut(&mut k, &mut v).await?;
 
             // remove first because if the track change the entity, we want to keep only the latest version.
@@ -1209,3 +1207,26 @@ fn register_apply_log_dyn(app: Box<dyn LogApplier>) {
 }
 
 static LOG_APPLIERS: RwLock<Vec<Box<dyn LogApplier>>> = RwLock::new(Vec::new());
+
+async fn validate_on_change<'a, E>(
+    trx: &mut CtxTransaction<'a>,
+    key: &E::Key,
+    entity: &mut E,
+    track: &E::TrackCtx,
+) -> Result<()>
+where
+    E: EntityAccessor + EntityValidate,
+{
+    let mut error = None;
+
+    if let Err(e) = E::on_change().call(trx, key, entity, track).await {
+        error = Some(e);
+    }
+
+    EntityValidate::entity_validate(&*entity, &mut error);
+
+    match error {
+        Some(e) => Err(e),
+        None => Ok(()),
+    }
+}

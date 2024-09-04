@@ -1,4 +1,8 @@
-use std::fmt::{self, Debug, Display};
+use crate::Fields;
+use std::{
+    fmt::{self, Debug, Display},
+    mem::{replace, swap},
+};
 
 pub enum Error {
     AlreadyInTransaction,
@@ -7,7 +11,13 @@ pub enum Error {
     ColumnNull,
     ConvertFailed(String),
     EntityNotFound,
+    FieldTooLong {
+        len: usize,
+        max: usize,
+        field: Box<dyn Fields>,
+    },
     Internal,
+    Multiple(Vec<Error>),
     NotInTransaction,
     ProviderNotFound,
     TransactionError,
@@ -40,6 +50,33 @@ impl Error {
         match self {
             Self::Std(v) => v.downcast_ref(),
             _ => None,
+        }
+    }
+
+    pub fn extend_one(&mut self, other: Error) {
+        match (self, other) {
+            (Self::Multiple(a), Self::Multiple(mut b)) => {
+                // optimize to extend the biggest which should
+                // minimize the allocation here.
+                if a.len() < b.len() {
+                    swap(a, &mut b);
+                }
+
+                a.extend(b);
+            }
+            (Self::Multiple(a), b) => a.push(b),
+            (a, Self::Multiple(mut b)) => {
+                b.push(replace(a, Self::ColumnNull));
+                *a = Self::Multiple(b)
+            }
+            (a, b) => *a = Self::Multiple(vec![replace(a, Self::ColumnNull), b]),
+        }
+    }
+
+    pub(crate) fn extend_one_opt(this: &mut Option<Self>, other: Self) {
+        match this {
+            Some(e) => e.extend_one(other),
+            None => *this = Some(other),
         }
     }
 
@@ -79,8 +116,15 @@ impl Display for Error {
             Self::AsyncCellLock(e) => Display::fmt(e, f),
             Self::ClientInError => f.write_str("Client in error state."),
             Self::ColumnNull => f.write_str("Column is null."),
-            Self::ConvertFailed(s) => f.write_str(&format!("Convert failed: `{s}`")),
+            Self::ConvertFailed(s) => write!(f, "Convert failed: `{s}`"),
             Self::EntityNotFound => f.write_str("Entity not found."),
+            Self::FieldTooLong { len, max, field } => {
+                write!(f, "{field} field too long, len: {len}, max {max}")
+            }
+            Self::Multiple(vec) => match &vec[..] {
+                [e] => Display::fmt(&e, f),
+                _ => f.write_str("Multiple errors"),
+            },
             Self::TransactionError => f.write_str("Transaction error."),
             Self::Internal => f.write_str("Internal."),
             Self::NotInTransaction => f.write_str("Not in transaction."),

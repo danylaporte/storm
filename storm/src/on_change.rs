@@ -37,8 +37,7 @@ type ArcChangeHandler<E> = Arc<dyn ChangeHandler<E> + Send + Sync>;
 pub struct OnChange<E>(parking_lot::Mutex<Arc<Box<[ArcChangeHandler<E>]>>>);
 
 impl<E: Entity> OnChange<E> {
-    #[doc(hidden)]
-    pub fn __call<'b>(
+    pub(crate) fn call<'b>(
         &'b self,
         trx: &'b mut CtxTransaction<'_>,
         key: &'b E::Key,
