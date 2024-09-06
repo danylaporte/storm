@@ -5,7 +5,7 @@ pub trait Len {
     fn len(&self) -> usize;
 
     fn is_empty(&self) -> bool {
-        self.len() == 0   
+        self.len() == 0
     }
 }
 
@@ -58,15 +58,25 @@ impl<T: Len> Len for Option<T> {
 
 impl Len for str {
     #[inline]
+    fn is_empty(&self) -> bool {
+        str::is_empty(self)
+    }
+
+    #[inline]
     fn len(&self) -> usize {
-        str::len(self)
+        self.chars().count()
     }
 }
 
 impl Len for String {
     #[inline]
+    fn is_empty(&self) -> bool {
+        str::is_empty(self)
+    }
+
+    #[inline]
     fn len(&self) -> usize {
-        str::len(self)
+        self.chars().count()
     }
 }
 
@@ -80,8 +90,13 @@ impl<T> Len for Vec<T> {
 #[cfg(feature = "str_utils")]
 impl<F> Len for str_utils::form_str::FormStr<F> {
     #[inline]
+    fn is_empty(&self) -> bool {
+        str::is_empty(self)
+    }
+
+    #[inline]
     fn len(&self) -> usize {
-        str::len(self)
+        self.chars().count()
     }
 }
 
