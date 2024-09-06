@@ -285,6 +285,16 @@ impl<'a> CtxTransaction<'a> {
         &self.provider
     }
 
+    pub async fn get_entity<'b, E>(&'b mut self, k: &E::Key) -> Result<Option<&'b E>>
+    where
+        E: EntityAccessor + LogAccessor,
+        E::Key: Eq + Hash,
+        E::Tbl: Get<E>,
+        Ctx: AsRefAsync<E::Tbl>,
+    {
+        self.tbl_of::<E>().await.map(|t| t.get_owned(k))
+    }
+
     pub fn insert<'b, E>(
         &'b mut self,
         k: E::Key,
@@ -610,11 +620,24 @@ where
     ///
     /// You can take the TblTransaction by ownership and have a longer
     /// lifetime for the & by using the [Self::into_ref] method.
-    pub fn get(&self, k: &E::Key) -> Option<&E>
+    pub fn get<'c>(&'c self, k: &E::Key) -> Option<&'c E>
     where
         Self: Get<E>,
     {
         Get::get(self, k)
+    }
+
+    /// Gets a reference by consuming the tbl transaction. This provide a longer reference.
+    pub fn get_owned(self, k: &E::Key) -> Option<&'b E>
+    where
+        E: LogAccessor,
+        E::Tbl: Get<E>,
+    {
+        match self.ctx.log_ctx.get(E::log_var()).and_then(|l| l.get(k)) {
+            Some(LogState::Inserted(v)) => Some(v),
+            Some(LogState::Removed) => None,
+            None => self.tbl.get(k),
+        }
     }
 
     pub fn insert<'c>(
