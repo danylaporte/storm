@@ -10,10 +10,13 @@ use std::{
         Arc,
     },
     task::{Context, Poll},
+    time::Duration,
 };
 use storm::{provider, BoxFuture, Error, Result};
 use tiberius::Row;
 use tokio::sync::{Mutex, MutexGuard};
+
+pub const DEFAULT_LOCK_TIMEOUT: Duration = Duration::from_secs(15);
 
 pub struct MssqlProvider(Arc<Inner>);
 
@@ -48,6 +51,47 @@ impl MssqlProvider {
             .transaction
             .is_some()
             .then_some(MssqlTransactionGuard(guard))
+    }
+
+    async fn query_rows_imp<'a, 'b, M, R, C>(
+        &'a self,
+        sql: &'b str,
+        params: &'b [&'b (dyn ToSql)],
+        mut mapper: M,
+        use_transaction: bool,
+    ) -> Result<C>
+    where
+        C: Default + Extend<R> + Send,
+        M: FnMut(Row) -> Result<R> + Send + 'a,
+        R: Send,
+        'a: 'b,
+    {
+        let mut conn = QueryConn::new(self, use_transaction).await?;
+        let mut query = conn.query(sql, params).await?;
+        let mut vec = Vec::with_capacity(10);
+        let mut coll = C::default();
+
+        while let Some(row) = query.try_next().await? {
+            vec.push(mapper(row)?);
+
+            if vec.len() == 10 {
+                #[allow(clippy::iter_with_drain)]
+                coll.extend(vec.drain(..));
+            }
+        }
+
+        if !vec.is_empty() {
+            coll.extend(vec);
+        }
+
+        query.complete().await?;
+        conn.complete();
+
+        Ok(coll)
+    }
+
+    pub async fn set_client_lock_timeout(&self, timeout: Option<Duration>) -> Result<()> {
+        self.0.state.lock().await.set_lock_timeout(timeout).await
     }
 }
 
@@ -134,28 +178,19 @@ impl QueryRows for MssqlProvider {
         let sql = statement.into();
 
         Box::pin(async move {
-            let mut conn = QueryConn::new(self, use_transaction).await?;
-            let mut query = conn.query(sql, params).await?;
-            let mut vec = Vec::with_capacity(10);
-            let mut coll = C::default();
+            let mut count = 0;
 
-            while let Some(row) = query.try_next().await? {
-                vec.push(mapper(row)?);
+            loop {
+                let r = self
+                    .query_rows_imp(&sql, params, &mut mapper, use_transaction)
+                    .await;
 
-                if vec.len() == 10 {
-                    #[allow(clippy::iter_with_drain)]
-                    coll.extend(vec.drain(..));
+                if r.is_ok() || count > 5 {
+                    return r;
                 }
+
+                count += 1;
             }
-
-            if !vec.is_empty() {
-                coll.extend(vec);
-            }
-
-            query.complete().await?;
-            conn.complete();
-
-            Ok(coll)
         })
     }
 }
@@ -189,11 +224,14 @@ impl<'a> QueryConn<'a> {
         }
     }
 
-    async fn query<'b>(
+    async fn query<'b, 'c>(
         &'b mut self,
-        sql: Cow<'b, str>,
-        params: &'b [&'b (dyn ToSql)],
-    ) -> Result<QueryStream<'b>> {
+        sql: &'c str,
+        params: &'c [&'c (dyn ToSql)],
+    ) -> Result<QueryStream<'b>>
+    where
+        'b: 'c,
+    {
         let mut intermediate = Vec::new();
         let mut output = Vec::new();
 
@@ -233,6 +271,7 @@ impl<'a> Stream for QueryStream<'a> {
 struct State {
     client: Option<Client>,
     factory: Box<dyn ClientFactory>,
+    lock_timeout: Option<Duration>,
     transaction: Option<Client>,
 }
 
@@ -241,6 +280,7 @@ impl State {
         Self {
             client: None,
             factory,
+            lock_timeout: Some(DEFAULT_LOCK_TIMEOUT),
             transaction: None,
         }
     }
@@ -291,7 +331,29 @@ impl State {
     }
 
     async fn create_client(&self) -> Result<Client> {
-        self.factory.create_client().await
+        let mut client = self.factory.create_client().await?;
+
+        set_client_lock_timeout(&mut client, self.lock_timeout).await?;
+
+        Ok(client)
+    }
+
+    async fn set_lock_timeout(&mut self, timeout: Option<Duration>) -> Result<()> {
+        if self.lock_timeout != timeout {
+            let mut client = self.client.take();
+
+            if let Some(client) = client.as_mut() {
+                set_client_lock_timeout(client, timeout).await?;
+            }
+
+            if let Some(client) = self.transaction.as_mut() {
+                set_client_lock_timeout(client, timeout).await?;
+            }
+
+            self.client = client;
+        }
+
+        Ok(())
     }
 
     async fn transaction(&mut self) -> Result<Client> {
@@ -316,6 +378,17 @@ impl State {
             }
         }
     }
+}
+
+async fn set_client_lock_timeout(client: &mut Client, timeout: Option<Duration>) -> Result<()> {
+    client
+        .simple_query(format!(
+            "SET LOCK_TIMEOUT {};",
+            timeout.map_or(-1, |d| d.as_millis() as i128)
+        ))
+        .await?;
+
+    Ok(())
 }
 
 fn adapt_params<'a>(
