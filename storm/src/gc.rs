@@ -166,6 +166,13 @@ where
 }
 
 #[cfg(feature = "str_utils")]
+impl Gc for str_utils::str_ci::StringCi {
+    const SUPPORT_GC: bool = false;
+
+    fn gc(&mut self, _: &GcCtx) {}
+}
+
+#[cfg(feature = "str_utils")]
 impl<F> Gc for str_utils::form_str::FormStr<F> {
     const SUPPORT_GC: bool = false;
 

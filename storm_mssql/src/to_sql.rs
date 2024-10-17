@@ -153,7 +153,7 @@ impl ToSqlNull for dec19x5::Decimal {
 #[cfg(feature = "str_utils")]
 impl<F: Send + Sync> ToSql for str_utils::form_str::FormStr<F> {
     fn to_sql(&self) -> ColumnData {
-        ColumnData::String(Some(Cow::Borrowed(&*self)))
+        ColumnData::String(Some(Cow::Borrowed(self)))
     }
 }
 
