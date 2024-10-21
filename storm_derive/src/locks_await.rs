@@ -72,7 +72,6 @@ pub(crate) fn locks_await(input: &DeriveInput) -> TokenStream {
     let declare = quote!(#(#declare)*);
     let as_refs = quote!(#(#as_refs)*);
     let init_fields = quote!(#(#init_fields)*);
-    let tags = quote!(storm::version_tag::combine(&[#(#tags,)*]));
 
     quote! {
         impl<'a> storm::AsyncTryFrom<'a, &'a storm::Ctx> for #type_ident<'a> {
@@ -101,7 +100,9 @@ pub(crate) fn locks_await(input: &DeriveInput) -> TokenStream {
 
         impl<'a> storm::Tag for #type_ident<'a> {
             fn tag(&self) -> storm::VersionTag {
-                #tags
+                let mut out = storm::VersionTag::zero();
+                #(out = std::cmp::max(out, #tags);)*
+                out
             }
         }
 
