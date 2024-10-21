@@ -1253,6 +1253,8 @@
 <a href="#1253" id="1253">1253</a>
 <a href="#1254" id="1254">1254</a>
 <a href="#1255" id="1255">1255</a>
+<a href="#1256" id="1256">1256</a>
+<a href="#1257" id="1257">1257</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
     Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity, EntityAccessor,
@@ -1356,7 +1358,8 @@
         }
     }
 
-    <span class="kw">pub fn </span>vars(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Vars {
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>vars(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Vars {
         <span class="kw-2">&amp;</span><span class="self">self</span>.vars
     }
 }
@@ -1450,7 +1453,8 @@
 <span class="kw">where
     </span>L: Tag,
 {
-    <span class="kw">fn </span>tag(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VersionTag {
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>tag(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VersionTag {
         <span class="self">self</span>.locks.tag()
     }
 }
