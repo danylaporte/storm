@@ -44,7 +44,7 @@ mod vec_table;
 
 pub use accessor::*;
 pub use apply_log::ApplyLog;
-pub use as_ref_async::{async_ref_block5, AsRefAsync};
+pub use as_ref_async::AsRefAsync;
 pub use as_ref_opt::{AsRefOpt, FromRefOpt};
 pub use async_cell_lock::{self, AsyncOnceCell, QueueRwLock};
 pub use async_try_from::AsyncTryFrom;

@@ -101,6 +101,7 @@ impl Ctx {
         }
     }
 
+    #[inline]
     pub fn vars(&self) -> &Vars {
         &self.vars
     }
@@ -195,6 +196,7 @@ impl<'a, L> Tag for CtxLocks<'a, L>
 where
     L: Tag,
 {
+    #[inline]
     fn tag(&self) -> VersionTag {
         self.locks.tag()
     }
