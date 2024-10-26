@@ -1,5 +1,5 @@
 use crate::Gc;
-use std::{cmp::Ordering, hash::Hash, ops::Index};
+use std::{cmp::Ordering, collections::HashMap, hash::Hash, ops::Index};
 use vec_map::{Entry, VecMap};
 
 pub struct OneToMany<ONE, MANY>(VecMap<ONE, Box<[MANY]>>);
@@ -47,6 +47,64 @@ where
     #[inline]
     fn index(&self, index: &ONE) -> &Self::Output {
         self.get(index)
+    }
+}
+
+impl<ONE, MANY, S> From<HashMap<ONE, Box<[MANY]>, S>> for OneToMany<ONE, MANY>
+where
+    ONE: Copy,
+    usize: From<ONE>,
+{
+    fn from(m: HashMap<ONE, Box<[MANY]>, S>) -> Self {
+        let mut vec = VecMap::with_capacity(m.len());
+
+        for (k, v) in m {
+            vec.insert(k, v);
+        }
+
+        Self(vec)
+    }
+}
+
+impl<ONE, MANY, S> From<HashMap<ONE, Vec<MANY>, S>> for OneToMany<ONE, MANY>
+where
+    ONE: Copy,
+    usize: From<ONE>,
+{
+    fn from(m: HashMap<ONE, Vec<MANY>, S>) -> Self {
+        let mut vec = VecMap::with_capacity(m.len());
+
+        for (k, v) in m {
+            vec.insert(k, v.into_boxed_slice());
+        }
+
+        Self(vec)
+    }
+}
+
+impl<ONE, MANY> From<VecMap<ONE, Box<[MANY]>>> for OneToMany<ONE, MANY>
+where
+    ONE: Copy,
+    usize: From<ONE>,
+{
+    fn from(m: VecMap<ONE, Box<[MANY]>>) -> Self {
+        Self(m)
+    }
+}
+
+impl<ONE, MANY> From<VecMap<ONE, Vec<MANY>>> for OneToMany<ONE, MANY>
+where
+    ONE: Copy,
+    usize: From<ONE>,
+{
+    fn from(m: VecMap<ONE, Vec<MANY>>) -> Self {
+        let mut vec = VecMap::with_capacity(m.len());
+
+        for (k, v) in m {
+            vec.insert(k, v.into_boxed_slice());
+        }
+
+        Self(vec)
     }
 }
 
