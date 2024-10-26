@@ -2,7 +2,7 @@ use crate::{Entity, EntityAccessor, Get, LogAccessor, LogState, TblTransaction};
 use fxhash::FxHashMap;
 use std::hash::Hash;
 
-impl<'a, 'b, 'c, E> IntoIterator for &'c TblTransaction<'a, 'b, E>
+impl<'c, E> IntoIterator for &'c TblTransaction<'_, '_, E>
 where
     E: EntityAccessor + LogAccessor,
     E::Key: Eq + Hash,

@@ -39,7 +39,7 @@ impl FilterSql for (&str, &[&'_ dyn ToSql]) {
 
 pub struct KeysFilter<'a, K>(pub &'a str, pub &'a [K]);
 
-impl<'a, K> FilterSql for KeysFilter<'a, K>
+impl<K> FilterSql for KeysFilter<'_, K>
 where
     K: ToSql,
 {

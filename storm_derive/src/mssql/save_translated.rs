@@ -30,7 +30,7 @@ impl<'a> SaveTranslated<'a> {
     }
 }
 
-impl<'a> ToTokens for SaveTranslated<'a> {
+impl ToTokens for SaveTranslated<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut errors = Vec::new();
 

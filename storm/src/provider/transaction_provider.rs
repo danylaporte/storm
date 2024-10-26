@@ -31,7 +31,7 @@ impl<'a> TransactionProvider<'a> {
     }
 }
 
-impl<'a> Deref for TransactionProvider<'a> {
+impl Deref for TransactionProvider<'_> {
     type Target = ProviderContainer;
 
     fn deref(&self) -> &Self::Target {
@@ -39,7 +39,7 @@ impl<'a> Deref for TransactionProvider<'a> {
     }
 }
 
-impl<'a> Drop for TransactionProvider<'a> {
+impl Drop for TransactionProvider<'_> {
     fn drop(&mut self) {
         for provider in self.0.providers() {
             provider.cancel();

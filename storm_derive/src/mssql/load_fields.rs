@@ -50,7 +50,7 @@ impl<'a> LoadFields<'a> {
     }
 }
 
-impl<'a> ToTokens for LoadFields<'a> {
+impl ToTokens for LoadFields<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut errors = Vec::new();
         let mut select = self.select.clone();

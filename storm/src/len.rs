@@ -36,7 +36,7 @@ where
     }
 }
 
-impl<'a, T> Len for Cow<'a, T>
+impl<T> Len for Cow<'_, T>
 where
     T: Len + ToOwned + ?Sized,
 {

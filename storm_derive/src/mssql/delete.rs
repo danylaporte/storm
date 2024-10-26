@@ -22,7 +22,7 @@ impl<'a, S> Delete<'a, S> {
     }
 }
 
-impl<'a, S> ToTokens for Delete<'a, S>
+impl<S> ToTokens for Delete<'_, S>
 where
     S: AttrsSelector,
 {

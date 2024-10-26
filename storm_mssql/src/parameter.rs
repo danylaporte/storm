@@ -43,13 +43,13 @@ impl Parameter<'static> {
     }
 }
 
-impl<'a> ToSql for Parameter<'a> {
+impl ToSql for Parameter<'_> {
     fn to_sql(&self) -> ColumnData<'_> {
         tiberius::ToSql::to_sql(self)
     }
 }
 
-impl<'a> tiberius::ToSql for Parameter<'a> {
+impl tiberius::ToSql for Parameter<'_> {
     fn to_sql(&self) -> ColumnData<'_> {
         fn copy<T: Copy>(o: &Option<T>) -> Option<T> {
             o.as_ref().copied()

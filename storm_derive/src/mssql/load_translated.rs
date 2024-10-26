@@ -49,7 +49,7 @@ impl<'a> LoadTranslated<'a> {
     }
 }
 
-impl<'a> ToTokens for LoadTranslated<'a> {
+impl ToTokens for LoadTranslated<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut errors = Vec::new();
 

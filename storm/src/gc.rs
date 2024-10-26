@@ -65,7 +65,7 @@ impl<E> Gc for cache::CacheIsland<E> {
     }
 }
 
-impl<'a, T> Gc for Cow<'a, T>
+impl<T> Gc for Cow<'_, T>
 where
     T: Clone + Gc,
 {

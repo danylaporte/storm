@@ -252,7 +252,7 @@ impl<'a> QueryStream<'a> {
     }
 }
 
-impl<'a> Stream for QueryStream<'a> {
+impl Stream for QueryStream<'_> {
     type Item = Result<tiberius::Row>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -402,7 +402,7 @@ fn adapt_params<'a>(
 
 pub struct MssqlTransactionGuard<'a>(MutexGuard<'a, State>);
 
-impl<'a> Deref for MssqlTransactionGuard<'a> {
+impl Deref for MssqlTransactionGuard<'_> {
     type Target = Client;
 
     #[allow(clippy::expect_used)]
@@ -411,7 +411,7 @@ impl<'a> Deref for MssqlTransactionGuard<'a> {
     }
 }
 
-impl<'a> DerefMut for MssqlTransactionGuard<'a> {
+impl DerefMut for MssqlTransactionGuard<'_> {
     #[allow(clippy::expect_used)]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.0.transaction.as_mut().expect("Transaction")

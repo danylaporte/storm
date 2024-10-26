@@ -174,7 +174,7 @@ pub struct CtxLocks<'a, L> {
     pub locks: L,
 }
 
-impl<'a, L> CtxLocks<'a, L> {
+impl<L> CtxLocks<'_, L> {
     #[inline]
     pub fn ref_as<T>(&self) -> &T
     where
@@ -192,7 +192,7 @@ impl<'a, L> CtxLocks<'a, L> {
     }
 }
 
-impl<'a, L> Tag for CtxLocks<'a, L>
+impl<L> Tag for CtxLocks<'_, L>
 where
     L: Tag,
 {
@@ -216,7 +216,7 @@ where
     }
 }
 
-impl<'a, E: Entity, L> AsRef<HashTable<E>> for CtxLocks<'a, L>
+impl<E: Entity, L> AsRef<HashTable<E>> for CtxLocks<'_, L>
 where
     L: AsRef<HashTable<E>>,
 {
@@ -226,7 +226,7 @@ where
     }
 }
 
-impl<'a, E: Entity, L> AsRef<VecTable<E>> for CtxLocks<'a, L>
+impl<E: Entity, L> AsRef<VecTable<E>> for CtxLocks<'_, L>
 where
     L: AsRef<VecTable<E>>,
 {
@@ -236,7 +236,7 @@ where
     }
 }
 
-impl<'a, E, F, C, L> LoadAll<E, F, C> for CtxLocks<'a, L>
+impl<E, F, C, L> LoadAll<E, F, C> for CtxLocks<'_, L>
 where
     E: Entity,
     C: Default + Extend<(E::Key, E)> + Send,
@@ -250,7 +250,7 @@ where
     }
 }
 
-impl<'a, E, L> LoadOne<E> for CtxLocks<'a, L>
+impl<E, L> LoadOne<E> for CtxLocks<'_, L>
 where
     E: Entity,
     L: Send + Sync,
@@ -599,7 +599,7 @@ where
     }
 }
 
-impl<'a, T> AsRefAsync<T> for CtxTransaction<'a>
+impl<T> AsRefAsync<T> for CtxTransaction<'_>
 where
     Ctx: AsRefAsync<T>,
 {
@@ -844,7 +844,7 @@ where
     }
 }
 
-impl<'a, 'b, E> Get<E> for TblTransaction<'a, 'b, E>
+impl<E> Get<E> for TblTransaction<'_, '_, E>
 where
     E: Entity + EntityAccessor + LogAccessor,
     E::Key: Eq + Hash,
@@ -859,7 +859,7 @@ where
     }
 }
 
-impl<'a, 'b, E> Insert<E> for TblTransaction<'a, 'b, E>
+impl<E> Insert<E> for TblTransaction<'_, '_, E>
 where
     for<'c> TransactionProvider<'c>: Upsert<E>,
     E: Entity + EntityAccessor + EntityValidate + LogAccessor,
@@ -920,7 +920,7 @@ where
     }
 }
 
-impl<'a, 'b, E> InsertIfChanged<E> for TblTransaction<'a, 'b, E>
+impl<E> InsertIfChanged<E> for TblTransaction<'_, '_, E>
 where
     E: Entity + EntityAccessor + PartialEq,
     Self: Get<E> + Insert<E>,
@@ -964,7 +964,7 @@ where
     }
 }
 
-impl<'a, 'b, E> InsertMut<E> for TblTransaction<'a, 'b, E>
+impl<E> InsertMut<E> for TblTransaction<'_, '_, E>
 where
     for<'c> TransactionProvider<'c>: UpsertMut<E>,
     E: Entity + EntityAccessor + EntityValidate + LogAccessor,
@@ -1025,7 +1025,7 @@ where
     }
 }
 
-impl<'a, 'b, E> InsertMutIfChanged<E> for TblTransaction<'a, 'b, E>
+impl<E> InsertMutIfChanged<E> for TblTransaction<'_, '_, E>
 where
     E: Entity + EntityAccessor + PartialEq,
     Self: Get<E> + InsertMut<E>,
@@ -1069,7 +1069,7 @@ where
     }
 }
 
-impl<'a, 'b, E> Remove<E> for TblTransaction<'a, 'b, E>
+impl<E> Remove<E> for TblTransaction<'_, '_, E>
 where
     for<'c> TransactionProvider<'c>: Delete<E>,
     E: Entity + EntityAccessor + LogAccessor,
@@ -1130,7 +1130,7 @@ where
     }
 }
 
-impl<'a> ApplyLog<Logs> for async_cell_lock::QueueRwLockWriteGuard<'a, Ctx> {
+impl ApplyLog<Logs> for async_cell_lock::QueueRwLockWriteGuard<'_, Ctx> {
     fn apply_log(&mut self, mut log: Logs) -> bool {
         let appliers = LOG_APPLIERS.read();
         let mut changed = false;
@@ -1143,7 +1143,7 @@ impl<'a> ApplyLog<Logs> for async_cell_lock::QueueRwLockWriteGuard<'a, Ctx> {
     }
 }
 
-impl<'a> Transaction for async_cell_lock::QueueRwLockQueueGuard<'a, Ctx> {
+impl Transaction for async_cell_lock::QueueRwLockQueueGuard<'_, Ctx> {
     fn transaction(&self) -> CtxTransaction<'_> {
         CtxTransaction {
             ctx: self,

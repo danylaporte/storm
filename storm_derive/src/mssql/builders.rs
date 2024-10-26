@@ -54,7 +54,7 @@ pub(super) struct JoinConditions<'a> {
     is_first: bool,
 }
 
-impl<'a> JoinConditions<'a> {
+impl JoinConditions<'_> {
     pub fn add(
         &mut self,
         (alias_left, left): (Option<&str>, &str),

@@ -55,7 +55,7 @@ from_sql!(u8, u8);
 from_sql!(&'a [u8], &'a [u8]);
 
 #[cfg(feature = "dec19x5")]
-impl<'a> FromSql<'a> for dec19x5::Decimal {
+impl FromSql<'_> for dec19x5::Decimal {
     type Column = dec19x5::Decimal;
 
     fn from_sql(col: Option<Self::Column>) -> Result<Self> {
@@ -147,7 +147,7 @@ impl<'a> FromSql<'a> for Box<str> {
     }
 }
 
-impl<'a, 'b> FromSql<'a> for Cow<'b, [u8]> {
+impl<'a> FromSql<'a> for Cow<'_, [u8]> {
     type Column = &'a [u8];
 
     fn from_sql(col: Option<Self::Column>) -> Result<Self> {
@@ -158,7 +158,7 @@ impl<'a, 'b> FromSql<'a> for Cow<'b, [u8]> {
     }
 }
 
-impl<'a, 'b> FromSql<'a> for Cow<'b, str> {
+impl<'a> FromSql<'a> for Cow<'_, str> {
     type Column = &'a str;
 
     fn from_sql(col: Option<Self::Column>) -> Result<Self> {
