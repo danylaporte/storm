@@ -127,7 +127,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, S&gt; ToTokens <span class="kw">for </span>Delete&lt;<span class="lifetime">'a</span>, S&gt;
+<span class="kw">impl</span>&lt;S&gt; ToTokens <span class="kw">for </span>Delete&lt;<span class="lifetime">'_</span>, S&gt;
 <span class="kw">where
     </span>S: AttrsSelector,
 {

@@ -70,7 +70,7 @@
 <span class="kw">use </span>fxhash::FxHashMap;
 <span class="kw">use </span>std::hash::Hash;
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, <span class="lifetime">'c</span>, E&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'c </span>TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'c</span>, E&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'c </span>TblTransaction&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, E&gt;
 <span class="kw">where
     </span>E: EntityAccessor + LogAccessor,
     E::Key: Eq + Hash,

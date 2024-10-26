@@ -1431,7 +1431,7 @@
     <span class="kw">pub </span>locks: L,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, L&gt; CtxLocks&lt;<span class="lifetime">'a</span>, L&gt; {
+<span class="kw">impl</span>&lt;L&gt; CtxLocks&lt;<span class="lifetime">'_</span>, L&gt; {
     <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>ref_as&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>T
     <span class="kw">where
@@ -1449,7 +1449,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, L&gt; Tag <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">'a</span>, L&gt;
+<span class="kw">impl</span>&lt;L&gt; Tag <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">'_</span>, L&gt;
 <span class="kw">where
     </span>L: Tag,
 {
@@ -1473,7 +1473,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, E: Entity, L&gt; AsRef&lt;HashTable&lt;E&gt;&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">'a</span>, L&gt;
+<span class="kw">impl</span>&lt;E: Entity, L&gt; AsRef&lt;HashTable&lt;E&gt;&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">'_</span>, L&gt;
 <span class="kw">where
     </span>L: AsRef&lt;HashTable&lt;E&gt;&gt;,
 {
@@ -1483,7 +1483,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, E: Entity, L&gt; AsRef&lt;VecTable&lt;E&gt;&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">'a</span>, L&gt;
+<span class="kw">impl</span>&lt;E: Entity, L&gt; AsRef&lt;VecTable&lt;E&gt;&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">'_</span>, L&gt;
 <span class="kw">where
     </span>L: AsRef&lt;VecTable&lt;E&gt;&gt;,
 {
@@ -1493,7 +1493,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, E, F, C, L&gt; LoadAll&lt;E, F, C&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">'a</span>, L&gt;
+<span class="kw">impl</span>&lt;E, F, C, L&gt; LoadAll&lt;E, F, C&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">'_</span>, L&gt;
 <span class="kw">where
     </span>E: Entity,
     C: Default + Extend&lt;(E::Key, E)&gt; + Send,
@@ -1507,7 +1507,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, E, L&gt; LoadOne&lt;E&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">'a</span>, L&gt;
+<span class="kw">impl</span>&lt;E, L&gt; LoadOne&lt;E&gt; <span class="kw">for </span>CtxLocks&lt;<span class="lifetime">'_</span>, L&gt;
 <span class="kw">where
     </span>E: Entity,
     L: Send + Sync,
@@ -1856,7 +1856,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; AsRefAsync&lt;T&gt; <span class="kw">for </span>CtxTransaction&lt;<span class="lifetime">'a</span>&gt;
+<span class="kw">impl</span>&lt;T&gt; AsRefAsync&lt;T&gt; <span class="kw">for </span>CtxTransaction&lt;<span class="lifetime">'_</span>&gt;
 <span class="kw">where
     </span>Ctx: AsRefAsync&lt;T&gt;,
 {
@@ -2101,7 +2101,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt; Get&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;
+<span class="kw">impl</span>&lt;E&gt; Get&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, E&gt;
 <span class="kw">where
     </span>E: Entity + EntityAccessor + LogAccessor,
     E::Key: Eq + Hash,
@@ -2116,7 +2116,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt; Insert&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;
+<span class="kw">impl</span>&lt;E&gt; Insert&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, E&gt;
 <span class="kw">where
     for</span>&lt;<span class="lifetime">'c</span>&gt; TransactionProvider&lt;<span class="lifetime">'c</span>&gt;: Upsert&lt;E&gt;,
     E: Entity + EntityAccessor + EntityValidate + LogAccessor,
@@ -2177,7 +2177,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt; InsertIfChanged&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;
+<span class="kw">impl</span>&lt;E&gt; InsertIfChanged&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, E&gt;
 <span class="kw">where
     </span>E: Entity + EntityAccessor + PartialEq,
     <span class="self">Self</span>: Get&lt;E&gt; + Insert&lt;E&gt;,
@@ -2221,7 +2221,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt; InsertMut&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;
+<span class="kw">impl</span>&lt;E&gt; InsertMut&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, E&gt;
 <span class="kw">where
     for</span>&lt;<span class="lifetime">'c</span>&gt; TransactionProvider&lt;<span class="lifetime">'c</span>&gt;: UpsertMut&lt;E&gt;,
     E: Entity + EntityAccessor + EntityValidate + LogAccessor,
@@ -2282,7 +2282,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt; InsertMutIfChanged&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;
+<span class="kw">impl</span>&lt;E&gt; InsertMutIfChanged&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, E&gt;
 <span class="kw">where
     </span>E: Entity + EntityAccessor + PartialEq,
     <span class="self">Self</span>: Get&lt;E&gt; + InsertMut&lt;E&gt;,
@@ -2326,7 +2326,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt; Remove&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;
+<span class="kw">impl</span>&lt;E&gt; Remove&lt;E&gt; <span class="kw">for </span>TblTransaction&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, E&gt;
 <span class="kw">where
     for</span>&lt;<span class="lifetime">'c</span>&gt; TransactionProvider&lt;<span class="lifetime">'c</span>&gt;: Delete&lt;E&gt;,
     E: Entity + EntityAccessor + LogAccessor,
@@ -2387,7 +2387,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ApplyLog&lt;Logs&gt; <span class="kw">for </span>async_cell_lock::QueueRwLockWriteGuard&lt;<span class="lifetime">'a</span>, Ctx&gt; {
+<span class="kw">impl </span>ApplyLog&lt;Logs&gt; <span class="kw">for </span>async_cell_lock::QueueRwLockWriteGuard&lt;<span class="lifetime">'_</span>, Ctx&gt; {
     <span class="kw">fn </span>apply_log(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>log: Logs) -&gt; bool {
         <span class="kw">let </span>appliers = LOG_APPLIERS.read();
         <span class="kw">let </span><span class="kw-2">mut </span>changed = <span class="bool-val">false</span>;
@@ -2400,7 +2400,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Transaction <span class="kw">for </span>async_cell_lock::QueueRwLockQueueGuard&lt;<span class="lifetime">'a</span>, Ctx&gt; {
+<span class="kw">impl </span>Transaction <span class="kw">for </span>async_cell_lock::QueueRwLockQueueGuard&lt;<span class="lifetime">'_</span>, Ctx&gt; {
     <span class="kw">fn </span>transaction(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; CtxTransaction&lt;<span class="lifetime">'_</span>&gt; {
         CtxTransaction {
             ctx: <span class="self">self</span>,

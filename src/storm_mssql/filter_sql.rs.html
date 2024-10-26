@@ -100,7 +100,7 @@
 
 <span class="kw">pub struct </span>KeysFilter&lt;<span class="lifetime">'a</span>, K&gt;(<span class="kw">pub </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span>str, <span class="kw">pub </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span>[K]);
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, K&gt; FilterSql <span class="kw">for </span>KeysFilter&lt;<span class="lifetime">'a</span>, K&gt;
+<span class="kw">impl</span>&lt;K&gt; FilterSql <span class="kw">for </span>KeysFilter&lt;<span class="lifetime">'_</span>, K&gt;
 <span class="kw">where
     </span>K: ToSql,
 {
