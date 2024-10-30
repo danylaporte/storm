@@ -168,7 +168,10 @@ impl<'a> UpsertBuilder<'a> {
                 let insert = self.insert_sql();
 
                 if update.is_empty() {
-                    insert
+                    format!(
+                        "IF NOT EXISTS(SELECT 1 FROM {} WHERE {}) {insert};",
+                        self.table, self.update_wheres
+                    )
                 } else {
                     format!(
                         "
