@@ -232,6 +232,9 @@
 <a href="#232" id="232">232</a>
 <a href="#233" id="233">233</a>
 <a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{Error, Execute, FromSql, Parameter, QueryRows, <span class="prelude-ty">Result</span>, ToSql};
 <span class="kw">use </span>storm::IsDefined;
 <span class="kw">use </span>tiberius::ColumnData;
@@ -402,7 +405,10 @@
                 <span class="kw">let </span>insert = <span class="self">self</span>.insert_sql();
 
                 <span class="kw">if </span>update.is_empty() {
-                    insert
+                    <span class="macro">format!</span>(
+                        <span class="string">"IF NOT EXISTS(SELECT 1 FROM {} WHERE {}) {insert};"</span>,
+                        <span class="self">self</span>.table, <span class="self">self</span>.update_wheres
+                    )
                 } <span class="kw">else </span>{
                     <span class="macro">format!</span>(
                         <span class="string">"
