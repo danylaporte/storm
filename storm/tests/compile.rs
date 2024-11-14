@@ -81,7 +81,7 @@ struct Locks<'a> {
 
 macro_rules! entity {
     ($n:ident) => {
-        #[derive(Ctx, Default, NoopDelete, NoopLoad, NoopSave)]
+        #[derive(Ctx, Default, NoopDelete, NoopLoad, NoopSave, PartialEq)]
         struct $n {
             #[allow(dead_code)]
             pub name: String,

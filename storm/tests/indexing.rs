@@ -1,4 +1,4 @@
-use storm::{prelude::*, NoopLoad, Result};
+use storm::{prelude::*, BoxFuture, EntityAsset, HashOneMany, NoopLoad, Result, Trx};
 
 fn create_ctx() -> QueueRwLock<Ctx> {
     QueueRwLock::new(Default::default())
@@ -15,7 +15,7 @@ async fn create_async() -> Result<()> {
     .await
 }
 
-#[derive(Ctx, Default, NoopLoad)]
+#[derive(Ctx, Default, NoopLoad, PartialEq)]
 struct User {
     #[allow(dead_code)]
     pub name: String,
@@ -39,4 +39,26 @@ fn next_id2(_tbl: &Users, next_id: &NextId) -> usize {
 #[indexing]
 fn index_with_ctx(_ctx: &Ctx, tbl: &Users) -> usize {
     tbl.len()
+}
+
+#[storm_derive::index]
+async fn index_id_by_name(ctx: &Ctx) -> Result<HashOneMany<String, usize, Self>> {
+    User::changed().register(&user_changed);
+
+    let user = ctx.tbl_of::<User>().await?;
+
+    Ok(user.iter().map(|(id, u)| (u.name.clone(), *id)).collect())
+}
+
+fn user_changed(
+    trx: &mut Trx<'_>,
+    id: &usize,
+    user: &User,
+    track: &(),
+) -> BoxFuture<'static, Result<()>> {
+    Box::pin(async move {
+        if let Some(index) = trx.asset_opt::<IndexIdByName>() {
+            index.insert(user.name.clone(), *id);
+        }
+    })
 }

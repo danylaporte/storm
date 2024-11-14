@@ -84,7 +84,7 @@ async fn identity_translate_key() -> storm::Result<()> {
     .await
 }
 
-#[derive(Clone, Ctx, Debug, MssqlLoad, MssqlSave)]
+#[derive(Clone, Ctx, Debug, MssqlLoad, MssqlSave, PartialEq)]
 #[storm(
     table = "##Labels",
     keys = "Id",
@@ -103,7 +103,7 @@ impl Entity for Label {
     type TrackCtx = ();
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default, Debug, PartialEq)]
 struct Translated {
     en: String,
     fr: String,

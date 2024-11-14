@@ -1,36 +1,57 @@
 use crate::{
-    on_changed::Changed, provider::LoadAll, Accessor, ApplyLog, BoxFuture, CtxTypeInfo, Deps,
-    Entity, EntityAccessor, EntityOf, Gc, GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag,
-    Result, Tag, TblVar,
+    provider::{Delete, LoadAll, LoadArgs, TransactionProvider, Upsert, UpsertMut},
+    validate_on_change, Asset, AssetProxy, BoxFuture, CtxTypeInfo, CtxVars, Entity, EntityAsset,
+    EntityValidate, Get, GetMut, GetOwned, Insert, InsertMut, LogVars, NotifyTag,
+    ProviderContainer, Remove, Result, Tag, Trx,
 };
+use attached::Var;
 use fxhash::FxHashMap;
 use rayon::{
     collections::hash_map::Iter as ParIter,
     iter::{IntoParallelIterator, IntoParallelRefIterator},
 };
 use std::{
-    collections::hash_map::{Entry, Iter, Keys, Values},
+    borrow::{Borrow, Cow},
+    collections::hash_map::{self, Entry, Iter, Keys, Values},
+    future::Future,
     hash::Hash,
-    ops::Deref,
 };
 use version_tag::VersionTag;
 
-pub struct HashTable<E: Entity> {
+type Log<E> = FxHashMap<<E as Entity>::Key, Option<E>>;
+
+pub struct HashTable<E: EntityAsset> {
     map: FxHashMap<E::Key, E>,
     tag: VersionTag,
 }
 
-impl<E: Entity> HashTable<E> {
+impl<E> HashTable<E>
+where
+    E: CtxTypeInfo + EntityAsset<Tbl = Self>,
+    E::Key: Eq + Hash,
+{
+    #[inline]
     pub fn new() -> Self {
-        Self {
-            map: FxHashMap::default(),
-            tag: VersionTag::new(),
-        }
+        Self::default()
     }
 
     #[inline]
-    pub fn iter(&self) -> Iter<E::Key, E> {
-        self.map.iter()
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
+
+    #[inline]
+    pub fn get<'a, Q>(&'a self, key: &Q) -> Option<&'a E>
+    where
+        E::Key: Borrow<Q>,
+        Q: Eq + Hash,
+    {
+        self.map.get(key)
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.map.len()
     }
 
     #[inline]
@@ -38,10 +59,12 @@ impl<E: Entity> HashTable<E> {
         self.map.keys()
     }
 
-    fn update_metrics(&self)
-    where
-        E: CtxTypeInfo,
-    {
+    #[inline]
+    pub fn iter(&self) -> Iter<E::Key, E> {
+        self.map.iter()
+    }
+
+    fn update_metrics(&self) {
         #[cfg(feature = "telemetry")]
         crate::telemetry::update_storm_table_rows(self.len(), E::NAME);
     }
@@ -52,97 +75,112 @@ impl<E: Entity> HashTable<E> {
     }
 }
 
-impl<E> Accessor for HashTable<E>
+impl<E> Asset for HashTable<E>
 where
-    E: Entity + EntityAccessor<Tbl = HashTable<E>>,
-{
-    #[inline]
-    fn var() -> TblVar<Self> {
-        E::entity_var()
-    }
-
-    #[inline]
-    fn deps() -> &'static Deps {
-        E::entity_deps()
-    }
-}
-
-impl<E> ApplyLog<Log<E>> for HashTable<E>
-where
-    E: CtxTypeInfo + Entity + EntityAccessor<Tbl = Self>,
+    E: CtxTypeInfo + EntityAsset<Tbl = Self> + PartialEq + 'static,
     E::Key: Eq + Hash,
+    ProviderContainer: LoadAll<E, (), Self>,
 {
-    fn apply_log(&mut self, log: Log<E>) -> bool {
-        if log.is_empty() {
-            return false;
-        }
+    type Log = FxHashMap<E::Key, Option<E>>;
+    type Trx<'a: 'b, 'b> = HashTableTrx<'a, 'b, E>;
 
-        for (k, state) in log {
-            match state {
-                LogState::Inserted(new) => {
-                    match self.map.entry(k) {
-                        Entry::Occupied(mut o) => {
-                            let entity = Changed::Inserted {
-                                old: Some(o.get()),
-                                new: &new,
-                            };
-                            E::on_changed().__call(o.key(), entity);
-                            o.insert(new);
-                        }
-                        Entry::Vacant(v) => {
-                            let entity = Changed::Inserted {
-                                old: None,
-                                new: &new,
-                            };
-                            E::on_changed().__call(v.key(), entity);
-                            v.insert(new);
-                        }
-                    };
-                }
-                LogState::Removed => {
-                    if let Some(old) = self.map.remove(&k) {
-                        E::on_changed().__call(&k, Changed::Removed { old: &old });
+    fn apply_log(&mut self, log: Self::Log) -> bool {
+        let mut changed = false;
+
+        for (key, o) in log {
+            match o {
+                Some(v) => match self.map.entry(key) {
+                    Entry::Occupied(mut e) => {
+                        changed |= *e.get() != v;
+                        e.insert(v);
                     }
-                }
+                    Entry::Vacant(e) => {
+                        changed = true;
+                        e.insert(v);
+                    }
+                },
+                None => changed = self.map.remove(&key).is_some() || changed,
             }
         }
 
-        self.update_metrics();
-        self.tag.notify();
-        true
-    }
-}
+        if changed {
+            self.update_metrics();
+            self.tag.notify();
+        }
 
-impl<E: Entity> AsRef<Self> for HashTable<E> {
+        changed
+    }
+
     #[inline]
-    fn as_ref(&self) -> &Self {
-        self
+    fn ctx_var() -> Var<Self, CtxVars> {
+        E::ctx_var()
+    }
+
+    fn gc(&mut self) {
+        self.map.values_mut().for_each(|e| e.gc());
+    }
+
+    fn init(ctx: &crate::Ctx) -> impl Future<Output = Result<Self>> {
+        ctx.provider.load_all_with_args(&(), LoadArgs::default())
+    }
+
+    #[inline]
+    fn log_var() -> Var<Self::Log, LogVars> {
+        E::log_var()
+    }
+
+    async fn trx<'a: 'b, 'b>(trx: &'b mut Trx<'a>) -> Result<Self::Trx<'a, 'b>> {
+        Ok(HashTableTrx {
+            tbl: trx.ctx.asset::<E::Tbl>().await?,
+            trx,
+        })
+    }
+
+    fn trx_opt<'a: 'b, 'b>(trx: &'b mut Trx<'a>) -> Option<Self::Trx<'a, 'b>> {
+        Some(HashTableTrx {
+            tbl: trx.ctx.asset_opt::<E::Tbl>()?,
+            trx,
+        })
     }
 }
 
-impl<E: Entity> Default for HashTable<E> {
+impl<E> AssetProxy for HashTable<E>
+where
+    E: EntityAsset<Tbl = HashTable<E>>,
+    E::Key: Eq + Hash,
+    Self: Asset,
+{
+    type Asset = Self;
+
+    #[inline]
+    fn ctx_var() -> Var<Self::Asset, CtxVars> {
+        E::ctx_var()
+    }
+
+    #[inline]
+    fn log_var() -> Var<<Self::Asset as Asset>::Log, LogVars> {
+        E::log_var()
+    }
+
+    #[inline]
+    fn init(ctx: &crate::Ctx) -> impl Future<Output = Result<Self::Asset>> + Send {
+        <Self as Asset>::init(ctx)
+    }
+}
+
+impl<E: EntityAsset<Tbl = Self>> Default for HashTable<E> {
     #[inline]
     fn default() -> Self {
-        Self::new()
+        Self {
+            map: FxHashMap::default(),
+            tag: VersionTag::new(),
+        }
     }
-}
-
-impl<E: Entity> Deref for HashTable<E> {
-    type Target = FxHashMap<E::Key, E>;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.map
-    }
-}
-
-impl<E: Entity> EntityOf for HashTable<E> {
-    type Entity = E;
 }
 
 impl<E> Extend<(E::Key, E)> for HashTable<E>
 where
-    E: CtxTypeInfo + Entity,
+    E: CtxTypeInfo + EntityAsset<Tbl = Self>,
     E::Key: Eq + Hash,
 {
     fn extend<T>(&mut self, iter: T)
@@ -157,31 +195,21 @@ where
     }
 }
 
-impl<E> Gc for HashTable<E>
+impl<E, Q> Get<E, Q> for HashTable<E>
 where
-    E: CtxTypeInfo + Entity + Gc,
-    E::Key: Eq + Hash,
+    E: EntityAsset<Tbl = Self>,
+    E::Key: Borrow<Q> + Eq + Hash,
+    Q: Eq + Hash,
 {
-    const SUPPORT_GC: bool = E::SUPPORT_GC;
-
     #[inline]
-    fn gc(&mut self, ctx: &GcCtx) {
-        self.map.gc(ctx);
+    fn get_entity<'a>(&'a self, q: &Q) -> Option<&'a E> {
+        self.map.get(q)
     }
 }
 
-impl<E: Entity> Get<E> for HashTable<E>
+impl<E> GetMut<E> for HashTable<E>
 where
-    E::Key: Eq + Hash,
-{
-    #[inline]
-    fn get(&self, k: &E::Key) -> Option<&E> {
-        self.map.get(k)
-    }
-}
-
-impl<E: Entity> GetMut<E> for HashTable<E>
-where
+    E: EntityAsset<Tbl = Self>,
     E::Key: Eq + Hash,
 {
     #[inline]
@@ -190,19 +218,7 @@ where
     }
 }
 
-impl<'a, P, E> Init<'a, P> for HashTable<E>
-where
-    E: CtxTypeInfo + Entity + Send,
-    E::Key: Eq + Hash + Send,
-    P: Sync + LoadAll<E, (), Self>,
-{
-    #[inline]
-    fn init(provider: &'a P) -> BoxFuture<'a, Result<Self>> {
-        provider.load_all(&())
-    }
-}
-
-impl<'a, E: Entity> IntoIterator for &'a HashTable<E> {
+impl<'a, E: EntityAsset<Tbl = Self>> IntoIterator for &'a HashTable<E> {
     type Item = (&'a E::Key, &'a E);
     type IntoIter = Iter<'a, E::Key, E>;
 
@@ -214,7 +230,7 @@ impl<'a, E: Entity> IntoIterator for &'a HashTable<E> {
 
 impl<'a, E> IntoParallelIterator for &'a HashTable<E>
 where
-    E: Entity,
+    E: EntityAsset<Tbl = Self>,
     E::Key: Eq + Hash,
 {
     type Item = (&'a E::Key, &'a E);
@@ -225,14 +241,314 @@ where
     }
 }
 
-impl<E: Entity> NotifyTag for HashTable<E> {
+impl<E: EntityAsset<Tbl = Self>> NotifyTag for HashTable<E> {
     fn notify_tag(&mut self) {
         self.tag.notify()
     }
 }
 
-impl<E: Entity> Tag for HashTable<E> {
+impl<E: EntityAsset<Tbl = Self>> Tag for HashTable<E> {
     fn tag(&self) -> VersionTag {
         self.tag
+    }
+}
+
+pub struct HashTableTrx<'a, 'b, E: EntityAsset<Tbl = HashTable<E>>> {
+    tbl: &'b HashTable<E>,
+    trx: &'b mut Trx<'a>,
+}
+
+impl<'a, 'b, E> HashTableTrx<'a, 'b, E>
+where
+    E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
+    E::Key: Eq + Hash,
+    HashTable<E>: Asset<Log = Log<E>>,
+{
+    #[inline]
+    pub fn get<Q>(&self, q: &Q) -> Option<&E>
+    where
+        E::Key: Borrow<Q>,
+        Q: Eq + Hash,
+    {
+        match self
+            .trx
+            .log
+            .get::<HashTable<E>>()
+            .and_then(|log| log.get(q))
+        {
+            Some(o) => o.as_ref(),
+            None => self.tbl.get(q),
+        }
+    }
+
+    pub fn get_owned<Q>(self, q: &Q) -> Option<&'b E>
+    where
+        E::Key: Borrow<Q>,
+        Q: Eq + Hash,
+    {
+        match self
+            .trx
+            .log
+            .get::<HashTable<E>>()
+            .and_then(|log| log.get(q))
+        {
+            Some(o) => o.as_ref(),
+            None => self.tbl.get(q),
+        }
+    }
+
+    pub async fn insert(&mut self, id: E::Key, mut entity: E, track: &E::TrackCtx) -> Result<()>
+    where
+        E: EntityValidate,
+        TransactionProvider<'a>: Upsert<E>,
+    {
+        let gate = self.trx.err_gate.open()?;
+
+        // if there is changes
+        if self.get(&id).map_or(true, |old| *old != entity) {
+            // raise change event & validate
+            validate_on_change(self.trx, &id, &mut entity, track).await?;
+
+            // if the change event revert incoming changes, do nothing.
+            if self.get(&id).map_or(true, |current| *current != entity) {
+                self.trx.provider.upsert(&id, &entity).await?;
+
+                let old = self.tbl.get(&id);
+                entity.track_insert(&id, old, self.trx, track).await?;
+
+                E::changed().call(self.trx, &id, &entity, track).await?;
+                self.log_mut().insert(id, Some(entity));
+            }
+        }
+
+        gate.close();
+
+        Ok(())
+    }
+
+    pub async fn insert_mut(
+        &mut self,
+        mut id: E::Key,
+        mut entity: E,
+        track: &E::TrackCtx,
+    ) -> Result<E::Key>
+    where
+        E: EntityValidate,
+        E::Key: Clone,
+        TransactionProvider<'a>: UpsertMut<E>,
+    {
+        let gate = self.trx.err_gate.open()?;
+
+        // if there is changes
+        if self.get(&id).map_or(true, |old| *old != entity) {
+            // raise change event & validate
+            validate_on_change(self.trx, &id, &mut entity, track).await?;
+
+            // if the change event revert incoming changes, do nothing.
+            if self.get(&id).map_or(true, |current| *current != entity) {
+                self.trx.provider.upsert_mut(&mut id, &mut entity).await?;
+
+                let old = self.tbl.get(&id);
+                entity.track_insert(&id, old, self.trx, track).await?;
+
+                E::changed().call(self.trx, &id, &entity, track).await?;
+                self.log_mut().insert(id.clone(), Some(entity));
+            }
+        }
+
+        gate.close();
+
+        Ok(id)
+    }
+
+    pub fn iter(&self) -> HashTableTrxIter<'_, E> {
+        let map = self.trx.log.get::<E::Tbl>().expect("trx");
+
+        HashTableTrxIter {
+            ctx_iter: self.tbl.iter(),
+            map,
+            trx_iter: map.iter(),
+        }
+    }
+
+    fn log_mut(&mut self) -> &mut FxHashMap<E::Key, Option<E>> {
+        self.trx.log.get_or_init_mut::<HashTable<E>>()
+    }
+
+    pub async fn remove(&mut self, id: E::Key, track: &E::TrackCtx) -> Result<()>
+    where
+        TransactionProvider<'a>: Delete<E>,
+    {
+        let gate = self.trx.err_gate.open()?;
+
+        if self.get(&id).is_some() {
+            E::remove().call(self.trx, &id, track).await?;
+
+            self.trx.provider.delete(&id).await?;
+
+            if let Some(old) = self.tbl.get(&id) {
+                old.track_remove(&id, self.trx, track).await?;
+            }
+
+            E::removed().call(self.trx, &id, track).await?;
+            self.log_mut().insert(id, None);
+        }
+
+        gate.close();
+
+        Ok(())
+    }
+
+    #[inline]
+    pub async fn remove_filter<F>(&mut self, filter: F, track: &E::TrackCtx) -> Result<()>
+    where
+        E::Key: Clone,
+        F: FnMut(&E::Key, &E) -> bool,
+        Self: Remove<E>,
+    {
+        Remove::remove_filter(self, filter, track).await
+    }
+
+    #[inline]
+    pub async fn update_with<F>(&mut self, updater: F, track: &E::TrackCtx) -> Result<()>
+    where
+        E: PartialEq + ToOwned<Owned = E>,
+        E::Key: Clone,
+        F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>),
+        Self: Insert<E>,
+    {
+        Insert::update_with(self, updater, track).await
+    }
+
+    #[inline]
+    pub async fn update_mut_with<F>(&mut self, updater: F, track: &E::TrackCtx) -> Result<()>
+    where
+        E: PartialEq + ToOwned<Owned = E>,
+        E::Key: Clone,
+        F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>),
+        Self: InsertMut<E>,
+    {
+        InsertMut::update_mut_with(self, updater, track).await
+    }
+}
+
+impl<'a, 'b, E, Q> Get<E, Q> for HashTableTrx<'a, 'b, E>
+where
+    E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
+    E::Key: Borrow<Q> + Eq + Hash,
+    HashTable<E>: Asset<Log = Log<E>>,
+    Q: Eq + Hash,
+{
+    #[inline]
+    fn get_entity<'c>(&'c self, q: &Q) -> Option<&'c E> {
+        self.get(q)
+    }
+}
+
+impl<'a, 'b, Q, E> GetOwned<'b, E, Q> for HashTableTrx<'a, 'b, E>
+where
+    E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
+    E::Key: Borrow<Q> + Eq + Hash,
+    HashTable<E>: Asset<Log = Log<E>>,
+    Q: Eq + Hash,
+{
+    #[inline]
+    fn get_owned(self, q: &Q) -> Option<&'b E> {
+        self.get_owned(q)
+    }
+}
+
+impl<'a, 'b, E> Insert<E> for HashTableTrx<'a, 'b, E>
+where
+    E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + EntityValidate + PartialEq,
+    E::Key: Eq + Hash,
+    HashTable<E>: Asset<Log = Log<E>>,
+    for<'c> TransactionProvider<'c>: Upsert<E>,
+{
+    fn insert<'c>(
+        &'c mut self,
+        id: E::Key,
+        entity: E,
+        track: &'c E::TrackCtx,
+    ) -> BoxFuture<'c, Result<()>> {
+        Box::pin(self.insert(id, entity, track))
+    }
+}
+
+impl<'a, 'b, E> InsertMut<E> for HashTableTrx<'a, 'b, E>
+where
+    E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + EntityValidate + PartialEq,
+    E::Key: Clone + Eq + Hash,
+    HashTable<E>: Asset<Log = Log<E>>,
+    for<'c> TransactionProvider<'c>: UpsertMut<E>,
+{
+    fn insert_mut<'c>(
+        &'c mut self,
+        id: E::Key,
+        entity: E,
+        track: &'c E::TrackCtx,
+    ) -> BoxFuture<'c, Result<E::Key>> {
+        Box::pin(self.insert_mut(id, entity, track))
+    }
+}
+
+impl<'a, 'b, 'c, E> IntoIterator for &'c HashTableTrx<'a, 'b, E>
+where
+    E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
+    E::Key: Eq + Hash,
+    HashTable<E>: Asset<Log = Log<E>>,
+{
+    type Item = (&'c E::Key, &'c E);
+    type IntoIter = HashTableTrxIter<'c, E>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a, 'b, E> Remove<E> for HashTableTrx<'a, 'b, E>
+where
+    E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
+    E::Key: Eq + Hash,
+    HashTable<E>: Asset<Log = Log<E>>,
+    for<'c> TransactionProvider<'c>: Delete<E>,
+{
+    fn remove<'c>(
+        &'c mut self,
+        id: <E as Entity>::Key,
+        track: &'c <E as Entity>::TrackCtx,
+    ) -> BoxFuture<'c, Result<()>> {
+        Box::pin(self.remove(id, track))
+    }
+}
+
+pub struct HashTableTrxIter<'a, E: Entity> {
+    ctx_iter: hash_map::Iter<'a, E::Key, E>,
+    map: &'a FxHashMap<E::Key, Option<E>>,
+    trx_iter: hash_map::Iter<'a, E::Key, Option<E>>,
+}
+
+impl<'a, E> Iterator for HashTableTrxIter<'a, E>
+where
+    E: Entity,
+    E::Key: Eq + Hash,
+{
+    type Item = (&'a E::Key, &'a E);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        for (k, v) in self.trx_iter.by_ref() {
+            if let Some(v) = v.as_ref() {
+                return Some((k, v));
+            }
+        }
+
+        for (k, v) in self.ctx_iter.by_ref() {
+            if !self.map.contains_key(k) {
+                return Some((k, v));
+            }
+        }
+
+        None
     }
 }

@@ -10,6 +10,7 @@ mod derive_input_ext;
 #[cfg(feature = "mssql")]
 mod errors;
 mod field_ext;
+mod index;
 mod indexing;
 mod locks_await;
 #[cfg(feature = "mssql")]
@@ -38,6 +39,12 @@ use type_ext::TypeExt;
 pub fn ctx(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     ctx::generate(&input).into()
+}
+
+#[proc_macro_attribute]
+pub fn index(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(item as Item);
+    index::index(item).into()
 }
 
 #[proc_macro_attribute]

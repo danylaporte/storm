@@ -24,65 +24,54 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let table_alias = Ident::new(&table_name, entity.span());
 
     let coll_ty = args.collection.ty(entity);
-    let (gc, gc_collect) = gc(input)?;
+    let gc = gc(input)?;
 
     Ok(quote! {
         #vis type #table_alias = #coll_ty;
 
-        impl storm::EntityAccessor for #entity {
+        impl storm::EntityAsset for #entity {
             type Tbl = #table_alias;
 
             #[allow(non_camel_case_types)]
             #[inline]
-            fn entity_var() -> storm::TblVar<Self::Tbl> {
-                storm::attached::var!(T: #table_alias, storm::vars::Tbl);
+            fn ctx_var() -> storm::attached::Var<Self::Tbl, storm::CtxVars> {
+                storm::attached::var!(VAR: #table_alias, storm::CtxVars);
+                *VAR
+            }
 
-                // Garbage collection static registering
-                #[static_init::dynamic]
-                static G: () = {
-                    #gc_collect
-                };
-
-                *T
+            #[allow(non_camel_case_types)]
+            #[inline]
+            fn log_var() -> storm::attached::Var<<Self::Tbl as storm::Asset>::Log, storm::LogVars> {
+                storm::attached::var!(VAR: <#table_alias as storm::Asset>::Log, storm::LogVars);
+                *VAR
             }
 
             #[inline]
-            fn entity_deps() -> &'static storm::Deps {
-                static DEPS: storm::Deps = storm::parking_lot::RwLock::new(Vec::new());
-                &DEPS
+            fn change() -> &'static storm::ChangeEvent<Self> {
+                #[static_init::dynamic]
+                static EVENT: storm::ChangeEvent<#entity> = Default::default();
+                &EVENT
             }
 
             #[inline]
-            fn on_change() -> &'static storm::OnChange<Self> {
+            fn changed() -> &'static storm::ChangedEvent<Self> {
                 #[static_init::dynamic]
-                static E: storm::OnChange<#entity> = Default::default();
-                &E
+                static EVENT: storm::ChangedEvent<#entity> = Default::default();
+                &EVENT
             }
 
             #[inline]
-            fn on_changed() -> &'static storm::OnChanged<Self> {
+            fn remove() -> &'static storm::RemoveEvent<<Self as storm::Entity>::Key, <Self as storm::Entity>::TrackCtx> {
                 #[static_init::dynamic]
-                static E: storm::OnChanged<#entity> = Default::default();
-                &E
+                static EVENT: storm::RemoveEvent<<#entity as storm::Entity>::Key, <#entity as storm::Entity>::TrackCtx> = Default::default();
+                &EVENT
             }
 
             #[inline]
-            fn on_remove() -> &'static storm::OnRemove<Self> {
+            fn removed() -> &'static storm::RemoveEvent<<Self as storm::Entity>::Key, <Self as storm::Entity>::TrackCtx> {
                 #[static_init::dynamic]
-                static E: storm::OnRemove<#entity> = Default::default();
-                &E
-            }
-        }
-
-        impl storm::LogAccessor for #entity {
-            #[inline]
-            fn log_var() -> storm::LogVar<storm::Log<Self>> {
-                storm::attached::var!(L: storm::Log<#entity>, storm::vars::Log);
-
-                #[static_init::dynamic]
-                static R: () = storm::register_apply_log::<#entity>();
-
-                *L
+                static EVENT: storm::RemoveEvent<<#entity as storm::Entity>::Key, <#entity as storm::Entity>::TrackCtx> = Default::default();
+                &EVENT
             }
         }
 
@@ -94,29 +83,22 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     })
 }
 
-fn gc(input: &DeriveInput) -> Result<(TokenStream, TokenStream), TokenStream> {
+fn gc(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let fields = input.fields()?;
     let ident = &input.ident;
     let types = fields.iter().map(|f| &f.ty);
     let fields = fields.iter().map(|f| &f.ident);
 
-    Ok((
-        quote! {
-            impl storm::Gc for #ident {
-                const SUPPORT_GC: bool = #(<#types as storm::Gc>::SUPPORT_GC ||)* false;
+    Ok(quote! {
+        impl storm::Gc for #ident {
+            const SUPPORT_GC: bool = #(<#types as storm::Gc>::SUPPORT_GC ||)* false;
 
-                #[allow(unused_variables)]
-                fn gc(&mut self, ctx: &storm::GcCtx) {
-                    #(storm::Gc::gc(&mut self.#fields, ctx);)*
-                }
+            #[allow(unused_variables)]
+            fn gc(&mut self) {
+                #(storm::Gc::gc(&mut self.#fields);)*
             }
-        },
-        quote! {
-            if <#ident as storm::Gc>::SUPPORT_GC {
-                storm::gc::collectables::register(|ctx| ctx.tbl_gc::<#ident>());
-            }
-        },
-    ))
+        }
+    })
 }
 
 #[derive(Clone, Copy, Debug, Eq, FromMeta, PartialEq)]

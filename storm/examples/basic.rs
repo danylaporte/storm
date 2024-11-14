@@ -34,7 +34,7 @@ async fn main() -> Result<()> {
     .await
 }
 
-#[derive(NoopDelete, NoopLoad, NoopSave, Ctx)]
+#[derive(Ctx, NoopDelete, NoopLoad, NoopSave, PartialEq)]
 struct Topic {
     #[allow(dead_code)]
     pub title: String,
@@ -46,7 +46,7 @@ impl Entity for Topic {
     type TrackCtx = ();
 }
 
-#[derive(NoopDelete, NoopLoad, NoopSave, Ctx)]
+#[derive(Ctx, NoopDelete, NoopLoad, NoopSave, PartialEq)]
 struct User {
     #[allow(dead_code)]
     pub name: String,

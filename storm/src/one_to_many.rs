@@ -24,8 +24,8 @@ where
 {
     const SUPPORT_GC: bool = MANY::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &crate::GcCtx) {
-        self.0.iter_mut().for_each(|(_, item)| item.gc(ctx));
+    fn gc(&mut self) {
+        self.0.iter_mut().for_each(|(_, item)| item.gc());
     }
 }
 

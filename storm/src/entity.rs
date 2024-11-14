@@ -1,4 +1,7 @@
-use crate::{BoxFuture, CtxTransaction, Result};
+use crate::{
+    Asset, BoxFuture, ChangeEvent, ChangedEvent, CtxVars, Gc, LogVars, RemoveEvent, Result, Trx,
+};
+use attached::Var;
 use std::fmt::Debug;
 
 pub trait Entity: Send + Sync + 'static {
@@ -9,7 +12,7 @@ pub trait Entity: Send + Sync + 'static {
         &'a self,
         _key: &'a Self::Key,
         _old: Option<&'a Self>,
-        _ctx: &'a mut CtxTransaction,
+        _trx: &'a mut Trx,
         _track: &'a Self::TrackCtx,
     ) -> BoxFuture<'a, Result<()>> {
         box_future_ok()
@@ -18,7 +21,7 @@ pub trait Entity: Send + Sync + 'static {
     fn track_remove<'a>(
         &'a self,
         _key: &'a Self::Key,
-        _ctx: &'a mut CtxTransaction,
+        _trx: &'a mut Trx,
         _track: &'a Self::TrackCtx,
     ) -> BoxFuture<'a, Result<()>> {
         box_future_ok()
@@ -44,4 +47,16 @@ where
 
 fn box_future_ok() -> BoxFuture<'static, Result<()>> {
     Box::pin(std::future::ready(Ok(())))
+}
+
+pub trait EntityAsset: Entity + Gc + 'static {
+    type Tbl: Asset;
+
+    fn ctx_var() -> Var<Self::Tbl, CtxVars>;
+    fn log_var() -> Var<<Self::Tbl as Asset>::Log, LogVars>;
+
+    fn change() -> &'static ChangeEvent<Self>;
+    fn changed() -> &'static ChangedEvent<Self>;
+    fn remove() -> &'static RemoveEvent<Self::Key, Self::TrackCtx>;
+    fn removed() -> &'static RemoveEvent<Self::Key, Self::TrackCtx>;
 }

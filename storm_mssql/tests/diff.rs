@@ -22,7 +22,7 @@ fn provider() -> ProviderContainer {
     provider
 }
 
-#[derive(Ctx, MssqlLoad, MssqlSave)]
+#[derive(Ctx, MssqlLoad, MssqlSave, PartialEq)]
 #[storm(
     table = "##Tbl",
     keys = "id",
@@ -42,7 +42,7 @@ impl Entity for Entity1 {
         &'a self,
         _key: &'a Self::Key,
         old: Option<&'a Self>,
-        _ctx: &'a mut storm::CtxTransaction,
+        _trx: &'a mut storm::Trx,
         _track: &'a Self::TrackCtx,
     ) -> storm::BoxFuture<'a, Result<()>> {
         println!("current: {}, old: {:?}", self.v, old.map(|e| e.v));

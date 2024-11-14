@@ -1,30 +1,52 @@
-use crate::Ctx;
+use crate::{Asset, Assets};
+use parking_lot::Mutex;
 use std::{
     borrow::Cow,
     collections::{HashMap, HashSet},
     hash::{BuildHasher, Hash},
     ops::DerefMut,
+    ptr::addr_eq,
     rc::Rc,
     sync::Arc,
 };
 use vec_map::VecMap;
 
 #[derive(Default)]
-pub struct GcCtx;
+pub(crate) struct AssetGc(Mutex<Vec<&'static (dyn Fn(&mut Assets) + Sync)>>);
 
-impl Ctx {
-    pub fn gc(&mut self) {
-        #[cfg(feature = "telemetry")]
-        crate::telemetry::inc_storm_gc();
+impl AssetGc {
+    /// Collect all garbage in assets.
+    pub(crate) fn collect(&mut self, assets: &mut Assets) {
+        for f in self.0.get_mut() {
+            f(assets);
+        }
+    }
 
-        self.provider.gc();
-        collectables::collect(self);
+    /// Register a garbage collection for this asset.
+    pub(crate) fn register<A: Asset>(&self) {
+        if A::SUPPORT_GC {
+            self.register_fn(&gc::<A>);
+        }
+    }
+
+    fn register_fn(&self, f: &'static (dyn Fn(&mut Assets) + Sync)) {
+        let mut guard = self.0.lock();
+
+        if !guard.iter().any(|a| addr_eq(a, f)) {
+            guard.push(f);
+        }
+    }
+}
+
+fn gc<A: Asset>(assets: &mut Assets) {
+    if let Some(asset) = assets.get_mut(A::ctx_var()) {
+        asset.gc();
     }
 }
 
 pub trait Gc {
     const SUPPORT_GC: bool = false;
-    fn gc(&mut self, _ctx: &GcCtx) {}
+    fn gc(&mut self) {}
 }
 
 impl<T> Gc for Arc<T>
@@ -33,9 +55,9 @@ where
 {
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
+    fn gc(&mut self) {
         if let Some(v) = Arc::get_mut(self) {
-            v.gc(ctx);
+            v.gc();
         }
     }
 }
@@ -46,8 +68,8 @@ where
 {
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
-        self.deref_mut().gc(ctx);
+    fn gc(&mut self) {
+        self.deref_mut().gc();
     }
 }
 
@@ -55,7 +77,7 @@ where
 impl<E> Gc for cache::CacheIsland<E> {
     const SUPPORT_GC: bool = true;
 
-    fn gc(&mut self, _: &GcCtx) {
+    fn gc(&mut self) {
         let was_touched = self.untouch();
 
         if !was_touched && self.take().is_some() {
@@ -71,8 +93,8 @@ where
 {
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
-        self.to_mut().gc(ctx);
+    fn gc(&mut self) {
+        self.to_mut().gc();
     }
 }
 
@@ -85,8 +107,8 @@ where
 {
     const SUPPORT_GC: bool = V::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
-        self.iter_mut().for_each(|(_, v)| v.gc(ctx));
+    fn gc(&mut self) {
+        self.iter_mut().for_each(|(_, v)| v.gc());
     }
 }
 
@@ -98,9 +120,9 @@ where
 {
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
+    fn gc(&mut self) {
         if let Some(v) = self.as_mut() {
-            v.gc(ctx);
+            v.gc();
         }
     }
 }
@@ -111,9 +133,9 @@ where
 {
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
+    fn gc(&mut self) {
         if let Some(v) = self.get_mut() {
-            v.gc(ctx);
+            v.gc();
         }
     }
 }
@@ -124,9 +146,9 @@ where
 {
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
+    fn gc(&mut self) {
         if let Some(v) = Rc::get_mut(self) {
-            v.gc(ctx);
+            v.gc();
         }
     }
 }
@@ -137,8 +159,8 @@ where
 {
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
-        self.iter_mut().for_each(|v| v.gc(ctx));
+    fn gc(&mut self) {
+        self.iter_mut().for_each(|v| v.gc());
     }
 }
 
@@ -149,8 +171,8 @@ where
 {
     const SUPPORT_GC: bool = V::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
-        self.iter_mut().for_each(|(_, v)| v.gc(ctx));
+    fn gc(&mut self) {
+        self.iter_mut().for_each(|(_, v)| v.gc());
     }
 }
 
@@ -160,8 +182,8 @@ where
 {
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
-        self.iter_mut().for_each(|v| v.gc(ctx));
+    fn gc(&mut self) {
+        self.iter_mut().for_each(|v| v.gc());
     }
 }
 
@@ -169,14 +191,14 @@ where
 impl Gc for str_utils::str_ci::StringCi {
     const SUPPORT_GC: bool = false;
 
-    fn gc(&mut self, _: &GcCtx) {}
+    fn gc(&mut self) {}
 }
 
 #[cfg(feature = "str_utils")]
 impl<F> Gc for str_utils::form_str::FormStr<F> {
     const SUPPORT_GC: bool = false;
 
-    fn gc(&mut self, _: &GcCtx) {}
+    fn gc(&mut self) {}
 }
 
 macro_rules! gc {
@@ -185,8 +207,8 @@ macro_rules! gc {
             const SUPPORT_GC: bool = false $(|| $t::SUPPORT_GC)*;
 
             #[allow(unused_variables)]
-            fn gc(&mut self, ctx: &GcCtx) {
-                $(self.$n.gc(ctx);)*
+            fn gc(&mut self) {
+                $(self.$n.gc();)*
             }
         }
     };
