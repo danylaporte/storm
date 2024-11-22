@@ -1,9 +1,8 @@
-use std::borrow::Cow;
-
 use crate::{
-    provider::TransactionProvider, Asset, Ctx, EntityAsset, GetOwned, Insert, InsertMut, Log,
-    Remove, Result, TrxErrGate,
+    log::LogToken, provider::TransactionProvider, Asset, AssetBase, BoxFuture, Ctx, EntityAsset,
+    GetOwned, Insert, InsertMut, Log, Remove, Result, TrxErrGate,
 };
+use std::borrow::Cow;
 
 pub struct Trx<'a> {
     pub ctx: &'a Ctx,
@@ -13,14 +12,25 @@ pub struct Trx<'a> {
 }
 
 impl<'a> Trx<'a> {
-    #[inline]
-    pub async fn asset<'b, A: Asset>(&'b mut self) -> Result<A::Trx<'a, 'b>> {
-        A::trx(self).await
+    pub fn asset<'b, A: Asset>(&'b mut self) -> BoxFuture<'b, Result<A::Trx<'a, 'b>>> {
+        Box::pin(async move {
+            Ok(self
+                .ctx
+                .asset::<A>()
+                .await?
+                .trx(self, LogToken::from_asset::<A>()))
+        })
     }
 
-    #[inline]
-    pub fn asset_opt<'b, A: Asset>(&'b mut self) -> Option<A::Trx<'a, 'b>> {
-        A::trx_opt(self)
+    pub fn asset_opt<'b, A: Asset>(&'b mut self) -> Option<A::Trx<'a, 'b>>
+    where
+        'a: 'b,
+    {
+        Some(
+            self.ctx
+                .asset_opt::<A>()?
+                .trx(self, LogToken::from_asset::<A>()),
+        )
     }
 
     pub async fn commit(self) -> Result<Log> {
@@ -33,25 +43,27 @@ impl<'a> Trx<'a> {
     pub async fn get_entity<'b, E, Q>(&'b mut self, q: &Q) -> Result<Option<&'b E>>
     where
         E: EntityAsset,
-        <E::Tbl as Asset>::Trx<'a, 'b>: GetOwned<'b, E, Q>,
+        <E::Tbl as AssetBase>::Trx<'a, 'b>: GetOwned<'b, E, Q>,
     {
         self.tbl_of::<E>().await.map(|t| t.get_owned(q))
     }
 
-    pub async fn insert<'b, E>(
+    pub fn insert<'b, E>(
         &'b mut self,
         id: E::Key,
         entity: E,
-        track: &E::TrackCtx,
-    ) -> Result<()>
+        track: &'b E::TrackCtx,
+    ) -> BoxFuture<'b, Result<()>>
     where
+        for<'c, 'd> <E::Tbl as AssetBase>::Trx<'c, 'd>: Insert<E>,
         E: EntityAsset + PartialEq,
-        <E::Tbl as Asset>::Trx<'a, 'b>: Insert<E>,
     {
-        self.asset::<E::Tbl>()
-            .await?
-            .insert(id, entity, track)
-            .await
+        Box::pin(async move {
+            self.asset::<E::Tbl>()
+                .await?
+                .insert(id, entity, track)
+                .await
+        })
     }
 
     #[inline]
@@ -63,7 +75,7 @@ impl<'a> Trx<'a> {
     ) -> Result<E::Key>
     where
         E: EntityAsset + PartialEq,
-        <E::Tbl as Asset>::Trx<'a, 'b>: InsertMut<E>,
+        <E::Tbl as AssetBase>::Trx<'a, 'b>: InsertMut<E>,
     {
         self.asset::<E::Tbl>()
             .await?
@@ -80,49 +92,82 @@ impl<'a> Trx<'a> {
     pub async fn remove<'b, E>(&'b mut self, id: E::Key, track: &E::TrackCtx) -> Result<()>
     where
         E: EntityAsset,
-        <E::Tbl as Asset>::Trx<'a, 'b>: Remove<E>,
+        <E::Tbl as AssetBase>::Trx<'a, 'b>: Remove<E>,
     {
         self.asset::<E::Tbl>().await?.remove(id, track).await
     }
 
     #[inline]
-    pub async fn tbl_of<'b, E: EntityAsset>(
+    pub fn remove_filter<'b, E, F>(
         &'b mut self,
-    ) -> Result<<E::Tbl as Asset>::Trx<'a, 'b>> {
-        self.asset::<E::Tbl>().await
+        filter: F,
+        track: &'b E::TrackCtx,
+    ) -> BoxFuture<'b, Result<()>>
+    where
+        for<'c, 'd> <E::Tbl as AssetBase>::Trx<'c, 'd>: Remove<E>,
+        E: EntityAsset,
+        E::Key: Clone,
+        F: FnMut(&E::Key, &E) -> bool + Send + 'b,
+        for<'c, 'd, 'e> &'c <E::Tbl as AssetBase>::Trx<'d, 'e>:
+            IntoIterator<Item = (&'c E::Key, &'c E)>,
+    {
+        Box::pin(async move {
+            self.asset::<E::Tbl>()
+                .await?
+                .remove_filter(filter, track)
+                .await
+        })
     }
 
     #[inline]
-    pub async fn update_with<'b, E, F>(&'b mut self, updater: F, track: &E::TrackCtx) -> Result<()>
+    pub fn tbl_of<'b, E: EntityAsset>(
+        &'b mut self,
+    ) -> BoxFuture<'b, Result<<E::Tbl as AssetBase>::Trx<'a, 'b>>>
     where
-        E: EntityAsset + PartialEq + ToOwned<Owned = E>,
-        E::Key: Clone,
-        F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>),
-        <E::Tbl as Asset>::Trx<'a, 'b>: Insert<E>,
-        for<'c> &'c <E::Tbl as Asset>::Trx<'a, 'b>: IntoIterator<Item = (&'c E::Key, &'c E)>,
+        'a: 'b,
     {
         self.asset::<E::Tbl>()
-            .await?
-            .update_with(updater, track)
-            .await
     }
 
     #[inline]
-    pub async fn update_mut_with<'b, E, F>(
+    pub fn update_with<'b, E, F>(
         &'b mut self,
         updater: F,
-        track: &E::TrackCtx,
-    ) -> Result<()>
+        track: &'b E::TrackCtx,
+    ) -> BoxFuture<'b, Result<()>>
     where
         E: EntityAsset + PartialEq + ToOwned<Owned = E>,
         E::Key: Clone,
-        F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>),
-        <E::Tbl as Asset>::Trx<'a, 'b>: InsertMut<E>,
-        for<'c> &'c <E::Tbl as Asset>::Trx<'a, 'b>: IntoIterator<Item = (&'c E::Key, &'c E)>,
+        F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>) + Send + 'b,
+        for<'c, 'd, 'e> &'c <E::Tbl as AssetBase>::Trx<'d, 'e>:
+            IntoIterator<Item = (&'c E::Key, &'c E)>,
+        for<'c, 'd> <E::Tbl as AssetBase>::Trx<'c, 'd>: Insert<E>,
     {
-        self.asset::<E::Tbl>()
-            .await?
-            .update_mut_with(updater, track)
-            .await
+        Box::pin(async move {
+            let mut asset = self.asset::<E::Tbl>().await?;
+            asset.update_with(updater, track).await
+        })
+    }
+
+    #[inline]
+    pub fn update_mut_with<'b, E, F>(
+        &'b mut self,
+        updater: F,
+        track: &'b E::TrackCtx,
+    ) -> BoxFuture<'b, Result<()>>
+    where
+        E: EntityAsset + PartialEq + ToOwned<Owned = E>,
+        E::Key: Clone,
+        F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>) + Send + 'b,
+        for<'c, 'd, 'e> &'c <E::Tbl as AssetBase>::Trx<'d, 'e>:
+            IntoIterator<Item = (&'c E::Key, &'c E)>,
+        for<'c, 'd> <E::Tbl as AssetBase>::Trx<'c, 'd>: InsertMut<E>,
+    {
+        Box::pin(async move {
+            self.asset::<E::Tbl>()
+                .await?
+                .update_mut_with(updater, track)
+                .await
+        })
     }
 }

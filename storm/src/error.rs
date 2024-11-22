@@ -10,6 +10,7 @@ pub enum Error {
     ClientInError,
     ColumnNull,
     ConvertFailed(String),
+    CycleDepInit(&'static str),
     EntityNotFound,
     FieldTooLong {
         len: usize,
@@ -117,6 +118,7 @@ impl Display for Error {
             Self::ClientInError => f.write_str("Client in error state."),
             Self::ColumnNull => f.write_str("Column is null."),
             Self::ConvertFailed(s) => write!(f, "Convert failed: `{s}`"),
+            Self::CycleDepInit(s) => write!(f, "Cylcle dependency init `{s}`"),
             Self::EntityNotFound => f.write_str("Entity not found."),
             Self::FieldTooLong { len, max, field } => {
                 write!(f, "{field} field too long, len: {len}, max {max}")

@@ -1,13 +1,14 @@
 use crate::{async_cell_lock::QueueRwLockQueueGuard, Asset, Ctx, Result};
-use attached::{container, Container};
+use attached::{container, Container, Var};
 
 container!(pub LogVars);
 
+type ApplyFn = &'static (dyn Fn(&mut Ctx, &mut Logs) -> bool + Sync);
 type Logs = Container<LogVars>;
 
 #[derive(Default)]
 pub struct Log {
-    apply_list: Vec<&'static (dyn Fn(&mut Ctx, &mut Logs) -> bool + Sync)>,
+    apply_list: Vec<ApplyFn>,
     logs: Logs,
 }
 
@@ -29,14 +30,17 @@ impl Log {
         Ok(self.apply(&mut guard))
     }
 
-    pub(crate) fn get<A: Asset>(&self) -> Option<&A::Log> {
-        self.logs.get(A::log_var())
+    pub(crate) fn get<Log>(&self, token: &LogToken<Log>) -> Option<&Log> {
+        self.logs.get(token.var)
     }
 
-    pub(crate) fn get_or_init_mut<A: Asset>(&mut self) -> &mut A::Log {
-        self.logs.get_or_init_mut(A::log_var(), || {
-            self.apply_list.push(&apply::<A>);
-            A::Log::default()
+    pub(crate) fn get_or_init_mut<Log>(&mut self, token: &LogToken<Log>) -> &mut Log
+    where
+        Log: Default,
+    {
+        self.logs.get_or_init_mut(token.var, || {
+            self.apply_list.push(token.apply_fn);
+            Log::default()
         })
     }
 }
@@ -49,4 +53,18 @@ fn apply<A: Asset>(ctx: &mut Ctx, logs: &mut Logs) -> bool {
     }
 
     false
+}
+
+pub struct LogToken<Log> {
+    apply_fn: ApplyFn,
+    var: Var<Log, LogVars>,
+}
+
+impl<Log> LogToken<Log> {
+    pub(crate) fn from_asset<A: Asset<Log = Log>>() -> Self {
+        Self {
+            apply_fn: &apply::<A>,
+            var: A::log_var(),
+        }
+    }
 }

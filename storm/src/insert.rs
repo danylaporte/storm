@@ -13,6 +13,7 @@ pub trait Insert<E: Entity>: Send {
     where
         I: IntoIterator<Item = (E::Key, E)> + Send + 'a,
         I::IntoIter: Send,
+        Self: Send,
     {
         Box::pin(async move {
             for (id, entity) in iter {
@@ -33,6 +34,7 @@ pub trait Insert<E: Entity>: Send {
         E::Key: Clone,
         F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>),
         for<'c> &'c Self: IntoIterator<Item = (&'c E::Key, &'c E)>,
+        Self: Send,
     {
         let vec = self
             .into_iter()
@@ -68,6 +70,7 @@ pub trait InsertMut<E: Entity>: Send {
     where
         I: IntoIterator<Item = (E::Key, E)> + Send + 'a,
         I::IntoIter: Send,
+        Self: Send,
     {
         Box::pin(async move {
             for (id, entity) in iter {
@@ -88,6 +91,7 @@ pub trait InsertMut<E: Entity>: Send {
         E::Key: Clone,
         F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>),
         for<'c> &'c Self: IntoIterator<Item = (&'c E::Key, &'c E)>,
+        Self: Send,
     {
         let vec = self
             .into_iter()

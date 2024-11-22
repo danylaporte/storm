@@ -1,8 +1,11 @@
+use std::any::TypeId;
+
 use crate::{
+    cycle_dep,
     provider::{LoadAll, LoadArgs, LoadOne},
     trx_err_gate::TrxErrGate,
-    AsRefAsync, Asset, AssetGc, AssetProxy, AsyncTryFrom, BoxFuture, ClearAssetEvent, Entity,
-    EntityAsset, Log, ProviderContainer, Result, Tag, Trx,
+    AsRefAsync, Asset, AssetGc, AsyncTryFrom, BoxFuture, ClearAssetEvent, Entity, EntityAsset, Log,
+    ProviderContainer, Result, Tag, Trx,
 };
 use attached::{container, Container};
 use version_tag::VersionTag;
@@ -30,51 +33,48 @@ impl Ctx {
         log.apply(self)
     }
 
+    pub fn asset<'a, A: Asset>(&'a self) -> BoxFuture<'a, Result<&A>> {
+        Box::pin(async move {
+            let var = A::ctx_var();
+
+            if let Some(v) = self.assets.get(var) {
+                return Ok(v);
+            }
+
+            let id = TypeId::of::<A>();
+
+            cycle_dep::guard(
+                |should_lock| async move {
+                    let _guard = if should_lock {
+                        Some(self.provider.gate().await)
+                    } else {
+                        None
+                    };
+
+                    if let Some(o) = self.assets.get(var) {
+                        return Ok(o);
+                    }
+
+                    let value = A::init(self).await?;
+
+                    self.gc.register::<A>();
+
+                    Ok(self.assets.get_or_init_val(var, value).0)
+                },
+                id,
+            )
+            .await
+        })
+    }
+
     #[inline]
-    pub async fn asset<A: AssetProxy>(&self) -> Result<&A::Asset> {
-        self.asset_impl1::<A::Asset>().await
-    }
-
-    async fn asset_impl1<A: Asset>(&self) -> Result<&A> {
-        match self.assets.get(A::ctx_var()) {
-            Some(v) => Ok(v),
-            None => self.asset_impl2().await,
-        }
-    }
-
-    async fn asset_impl2<A: Asset>(&self) -> Result<&A> {
-        let var = A::ctx_var();
-        let _guard = self.provider.gate().await;
-
-        if let Some(o) = self.assets.get(var) {
-            return Ok(o);
-        }
-
-        let value = A::init(self).await?;
-
-        self.gc.register::<A>();
-
-        Ok(self.assets.get_or_init_val(var, value).0)
-    }
-
-    #[inline]
-    pub fn asset_opt<A: AssetProxy>(&self) -> Option<&A::Asset> {
-        self.asset_opt_imp()
-    }
-
-    #[inline]
-    fn asset_opt_imp<A: Asset>(&self) -> Option<&A> {
+    pub fn asset_opt<A: Asset>(&self) -> Option<&A> {
         self.assets.get(A::ctx_var())
     }
 
-    #[inline]
-    pub fn clear_asset<A: AssetProxy>(&mut self) {
-        self.clear_asset_imp::<A::Asset>();
-    }
-
-    fn clear_asset_imp<A: Asset>(&mut self) {
+    pub fn clear_asset<A: Asset>(&mut self) {
         if self.assets.replace(A::ctx_var(), None).is_some() {
-            Self::on_clear_asset_imp::<A>().call(self);
+            Self::on_clear_asset::<A>().call(self);
         }
     }
 
@@ -82,7 +82,7 @@ impl Ctx {
     where
         E: EntityAsset,
     {
-        self.clear_asset_imp::<E::Tbl>();
+        self.clear_asset::<E::Tbl>();
     }
 
     pub fn gc(&mut self) {
@@ -94,11 +94,7 @@ impl Ctx {
     }
 
     #[inline]
-    pub fn on_clear_asset<A: AssetProxy>() -> &'static ClearAssetEvent {
-        Self::on_clear_asset_imp::<A::Asset>()
-    }
-
-    fn on_clear_asset_imp<A: Asset>() -> &'static ClearAssetEvent {
+    pub fn on_clear_asset<A: Asset>() -> &'static ClearAssetEvent {
         #[static_init::dynamic]
         static EVENT: ClearAssetEvent = Default::default();
         &EVENT
@@ -111,12 +107,12 @@ impl Ctx {
 
     #[inline]
     pub async fn tbl_of<E: EntityAsset>(&self) -> Result<&E::Tbl> {
-        self.asset_impl1::<E::Tbl>().await
+        self.asset::<E::Tbl>().await
     }
 
     #[inline]
     pub fn tbl_of_opt<E: EntityAsset>(&self) -> Option<&E::Tbl> {
-        self.asset_opt_imp::<E::Tbl>()
+        self.asset_opt::<E::Tbl>()
     }
 
     #[must_use]
@@ -136,9 +132,13 @@ impl Default for Ctx {
     }
 }
 
-impl<A: Asset> AsRefAsync<A> for Ctx {
+impl<A> AsRefAsync<A> for Ctx
+where
+    A: Asset + Sync,
+{
+    #[inline]
     fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ A>> {
-        Box::pin(self.asset_impl1::<A>())
+        Box::pin(self.asset())
     }
 }
 

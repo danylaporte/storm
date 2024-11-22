@@ -1,7 +1,7 @@
 use crate::{
-    log::LogVars,
+    log::{LogToken, LogVars},
     provider::{Delete, LoadAll, LoadArgs, TransactionProvider, Upsert, UpsertMut},
-    validate_on_change, Asset, AssetProxy, BoxFuture, CtxTypeInfo, CtxVars, Entity, EntityAsset,
+    validate_on_change, Asset, AssetBase, BoxFuture, CtxTypeInfo, CtxVars, Entity, EntityAsset,
     EntityValidate, Get, GetMut, GetOwned, Insert, InsertMut, ProviderContainer, Remove, Result,
     Tag, Trx,
 };
@@ -70,9 +70,30 @@ where
 
 impl<E> Asset for VecTable<E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = Self> + PartialEq + 'static,
+    E: CtxTypeInfo + EntityAsset<Tbl = Self> + PartialEq,
     E::Key: Copy,
     ProviderContainer: LoadAll<E, (), Self>,
+    usize: From<E::Key>,
+{
+    #[inline]
+    fn ctx_var() -> Var<Self, CtxVars> {
+        E::ctx_var()
+    }
+
+    fn init(ctx: &crate::Ctx) -> impl Future<Output = Result<Self>> {
+        ctx.provider.load_all_with_args(&(), LoadArgs::default())
+    }
+
+    #[inline]
+    fn log_var() -> Var<Self::Log, LogVars> {
+        E::log_var()
+    }
+}
+
+impl<E> AssetBase for VecTable<E>
+where
+    E: CtxTypeInfo + EntityAsset<Tbl = Self> + PartialEq + 'static,
+    E::Key: Copy,
     usize: From<E::Key>,
 {
     const SUPPORT_GC: bool = E::SUPPORT_GC;
@@ -107,59 +128,20 @@ where
         changed
     }
 
-    #[inline]
-    fn ctx_var() -> attached::Var<Self, CtxVars> {
-        E::ctx_var()
-    }
-
     fn gc(&mut self) {
         self.map.values_mut().for_each(|e| e.gc());
     }
 
-    fn init(ctx: &crate::Ctx) -> impl Future<Output = Result<Self>> {
-        ctx.provider.load_all_with_args(&(), LoadArgs::default())
-    }
-
-    #[inline]
-    fn log_var() -> attached::Var<Self::Log, LogVars> {
-        E::log_var()
-    }
-
-    async fn trx<'a: 'b, 'b>(trx: &'b mut Trx<'a>) -> Result<Self::Trx<'a, 'b>> {
-        Ok(VecTableTrx {
-            tbl: trx.ctx.asset::<E::Tbl>().await?,
+    fn trx<'a: 'b, 'b>(
+        &'b self,
+        trx: &'b mut Trx<'a>,
+        log: LogToken<Self::Log>,
+    ) -> Self::Trx<'a, 'b> {
+        VecTableTrx {
+            log_token: log,
+            tbl: self,
             trx,
-        })
-    }
-
-    fn trx_opt<'a: 'b, 'b>(trx: &'b mut Trx<'a>) -> Option<Self::Trx<'a, 'b>> {
-        Some(VecTableTrx {
-            tbl: trx.ctx.asset_opt::<E::Tbl>()?,
-            trx,
-        })
-    }
-}
-
-impl<E> AssetProxy for VecTable<E>
-where
-    E: EntityAsset<Tbl = VecTable<E>>,
-    Self: Asset,
-{
-    type Asset = Self;
-
-    #[inline]
-    fn ctx_var() -> Var<Self::Asset, CtxVars> {
-        E::ctx_var()
-    }
-
-    #[inline]
-    fn log_var() -> Var<<Self::Asset as Asset>::Log, LogVars> {
-        E::log_var()
-    }
-
-    #[inline]
-    fn init(ctx: &crate::Ctx) -> impl Future<Output = Result<Self::Asset>> + Send {
-        <Self as Asset>::init(ctx)
+        }
     }
 }
 
@@ -261,6 +243,7 @@ impl<E: EntityAsset<Tbl = Self>> Tag for VecTable<E> {
 }
 
 pub struct VecTableTrx<'a, 'b, E: EntityAsset<Tbl = VecTable<E>>> {
+    log_token: LogToken<Log<E>>,
     tbl: &'b VecTable<E>,
     trx: &'b mut Trx<'a>,
 }
@@ -276,7 +259,7 @@ where
         match self
             .trx
             .log
-            .get::<VecTable<E>>()
+            .get(&self.log_token)
             .and_then(|log| log.get(id))
         {
             Some(o) => o.as_ref(),
@@ -288,7 +271,7 @@ where
         match self
             .trx
             .log
-            .get::<VecTable<E>>()
+            .get(&self.log_token)
             .and_then(|log| log.get(id))
         {
             Some(o) => o.as_ref(),
@@ -296,71 +279,80 @@ where
         }
     }
 
-    pub async fn insert(&mut self, id: E::Key, mut entity: E, track: &E::TrackCtx) -> Result<()>
+    pub fn insert<'c>(
+        &'c mut self,
+        id: E::Key,
+        mut entity: E,
+        track: &'c E::TrackCtx,
+    ) -> BoxFuture<'c, Result<()>>
     where
         E: EntityValidate + PartialEq,
-        for<'c> TransactionProvider<'c>: Upsert<E>,
+        for<'d> TransactionProvider<'d>: Upsert<E>,
     {
-        let gate = self.trx.err_gate.open()?;
+        Box::pin(async move {
+            let gate = self.trx.err_gate.open()?;
 
-        // if there is changes
-        if self.get(&id).map_or(true, |old| *old != entity) {
-            // raise change event & validate
-            validate_on_change(self.trx, &id, &mut entity, track).await?;
+            // if there is changes
+            if self.get(&id).map_or(true, |old| *old != entity) {
+                // raise change event & validate
+                validate_on_change(self.trx, &id, &mut entity, track).await?;
 
-            // if the change event revert incoming changes, do nothing.
-            if self.get(&id).map_or(true, |current| *current != entity) {
-                self.trx.provider.upsert(&id, &entity).await?;
+                // if the change event revert incoming changes, do nothing.
+                if self.get(&id).map_or(true, |current| *current != entity) {
+                    self.trx.provider.upsert(&id, &entity).await?;
 
-                let old = self.tbl.get(&id);
-                entity.track_insert(&id, old, self.trx, track).await?;
+                    let old = self.tbl.get(&id);
+                    entity.track_insert(&id, old, self.trx, track).await?;
 
-                E::changed().call(self.trx, &id, &entity, track).await?;
-                self.log_mut().insert(id, Some(entity));
+                    E::changed().call(self.trx, &id, &entity, track).await?;
+                    self.log_mut().insert(id, Some(entity));
+                }
             }
-        }
 
-        gate.close();
+            gate.close();
 
-        Ok(())
+            Ok(())
+        })
     }
 
-    pub async fn insert_mut(
-        &mut self,
+    pub fn insert_mut<'c>(
+        &'c mut self,
         mut id: E::Key,
         mut entity: E,
-        track: &E::TrackCtx,
-    ) -> Result<E::Key>
+        track: &'c E::TrackCtx,
+    ) -> BoxFuture<'c, Result<E::Key>>
     where
         E: EntityValidate + PartialEq,
-        for<'c> TransactionProvider<'c>: UpsertMut<E>,
+        for<'d> TransactionProvider<'d>: UpsertMut<E>,
     {
-        let gate = self.trx.err_gate.open()?;
+        Box::pin(async move {
+            let gate = self.trx.err_gate.open()?;
 
-        // if there is changes
-        if self.get(&id).map_or(true, |old| *old != entity) {
-            // raise change event & validate
-            validate_on_change(self.trx, &id, &mut entity, track).await?;
+            // if there is changes
+            if self.get(&id).map_or(true, |old| *old != entity) {
+                // raise change event & validate
+                validate_on_change(self.trx, &id, &mut entity, track).await?;
 
-            // if the change event revert incoming changes, do nothing.
-            if self.get(&id).map_or(true, |current| *current != entity) {
-                self.trx.provider.upsert_mut(&mut id, &mut entity).await?;
+                // if the change event revert incoming changes, do nothing.
+                if self.get(&id).map_or(true, |current| *current != entity) {
+                    self.trx.provider.upsert_mut(&mut id, &mut entity).await?;
 
-                let old = self.tbl.get(&id);
-                entity.track_insert(&id, old, self.trx, track).await?;
+                    let old = self.tbl.get(&id);
+                    entity.track_insert(&id, old, self.trx, track).await?;
 
-                E::changed().call(self.trx, &id, &entity, track).await?;
-                self.log_mut().insert(id, Some(entity));
+                    E::changed().call(self.trx, &id, &entity, track).await?;
+                    self.log_mut().insert(id, Some(entity));
+                }
             }
-        }
 
-        gate.close();
+            gate.close();
 
-        Ok(id)
+            Ok(id)
+        })
     }
 
     pub fn iter(&self) -> VecTableTrxIter<'_, E> {
-        let map = self.trx.log.get::<E::Tbl>().expect("trx");
+        let map = self.trx.log.get(&self.log_token).expect("trx");
 
         VecTableTrxIter {
             ctx_iter: self.tbl.iter(),
@@ -370,7 +362,7 @@ where
     }
 
     fn log_mut(&mut self) -> &mut Log<E> {
-        self.trx.log.get_or_init_mut::<VecTable<E>>()
+        self.trx.log.get_or_init_mut(&self.log_token)
     }
 
     pub async fn remove(&mut self, id: E::Key, track: &E::TrackCtx) -> Result<()>
@@ -457,8 +449,8 @@ impl<'a, 'b, E> Insert<E> for VecTableTrx<'a, 'b, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = VecTable<E>> + EntityValidate + PartialEq,
     E::Key: Copy + Eq + Hash,
-    for<'c> TransactionProvider<'c>: Upsert<E>,
     VecTable<E>: Asset<Log = Log<E>>,
+    for<'c> TransactionProvider<'c>: Upsert<E>,
     usize: From<E::Key>,
 {
     fn insert<'c>(
@@ -467,7 +459,7 @@ where
         entity: E,
         track: &'c E::TrackCtx,
     ) -> BoxFuture<'c, Result<()>> {
-        Box::pin(VecTableTrx::insert(self, id, entity, track))
+        VecTableTrx::insert(self, id, entity, track)
     }
 }
 
@@ -485,7 +477,7 @@ where
         entity: E,
         track: &'c E::TrackCtx,
     ) -> BoxFuture<'c, Result<E::Key>> {
-        Box::pin(VecTableTrx::insert_mut(self, id, entity, track))
+        VecTableTrx::insert_mut(self, id, entity, track)
     }
 }
 

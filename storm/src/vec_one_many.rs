@@ -1,41 +1,33 @@
 use crate::{log::LogToken, AssetBase, Gc, Tag, Trx};
 use fxhash::FxHashMap;
-use std::{borrow::Borrow, collections::hash_map::Entry, hash::Hash};
+use std::{collections::hash_map, hash::Hash};
+use vec_map::{Entry, VecMap};
 use version_tag::VersionTag;
 
 type Log<K, V> = FxHashMap<K, Vec<V>>;
 
-pub struct HashOneMany<K, V> {
-    map: FxHashMap<K, Box<[V]>>,
+pub struct VecOneMany<K, V> {
+    map: VecMap<K, Box<[V]>>,
     tag: VersionTag,
 }
 
-impl<K, V> HashOneMany<K, V>
+impl<K, V> VecOneMany<K, V>
 where
-    K: Eq + Hash,
+    K: Copy + Eq + Hash,
+    usize: From<K>,
 {
-    pub fn contains_key<Q>(&self, key: &Q) -> bool
-    where
-        K: Borrow<Q> + Eq + Hash,
-        Q: Eq + Hash,
-    {
+    pub fn contains_key(&self, key: &K) -> bool {
         !self.get(key).is_empty()
     }
 
-    pub fn contains_key_value<Q>(&self, key: &Q, value: &V) -> bool
+    pub fn contains_key_value(&self, key: &K, value: &V) -> bool
     where
-        K: Borrow<Q>,
-        Q: Eq + Hash,
         V: Ord,
     {
         self.get(key).binary_search(value).is_ok()
     }
 
-    pub fn get<'b, Q>(&'b self, key: &Q) -> &'b [V]
-    where
-        K: Borrow<Q>,
-        Q: Eq + Hash,
-    {
+    pub fn get<'b>(&'b self, key: &K) -> &'b [V] {
         match self.map.get(key) {
             Some(set) => set,
             None => &[],
@@ -43,35 +35,37 @@ where
     }
 }
 
-impl<K, V> Tag for HashOneMany<K, V> {
+impl<K, V> Tag for VecOneMany<K, V> {
     #[inline]
     fn tag(&self) -> VersionTag {
         self.tag
     }
 }
 
-impl<K, V> FromIterator<(K, V)> for HashOneMany<K, V>
+impl<K, V> FromIterator<(K, V)> for VecOneMany<K, V>
 where
-    K: Eq + Hash,
+    K: Copy + Eq + Hash,
     V: Ord,
+    usize: From<K>,
 {
     fn from_iter<I: IntoIterator<Item = (K, V)>>(iter: I) -> Self {
         Self {
-            map: create_hash_map(iter),
+            map: create_vec_map(iter),
             tag: VersionTag::new(),
         }
     }
 }
 
-impl<K, V> AssetBase for HashOneMany<K, V>
+impl<K, V> AssetBase for VecOneMany<K, V>
 where
-    K: Eq + Hash + Send + Sync + 'static,
+    K: Copy + Eq + Hash + Send + Sync + 'static,
     V: Gc + PartialEq + Send + Sync + 'static,
+    usize: From<K>,
 {
     const SUPPORT_GC: bool = V::SUPPORT_GC;
 
     type Log = Log<K, V>;
-    type Trx<'a: 'b, 'b> = HashOneManyTrx<'a, 'b, K, V>;
+    type Trx<'a: 'b, 'b> = VecOneManyTrx<'a, 'b, K, V>;
 
     fn apply_log(&mut self, log: Self::Log) -> bool {
         let mut changed = false;
@@ -113,7 +107,7 @@ where
         trx: &'b mut Trx<'a>,
         log_token: LogToken<Log<K, V>>,
     ) -> Self::Trx<'a, 'b> {
-        HashOneManyTrx {
+        VecOneManyTrx {
             log_token,
             map: self,
             trx,
@@ -121,43 +115,34 @@ where
     }
 }
 
-pub struct HashOneManyTrx<'a, 'b, K: Send, V: Send> {
-    map: &'b HashOneMany<K, V>,
+pub struct VecOneManyTrx<'a, 'b, K: Sync, V: Sync> {
+    map: &'b VecOneMany<K, V>,
     trx: &'b mut Trx<'a>,
     log_token: LogToken<Log<K, V>>,
 }
 
-impl<'a, 'b, K, V> HashOneManyTrx<'a, 'b, K, V>
+impl<'a, 'b, K, V> VecOneManyTrx<'a, 'b, K, V>
 where
-    K: Eq + Hash + Send + 'static,
-    V: Send,
+    K: Copy + Eq + Hash + Sync + 'static,
+    V: Sync,
+    usize: From<K>,
 {
-    pub fn contains_key<Q>(&self, key: &Q) -> bool
-    where
-        K: Borrow<Q>,
-        Q: Eq + Hash,
-    {
+    pub fn contains_key(&self, key: &K) -> bool {
         !self.get(key).is_empty()
     }
 
-    pub fn contains_key_value<Q>(&self, key: &Q, value: &V) -> bool
+    pub fn contains_key_value(&self, key: &K, value: &V) -> bool
     where
-        K: Borrow<Q>,
         V: Ord,
-        Q: Eq + Hash,
     {
         self.get(key).binary_search(value).is_ok()
     }
 
-    fn entry(&mut self, key: K) -> Entry<K, Vec<V>> {
+    fn entry(&mut self, key: K) -> hash_map::Entry<K, Vec<V>> {
         self.log_mut().entry(key)
     }
 
-    pub fn get<'c, Q>(&'c self, key: &Q) -> &'c [V]
-    where
-        K: Borrow<Q>,
-        Q: Eq + Hash,
-    {
+    pub fn get<'c>(&'c self, key: &K) -> &'c [V] {
         self.trx
             .log
             .get(&self.log_token)
@@ -172,14 +157,14 @@ where
         let map = self.map;
 
         match self.entry(key) {
-            Entry::Occupied(mut o) => {
+            hash_map::Entry::Occupied(mut o) => {
                 let vec = o.get_mut();
 
                 if let Err(index) = vec.binary_search(&value) {
                     vec.insert(index, value);
                 }
             }
-            Entry::Vacant(v) => {
+            hash_map::Entry::Vacant(v) => {
                 let vec = map.get(v.key());
 
                 if let Err(index) = vec.binary_search(&value) {
@@ -216,14 +201,14 @@ where
         let map = self.map;
 
         match self.entry(key) {
-            Entry::Occupied(mut o) => {
+            hash_map::Entry::Occupied(mut o) => {
                 let vec = o.get_mut();
 
                 if let Ok(index) = vec.binary_search(value) {
                     vec.remove(index);
                 }
             }
-            Entry::Vacant(v) => {
+            hash_map::Entry::Vacant(v) => {
                 let slice = map.get(v.key());
 
                 if let Ok(index) = slice.binary_search(value) {
@@ -236,11 +221,12 @@ where
     }
 }
 
-fn create_hash_map<K, V, I>(iter: I) -> FxHashMap<K, Box<[V]>>
+fn create_vec_map<K, V, I>(iter: I) -> VecMap<K, Box<[V]>>
 where
-    K: Eq + Hash,
+    K: Copy + Eq + Hash,
     I: IntoIterator<Item = (K, V)>,
     V: Ord,
+    usize: From<K>,
 {
     let mut map = Log::<K, V>::default();
 

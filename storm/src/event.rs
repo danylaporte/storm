@@ -1,21 +1,35 @@
-use crate::{AssetProxy, Ctx, Entity, Result, Trx};
+use crate::{Asset, Ctx, Entity, Result, Trx};
 use parking_lot::Mutex;
 use std::{iter::once, ptr::addr_eq, sync::Arc};
 use tokio::task_local;
 
-pub type BoxedFut<T> = std::pin::Pin<Box<dyn std::future::Future<Output = T> + Send>>;
-pub type Fut = BoxedFut<Result<()>>;
+pub type BoxedFut<'a, T> = std::pin::Pin<Box<dyn std::future::Future<Output = T> + Send + 'a>>;
+pub type Fut<'a> = BoxedFut<'a, Result<()>>;
 
 pub type ChangeEvent<E> = Event<
-    (dyn Fn(&mut Trx<'_>, &<E as Entity>::Key, &mut E, &<E as Entity>::TrackCtx) -> Fut + Sync),
+    (dyn for<'a, 'b> Fn(
+        &'b mut Trx<'a>,
+        &'b <E as Entity>::Key,
+        &'b mut E,
+        &'b <E as Entity>::TrackCtx,
+    ) -> Fut<'b>
+         + Sync),
 >;
 
-pub type ChangedEvent<E> =
-    Event<(dyn Fn(&mut Trx<'_>, &<E as Entity>::Key, &E, &<E as Entity>::TrackCtx) -> Fut + Sync)>;
+pub type ChangedEvent<E> = Event<
+    (dyn for<'a, 'b> Fn(
+        &'b mut Trx<'a>,
+        &'b <E as Entity>::Key,
+        &'b E,
+        &'b <E as Entity>::TrackCtx,
+    ) -> Fut<'b>
+         + Sync),
+>;
 
 pub type ClearAssetEvent = Event<(dyn Fn(&mut Ctx) + Sync)>;
 
-pub type RemoveEvent<Key, Track> = Event<(dyn Fn(&mut Trx<'_>, &Key, &Track) -> Fut + Sync)>;
+pub type RemoveEvent<Key, Track> =
+    Event<(dyn for<'a, 'b> Fn(&'b mut Trx<'a>, &'b Key, &'b Track) -> Fut<'b> + Sync)>;
 
 pub struct Event<T: ?Sized + 'static>(Mutex<Arc<[&'static T]>>);
 
@@ -88,7 +102,7 @@ impl ClearAssetEvent {
     }
 
     /// Clear automatically the specified asset when this event is raised.
-    pub fn register_clear_asset<A: AssetProxy>(&self) {
+    pub fn register_clear_asset<A: Asset>(&self) {
         self.register(&clear_asset::<A>);
     }
 }
@@ -106,7 +120,7 @@ impl<Key, Track> RemoveEvent<Key, Track> {
     }
 }
 
-fn clear_asset<A: AssetProxy>(ctx: &mut Ctx) {
+fn clear_asset<A: Asset>(ctx: &mut Ctx) {
     ctx.clear_asset::<A>()
 }
 

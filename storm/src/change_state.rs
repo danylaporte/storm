@@ -1,4 +1,4 @@
-use crate::{Asset, EntityAsset, GetOwned, Result, Trx};
+use crate::{AssetBase, EntityAsset, GetOwned, Result, Trx};
 
 pub enum ChangeState<T> {
     New(T),
@@ -16,7 +16,7 @@ impl<T> ChangeState<T> {
         F: Fn(&E) -> T,
         E: EntityAsset,
         T: PartialEq,
-        for<'b> <E::Tbl as Asset>::Trx<'a, 'b>: GetOwned<'b, E, Q>,
+        for<'b> <E::Tbl as AssetBase>::Trx<'a, 'b>: GetOwned<'b, E, Q>,
     {
         let old = trx.get_entity(q).await?;
 

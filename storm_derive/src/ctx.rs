@@ -41,8 +41,8 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
             #[allow(non_camel_case_types)]
             #[inline]
-            fn log_var() -> storm::attached::Var<<Self::Tbl as storm::Asset>::Log, storm::LogVars> {
-                storm::attached::var!(VAR: <#table_alias as storm::Asset>::Log, storm::LogVars);
+            fn log_var() -> storm::attached::Var<<Self::Tbl as storm::AssetBase>::Log, storm::LogVars> {
+                storm::attached::var!(VAR: <#table_alias as storm::AssetBase>::Log, storm::LogVars);
                 *VAR
             }
 

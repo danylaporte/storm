@@ -1,6 +1,7 @@
 use crate::{
+    log::LogToken,
     provider::{Delete, LoadAll, LoadArgs, TransactionProvider, Upsert, UpsertMut},
-    validate_on_change, Asset, AssetProxy, BoxFuture, CtxTypeInfo, CtxVars, Entity, EntityAsset,
+    validate_on_change, Asset, AssetBase, BoxFuture, CtxTypeInfo, CtxVars, Entity, EntityAsset,
     EntityValidate, Get, GetMut, GetOwned, Insert, InsertMut, LogVars, NotifyTag,
     ProviderContainer, Remove, Result, Tag, Trx,
 };
@@ -75,13 +76,13 @@ where
     }
 }
 
-impl<E> Asset for HashTable<E>
+impl<E> AssetBase for HashTable<E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = Self> + PartialEq + 'static,
     E::Key: Eq + Hash,
     ProviderContainer: LoadAll<E, (), Self>,
 {
-    type Log = FxHashMap<E::Key, Option<E>>;
+    type Log = Log<E>;
     type Trx<'a: 'b, 'b> = HashTableTrx<'a, 'b, E>;
 
     fn apply_log(&mut self, log: Self::Log) -> bool {
@@ -111,17 +112,32 @@ where
         changed
     }
 
-    #[inline]
-    fn ctx_var() -> Var<Self, CtxVars> {
-        E::ctx_var()
-    }
-
     fn gc(&mut self) {
         self.map.values_mut().for_each(|e| e.gc());
     }
 
-    fn init(ctx: &crate::Ctx) -> impl Future<Output = Result<Self>> {
-        ctx.provider.load_all_with_args(&(), LoadArgs::default())
+    fn trx<'a: 'b, 'b>(
+        &'b self,
+        trx: &'b mut Trx<'a>,
+        log_token: LogToken<Log<E>>,
+    ) -> Self::Trx<'a, 'b> {
+        HashTableTrx {
+            log_token,
+            tbl: self,
+            trx,
+        }
+    }
+}
+
+impl<E> Asset for HashTable<E>
+where
+    E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
+    E::Key: Eq + Hash,
+    ProviderContainer: LoadAll<E, (), Self>,
+{
+    #[inline]
+    fn ctx_var() -> Var<Self, CtxVars> {
+        E::ctx_var()
     }
 
     #[inline]
@@ -129,42 +145,9 @@ where
         E::log_var()
     }
 
-    async fn trx<'a: 'b, 'b>(trx: &'b mut Trx<'a>) -> Result<Self::Trx<'a, 'b>> {
-        Ok(HashTableTrx {
-            tbl: trx.ctx.asset::<E::Tbl>().await?,
-            trx,
-        })
-    }
-
-    fn trx_opt<'a: 'b, 'b>(trx: &'b mut Trx<'a>) -> Option<Self::Trx<'a, 'b>> {
-        Some(HashTableTrx {
-            tbl: trx.ctx.asset_opt::<E::Tbl>()?,
-            trx,
-        })
-    }
-}
-
-impl<E> AssetProxy for HashTable<E>
-where
-    E: EntityAsset<Tbl = HashTable<E>>,
-    E::Key: Eq + Hash,
-    Self: Asset,
-{
-    type Asset = Self;
-
     #[inline]
-    fn ctx_var() -> Var<Self::Asset, CtxVars> {
-        E::ctx_var()
-    }
-
-    #[inline]
-    fn log_var() -> Var<<Self::Asset as Asset>::Log, LogVars> {
-        E::log_var()
-    }
-
-    #[inline]
-    fn init(ctx: &crate::Ctx) -> impl Future<Output = Result<Self::Asset>> + Send {
-        <Self as Asset>::init(ctx)
+    fn init(ctx: &crate::Ctx) -> impl Future<Output = Result<Self>> + Send {
+        ctx.provider.load_all_with_args(&(), LoadArgs::default())
     }
 }
 
@@ -254,6 +237,7 @@ impl<E: EntityAsset<Tbl = Self>> Tag for HashTable<E> {
 }
 
 pub struct HashTableTrx<'a, 'b, E: EntityAsset<Tbl = HashTable<E>>> {
+    log_token: LogToken<Log<E>>,
     tbl: &'b HashTable<E>,
     trx: &'b mut Trx<'a>,
 }
@@ -262,7 +246,7 @@ impl<'a, 'b, E> HashTableTrx<'a, 'b, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
     E::Key: Eq + Hash,
-    HashTable<E>: Asset<Log = Log<E>>,
+    HashTable<E>: AssetBase<Log = Log<E>>,
 {
     #[inline]
     pub fn get<Q>(&self, q: &Q) -> Option<&E>
@@ -270,12 +254,7 @@ where
         E::Key: Borrow<Q>,
         Q: Eq + Hash,
     {
-        match self
-            .trx
-            .log
-            .get::<HashTable<E>>()
-            .and_then(|log| log.get(q))
-        {
+        match self.trx.log.get(&self.log_token).and_then(|log| log.get(q)) {
             Some(o) => o.as_ref(),
             None => self.tbl.get(q),
         }
@@ -286,12 +265,7 @@ where
         E::Key: Borrow<Q>,
         Q: Eq + Hash,
     {
-        match self
-            .trx
-            .log
-            .get::<HashTable<E>>()
-            .and_then(|log| log.get(q))
-        {
+        match self.trx.log.get(&self.log_token).and_then(|log| log.get(q)) {
             Some(o) => o.as_ref(),
             None => self.tbl.get(q),
         }
@@ -362,7 +336,7 @@ where
     }
 
     pub fn iter(&self) -> HashTableTrxIter<'_, E> {
-        let map = self.trx.log.get::<E::Tbl>().expect("trx");
+        let map = self.trx.log.get(&self.log_token).expect("trx");
 
         HashTableTrxIter {
             ctx_iter: self.tbl.iter(),
@@ -371,8 +345,8 @@ where
         }
     }
 
-    fn log_mut(&mut self) -> &mut FxHashMap<E::Key, Option<E>> {
-        self.trx.log.get_or_init_mut::<HashTable<E>>()
+    fn log_mut(&mut self) -> &mut Log<E> {
+        self.trx.log.get_or_init_mut(&self.log_token)
     }
 
     pub async fn remove(&mut self, id: E::Key, track: &E::TrackCtx) -> Result<()>
@@ -436,7 +410,7 @@ impl<'a, 'b, E, Q> Get<E, Q> for HashTableTrx<'a, 'b, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
     E::Key: Borrow<Q> + Eq + Hash,
-    HashTable<E>: Asset<Log = Log<E>>,
+    HashTable<E>: AssetBase<Log = Log<E>>,
     Q: Eq + Hash,
 {
     #[inline]
@@ -449,7 +423,7 @@ impl<'a, 'b, Q, E> GetOwned<'b, E, Q> for HashTableTrx<'a, 'b, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
     E::Key: Borrow<Q> + Eq + Hash,
-    HashTable<E>: Asset<Log = Log<E>>,
+    HashTable<E>: AssetBase<Log = Log<E>>,
     Q: Eq + Hash,
 {
     #[inline]
@@ -462,7 +436,7 @@ impl<'a, 'b, E> Insert<E> for HashTableTrx<'a, 'b, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + EntityValidate + PartialEq,
     E::Key: Eq + Hash,
-    HashTable<E>: Asset<Log = Log<E>>,
+    HashTable<E>: AssetBase<Log = Log<E>>,
     for<'c> TransactionProvider<'c>: Upsert<E>,
 {
     fn insert<'c>(
@@ -479,7 +453,7 @@ impl<'a, 'b, E> InsertMut<E> for HashTableTrx<'a, 'b, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + EntityValidate + PartialEq,
     E::Key: Clone + Eq + Hash,
-    HashTable<E>: Asset<Log = Log<E>>,
+    HashTable<E>: AssetBase<Log = Log<E>>,
     for<'c> TransactionProvider<'c>: UpsertMut<E>,
 {
     fn insert_mut<'c>(
@@ -496,7 +470,7 @@ impl<'a, 'b, 'c, E> IntoIterator for &'c HashTableTrx<'a, 'b, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
     E::Key: Eq + Hash,
-    HashTable<E>: Asset<Log = Log<E>>,
+    HashTable<E>: AssetBase<Log = Log<E>>,
 {
     type Item = (&'c E::Key, &'c E);
     type IntoIter = HashTableTrxIter<'c, E>;
@@ -511,7 +485,7 @@ impl<'a, 'b, E> Remove<E> for HashTableTrx<'a, 'b, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
     E::Key: Eq + Hash,
-    HashTable<E>: Asset<Log = Log<E>>,
+    HashTable<E>: AssetBase<Log = Log<E>>,
     for<'c> TransactionProvider<'c>: Delete<E>,
 {
     fn remove<'c>(
@@ -525,7 +499,7 @@ where
 
 pub struct HashTableTrxIter<'a, E: Entity> {
     ctx_iter: hash_map::Iter<'a, E::Key, E>,
-    map: &'a FxHashMap<E::Key, Option<E>>,
+    map: &'a Log<E>,
     trx_iter: hash_map::Iter<'a, E::Key, Option<E>>,
 }
 

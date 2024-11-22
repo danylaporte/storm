@@ -1,12 +1,13 @@
 use crate::{
-    Asset, BoxFuture, ChangeEvent, ChangedEvent, CtxVars, Gc, LogVars, RemoveEvent, Result, Trx,
+    Asset, AssetBase, BoxFuture, ChangeEvent, ChangedEvent, CtxVars, Gc, LogVars, RemoveEvent,
+    Result, Trx,
 };
 use attached::Var;
 use std::fmt::Debug;
 
 pub trait Entity: Send + Sync + 'static {
     type Key: Send + Sync;
-    type TrackCtx: Debug + Sync;
+    type TrackCtx: Debug + Send + Sync;
 
     fn track_insert<'a>(
         &'a self,
@@ -53,7 +54,7 @@ pub trait EntityAsset: Entity + Gc + 'static {
     type Tbl: Asset;
 
     fn ctx_var() -> Var<Self::Tbl, CtxVars>;
-    fn log_var() -> Var<<Self::Tbl as Asset>::Log, LogVars>;
+    fn log_var() -> Var<<Self::Tbl as AssetBase>::Log, LogVars>;
 
     fn change() -> &'static ChangeEvent<Self>;
     fn changed() -> &'static ChangedEvent<Self>;

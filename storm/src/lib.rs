@@ -5,11 +5,12 @@ mod apply_log;
 mod as_ref_async;
 mod as_ref_opt;
 mod asset;
-mod asset_proxy;
+mod asset_base;
 mod async_try_from;
 mod change_state;
 mod ctx;
 mod ctx_type_info;
+mod cycle_dep;
 mod entity;
 mod entity_fields;
 mod entity_validate;
@@ -38,13 +39,14 @@ mod tag;
 pub mod telemetry;
 mod trx;
 mod trx_err_gate;
+mod vec_one_many;
 mod vec_table;
 
 pub use apply_log::ApplyLog;
 pub use as_ref_async::AsRefAsync;
 pub use as_ref_opt::{AsRefOpt, FromRefOpt};
 pub use asset::Asset;
-pub use asset_proxy::AssetProxy;
+pub use asset_base::AssetBase;
 pub use async_cell_lock::{self, AsyncOnceCell, QueueRwLock};
 pub use async_try_from::AsyncTryFrom;
 pub use attached;
@@ -62,13 +64,13 @@ pub use fields::Fields;
 pub use gc::*;
 pub use get::{Get, GetOwned};
 pub use get_mut::GetMut;
-pub use hash_one_many::*;
+pub use hash_one_many::HashOneMany;
 pub use hash_table::HashTable;
 pub use init::Init;
 pub use insert::*;
 pub use is_defined::IsDefined;
 pub use len::{macro_check_max_len, Len};
-pub use log::{Log, LogVars};
+pub use log::{Log, LogToken, LogVars};
 #[cfg(feature = "telemetry")]
 pub use metrics;
 pub use once_cell::sync::OnceCell;
@@ -82,6 +84,7 @@ pub use tokio;
 pub use trx::Trx;
 use trx_err_gate::TrxErrGate;
 pub use vec_map::{self, VecMap};
+pub use vec_one_many::VecOneMany;
 pub use vec_table::VecTable;
 pub use version_tag::{self, VersionTag};
 
@@ -93,7 +96,7 @@ pub const OBJ_INDEX: &str = "index";
 pub const OBJ_TABLE: &str = "table";
 
 #[cfg(feature = "derive")]
-pub use storm_derive::{indexing, Ctx, LocksAwait, NoopDelete, NoopLoad, NoopSave};
+pub use storm_derive::{index, indexing, Ctx, LocksAwait, NoopDelete, NoopLoad, NoopSave};
 #[cfg(feature = "mssql")]
 pub use storm_derive::{MssqlDelete, MssqlLoad, MssqlSave};
 

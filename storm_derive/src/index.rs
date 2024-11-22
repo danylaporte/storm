@@ -17,32 +17,69 @@ fn index_fn(f: &ItemFn) -> TokenStream {
     let name = &f.sig.ident;
     let name_str = &name.to_string().to_pascal_case();
     let index_name = Ident::new(name_str, name.span());
-    let mut asset = resolve_result(&f.sig.output).clone();
+    let asset = resolve_result(&f.sig.output).clone();
     let args = &f.sig.inputs;
     let expr = &f.block;
 
-    replace_self(&mut asset, &index_name);
-
     quote! {
-        #vis struct #index_name;
+        #vis struct #index_name(#asset);
 
-        impl storm::AssetProxy for #index_name {
-            type Asset = #asset;
-
-            #[inline]
-            fn ctx_var() -> storm::attached::Var<Self::Asset, storm::CtxVars> {
-                storm::attached::var!(V: #asset, storm::CtxVars);
-                &V
-            }
-
-            #[inline]
-            fn log_var() -> storm::attached::Var<<Self::Asset as storm::Asset>::Log, storm::LogVars> {
-                storm::attached::var!(V: <#asset as storm::Asset>::Log, storm::LogVars);
-                &V
-            }
-
-            async fn init(#args) -> storm::Result<#asset> {
+        impl #index_name {
+            async fn init_imp(#args) -> storm::Result<#asset> {
                 #expr
+            }
+        }
+
+        impl storm::Asset for #index_name {
+            #[inline]
+            fn ctx_var() -> storm::attached::Var<Self, storm::CtxVars> {
+                storm::attached::var!(V: #index_name, storm::CtxVars);
+                *V
+            }
+
+            #[inline]
+            fn log_var() -> storm::attached::Var<<Self as storm::AssetBase>::Log, storm::LogVars> {
+                storm::attached::var!(V: <#index_name as storm::AssetBase>::Log, storm::LogVars);
+                *V
+            }
+
+            async fn init(ctx: &storm::Ctx) -> storm::Result<Self> {
+                Self::init_imp(ctx).await.map(Self)
+            }
+        }
+
+        impl storm::AssetBase for #index_name {
+            const SUPPORT_GC: bool = <#asset as storm::AssetBase>::SUPPORT_GC;
+
+            type Log = <#asset as storm::AssetBase>::Log;
+            type Trx<'a: 'b, 'b> = <#asset as storm::AssetBase>::Trx::<'a, 'b>;
+
+            #[inline]
+            fn apply_log(&mut self, log: Self::Log) -> bool {
+                storm::AssetBase::apply_log(&mut self.0, log)
+            }
+
+            #[inline]
+            fn gc(&mut self) {
+                storm::AssetBase::gc(&mut self.0)
+            }
+
+            #[inline]
+            fn trx<'a: 'b, 'b>(
+                &'b self,
+                trx: &'b mut Trx<'a>,
+                log: storm::LogToken<Self::Log>,
+            ) -> Self::Trx<'a, 'b> {
+                storm::AssetBase::trx(&self.0, trx, log)
+            }
+        }
+
+        impl std::ops::Deref for #index_name {
+            type Target = #asset;
+
+            #[inline]
+            fn deref(&self) -> &Self::Target {
+                &self.0
             }
         }
     }
@@ -62,37 +99,4 @@ fn resolve_result(t: &ReturnType) -> &Type {
     }
 
     panic!("invalid result, expected a Result<..>")
-}
-
-fn replace_self(t: &mut Type, new: &Ident) {
-    match t {
-        Type::Path(p) => {
-            if let Some(t) = &mut p.qself {
-                replace_self(&mut t.ty, new);
-            }
-
-            p.path.segments.iter_mut().for_each(|a| {
-                replace_self_ident(&mut a.ident, new);
-
-                match &mut a.arguments {
-                    PathArguments::AngleBracketed(a) => a.args.iter_mut().for_each(|a| match a {
-                        GenericArgument::AssocConst(c) => {
-                            replace_self_ident(&mut c.ident, new);
-                        }
-                        GenericArgument::AssocType(a) => replace_self_ident(&mut a.ident, new),
-                        GenericArgument::Type(t) => replace_self(t, new),
-                        _ => {}
-                    }),
-                    _ => {}
-                }
-            });
-        }
-        _ => {}
-    }
-}
-
-fn replace_self_ident(ident: &mut Ident, new: &Ident) {
-    if *ident == "Self" {
-        *ident = new.clone();
-    }
 }
