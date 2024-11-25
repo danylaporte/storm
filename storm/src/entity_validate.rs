@@ -1,3 +1,5 @@
+use std::future::Future;
+
 use crate::{EntityAsset, Error, Result, Trx};
 
 pub trait EntityValidate {
@@ -24,25 +26,27 @@ impl<T: EntityValidate> EntityValidate for Option<T> {
     }
 }
 
-pub(crate) async fn validate_on_change<'a, E>(
-    trx: &mut Trx<'a>,
-    key: &E::Key,
-    entity: &mut E,
-    track: &E::TrackCtx,
-) -> Result<()>
+pub(crate) fn validate_on_change<'a, 'b, E>(
+    trx: &'b mut Trx<'a>,
+    key: &'b E::Key,
+    entity: &'b mut E,
+    track: &'b E::TrackCtx,
+) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, E>
 where
     E: EntityAsset + EntityValidate,
 {
-    let mut error = None;
+    async move {
+        let mut error = None;
 
-    if let Err(e) = E::change().call(trx, key, entity, track).await {
-        error = Some(e);
-    }
+        if let Err(e) = E::change().call(trx, key, entity, track).await {
+            error = Some(e);
+        }
 
-    EntityValidate::entity_validate(&*entity, &mut error);
+        EntityValidate::entity_validate(&*entity, &mut error);
 
-    match error {
-        Some(e) => Err(e),
-        None => Ok(()),
+        match error {
+            Some(e) => Err(e),
+            None => Ok(()),
+        }
     }
 }

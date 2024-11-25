@@ -271,68 +271,77 @@ where
         }
     }
 
-    pub async fn insert(&mut self, id: E::Key, mut entity: E, track: &E::TrackCtx) -> Result<()>
+    pub fn insert<'c>(
+        &'c mut self,
+        id: E::Key,
+        mut entity: E,
+        track: &'c E::TrackCtx,
+    ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, 'c, E>
     where
         E: EntityValidate,
         TransactionProvider<'a>: Upsert<E>,
     {
-        let gate = self.trx.err_gate.open()?;
+        async move {
+            let gate = self.trx.err_gate.open()?;
 
-        // if there is changes
-        if self.get(&id).map_or(true, |old| *old != entity) {
-            // raise change event & validate
-            validate_on_change(self.trx, &id, &mut entity, track).await?;
+            // if there is changes
+            if self.get(&id).map_or(true, |old| *old != entity) {
+                // raise change event & validate
+                validate_on_change(self.trx, &id, &mut entity, track).await?;
 
-            // if the change event revert incoming changes, do nothing.
-            if self.get(&id).map_or(true, |current| *current != entity) {
-                self.trx.provider.upsert(&id, &entity).await?;
+                // if the change event revert incoming changes, do nothing.
+                if self.get(&id).map_or(true, |current| *current != entity) {
+                    self.trx.provider.upsert(&id, &entity).await?;
 
-                let old = self.tbl.get(&id);
-                entity.track_insert(&id, old, self.trx, track).await?;
+                    let old = self.tbl.get(&id);
+                    entity.track_insert(&id, old, self.trx, track).await?;
 
-                E::changed().call(self.trx, &id, &entity, track).await?;
-                self.log_mut().insert(id, Some(entity));
+                    E::changed().call(self.trx, &id, &entity, track).await?;
+                    self.log_mut().insert(id, Some(entity));
+                }
             }
+
+            gate.close();
+
+            Ok(())
         }
-
-        gate.close();
-
-        Ok(())
     }
 
-    pub async fn insert_mut(
-        &mut self,
+    pub fn insert_mut<'c>(
+        &'c mut self,
         mut id: E::Key,
         mut entity: E,
-        track: &E::TrackCtx,
-    ) -> Result<E::Key>
+        track: &'c E::TrackCtx,
+    ) -> impl Future<Output = Result<E::Key>> + Send + use<'a, 'b, 'c, E>
     where
         E: EntityValidate,
         E::Key: Clone,
         TransactionProvider<'a>: UpsertMut<E>,
     {
-        let gate = self.trx.err_gate.open()?;
+        async move {
+            let gate = self.trx.err_gate.open()?;
 
-        // if there is changes
-        if self.get(&id).map_or(true, |old| *old != entity) {
-            // raise change event & validate
-            validate_on_change(self.trx, &id, &mut entity, track).await?;
+            // if there is changes
+            if self.get(&id).map_or(true, |old| *old != entity) {
+                // raise change event & validate
+                validate_on_change(self.trx, &id, &mut entity, track).await?;
 
-            // if the change event revert incoming changes, do nothing.
-            if self.get(&id).map_or(true, |current| *current != entity) {
-                self.trx.provider.upsert_mut(&mut id, &mut entity).await?;
+                // if the change event revert incoming changes, do nothing.
+                if self.get(&id).map_or(true, |current| *current != entity) {
+                    self.trx.provider.upsert_mut(&mut id, &mut entity).await?;
 
-                let old = self.tbl.get(&id);
-                entity.track_insert(&id, old, self.trx, track).await?;
+                    let old = self.tbl.get(&id);
+                    entity.track_insert(&id, old, self.trx, track).await?;
 
-                E::changed().call(self.trx, &id, &entity, track).await?;
-                self.log_mut().insert(id.clone(), Some(entity));
+                    E::changed().call(self.trx, &id, &entity, track).await?;
+                    self.log_mut().insert(id.clone(), Some(entity));
+                }
             }
+
+            gate.close();
+
+            Ok(id)
         }
-
-        gate.close();
-
-        Ok(id)
     }
 
     pub fn iter(&self) -> HashTableTrxIter<'_, E> {
@@ -349,28 +358,34 @@ where
         self.trx.log.get_or_init_mut(&self.log_token)
     }
 
-    pub async fn remove(&mut self, id: E::Key, track: &E::TrackCtx) -> Result<()>
+    pub fn remove<'c>(
+        &'c mut self,
+        id: E::Key,
+        track: &'c E::TrackCtx,
+    ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, 'c, E>
     where
         TransactionProvider<'a>: Delete<E>,
     {
-        let gate = self.trx.err_gate.open()?;
+        async move {
+            let gate = self.trx.err_gate.open()?;
 
-        if self.get(&id).is_some() {
-            E::remove().call(self.trx, &id, track).await?;
+            if self.get(&id).is_some() {
+                E::remove().call(self.trx, &id, track).await?;
 
-            self.trx.provider.delete(&id).await?;
+                self.trx.provider.delete(&id).await?;
 
-            if let Some(old) = self.tbl.get(&id) {
-                old.track_remove(&id, self.trx, track).await?;
+                if let Some(old) = self.tbl.get(&id) {
+                    old.track_remove(&id, self.trx, track).await?;
+                }
+
+                E::removed().call(self.trx, &id, track).await?;
+                self.log_mut().insert(id, None);
             }
 
-            E::removed().call(self.trx, &id, track).await?;
-            self.log_mut().insert(id, None);
+            gate.close();
+
+            Ok(())
         }
-
-        gate.close();
-
-        Ok(())
     }
 
     #[inline]
@@ -437,7 +452,7 @@ where
     E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + EntityValidate + PartialEq,
     E::Key: Eq + Hash,
     HashTable<E>: AssetBase<Log = Log<E>>,
-    for<'c> TransactionProvider<'c>: Upsert<E>,
+    TransactionProvider<'a>: Upsert<E>,
 {
     fn insert<'c>(
         &'c mut self,
@@ -454,7 +469,7 @@ where
     E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + EntityValidate + PartialEq,
     E::Key: Clone + Eq + Hash,
     HashTable<E>: AssetBase<Log = Log<E>>,
-    for<'c> TransactionProvider<'c>: UpsertMut<E>,
+    TransactionProvider<'a>: UpsertMut<E>,
 {
     fn insert_mut<'c>(
         &'c mut self,

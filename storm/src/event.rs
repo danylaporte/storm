@@ -1,6 +1,6 @@
 use crate::{Asset, Ctx, Entity, Result, Trx};
 use parking_lot::Mutex;
-use std::{iter::once, ptr::addr_eq, sync::Arc};
+use std::{future::Future, iter::once, ptr::addr_eq, sync::Arc};
 use tokio::task_local;
 
 pub type BoxedFut<'a, T> = std::pin::Pin<Box<dyn std::future::Future<Output = T> + Send + 'a>>;
@@ -55,42 +55,38 @@ impl<T: ?Sized + 'static> Event<T> {
 }
 
 impl<E: Entity> ChangeEvent<E> {
-    pub(crate) async fn call(
-        &self,
-        trx: &mut Trx<'_>,
-        key: &E::Key,
-        entity: &mut E,
-        track: &E::TrackCtx,
-    ) -> Result<()> {
-        CHANGE_DEPTH
-            .scope(change_depth() + 1, async move {
-                for h in &*self.list() {
-                    h(trx, key, entity, track).await?;
-                }
+    pub(crate) fn call<'a, 'b>(
+        &'b self,
+        trx: &'b mut Trx<'a>,
+        key: &'b E::Key,
+        entity: &'b mut E,
+        track: &'b E::TrackCtx,
+    ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, E> {
+        CHANGE_DEPTH.scope(change_depth() + 1, async move {
+            for h in &*self.list() {
+                h(trx, key, entity, track).await?;
+            }
 
-                Ok(())
-            })
-            .await
+            Ok(())
+        })
     }
 }
 
 impl<E: Entity> ChangedEvent<E> {
-    pub(crate) async fn call(
-        &self,
-        trx: &mut Trx<'_>,
-        key: &E::Key,
-        entity: &E,
-        track: &E::TrackCtx,
-    ) -> Result<()> {
-        CHANGE_DEPTH
-            .scope(change_depth() + 1, async move {
-                for h in &*self.list() {
-                    h(trx, key, entity, track).await?;
-                }
+    pub(crate) fn call<'a, 'b>(
+        &'b self,
+        trx: &'b mut Trx<'a>,
+        key: &'b E::Key,
+        entity: &'b E,
+        track: &'b E::TrackCtx,
+    ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, E> {
+        CHANGE_DEPTH.scope(change_depth() + 1, async move {
+            for h in &*self.list() {
+                h(trx, key, entity, track).await?;
+            }
 
-                Ok(())
-            })
-            .await
+            Ok(())
+        })
     }
 }
 
@@ -108,15 +104,22 @@ impl ClearAssetEvent {
 }
 
 impl<Key, Track> RemoveEvent<Key, Track> {
-    pub(crate) async fn call(&self, trx: &mut Trx<'_>, key: &Key, track: &Track) -> Result<()> {
-        CHANGE_DEPTH
-            .scope(change_depth() + 1, async move {
-                for h in &*self.list() {
-                    h(trx, key, track).await?;
-                }
-                Ok(())
-            })
-            .await
+    pub(crate) fn call<'a, 'b>(
+        &'b self,
+        trx: &'b mut Trx<'a>,
+        key: &'b Key,
+        track: &'b Track,
+    ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, Key, Track>
+    where
+        Key: Sync,
+        Track: Sync,
+    {
+        CHANGE_DEPTH.scope(change_depth() + 1, async move {
+            for h in &*self.list() {
+                h(trx, key, track).await?;
+            }
+            Ok(())
+        })
     }
 }
 

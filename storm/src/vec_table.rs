@@ -284,10 +284,10 @@ where
         id: E::Key,
         mut entity: E,
         track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<()>>
+    ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, 'c, E>
     where
         E: EntityValidate + PartialEq,
-        for<'d> TransactionProvider<'d>: Upsert<E>,
+        TransactionProvider<'a>: Upsert<E>,
     {
         Box::pin(async move {
             let gate = self.trx.err_gate.open()?;
@@ -320,12 +320,12 @@ where
         mut id: E::Key,
         mut entity: E,
         track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<E::Key>>
+    ) -> impl Future<Output = Result<E::Key>> + Send + use<'a, 'b, 'c, E>
     where
         E: EntityValidate + PartialEq,
-        for<'d> TransactionProvider<'d>: UpsertMut<E>,
+        TransactionProvider<'a>: UpsertMut<E>,
     {
-        Box::pin(async move {
+        async move {
             let gate = self.trx.err_gate.open()?;
 
             // if there is changes
@@ -348,7 +348,7 @@ where
             gate.close();
 
             Ok(id)
-        })
+        }
     }
 
     pub fn iter(&self) -> VecTableTrxIter<'_, E> {
@@ -365,28 +365,34 @@ where
         self.trx.log.get_or_init_mut(&self.log_token)
     }
 
-    pub async fn remove(&mut self, id: E::Key, track: &E::TrackCtx) -> Result<()>
+    pub fn remove<'c>(
+        &'c mut self,
+        id: E::Key,
+        track: &'c E::TrackCtx,
+    ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, 'c, E>
     where
-        for<'c> TransactionProvider<'c>: Delete<E>,
+        TransactionProvider<'a>: Delete<E>,
     {
-        let gate = self.trx.err_gate.open()?;
+        async move {
+            let gate = self.trx.err_gate.open()?;
 
-        if self.get(&id).is_some() {
-            E::remove().call(self.trx, &id, track).await?;
+            if self.get(&id).is_some() {
+                E::remove().call(self.trx, &id, track).await?;
 
-            self.trx.provider.delete(&id).await?;
+                self.trx.provider.delete(&id).await?;
 
-            if let Some(old) = self.tbl.get(&id) {
-                old.track_remove(&id, self.trx, track).await?;
+                if let Some(old) = self.tbl.get(&id) {
+                    old.track_remove(&id, self.trx, track).await?;
+                }
+
+                E::removed().call(self.trx, &id, track).await?;
+                self.log_mut().insert(id, None);
             }
 
-            E::removed().call(self.trx, &id, track).await?;
-            self.log_mut().insert(id, None);
+            gate.close();
+
+            Ok(())
         }
-
-        gate.close();
-
-        Ok(())
     }
 
     #[inline]
@@ -450,7 +456,7 @@ where
     E: CtxTypeInfo + EntityAsset<Tbl = VecTable<E>> + EntityValidate + PartialEq,
     E::Key: Copy + Eq + Hash,
     VecTable<E>: Asset<Log = Log<E>>,
-    for<'c> TransactionProvider<'c>: Upsert<E>,
+    TransactionProvider<'a>: Upsert<E>,
     usize: From<E::Key>,
 {
     fn insert<'c>(
@@ -459,7 +465,7 @@ where
         entity: E,
         track: &'c E::TrackCtx,
     ) -> BoxFuture<'c, Result<()>> {
-        VecTableTrx::insert(self, id, entity, track)
+        Box::pin(VecTableTrx::insert(self, id, entity, track))
     }
 }
 
@@ -468,7 +474,7 @@ where
     E: CtxTypeInfo + EntityAsset<Tbl = VecTable<E>> + EntityValidate + PartialEq,
     E::Key: Copy + Eq + Hash,
     VecTable<E>: Asset<Log = Log<E>>,
-    for<'c> TransactionProvider<'c>: UpsertMut<E>,
+    TransactionProvider<'a>: UpsertMut<E>,
     usize: From<E::Key>,
 {
     fn insert_mut<'c>(
@@ -477,7 +483,7 @@ where
         entity: E,
         track: &'c E::TrackCtx,
     ) -> BoxFuture<'c, Result<E::Key>> {
-        VecTableTrx::insert_mut(self, id, entity, track)
+        Box::pin(VecTableTrx::insert_mut(self, id, entity, track))
     }
 }
 
@@ -502,7 +508,7 @@ where
     E: CtxTypeInfo + EntityAsset<Tbl = VecTable<E>>,
     E::Key: Copy + Eq + Hash,
     VecTable<E>: Asset<Log = Log<E>>,
-    for<'c> TransactionProvider<'c>: Delete<E>,
+    TransactionProvider<'a>: Delete<E>,
     usize: From<E::Key>,
 {
     fn remove<'c>(

@@ -52,8 +52,9 @@ impl<'a> Trx<'a> {
         track: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<()>>
     where
-        for<'c, 'd> <E::Tbl as AssetBase>::Trx<'c, 'd>: Insert<E>,
+        'a: 'b,
         E: EntityAsset + PartialEq,
+        for<'c, 'd> <E::Tbl as AssetBase>::Trx<'c, 'd>: Insert<E>,
     {
         Box::pin(async move {
             self.asset::<E::Tbl>()
@@ -71,7 +72,6 @@ impl<'a> Trx<'a> {
         track: &E::TrackCtx,
     ) -> Result<E::Key>
     where
-        'b: 'a,
         E: EntityAsset + PartialEq,
         for<'c, 'd> <E::Tbl as AssetBase>::Trx<'c, 'd>: InsertMut<E>,
     {
