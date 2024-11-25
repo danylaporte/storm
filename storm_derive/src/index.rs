@@ -85,6 +85,7 @@ fn index_fn(f: &ItemFn) -> TokenStream {
     }
 }
 
+#[allow(clippy::panic)]
 fn resolve_result(t: &ReturnType) -> &Type {
     if let ReturnType::Type(_, t) = t {
         if let Type::Path(p) = &**t {

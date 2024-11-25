@@ -33,7 +33,7 @@ impl Ctx {
         log.apply(self)
     }
 
-    pub fn asset<'a, A: Asset>(&'a self) -> BoxFuture<'a, Result<&A>> {
+    pub fn asset<A: Asset>(&self) -> BoxFuture<'_, Result<&A>> {
         Box::pin(async move {
             let var = A::ctx_var();
 

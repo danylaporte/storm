@@ -11,8 +11,10 @@ use std::{
 };
 use vec_map::VecMap;
 
+type AssetFnRef = &'static (dyn Fn(&mut Assets) + Sync);
+
 #[derive(Default)]
-pub(crate) struct AssetGc(Mutex<Vec<&'static (dyn Fn(&mut Assets) + Sync)>>);
+pub(crate) struct AssetGc(Mutex<Vec<AssetFnRef>>);
 
 impl AssetGc {
     /// Collect all garbage in assets.

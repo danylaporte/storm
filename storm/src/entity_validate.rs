@@ -26,6 +26,7 @@ impl<T: EntityValidate> EntityValidate for Option<T> {
     }
 }
 
+#[allow(clippy::manual_async_fn)]
 pub(crate) fn validate_on_change<'a, 'b, E>(
     trx: &'b mut Trx<'a>,
     key: &'b E::Key,

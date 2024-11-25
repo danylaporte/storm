@@ -82,7 +82,7 @@ where
                     if vec.is_empty() {
                         o.remove();
                         changed = true;
-                    } else if &**o.get() != &vec[..] {
+                    } else if **o.get() != vec[..] {
                         o.insert(vec.into_boxed_slice());
                         changed = true;
                     }
@@ -183,7 +183,7 @@ where
                 let vec = map.get(v.key());
 
                 if let Err(index) = vec.binary_search(&value) {
-                    let mut vec = vec.iter().cloned().collect::<Vec<_>>();
+                    let mut vec = vec.to_vec();
                     vec.insert(index, value);
                     v.insert(vec);
                 }
@@ -227,7 +227,7 @@ where
                 let slice = map.get(v.key());
 
                 if let Ok(index) = slice.binary_search(value) {
-                    let mut vec = slice.iter().cloned().collect::<Vec<_>>();
+                    let mut vec = slice.to_vec();
                     vec.remove(index);
                     v.insert(vec);
                 }

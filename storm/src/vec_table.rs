@@ -315,6 +315,7 @@ where
         })
     }
 
+    #[allow(clippy::manual_async_fn)]
     pub fn insert_mut<'c>(
         &'c mut self,
         mut id: E::Key,
@@ -351,6 +352,7 @@ where
         }
     }
 
+    #[allow(clippy::expect_used)]
     pub fn iter(&self) -> VecTableTrxIter<'_, E> {
         let map = self.trx.log.get(&self.log_token).expect("trx");
 
@@ -365,6 +367,7 @@ where
         self.trx.log.get_or_init_mut(&self.log_token)
     }
 
+    #[allow(clippy::manual_async_fn)]
     pub fn remove<'c>(
         &'c mut self,
         id: E::Key,
