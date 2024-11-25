@@ -22,10 +22,7 @@ impl<'a> Trx<'a> {
         })
     }
 
-    pub fn asset_opt<'b, A: Asset>(&'b mut self) -> Option<A::Trx<'a, 'b>>
-    where
-        'a: 'b,
-    {
+    pub fn asset_opt<'b, A: Asset>(&'b mut self) -> Option<A::Trx<'a, 'b>> {
         Some(
             self.ctx
                 .asset_opt::<A>()?
@@ -74,8 +71,9 @@ impl<'a> Trx<'a> {
         track: &E::TrackCtx,
     ) -> Result<E::Key>
     where
+        'b: 'a,
         E: EntityAsset + PartialEq,
-        <E::Tbl as AssetBase>::Trx<'a, 'b>: InsertMut<E>,
+        for<'c, 'd> <E::Tbl as AssetBase>::Trx<'c, 'd>: InsertMut<E>,
     {
         self.asset::<E::Tbl>()
             .await?
@@ -92,7 +90,7 @@ impl<'a> Trx<'a> {
     pub async fn remove<'b, E>(&'b mut self, id: E::Key, track: &E::TrackCtx) -> Result<()>
     where
         E: EntityAsset,
-        <E::Tbl as AssetBase>::Trx<'a, 'b>: Remove<E>,
+        for<'c, 'd> <E::Tbl as AssetBase>::Trx<'c, 'd>: Remove<E>,
     {
         self.asset::<E::Tbl>().await?.remove(id, track).await
     }
@@ -108,8 +106,8 @@ impl<'a> Trx<'a> {
         E: EntityAsset,
         E::Key: Clone,
         F: FnMut(&E::Key, &E) -> bool + Send + 'b,
-        for<'c, 'd, 'e> &'c <E::Tbl as AssetBase>::Trx<'d, 'e>:
-            IntoIterator<Item = (&'c E::Key, &'c E)>,
+        for<'c, 'd, 'e> &'e <E::Tbl as AssetBase>::Trx<'c, 'd>:
+            IntoIterator<Item = (&'e E::Key, &'e E)>,
     {
         Box::pin(async move {
             self.asset::<E::Tbl>()
@@ -122,10 +120,7 @@ impl<'a> Trx<'a> {
     #[inline]
     pub fn tbl_of<'b, E: EntityAsset>(
         &'b mut self,
-    ) -> BoxFuture<'b, Result<<E::Tbl as AssetBase>::Trx<'a, 'b>>>
-    where
-        'a: 'b,
-    {
+    ) -> BoxFuture<'b, Result<<E::Tbl as AssetBase>::Trx<'a, 'b>>> {
         self.asset::<E::Tbl>()
     }
 
@@ -136,11 +131,12 @@ impl<'a> Trx<'a> {
         track: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<()>>
     where
+        'b: 'a,
         E: EntityAsset + PartialEq + ToOwned<Owned = E>,
         E::Key: Clone,
         F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>) + Send + 'b,
-        for<'c, 'd, 'e> &'c <E::Tbl as AssetBase>::Trx<'d, 'e>:
-            IntoIterator<Item = (&'c E::Key, &'c E)>,
+        for<'c, 'd, 'e> &'e <E::Tbl as AssetBase>::Trx<'c, 'd>:
+            IntoIterator<Item = (&'e E::Key, &'e E)>,
         for<'c, 'd> <E::Tbl as AssetBase>::Trx<'c, 'd>: Insert<E>,
     {
         Box::pin(async move {
@@ -156,11 +152,12 @@ impl<'a> Trx<'a> {
         track: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<()>>
     where
+        'b: 'a,
         E: EntityAsset + PartialEq + ToOwned<Owned = E>,
         E::Key: Clone,
         F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>) + Send + 'b,
-        for<'c, 'd, 'e> &'c <E::Tbl as AssetBase>::Trx<'d, 'e>:
-            IntoIterator<Item = (&'c E::Key, &'c E)>,
+        for<'c, 'd, 'e> &'e <E::Tbl as AssetBase>::Trx<'c, 'd>:
+            IntoIterator<Item = (&'e E::Key, &'e E)>,
         for<'c, 'd> <E::Tbl as AssetBase>::Trx<'c, 'd>: InsertMut<E>,
     {
         Box::pin(async move {
