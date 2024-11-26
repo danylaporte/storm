@@ -83,7 +83,7 @@ where
     ProviderContainer: LoadAll<E, (), Self>,
 {
     type Log = Log<E>;
-    type Trx<'a: 'b, 'b> = HashTableTrx<'a, 'b, E>;
+    type Trx<'a> = HashTableTrx<'a, E>;
 
     fn apply_log(&mut self, log: Self::Log) -> bool {
         let mut changed = false;
@@ -116,11 +116,7 @@ where
         self.map.values_mut().for_each(|e| e.gc());
     }
 
-    fn trx<'a: 'b, 'b>(
-        &'b self,
-        trx: &'b mut Trx<'a>,
-        log_token: LogToken<Log<E>>,
-    ) -> Self::Trx<'a, 'b> {
+    fn trx<'a>(&'a self, trx: &'a mut Trx<'a>, log_token: LogToken<Log<E>>) -> Self::Trx<'a> {
         HashTableTrx {
             log_token,
             tbl: self,
@@ -236,13 +232,13 @@ impl<E: EntityAsset<Tbl = Self>> Tag for HashTable<E> {
     }
 }
 
-pub struct HashTableTrx<'a, 'b, E: EntityAsset<Tbl = HashTable<E>>> {
+pub struct HashTableTrx<'a, E: EntityAsset<Tbl = HashTable<E>>> {
     log_token: LogToken<Log<E>>,
-    tbl: &'b HashTable<E>,
-    trx: &'b mut Trx<'a>,
+    tbl: &'a HashTable<E>,
+    trx: &'a mut Trx<'a>,
 }
 
-impl<'a, 'b, E> HashTableTrx<'a, 'b, E>
+impl<'a, E> HashTableTrx<'a, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
     E::Key: Eq + Hash,
@@ -260,7 +256,7 @@ where
         }
     }
 
-    pub fn get_owned<Q>(self, q: &Q) -> Option<&'b E>
+    pub fn get_owned<Q>(self, q: &Q) -> Option<&'a E>
     where
         E::Key: Borrow<Q>,
         Q: Eq + Hash,
@@ -272,12 +268,12 @@ where
     }
 
     #[allow(clippy::manual_async_fn)]
-    pub fn insert<'c>(
-        &'c mut self,
+    pub fn insert<'b>(
+        &'b mut self,
         id: E::Key,
         mut entity: E,
-        track: &'c E::TrackCtx,
-    ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, 'c, E>
+        track: &'b E::TrackCtx,
+    ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, E>
     where
         E: EntityValidate,
         TransactionProvider<'a>: Upsert<E>,
@@ -309,12 +305,12 @@ where
     }
 
     #[allow(clippy::manual_async_fn)]
-    pub fn insert_mut<'c>(
-        &'c mut self,
+    pub fn insert_mut<'b>(
+        &'b mut self,
         mut id: E::Key,
         mut entity: E,
-        track: &'c E::TrackCtx,
-    ) -> impl Future<Output = Result<E::Key>> + Send + use<'a, 'b, 'c, E>
+        track: &'b E::TrackCtx,
+    ) -> impl Future<Output = Result<E::Key>> + Send + use<'a, 'b, E>
     where
         E: EntityValidate,
         E::Key: Clone,
@@ -362,11 +358,11 @@ where
     }
 
     #[allow(clippy::manual_async_fn)]
-    pub fn remove<'c>(
-        &'c mut self,
+    pub fn remove<'b>(
+        &'b mut self,
         id: E::Key,
-        track: &'c E::TrackCtx,
-    ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, 'c, E>
+        track: &'b E::TrackCtx,
+    ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, E>
     where
         TransactionProvider<'a>: Delete<E>,
     {
@@ -425,7 +421,7 @@ where
     }
 }
 
-impl<'a, 'b, E, Q> Get<E, Q> for HashTableTrx<'a, 'b, E>
+impl<'a, E, Q> Get<E, Q> for HashTableTrx<'a, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
     E::Key: Borrow<Q> + Eq + Hash,
@@ -433,12 +429,12 @@ where
     Q: Eq + Hash,
 {
     #[inline]
-    fn get_entity<'c>(&'c self, q: &Q) -> Option<&'c E> {
+    fn get_entity<'b>(&'b self, q: &Q) -> Option<&'b E> {
         self.get(q)
     }
 }
 
-impl<'a, 'b, Q, E> GetOwned<'b, E, Q> for HashTableTrx<'a, 'b, E>
+impl<'a, Q, E> GetOwned<'a, E, Q> for HashTableTrx<'a, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
     E::Key: Borrow<Q> + Eq + Hash,
@@ -446,53 +442,53 @@ where
     Q: Eq + Hash,
 {
     #[inline]
-    fn get_owned(self, q: &Q) -> Option<&'b E> {
+    fn get_owned(self, q: &Q) -> Option<&'a E> {
         self.get_owned(q)
     }
 }
 
-impl<'a, 'b, E> Insert<E> for HashTableTrx<'a, 'b, E>
+impl<'a, E> Insert<E> for HashTableTrx<'a, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + EntityValidate + PartialEq,
     E::Key: Eq + Hash,
     HashTable<E>: AssetBase<Log = Log<E>>,
     TransactionProvider<'a>: Upsert<E>,
 {
-    fn insert<'c>(
-        &'c mut self,
+    fn insert<'b>(
+        &'b mut self,
         id: E::Key,
         entity: E,
-        track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<()>> {
+        track: &'b E::TrackCtx,
+    ) -> BoxFuture<'b, Result<()>> {
         Box::pin(self.insert(id, entity, track))
     }
 }
 
-impl<'a, 'b, E> InsertMut<E> for HashTableTrx<'a, 'b, E>
+impl<'a, E> InsertMut<E> for HashTableTrx<'a, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + EntityValidate + PartialEq,
     E::Key: Clone + Eq + Hash,
     HashTable<E>: AssetBase<Log = Log<E>>,
     TransactionProvider<'a>: UpsertMut<E>,
 {
-    fn insert_mut<'c>(
-        &'c mut self,
+    fn insert_mut<'b>(
+        &'b mut self,
         id: E::Key,
         entity: E,
-        track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<E::Key>> {
+        track: &'b E::TrackCtx,
+    ) -> BoxFuture<'b, Result<E::Key>> {
         Box::pin(self.insert_mut(id, entity, track))
     }
 }
 
-impl<'a, 'b, 'c, E> IntoIterator for &'c HashTableTrx<'a, 'b, E>
+impl<'a, 'b, E> IntoIterator for &'b HashTableTrx<'a, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
     E::Key: Eq + Hash,
     HashTable<E>: AssetBase<Log = Log<E>>,
 {
-    type Item = (&'c E::Key, &'c E);
-    type IntoIter = HashTableTrxIter<'c, E>;
+    type Item = (&'b E::Key, &'b E);
+    type IntoIter = HashTableTrxIter<'b, E>;
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
@@ -500,18 +496,18 @@ where
     }
 }
 
-impl<'a, 'b, E> Remove<E> for HashTableTrx<'a, 'b, E>
+impl<'a, E> Remove<E> for HashTableTrx<'a, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
     E::Key: Eq + Hash,
     HashTable<E>: AssetBase<Log = Log<E>>,
     for<'c> TransactionProvider<'c>: Delete<E>,
 {
-    fn remove<'c>(
-        &'c mut self,
+    fn remove<'b>(
+        &'b mut self,
         id: <E as Entity>::Key,
-        track: &'c <E as Entity>::TrackCtx,
-    ) -> BoxFuture<'c, Result<()>> {
+        track: &'b <E as Entity>::TrackCtx,
+    ) -> BoxFuture<'b, Result<()>> {
         Box::pin(self.remove(id, track))
     }
 }

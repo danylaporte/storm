@@ -71,7 +71,7 @@ where
     const SUPPORT_GC: bool = V::SUPPORT_GC;
 
     type Log = Log<K, V>;
-    type Trx<'a: 'b, 'b> = HashOneManyTrx<'a, 'b, K, V>;
+    type Trx<'a> = HashOneManyTrx<'a, K, V>;
 
     fn apply_log(&mut self, log: Self::Log) -> bool {
         let mut changed = false;
@@ -108,11 +108,7 @@ where
     }
 
     #[inline]
-    fn trx<'a: 'b, 'b>(
-        &'b self,
-        trx: &'b mut Trx<'a>,
-        log_token: LogToken<Log<K, V>>,
-    ) -> Self::Trx<'a, 'b> {
+    fn trx<'a>(&'a self, trx: &'a mut Trx<'a>, log_token: LogToken<Log<K, V>>) -> Self::Trx<'a> {
         HashOneManyTrx {
             log_token,
             map: self,
@@ -121,16 +117,15 @@ where
     }
 }
 
-pub struct HashOneManyTrx<'a, 'b, K: Send, V: Send> {
-    map: &'b HashOneMany<K, V>,
-    trx: &'b mut Trx<'a>,
+pub struct HashOneManyTrx<'a, K, V> {
+    map: &'a HashOneMany<K, V>,
+    trx: &'a mut Trx<'a>,
     log_token: LogToken<Log<K, V>>,
 }
 
-impl<'a, 'b, K, V> HashOneManyTrx<'a, 'b, K, V>
+impl<'a, K, V> HashOneManyTrx<'a, K, V>
 where
-    K: Eq + Hash + Send + 'static,
-    V: Send,
+    K: Eq + Hash,
 {
     pub fn contains_key<Q>(&self, key: &Q) -> bool
     where

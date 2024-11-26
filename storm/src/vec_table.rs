@@ -99,7 +99,7 @@ where
     const SUPPORT_GC: bool = E::SUPPORT_GC;
 
     type Log = Log<E>;
-    type Trx<'a: 'b, 'b> = VecTableTrx<'a, 'b, E>;
+    type Trx<'a> = VecTableTrx<'a, E>;
 
     fn apply_log(&mut self, log: Self::Log) -> bool {
         let mut changed = false;
@@ -132,11 +132,7 @@ where
         self.map.values_mut().for_each(|e| e.gc());
     }
 
-    fn trx<'a: 'b, 'b>(
-        &'b self,
-        trx: &'b mut Trx<'a>,
-        log: LogToken<Self::Log>,
-    ) -> Self::Trx<'a, 'b> {
+    fn trx<'a>(&'a self, trx: &'a mut Trx<'a>, log: LogToken<Self::Log>) -> Self::Trx<'a> {
         VecTableTrx {
             log_token: log,
             tbl: self,
@@ -242,20 +238,20 @@ impl<E: EntityAsset<Tbl = Self>> Tag for VecTable<E> {
     }
 }
 
-pub struct VecTableTrx<'a, 'b, E: EntityAsset<Tbl = VecTable<E>>> {
+pub struct VecTableTrx<'a, E: EntityAsset<Tbl = VecTable<E>>> {
     log_token: LogToken<Log<E>>,
-    tbl: &'b VecTable<E>,
-    trx: &'b mut Trx<'a>,
+    tbl: &'a VecTable<E>,
+    trx: &'a mut Trx<'a>,
 }
 
-impl<'a, 'b, E> VecTableTrx<'a, 'b, E>
+impl<'a, E> VecTableTrx<'a, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = VecTable<E>>,
     E::Key: Copy + Eq + Hash,
     VecTable<E>: Asset<Log = Log<E>>,
     usize: From<E::Key>,
 {
-    pub fn get<'c>(&'c self, id: &E::Key) -> Option<&'c E> {
+    pub fn get<'b>(&'b self, id: &E::Key) -> Option<&'b E> {
         match self
             .trx
             .log
@@ -267,7 +263,7 @@ where
         }
     }
 
-    pub fn get_owned(self, id: &E::Key) -> Option<&'b E> {
+    pub fn get_owned(self, id: &E::Key) -> Option<&'a E> {
         match self
             .trx
             .log
@@ -279,12 +275,12 @@ where
         }
     }
 
-    pub fn insert<'c>(
-        &'c mut self,
+    pub fn insert<'b>(
+        &'b mut self,
         id: E::Key,
         mut entity: E,
-        track: &'c E::TrackCtx,
-    ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, 'c, E>
+        track: &'b E::TrackCtx,
+    ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, E>
     where
         E: EntityValidate + PartialEq,
         TransactionProvider<'a>: Upsert<E>,
@@ -316,12 +312,12 @@ where
     }
 
     #[allow(clippy::manual_async_fn)]
-    pub fn insert_mut<'c>(
-        &'c mut self,
+    pub fn insert_mut<'b>(
+        &'b mut self,
         mut id: E::Key,
         mut entity: E,
-        track: &'c E::TrackCtx,
-    ) -> impl Future<Output = Result<E::Key>> + Send + use<'a, 'b, 'c, E>
+        track: &'b E::TrackCtx,
+    ) -> impl Future<Output = Result<E::Key>> + Send + use<'a, 'b, E>
     where
         E: EntityValidate + PartialEq,
         TransactionProvider<'a>: UpsertMut<E>,
@@ -368,11 +364,11 @@ where
     }
 
     #[allow(clippy::manual_async_fn)]
-    pub fn remove<'c>(
-        &'c mut self,
+    pub fn remove<'b>(
+        &'b mut self,
         id: E::Key,
-        track: &'c E::TrackCtx,
-    ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, 'c, E>
+        track: &'b E::TrackCtx,
+    ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, E>
     where
         TransactionProvider<'a>: Delete<E>,
     {
@@ -428,7 +424,7 @@ where
     }
 }
 
-impl<'a, 'b, E, Q> Get<E, Q> for VecTableTrx<'a, 'b, E>
+impl<'a, E, Q> Get<E, Q> for VecTableTrx<'a, E>
 where
     E: CtxTypeInfo + EntityAsset<Key = Q, Tbl = VecTable<E>>,
     Q: Copy + Eq + Hash,
@@ -441,7 +437,7 @@ where
     }
 }
 
-impl<'a, 'b, E, Q> GetOwned<'b, E, Q> for VecTableTrx<'a, 'b, E>
+impl<'a, E, Q> GetOwned<'a, E, Q> for VecTableTrx<'a, E>
 where
     E: CtxTypeInfo + EntityAsset<Key = Q, Tbl = VecTable<E>>,
     Q: Copy + Eq + Hash,
@@ -449,12 +445,12 @@ where
     usize: From<Q>,
 {
     #[inline]
-    fn get_owned(self, q: &Q) -> Option<&'b E> {
+    fn get_owned(self, q: &Q) -> Option<&'a E> {
         VecTableTrx::get_owned(self, q)
     }
 }
 
-impl<'a, 'b, E> Insert<E> for VecTableTrx<'a, 'b, E>
+impl<'a, E> Insert<E> for VecTableTrx<'a, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = VecTable<E>> + EntityValidate + PartialEq,
     E::Key: Copy + Eq + Hash,
@@ -462,17 +458,17 @@ where
     TransactionProvider<'a>: Upsert<E>,
     usize: From<E::Key>,
 {
-    fn insert<'c>(
-        &'c mut self,
+    fn insert<'b>(
+        &'b mut self,
         id: E::Key,
         entity: E,
-        track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<()>> {
+        track: &'b E::TrackCtx,
+    ) -> BoxFuture<'b, Result<()>> {
         Box::pin(VecTableTrx::insert(self, id, entity, track))
     }
 }
 
-impl<'a, 'b, E> InsertMut<E> for VecTableTrx<'a, 'b, E>
+impl<'a, E> InsertMut<E> for VecTableTrx<'a, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = VecTable<E>> + EntityValidate + PartialEq,
     E::Key: Copy + Eq + Hash,
@@ -490,15 +486,15 @@ where
     }
 }
 
-impl<'a, 'b, 'c, E> IntoIterator for &'c VecTableTrx<'a, 'b, E>
+impl<'a, 'b, E> IntoIterator for &'b VecTableTrx<'a, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = VecTable<E>>,
     E::Key: Copy + Eq + Hash,
     VecTable<E>: Asset<Log = Log<E>>,
     usize: From<E::Key>,
 {
-    type Item = (&'c E::Key, &'c E);
-    type IntoIter = VecTableTrxIter<'c, E>;
+    type Item = (&'b E::Key, &'b E);
+    type IntoIter = VecTableTrxIter<'b, E>;
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
@@ -506,19 +502,19 @@ where
     }
 }
 
-impl<'a, 'b, E> Remove<E> for VecTableTrx<'a, 'b, E>
+impl<'a, E> Remove<E> for VecTableTrx<'a, E>
 where
     E: CtxTypeInfo + EntityAsset<Tbl = VecTable<E>>,
     E::Key: Copy + Eq + Hash,
     VecTable<E>: Asset<Log = Log<E>>,
-    TransactionProvider<'a>: Delete<E>,
+    for<'c> TransactionProvider<'c>: Delete<E>,
     usize: From<E::Key>,
 {
-    fn remove<'c>(
-        &'c mut self,
+    fn remove<'b>(
+        &'b mut self,
         id: <E as Entity>::Key,
-        track: &'c <E as Entity>::TrackCtx,
-    ) -> BoxFuture<'c, Result<()>> {
+        track: &'b <E as Entity>::TrackCtx,
+    ) -> BoxFuture<'b, Result<()>> {
         Box::pin(VecTableTrx::remove(self, id, track))
     }
 }

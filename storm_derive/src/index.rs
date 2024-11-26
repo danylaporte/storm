@@ -52,7 +52,7 @@ fn index_fn(f: &ItemFn) -> TokenStream {
             const SUPPORT_GC: bool = <#asset as storm::AssetBase>::SUPPORT_GC;
 
             type Log = <#asset as storm::AssetBase>::Log;
-            type Trx<'a: 'b, 'b> = <#asset as storm::AssetBase>::Trx::<'a, 'b>;
+            type Trx<'a> = <#asset as storm::AssetBase>::Trx::<'a>;
 
             #[inline]
             fn apply_log(&mut self, log: Self::Log) -> bool {
@@ -65,11 +65,11 @@ fn index_fn(f: &ItemFn) -> TokenStream {
             }
 
             #[inline]
-            fn trx<'a: 'b, 'b>(
-                &'b self,
-                trx: &'b mut Trx<'a>,
+            fn trx<'a>(
+                &'a self,
+                trx: &'a mut Trx<'a>,
                 log: storm::LogToken<Self::Log>,
-            ) -> Self::Trx<'a, 'b> {
+            ) -> Self::Trx<'a> {
                 storm::AssetBase::trx(&self.0, trx, log)
             }
         }

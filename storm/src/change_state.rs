@@ -6,8 +6,8 @@ pub enum ChangeState<T> {
 }
 
 impl<T> ChangeState<T> {
-    pub async fn from_trx<'a: 'b, 'b, E, F, Q>(
-        trx: &'b mut Trx<'a>,
+    pub async fn from_trx<'a, E, F, Q>(
+        trx: &'a mut Trx<'a>,
         q: &Q,
         new: &E,
         map: F,
@@ -16,7 +16,7 @@ impl<T> ChangeState<T> {
         F: Fn(&E) -> T,
         E: EntityAsset,
         T: PartialEq,
-        <E::Tbl as AssetBase>::Trx<'a, 'b>: GetOwned<'b, E, Q>,
+        <E::Tbl as AssetBase>::Trx<'a>: GetOwned<'a, E, Q>,
     {
         let old = trx.get_entity(q).await?;
 

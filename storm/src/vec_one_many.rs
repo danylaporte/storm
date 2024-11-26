@@ -65,7 +65,7 @@ where
     const SUPPORT_GC: bool = V::SUPPORT_GC;
 
     type Log = Log<K, V>;
-    type Trx<'a: 'b, 'b> = VecOneManyTrx<'a, 'b, K, V>;
+    type Trx<'a> = VecOneManyTrx<'a, K, V>;
 
     fn apply_log(&mut self, log: Self::Log) -> bool {
         let mut changed = false;
@@ -102,11 +102,7 @@ where
     }
 
     #[inline]
-    fn trx<'a: 'b, 'b>(
-        &'b self,
-        trx: &'b mut Trx<'a>,
-        log_token: LogToken<Log<K, V>>,
-    ) -> Self::Trx<'a, 'b> {
+    fn trx<'a>(&'a self, trx: &'a mut Trx<'a>, log_token: LogToken<Log<K, V>>) -> Self::Trx<'a> {
         VecOneManyTrx {
             log_token,
             map: self,
@@ -115,13 +111,13 @@ where
     }
 }
 
-pub struct VecOneManyTrx<'a, 'b, K: Sync, V: Sync> {
-    map: &'b VecOneMany<K, V>,
-    trx: &'b mut Trx<'a>,
+pub struct VecOneManyTrx<'a, K: Sync, V: Sync> {
+    map: &'a VecOneMany<K, V>,
+    trx: &'a mut Trx<'a>,
     log_token: LogToken<Log<K, V>>,
 }
 
-impl<'a, 'b, K, V> VecOneManyTrx<'a, 'b, K, V>
+impl<'a, K, V> VecOneManyTrx<'a, K, V>
 where
     K: Copy + Eq + Hash + Sync + 'static,
     V: Sync,
