@@ -1,6 +1,6 @@
-use crate::{BoxFuture, EntityAsset, Result};
+use crate::{BoxFuture, EntityObj, Result};
 
-pub trait Remove<E: EntityAsset>: Send {
+pub trait Remove<E: EntityObj>: Send {
     fn remove<'a>(&'a mut self, k: E::Key, track: &'a E::TrackCtx) -> BoxFuture<'a, Result<()>>;
 
     fn remove_all<'a, K>(&'a mut self, keys: K, track: &'a E::TrackCtx) -> BoxFuture<'a, Result<()>>

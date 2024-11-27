@@ -1,6 +1,6 @@
 use std::future::Future;
 
-use crate::{EntityAsset, Error, Result, Trx};
+use crate::{EntityObj, Error, Result, Trx};
 
 pub trait EntityValidate {
     fn entity_validate(&self, error: &mut Option<Error>);
@@ -34,7 +34,7 @@ pub(crate) fn validate_on_change<'a, 'b, E>(
     track: &'b E::TrackCtx,
 ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, E>
 where
-    E: EntityAsset + EntityValidate,
+    E: EntityObj + EntityValidate,
 {
     async move {
         let mut error = None;

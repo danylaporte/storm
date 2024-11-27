@@ -17,20 +17,20 @@ fn index_fn(f: &ItemFn) -> TokenStream {
     let name = &f.sig.ident;
     let name_str = &name.to_string().to_pascal_case();
     let index_name = Ident::new(name_str, name.span());
-    let asset = resolve_result(&f.sig.output).clone();
+    let obj = resolve_result(&f.sig.output).clone();
     let args = &f.sig.inputs;
     let expr = &f.block;
 
     quote! {
-        #vis struct #index_name(#asset);
+        #vis struct #index_name(#obj);
 
         impl #index_name {
-            async fn init_imp(#args) -> storm::Result<#asset> {
+            async fn init_imp(#args) -> storm::Result<#obj> {
                 #expr
             }
         }
 
-        impl storm::Asset for #index_name {
+        impl storm::Obj for #index_name {
             #[inline]
             fn ctx_var() -> storm::attached::Var<Self, storm::CtxVars> {
                 storm::attached::var!(V: #index_name, storm::CtxVars);
@@ -38,8 +38,8 @@ fn index_fn(f: &ItemFn) -> TokenStream {
             }
 
             #[inline]
-            fn log_var() -> storm::attached::Var<<Self as storm::AssetBase>::Log, storm::LogVars> {
-                storm::attached::var!(V: <#index_name as storm::AssetBase>::Log, storm::LogVars);
+            fn log_var() -> storm::attached::Var<<Self as storm::ObjBase>::Log, storm::LogVars> {
+                storm::attached::var!(V: <#index_name as storm::ObjBase>::Log, storm::LogVars);
                 *V
             }
 
@@ -48,20 +48,20 @@ fn index_fn(f: &ItemFn) -> TokenStream {
             }
         }
 
-        impl storm::AssetBase for #index_name {
-            const SUPPORT_GC: bool = <#asset as storm::AssetBase>::SUPPORT_GC;
+        impl storm::ObjBase for #index_name {
+            const SUPPORT_GC: bool = <#obj as storm::ObjBase>::SUPPORT_GC;
 
-            type Log = <#asset as storm::AssetBase>::Log;
-            type Trx<'a> = <#asset as storm::AssetBase>::Trx::<'a>;
+            type Log = <#obj as storm::ObjBase>::Log;
+            type Trx<'a> = <#obj as storm::ObjBase>::Trx::<'a>;
 
             #[inline]
             fn apply_log(&mut self, log: Self::Log) -> bool {
-                storm::AssetBase::apply_log(&mut self.0, log)
+                storm::ObjBase::apply_log(&mut self.0, log)
             }
 
             #[inline]
             fn gc(&mut self) {
-                storm::AssetBase::gc(&mut self.0)
+                storm::ObjBase::gc(&mut self.0)
             }
 
             #[inline]
@@ -70,12 +70,12 @@ fn index_fn(f: &ItemFn) -> TokenStream {
                 trx: &'a mut Trx<'a>,
                 log: storm::LogToken<Self::Log>,
             ) -> Self::Trx<'a> {
-                storm::AssetBase::trx(&self.0, trx, log)
+                storm::ObjBase::trx(&self.0, trx, log)
             }
         }
 
         impl std::ops::Deref for #index_name {
-            type Target = #asset;
+            type Target = #obj;
 
             #[inline]
             fn deref(&self) -> &Self::Target {

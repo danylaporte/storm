@@ -1,4 +1,4 @@
-use crate::{Asset, Assets};
+use crate::{Obj, Objs};
 use parking_lot::Mutex;
 use std::{
     borrow::Cow,
@@ -11,27 +11,27 @@ use std::{
 };
 use vec_map::VecMap;
 
-type AssetFnRef = &'static (dyn Fn(&mut Assets) + Sync);
+type ObjFnRef = &'static (dyn Fn(&mut Objs) + Sync);
 
 #[derive(Default)]
-pub(crate) struct AssetGc(Mutex<Vec<AssetFnRef>>);
+pub(crate) struct ObjGc(Mutex<Vec<ObjFnRef>>);
 
-impl AssetGc {
-    /// Collect all garbage in assets.
-    pub(crate) fn collect(&mut self, assets: &mut Assets) {
+impl ObjGc {
+    /// Collect all garbage in objs.
+    pub(crate) fn collect(&mut self, objs: &mut Objs) {
         for f in self.0.get_mut() {
-            f(assets);
+            f(objs);
         }
     }
 
-    /// Register a garbage collection for this asset.
-    pub(crate) fn register<A: Asset>(&self) {
+    /// Register a garbage collection for this obj.
+    pub(crate) fn register<A: Obj>(&self) {
         if A::SUPPORT_GC {
             self.register_fn(&gc::<A>);
         }
     }
 
-    fn register_fn(&self, f: &'static (dyn Fn(&mut Assets) + Sync)) {
+    fn register_fn(&self, f: &'static (dyn Fn(&mut Objs) + Sync)) {
         let mut guard = self.0.lock();
 
         if !guard.iter().any(|a| addr_eq(a, f)) {
@@ -40,9 +40,9 @@ impl AssetGc {
     }
 }
 
-fn gc<A: Asset>(assets: &mut Assets) {
-    if let Some(asset) = assets.get_mut(A::ctx_var()) {
-        asset.gc();
+fn gc<A: Obj>(objs: &mut Objs) {
+    if let Some(obj) = objs.get_mut(A::ctx_var()) {
+        obj.gc();
     }
 }
 

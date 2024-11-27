@@ -1,6 +1,6 @@
 use crate::{
-    Asset, AssetBase, BoxFuture, ChangeEvent, ChangedEvent, CtxVars, Gc, LogVars, RemoveEvent,
-    Result, Trx,
+    BoxFuture, ChangeEvent, ChangedEvent, CtxVars, Gc, LogVars, Obj, ObjBase, RemoveEvent, Result,
+    Trx,
 };
 use attached::Var;
 use std::fmt::Debug;
@@ -50,11 +50,11 @@ fn box_future_ok() -> BoxFuture<'static, Result<()>> {
     Box::pin(std::future::ready(Ok(())))
 }
 
-pub trait EntityAsset: Entity + Gc + 'static {
-    type Tbl: Asset;
+pub trait EntityObj: Entity + Gc + 'static {
+    type Tbl: Obj;
 
     fn ctx_var() -> Var<Self::Tbl, CtxVars>;
-    fn log_var() -> Var<<Self::Tbl as AssetBase>::Log, LogVars>;
+    fn log_var() -> Var<<Self::Tbl as ObjBase>::Log, LogVars>;
 
     fn change() -> &'static ChangeEvent<Self>;
     fn changed() -> &'static ChangedEvent<Self>;

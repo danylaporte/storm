@@ -1,7 +1,7 @@
 use crate::{log::LogToken, Trx};
 
-/// A table or an index in the storm Ctx is an asset.
-pub trait AssetBase: Sized + Send + Sync + 'static {
+/// A table or an index in the storm Ctx is an obj.
+pub trait ObjBase: Sized + Send + Sync + 'static {
     const SUPPORT_GC: bool = false;
 
     type Log: Default;

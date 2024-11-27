@@ -1,4 +1,4 @@
-use crate::{AssetBase, EntityAsset, GetOwned, Result, Trx};
+use crate::{ObjBase, EntityObj, GetOwned, Result, Trx};
 
 pub enum ChangeState<T> {
     New(T),
@@ -14,9 +14,9 @@ impl<T> ChangeState<T> {
     ) -> Result<Option<Self>>
     where
         F: Fn(&E) -> T,
-        E: EntityAsset,
+        E: EntityObj,
         T: PartialEq,
-        <E::Tbl as AssetBase>::Trx<'a>: GetOwned<'a, E, Q>,
+        <E::Tbl as ObjBase>::Trx<'a>: GetOwned<'a, E, Q>,
     {
         let old = trx.get_entity(q).await?;
 
@@ -26,7 +26,7 @@ impl<T> ChangeState<T> {
     pub fn from_new_old<E, F>(new: &E, old: Option<&E>, map: F) -> Option<Self>
     where
         F: Fn(&E) -> T,
-        E: EntityAsset,
+        E: EntityObj,
         T: PartialEq,
     {
         match old {

@@ -29,7 +29,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     Ok(quote! {
         #vis type #table_alias = #coll_ty;
 
-        impl storm::EntityAsset for #entity {
+        impl storm::EntityObj for #entity {
             type Tbl = #table_alias;
 
             #[allow(non_camel_case_types)]
@@ -41,8 +41,8 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
             #[allow(non_camel_case_types)]
             #[inline]
-            fn log_var() -> storm::attached::Var<<Self::Tbl as storm::AssetBase>::Log, storm::LogVars> {
-                storm::attached::var!(VAR: <#table_alias as storm::AssetBase>::Log, storm::LogVars);
+            fn log_var() -> storm::attached::Var<<Self::Tbl as storm::ObjBase>::Log, storm::LogVars> {
+                storm::attached::var!(VAR: <#table_alias as storm::ObjBase>::Log, storm::LogVars);
                 *VAR
             }
 

@@ -4,25 +4,25 @@ use crate::{
     cycle_dep,
     provider::{LoadAll, LoadArgs, LoadOne},
     trx_err_gate::TrxErrGate,
-    AsRefAsync, Asset, AssetGc, AsyncTryFrom, BoxFuture, ClearAssetEvent, Entity, EntityAsset, Log,
+    AsRefAsync, AsyncTryFrom, BoxFuture, ClearObjEvent, Entity, EntityObj, Log, Obj, ObjGc,
     ProviderContainer, Result, Tag, Trx,
 };
 use attached::{container, Container};
 use version_tag::VersionTag;
 
 container!(pub CtxVars);
-pub(crate) type Assets = Container<CtxVars>;
+pub(crate) type Objs = Container<CtxVars>;
 
 pub struct Ctx {
-    pub(crate) assets: Assets,
-    gc: AssetGc,
+    pub(crate) objs: Objs,
+    gc: ObjGc,
     pub(crate) provider: ProviderContainer,
 }
 
 impl Ctx {
     pub fn new(provider: ProviderContainer) -> Self {
         Self {
-            assets: Default::default(),
+            objs: Default::default(),
             gc: Default::default(),
             provider,
         }
@@ -33,11 +33,11 @@ impl Ctx {
         log.apply(self)
     }
 
-    pub fn asset<A: Asset>(&self) -> BoxFuture<'_, Result<&A>> {
+    pub fn obj<A: Obj>(&self) -> BoxFuture<'_, Result<&A>> {
         Box::pin(async move {
             let var = A::ctx_var();
 
-            if let Some(v) = self.assets.get(var) {
+            if let Some(v) = self.objs.get(var) {
                 return Ok(v);
             }
 
@@ -51,7 +51,7 @@ impl Ctx {
                         None
                     };
 
-                    if let Some(o) = self.assets.get(var) {
+                    if let Some(o) = self.objs.get(var) {
                         return Ok(o);
                     }
 
@@ -59,7 +59,7 @@ impl Ctx {
 
                     self.gc.register::<A>();
 
-                    Ok(self.assets.get_or_init_val(var, value).0)
+                    Ok(self.objs.get_or_init_val(var, value).0)
                 },
                 id,
             )
@@ -68,21 +68,21 @@ impl Ctx {
     }
 
     #[inline]
-    pub fn asset_opt<A: Asset>(&self) -> Option<&A> {
-        self.assets.get(A::ctx_var())
+    pub fn obj_opt<A: Obj>(&self) -> Option<&A> {
+        self.objs.get(A::ctx_var())
     }
 
-    pub fn clear_asset<A: Asset>(&mut self) {
-        if self.assets.replace(A::ctx_var(), None).is_some() {
-            Self::on_clear_asset::<A>().call(self);
+    pub fn clear_obj<A: Obj>(&mut self) {
+        if self.objs.replace(A::ctx_var(), None).is_some() {
+            Self::on_clear_obj::<A>().call(self);
         }
     }
 
     pub fn clear_tbl_of<E>(&mut self)
     where
-        E: EntityAsset,
+        E: EntityObj,
     {
-        self.clear_asset::<E::Tbl>();
+        self.clear_obj::<E::Tbl>();
     }
 
     pub fn gc(&mut self) {
@@ -90,13 +90,13 @@ impl Ctx {
         crate::telemetry::inc_storm_gc();
 
         self.provider.gc();
-        self.gc.collect(&mut self.assets);
+        self.gc.collect(&mut self.objs);
     }
 
     #[inline]
-    pub fn on_clear_asset<A: Asset>() -> &'static ClearAssetEvent {
+    pub fn on_clear_obj<A: Obj>() -> &'static ClearObjEvent {
         #[static_init::dynamic]
-        static EVENT: ClearAssetEvent = Default::default();
+        static EVENT: ClearObjEvent = Default::default();
         &EVENT
     }
 
@@ -106,13 +106,13 @@ impl Ctx {
     }
 
     #[inline]
-    pub async fn tbl_of<E: EntityAsset>(&self) -> Result<&E::Tbl> {
-        self.asset::<E::Tbl>().await
+    pub async fn tbl_of<E: EntityObj>(&self) -> Result<&E::Tbl> {
+        self.obj::<E::Tbl>().await
     }
 
     #[inline]
-    pub fn tbl_of_opt<E: EntityAsset>(&self) -> Option<&E::Tbl> {
-        self.asset_opt::<E::Tbl>()
+    pub fn tbl_of_opt<E: EntityObj>(&self) -> Option<&E::Tbl> {
+        self.obj_opt::<E::Tbl>()
     }
 
     #[must_use]
@@ -134,11 +134,11 @@ impl Default for Ctx {
 
 impl<A> AsRefAsync<A> for Ctx
 where
-    A: Asset + Sync,
+    A: Obj + Sync,
 {
     #[inline]
     fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ A>> {
-        Box::pin(self.asset())
+        Box::pin(self.obj())
     }
 }
 

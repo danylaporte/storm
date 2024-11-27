@@ -1,4 +1,4 @@
-use crate::{log::LogToken, AssetBase, Gc, Tag, Trx};
+use crate::{log::LogToken, ObjBase, Gc, Tag, Trx};
 use fxhash::FxHashMap;
 use std::{collections::hash_map, hash::Hash};
 use vec_map::{Entry, VecMap};
@@ -56,7 +56,7 @@ where
     }
 }
 
-impl<K, V> AssetBase for VecOneMany<K, V>
+impl<K, V> ObjBase for VecOneMany<K, V>
 where
     K: Copy + Eq + Hash + Send + Sync + 'static,
     V: Gc + PartialEq + Send + Sync + 'static,

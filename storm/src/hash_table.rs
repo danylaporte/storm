@@ -1,9 +1,9 @@
 use crate::{
     log::LogToken,
     provider::{Delete, LoadAll, LoadArgs, TransactionProvider, Upsert, UpsertMut},
-    validate_on_change, Asset, AssetBase, BoxFuture, CtxTypeInfo, CtxVars, Entity, EntityAsset,
-    EntityValidate, Get, GetMut, GetOwned, Insert, InsertMut, LogVars, NotifyTag,
-    ProviderContainer, Remove, Result, Tag, Trx,
+    validate_on_change, BoxFuture, CtxTypeInfo, CtxVars, Entity, EntityObj, EntityValidate, Get,
+    GetMut, GetOwned, Insert, InsertMut, LogVars, NotifyTag, Obj, ObjBase, ProviderContainer,
+    Remove, Result, Tag, Trx,
 };
 use attached::Var;
 use fxhash::FxHashMap;
@@ -21,14 +21,14 @@ use version_tag::VersionTag;
 
 type Log<E> = FxHashMap<<E as Entity>::Key, Option<E>>;
 
-pub struct HashTable<E: EntityAsset> {
+pub struct HashTable<E: EntityObj> {
     map: FxHashMap<E::Key, E>,
     tag: VersionTag,
 }
 
 impl<E> HashTable<E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = Self>,
+    E: CtxTypeInfo + EntityObj<Tbl = Self>,
     E::Key: Eq + Hash,
 {
     #[inline]
@@ -76,9 +76,9 @@ where
     }
 }
 
-impl<E> AssetBase for HashTable<E>
+impl<E> ObjBase for HashTable<E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = Self> + PartialEq + 'static,
+    E: CtxTypeInfo + EntityObj<Tbl = Self> + PartialEq + 'static,
     E::Key: Eq + Hash,
     ProviderContainer: LoadAll<E, (), Self>,
 {
@@ -125,9 +125,9 @@ where
     }
 }
 
-impl<E> Asset for HashTable<E>
+impl<E> Obj for HashTable<E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>> + PartialEq,
     E::Key: Eq + Hash,
     ProviderContainer: LoadAll<E, (), Self>,
 {
@@ -147,7 +147,7 @@ where
     }
 }
 
-impl<E: EntityAsset<Tbl = Self>> Default for HashTable<E> {
+impl<E: EntityObj<Tbl = Self>> Default for HashTable<E> {
     #[inline]
     fn default() -> Self {
         Self {
@@ -159,7 +159,7 @@ impl<E: EntityAsset<Tbl = Self>> Default for HashTable<E> {
 
 impl<E> Extend<(E::Key, E)> for HashTable<E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = Self>,
+    E: CtxTypeInfo + EntityObj<Tbl = Self>,
     E::Key: Eq + Hash,
 {
     fn extend<T>(&mut self, iter: T)
@@ -176,7 +176,7 @@ where
 
 impl<E, Q> Get<E, Q> for HashTable<E>
 where
-    E: EntityAsset<Tbl = Self>,
+    E: EntityObj<Tbl = Self>,
     E::Key: Borrow<Q> + Eq + Hash,
     Q: Eq + Hash,
 {
@@ -188,7 +188,7 @@ where
 
 impl<E> GetMut<E> for HashTable<E>
 where
-    E: EntityAsset<Tbl = Self>,
+    E: EntityObj<Tbl = Self>,
     E::Key: Eq + Hash,
 {
     #[inline]
@@ -197,7 +197,7 @@ where
     }
 }
 
-impl<'a, E: EntityAsset<Tbl = Self>> IntoIterator for &'a HashTable<E> {
+impl<'a, E: EntityObj<Tbl = Self>> IntoIterator for &'a HashTable<E> {
     type Item = (&'a E::Key, &'a E);
     type IntoIter = Iter<'a, E::Key, E>;
 
@@ -209,7 +209,7 @@ impl<'a, E: EntityAsset<Tbl = Self>> IntoIterator for &'a HashTable<E> {
 
 impl<'a, E> IntoParallelIterator for &'a HashTable<E>
 where
-    E: EntityAsset<Tbl = Self>,
+    E: EntityObj<Tbl = Self>,
     E::Key: Eq + Hash,
 {
     type Item = (&'a E::Key, &'a E);
@@ -220,19 +220,19 @@ where
     }
 }
 
-impl<E: EntityAsset<Tbl = Self>> NotifyTag for HashTable<E> {
+impl<E: EntityObj<Tbl = Self>> NotifyTag for HashTable<E> {
     fn notify_tag(&mut self) {
         self.tag.notify()
     }
 }
 
-impl<E: EntityAsset<Tbl = Self>> Tag for HashTable<E> {
+impl<E: EntityObj<Tbl = Self>> Tag for HashTable<E> {
     fn tag(&self) -> VersionTag {
         self.tag
     }
 }
 
-pub struct HashTableTrx<'a, E: EntityAsset<Tbl = HashTable<E>>> {
+pub struct HashTableTrx<'a, E: EntityObj<Tbl = HashTable<E>>> {
     log_token: LogToken<Log<E>>,
     tbl: &'a HashTable<E>,
     trx: &'a mut Trx<'a>,
@@ -240,9 +240,9 @@ pub struct HashTableTrx<'a, E: EntityAsset<Tbl = HashTable<E>>> {
 
 impl<'a, E> HashTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>> + PartialEq,
     E::Key: Eq + Hash,
-    HashTable<E>: AssetBase<Log = Log<E>>,
+    HashTable<E>: ObjBase<Log = Log<E>>,
 {
     #[inline]
     pub fn get<Q>(&self, q: &Q) -> Option<&E>
@@ -423,9 +423,9 @@ where
 
 impl<'a, E, Q> Get<E, Q> for HashTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>> + PartialEq,
     E::Key: Borrow<Q> + Eq + Hash,
-    HashTable<E>: AssetBase<Log = Log<E>>,
+    HashTable<E>: ObjBase<Log = Log<E>>,
     Q: Eq + Hash,
 {
     #[inline]
@@ -436,9 +436,9 @@ where
 
 impl<'a, Q, E> GetOwned<'a, E, Q> for HashTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>> + PartialEq,
     E::Key: Borrow<Q> + Eq + Hash,
-    HashTable<E>: AssetBase<Log = Log<E>>,
+    HashTable<E>: ObjBase<Log = Log<E>>,
     Q: Eq + Hash,
 {
     #[inline]
@@ -449,9 +449,9 @@ where
 
 impl<'a, E> Insert<E> for HashTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + EntityValidate + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>> + EntityValidate + PartialEq,
     E::Key: Eq + Hash,
-    HashTable<E>: AssetBase<Log = Log<E>>,
+    HashTable<E>: ObjBase<Log = Log<E>>,
     TransactionProvider<'a>: Upsert<E>,
 {
     fn insert<'b>(
@@ -466,9 +466,9 @@ where
 
 impl<'a, E> InsertMut<E> for HashTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + EntityValidate + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>> + EntityValidate + PartialEq,
     E::Key: Clone + Eq + Hash,
-    HashTable<E>: AssetBase<Log = Log<E>>,
+    HashTable<E>: ObjBase<Log = Log<E>>,
     TransactionProvider<'a>: UpsertMut<E>,
 {
     fn insert_mut<'b>(
@@ -483,9 +483,9 @@ where
 
 impl<'a, 'b, E> IntoIterator for &'b HashTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>> + PartialEq,
     E::Key: Eq + Hash,
-    HashTable<E>: AssetBase<Log = Log<E>>,
+    HashTable<E>: ObjBase<Log = Log<E>>,
 {
     type Item = (&'b E::Key, &'b E);
     type IntoIter = HashTableTrxIter<'b, E>;
@@ -498,9 +498,9 @@ where
 
 impl<'a, E> Remove<E> for HashTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = HashTable<E>> + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>> + PartialEq,
     E::Key: Eq + Hash,
-    HashTable<E>: AssetBase<Log = Log<E>>,
+    HashTable<E>: ObjBase<Log = Log<E>>,
     for<'c> TransactionProvider<'c>: Delete<E>,
 {
     fn remove<'b>(

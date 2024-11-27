@@ -1,4 +1,4 @@
-use crate::{Asset, Ctx, Entity, Result, Trx};
+use crate::{Ctx, Entity, Obj, Result, Trx};
 use parking_lot::Mutex;
 use std::{future::Future, iter::once, ptr::addr_eq, sync::Arc};
 use tokio::task_local;
@@ -26,7 +26,7 @@ pub type ChangedEvent<E> = Event<
          + Sync),
 >;
 
-pub type ClearAssetEvent = Event<(dyn Fn(&mut Ctx) + Sync)>;
+pub type ClearObjEvent = Event<(dyn Fn(&mut Ctx) + Sync)>;
 
 pub type RemoveEvent<Key, Track> =
     Event<(dyn for<'a, 'b> Fn(&'b mut Trx<'a>, &'b Key, &'b Track) -> Fut<'b> + Sync)>;
@@ -90,16 +90,16 @@ impl<E: Entity> ChangedEvent<E> {
     }
 }
 
-impl ClearAssetEvent {
+impl ClearObjEvent {
     pub(crate) fn call(&self, ctx: &mut Ctx) {
         for f in &*self.list() {
             f(ctx);
         }
     }
 
-    /// Clear automatically the specified asset when this event is raised.
-    pub fn register_clear_asset<A: Asset>(&self) {
-        self.register(&clear_asset::<A>);
+    /// Clear automatically the specified obj when this event is raised.
+    pub fn register_clear_obj<A: Obj>(&self) {
+        self.register(&clear_obj::<A>);
     }
 }
 
@@ -123,8 +123,8 @@ impl<Key, Track> RemoveEvent<Key, Track> {
     }
 }
 
-fn clear_asset<A: Asset>(ctx: &mut Ctx) {
-    ctx.clear_asset::<A>()
+fn clear_obj<A: Obj>(ctx: &mut Ctx) {
+    ctx.clear_obj::<A>()
 }
 
 task_local! {

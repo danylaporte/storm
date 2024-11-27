@@ -1,7 +1,7 @@
 use crate::{
     log::{LogToken, LogVars},
     provider::{Delete, LoadAll, LoadArgs, TransactionProvider, Upsert, UpsertMut},
-    validate_on_change, Asset, AssetBase, BoxFuture, CtxTypeInfo, CtxVars, Entity, EntityAsset,
+    validate_on_change, Obj, ObjBase, BoxFuture, CtxTypeInfo, CtxVars, Entity, EntityObj,
     EntityValidate, Get, GetMut, GetOwned, Insert, InsertMut, ProviderContainer, Remove, Result,
     Tag, Trx,
 };
@@ -14,14 +14,14 @@ use version_tag::VersionTag;
 
 type Log<E> = FxHashMap<<E as Entity>::Key, Option<E>>;
 
-pub struct VecTable<E: EntityAsset<Tbl = Self>> {
+pub struct VecTable<E: EntityObj<Tbl = Self>> {
     map: VecMap<E::Key, E>,
     tag: VersionTag,
 }
 
 impl<E> VecTable<E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = Self>,
+    E: CtxTypeInfo + EntityObj<Tbl = Self>,
 {
     #[inline]
     pub fn new() -> Self {
@@ -68,9 +68,9 @@ where
     }
 }
 
-impl<E> Asset for VecTable<E>
+impl<E> Obj for VecTable<E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = Self> + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = Self> + PartialEq,
     E::Key: Copy,
     ProviderContainer: LoadAll<E, (), Self>,
     usize: From<E::Key>,
@@ -90,9 +90,9 @@ where
     }
 }
 
-impl<E> AssetBase for VecTable<E>
+impl<E> ObjBase for VecTable<E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = Self> + PartialEq + 'static,
+    E: CtxTypeInfo + EntityObj<Tbl = Self> + PartialEq + 'static,
     E::Key: Copy,
     usize: From<E::Key>,
 {
@@ -143,7 +143,7 @@ where
 
 impl<E> Clone for VecTable<E>
 where
-    E: Clone + EntityAsset<Tbl = Self>,
+    E: Clone + EntityObj<Tbl = Self>,
     E::Key: Clone,
 {
     fn clone(&self) -> Self {
@@ -154,7 +154,7 @@ where
     }
 }
 
-impl<E: EntityAsset<Tbl = Self>> Default for VecTable<E> {
+impl<E: EntityObj<Tbl = Self>> Default for VecTable<E> {
     #[inline]
     fn default() -> Self {
         Self {
@@ -166,7 +166,7 @@ impl<E: EntityAsset<Tbl = Self>> Default for VecTable<E> {
 
 impl<E> Extend<(E::Key, E)> for VecTable<E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = Self> + PartialEq + 'static,
+    E: CtxTypeInfo + EntityObj<Tbl = Self> + PartialEq + 'static,
     E::Key: Copy + Into<usize>,
     usize: From<E::Key>,
 {
@@ -184,7 +184,7 @@ where
 
 impl<E, Q> Get<E, Q> for VecTable<E>
 where
-    E: CtxTypeInfo + EntityAsset<Key = Q, Tbl = VecTable<E>>,
+    E: CtxTypeInfo + EntityObj<Key = Q, Tbl = VecTable<E>>,
     Q: Copy + 'static,
     usize: From<Q>,
 {
@@ -196,7 +196,7 @@ where
 
 impl<E> GetMut<E> for VecTable<E>
 where
-    E: EntityAsset<Tbl = Self>,
+    E: EntityObj<Tbl = Self>,
     E::Key: Copy + Into<usize>,
 {
     #[inline]
@@ -207,7 +207,7 @@ where
 
 impl<'a, E> IntoIterator for &'a VecTable<E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = VecTable<E>>,
+    E: CtxTypeInfo + EntityObj<Tbl = VecTable<E>>,
 {
     type Item = (&'a E::Key, &'a E);
     type IntoIter = Iter<'a, E::Key, E>;
@@ -220,7 +220,7 @@ where
 
 impl<'a, E> IntoParallelIterator for &'a VecTable<E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = VecTable<E>>,
+    E: CtxTypeInfo + EntityObj<Tbl = VecTable<E>>,
 {
     type Item = (&'a E::Key, &'a E);
     type Iter = ParIter<'a, E::Key, E>;
@@ -231,14 +231,14 @@ where
     }
 }
 
-impl<E: EntityAsset<Tbl = Self>> Tag for VecTable<E> {
+impl<E: EntityObj<Tbl = Self>> Tag for VecTable<E> {
     #[inline]
     fn tag(&self) -> VersionTag {
         self.tag
     }
 }
 
-pub struct VecTableTrx<'a, E: EntityAsset<Tbl = VecTable<E>>> {
+pub struct VecTableTrx<'a, E: EntityObj<Tbl = VecTable<E>>> {
     log_token: LogToken<Log<E>>,
     tbl: &'a VecTable<E>,
     trx: &'a mut Trx<'a>,
@@ -246,9 +246,9 @@ pub struct VecTableTrx<'a, E: EntityAsset<Tbl = VecTable<E>>> {
 
 impl<'a, E> VecTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = VecTable<E>>,
+    E: CtxTypeInfo + EntityObj<Tbl = VecTable<E>>,
     E::Key: Copy + Eq + Hash,
-    VecTable<E>: Asset<Log = Log<E>>,
+    VecTable<E>: Obj<Log = Log<E>>,
     usize: From<E::Key>,
 {
     pub fn get<'b>(&'b self, id: &E::Key) -> Option<&'b E> {
@@ -426,9 +426,9 @@ where
 
 impl<'a, E, Q> Get<E, Q> for VecTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityAsset<Key = Q, Tbl = VecTable<E>>,
+    E: CtxTypeInfo + EntityObj<Key = Q, Tbl = VecTable<E>>,
     Q: Copy + Eq + Hash,
-    VecTable<E>: Asset<Log = Log<E>>,
+    VecTable<E>: Obj<Log = Log<E>>,
     usize: From<Q>,
 {
     #[inline]
@@ -439,9 +439,9 @@ where
 
 impl<'a, E, Q> GetOwned<'a, E, Q> for VecTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityAsset<Key = Q, Tbl = VecTable<E>>,
+    E: CtxTypeInfo + EntityObj<Key = Q, Tbl = VecTable<E>>,
     Q: Copy + Eq + Hash,
-    VecTable<E>: Asset<Log = Log<E>>,
+    VecTable<E>: Obj<Log = Log<E>>,
     usize: From<Q>,
 {
     #[inline]
@@ -452,9 +452,9 @@ where
 
 impl<'a, E> Insert<E> for VecTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = VecTable<E>> + EntityValidate + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = VecTable<E>> + EntityValidate + PartialEq,
     E::Key: Copy + Eq + Hash,
-    VecTable<E>: Asset<Log = Log<E>>,
+    VecTable<E>: Obj<Log = Log<E>>,
     TransactionProvider<'a>: Upsert<E>,
     usize: From<E::Key>,
 {
@@ -470,9 +470,9 @@ where
 
 impl<'a, E> InsertMut<E> for VecTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = VecTable<E>> + EntityValidate + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = VecTable<E>> + EntityValidate + PartialEq,
     E::Key: Copy + Eq + Hash,
-    VecTable<E>: Asset<Log = Log<E>>,
+    VecTable<E>: Obj<Log = Log<E>>,
     TransactionProvider<'a>: UpsertMut<E>,
     usize: From<E::Key>,
 {
@@ -488,9 +488,9 @@ where
 
 impl<'a, 'b, E> IntoIterator for &'b VecTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = VecTable<E>>,
+    E: CtxTypeInfo + EntityObj<Tbl = VecTable<E>>,
     E::Key: Copy + Eq + Hash,
-    VecTable<E>: Asset<Log = Log<E>>,
+    VecTable<E>: Obj<Log = Log<E>>,
     usize: From<E::Key>,
 {
     type Item = (&'b E::Key, &'b E);
@@ -504,9 +504,9 @@ where
 
 impl<'a, E> Remove<E> for VecTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityAsset<Tbl = VecTable<E>>,
+    E: CtxTypeInfo + EntityObj<Tbl = VecTable<E>>,
     E::Key: Copy + Eq + Hash,
-    VecTable<E>: Asset<Log = Log<E>>,
+    VecTable<E>: Obj<Log = Log<E>>,
     for<'c> TransactionProvider<'c>: Delete<E>,
     usize: From<E::Key>,
 {

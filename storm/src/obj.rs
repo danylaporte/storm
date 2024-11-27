@@ -1,8 +1,8 @@
-use crate::{AssetBase, Ctx, CtxVars, LogVars, Result};
+use crate::{Ctx, CtxVars, LogVars, ObjBase, Result};
 use attached::Var;
 use std::future::Future;
 
-pub trait Asset: AssetBase {
+pub trait Obj: ObjBase {
     fn ctx_var() -> Var<Self, CtxVars>;
     fn log_var() -> Var<Self::Log, LogVars>;
 
