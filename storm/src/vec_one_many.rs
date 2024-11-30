@@ -1,4 +1,4 @@
-use crate::{log::LogToken, ObjBase, Gc, Tag, Trx};
+use crate::{log::LogToken, Gc, ObjBase, Tag, Trx};
 use fxhash::FxHashMap;
 use std::{collections::hash_map, hash::Hash};
 use vec_map::{Entry, VecMap};

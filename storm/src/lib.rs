@@ -6,6 +6,7 @@ mod as_ref_async;
 mod as_ref_opt;
 mod async_try_from;
 mod change_state;
+mod cow_obj;
 mod ctx;
 mod ctx_type_info;
 mod cycle_dep;
@@ -51,6 +52,7 @@ pub use attached;
 #[cfg(feature = "cache")]
 pub use cache;
 pub use change_state::ChangeState;
+pub use cow_obj::CowObj;
 pub use ctx::*;
 pub use ctx_type_info::CtxTypeInfo;
 pub use entity::{Entity, EntityObj};

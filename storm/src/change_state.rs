@@ -1,4 +1,4 @@
-use crate::{ObjBase, EntityObj, GetOwned, Result, Trx};
+use crate::{EntityObj, GetOwned, ObjBase, Result, Trx};
 
 pub enum ChangeState<T> {
     New(T),

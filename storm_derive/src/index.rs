@@ -67,7 +67,7 @@ fn index_fn(f: &ItemFn) -> TokenStream {
             #[inline]
             fn trx<'a>(
                 &'a self,
-                trx: &'a mut Trx<'a>,
+                trx: &'a mut storm::Trx<'a>,
                 log: storm::LogToken<Self::Log>,
             ) -> Self::Trx<'a> {
                 storm::ObjBase::trx(&self.0, trx, log)

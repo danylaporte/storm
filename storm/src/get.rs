@@ -1,7 +1,7 @@
 use crate::Entity;
 use std::hash::{BuildHasher, Hash};
 
-pub trait Get<E, Q> {
+pub trait Get<E, Q: ?Sized> {
     fn get_entity<'a>(&'a self, q: &Q) -> Option<&'a E>;
 }
 
@@ -17,6 +17,6 @@ where
     }
 }
 
-pub trait GetOwned<'a, E, Q> {
+pub trait GetOwned<'a, E, Q: ?Sized> {
     fn get_owned(self, q: &Q) -> Option<&'a E>;
 }

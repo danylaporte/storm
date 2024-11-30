@@ -45,7 +45,7 @@ where
     pub fn get<'a, Q>(&'a self, key: &Q) -> Option<&'a E>
     where
         E::Key: Borrow<Q>,
-        Q: Eq + Hash,
+        Q: ?Sized + Eq + Hash,
     {
         self.map.get(key)
     }
@@ -178,7 +178,7 @@ impl<E, Q> Get<E, Q> for HashTable<E>
 where
     E: EntityObj<Tbl = Self>,
     E::Key: Borrow<Q> + Eq + Hash,
-    Q: Eq + Hash,
+    Q: ?Sized + Eq + Hash,
 {
     #[inline]
     fn get_entity<'a>(&'a self, q: &Q) -> Option<&'a E> {
@@ -248,7 +248,7 @@ where
     pub fn get<Q>(&self, q: &Q) -> Option<&E>
     where
         E::Key: Borrow<Q>,
-        Q: Eq + Hash,
+        Q: ?Sized + Eq + Hash,
     {
         match self.trx.log.get(&self.log_token).and_then(|log| log.get(q)) {
             Some(o) => o.as_ref(),
@@ -259,7 +259,7 @@ where
     pub fn get_owned<Q>(self, q: &Q) -> Option<&'a E>
     where
         E::Key: Borrow<Q>,
-        Q: Eq + Hash,
+        Q: ?Sized + Eq + Hash,
     {
         match self.trx.log.get(&self.log_token).and_then(|log| log.get(q)) {
             Some(o) => o.as_ref(),
@@ -426,7 +426,7 @@ where
     E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>> + PartialEq,
     E::Key: Borrow<Q> + Eq + Hash,
     HashTable<E>: ObjBase<Log = Log<E>>,
-    Q: Eq + Hash,
+    Q: ?Sized + Eq + Hash,
 {
     #[inline]
     fn get_entity<'b>(&'b self, q: &Q) -> Option<&'b E> {
@@ -439,7 +439,7 @@ where
     E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>> + PartialEq,
     E::Key: Borrow<Q> + Eq + Hash,
     HashTable<E>: ObjBase<Log = Log<E>>,
-    Q: Eq + Hash,
+    Q: ?Sized + Eq + Hash,
 {
     #[inline]
     fn get_owned(self, q: &Q) -> Option<&'a E> {
