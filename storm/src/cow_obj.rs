@@ -1,4 +1,4 @@
-use crate::{Gc, LogToken, ObjBase, Trx};
+use crate::{Gc, LogToken, ObjTrxBase, Trx};
 use std::ops::{Deref, DerefMut};
 
 pub type Log<T> = Option<T>;
@@ -6,12 +6,19 @@ pub type Log<T> = Option<T>;
 /// Represent a Copy on write object that support a transaction.
 pub struct CowObj<T>(pub T);
 
-impl<T> ObjBase for CowObj<T>
-where
-    T: Gc + PartialEq + Send + Sync + 'static,
-{
+impl<T: Gc> Gc for CowObj<T> {
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
+    #[inline]
+    fn gc(&mut self) {
+        self.0.gc();
+    }
+}
+
+impl<T> ObjTrxBase for CowObj<T>
+where
+    T: PartialEq + Send + Sync + 'static,
+{
     type Log = Log<T>;
     type Trx<'a> = CowTrx<'a, T>;
 
@@ -24,11 +31,6 @@ where
         }
 
         false
-    }
-
-    #[inline]
-    fn gc(&mut self) {
-        self.0.gc();
     }
 
     fn trx<'a>(&'a self, trx: &'a mut Trx<'a>, log: LogToken<Self::Log>) -> Self::Trx<'a> {

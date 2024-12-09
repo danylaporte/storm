@@ -1,8 +1,11 @@
 use crate::{
+    entity::EntityTrx,
     log::{LogToken, LogVars},
+    obj::ObjTrx,
     provider::{Delete, LoadAll, LoadArgs, TransactionProvider, Upsert, UpsertMut},
-    validate_on_change, BoxFuture, CtxTypeInfo, CtxVars, Entity, EntityObj, EntityValidate, Get,
-    GetMut, GetOwned, Insert, InsertMut, Obj, ObjBase, ProviderContainer, Remove, Result, Tag, Trx,
+    validate_on_change, BoxFuture, CtxTypeInfo, CtxVars, Entity, EntityObj, EntityValidate, Gc,
+    Get, GetMut, GetOwned, Insert, InsertMut, Obj, ObjTrxBase, ProviderContainer, Remove, Result,
+    Tag, Trx,
 };
 use attached::Var;
 use fxhash::FxHashMap;
@@ -67,9 +70,20 @@ where
     }
 }
 
+impl<E> Gc for VecTable<E>
+where
+    E: EntityObj<Tbl = Self>,
+{
+    const SUPPORT_GC: bool = E::SUPPORT_GC;
+
+    fn gc(&mut self) {
+        self.map.values_mut().for_each(|e| e.gc());
+    }
+}
+
 impl<E> Obj for VecTable<E>
 where
-    E: CtxTypeInfo + EntityObj<Tbl = Self> + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = Self>,
     E::Key: Copy,
     ProviderContainer: LoadAll<E, (), Self>,
     usize: From<E::Key>,
@@ -82,21 +96,15 @@ where
     fn init(ctx: &crate::Ctx) -> impl Future<Output = Result<Self>> {
         ctx.provider.load_all_with_args(&(), LoadArgs::default())
     }
-
-    #[inline]
-    fn log_var() -> Var<Self::Log, LogVars> {
-        E::log_var()
-    }
 }
 
-impl<E> ObjBase for VecTable<E>
+impl<E> ObjTrxBase for VecTable<E>
 where
-    E: CtxTypeInfo + EntityObj<Tbl = Self> + PartialEq + 'static,
+    E: CtxTypeInfo + EntityTrx<Tbl = Self> + PartialEq + 'static,
     E::Key: Copy,
     usize: From<E::Key>,
+    Self: Obj,
 {
-    const SUPPORT_GC: bool = E::SUPPORT_GC;
-
     type Log = Log<E>;
     type Trx<'a> = VecTableTrx<'a, E>;
 
@@ -127,16 +135,23 @@ where
         changed
     }
 
-    fn gc(&mut self) {
-        self.map.values_mut().for_each(|e| e.gc());
-    }
-
     fn trx<'a>(&'a self, trx: &'a mut Trx<'a>, log: LogToken<Self::Log>) -> Self::Trx<'a> {
         VecTableTrx {
             log_token: log,
             tbl: self,
             trx,
         }
+    }
+}
+
+impl<E> ObjTrx for VecTable<E>
+where
+    E: EntityTrx<Tbl = Self>,
+    Self: ObjTrxBase,
+{
+    #[inline]
+    fn log_var() -> Var<Self::Log, LogVars> {
+        E::log_var()
     }
 }
 
@@ -165,7 +180,7 @@ impl<E: EntityObj<Tbl = Self>> Default for VecTable<E> {
 
 impl<E> Extend<(E::Key, E)> for VecTable<E>
 where
-    E: CtxTypeInfo + EntityObj<Tbl = Self> + PartialEq + 'static,
+    E: CtxTypeInfo + EntityObj<Tbl = Self> + 'static,
     E::Key: Copy + Into<usize>,
     usize: From<E::Key>,
 {
@@ -245,9 +260,9 @@ pub struct VecTableTrx<'a, E: EntityObj<Tbl = VecTable<E>>> {
 
 impl<'a, E> VecTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityObj<Tbl = VecTable<E>>,
+    E: CtxTypeInfo + EntityTrx<Tbl = VecTable<E>>,
     E::Key: Copy + Eq + Hash,
-    VecTable<E>: Obj<Log = Log<E>>,
+    VecTable<E>: ObjTrxBase<Log = Log<E>>,
     usize: From<E::Key>,
 {
     pub fn get<'b>(&'b self, id: &E::Key) -> Option<&'b E> {
@@ -425,9 +440,9 @@ where
 
 impl<'a, E, Q> Get<E, Q> for VecTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityObj<Key = Q, Tbl = VecTable<E>>,
+    E: CtxTypeInfo + EntityTrx<Key = Q, Tbl = VecTable<E>>,
     Q: Copy + Eq + Hash,
-    VecTable<E>: Obj<Log = Log<E>>,
+    VecTable<E>: ObjTrxBase<Log = Log<E>>,
     usize: From<Q>,
 {
     #[inline]
@@ -438,9 +453,9 @@ where
 
 impl<'a, E, Q> GetOwned<'a, E, Q> for VecTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityObj<Key = Q, Tbl = VecTable<E>>,
+    E: CtxTypeInfo + EntityTrx<Key = Q, Tbl = VecTable<E>>,
     Q: Copy + Eq + Hash,
-    VecTable<E>: Obj<Log = Log<E>>,
+    VecTable<E>: ObjTrxBase<Log = Log<E>>,
     usize: From<Q>,
 {
     #[inline]
@@ -451,9 +466,9 @@ where
 
 impl<'a, E> Insert<E> for VecTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityObj<Tbl = VecTable<E>> + EntityValidate + PartialEq,
+    E: CtxTypeInfo + EntityTrx<Tbl = VecTable<E>> + EntityValidate + PartialEq,
     E::Key: Copy + Eq + Hash,
-    VecTable<E>: Obj<Log = Log<E>>,
+    VecTable<E>: ObjTrxBase<Log = Log<E>>,
     TransactionProvider<'a>: Upsert<E>,
     usize: From<E::Key>,
 {
@@ -469,9 +484,9 @@ where
 
 impl<'a, E> InsertMut<E> for VecTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityObj<Tbl = VecTable<E>> + EntityValidate + PartialEq,
+    E: CtxTypeInfo + EntityTrx<Tbl = VecTable<E>> + EntityValidate + PartialEq,
     E::Key: Copy + Eq + Hash,
-    VecTable<E>: Obj<Log = Log<E>>,
+    VecTable<E>: ObjTrxBase<Log = Log<E>>,
     TransactionProvider<'a>: UpsertMut<E>,
     usize: From<E::Key>,
 {
@@ -487,9 +502,9 @@ where
 
 impl<'a, 'b, E> IntoIterator for &'b VecTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityObj<Tbl = VecTable<E>>,
+    E: CtxTypeInfo + EntityTrx<Tbl = VecTable<E>>,
     E::Key: Copy + Eq + Hash,
-    VecTable<E>: Obj<Log = Log<E>>,
+    VecTable<E>: ObjTrxBase<Log = Log<E>>,
     usize: From<E::Key>,
 {
     type Item = (&'b E::Key, &'b E);
@@ -503,9 +518,9 @@ where
 
 impl<'a, E> Remove<E> for VecTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityObj<Tbl = VecTable<E>>,
+    E: CtxTypeInfo + EntityTrx<Tbl = VecTable<E>>,
     E::Key: Copy + Eq + Hash,
-    VecTable<E>: Obj<Log = Log<E>>,
+    VecTable<E>: ObjTrxBase<Log = Log<E>>,
     for<'c> TransactionProvider<'c>: Delete<E>,
     usize: From<E::Key>,
 {

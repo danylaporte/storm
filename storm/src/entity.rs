@@ -1,6 +1,6 @@
 use crate::{
-    BoxFuture, ChangeEvent, ChangedEvent, CtxVars, Gc, LogVars, Obj, ObjBase, RemoveEvent, Result,
-    Trx,
+    BoxFuture, ChangeEvent, ChangedEvent, CtxVars, Gc, LogVars, Obj, ObjTrxBase, RemoveEvent,
+    Result, Trx,
 };
 use attached::Var;
 use std::fmt::Debug;
@@ -54,7 +54,13 @@ pub trait EntityObj: Entity + Gc + 'static {
     type Tbl: Obj;
 
     fn ctx_var() -> Var<Self::Tbl, CtxVars>;
-    fn log_var() -> Var<<Self::Tbl as ObjBase>::Log, LogVars>;
+}
+
+pub trait EntityTrx: EntityObj
+where
+    Self::Tbl: ObjTrxBase,
+{
+    fn log_var() -> Var<<Self::Tbl as ObjTrxBase>::Log, LogVars>;
 
     fn change() -> &'static ChangeEvent<Self>;
     fn changed() -> &'static ChangedEvent<Self>;

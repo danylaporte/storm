@@ -1,4 +1,4 @@
-use crate::{log::LogToken, Gc, ObjBase, Tag, Trx};
+use crate::{log::LogToken, Gc, ObjTrxBase, Tag, Trx};
 use fxhash::FxHashMap;
 use std::{collections::hash_map, hash::Hash};
 use vec_map::{Entry, VecMap};
@@ -56,14 +56,23 @@ where
     }
 }
 
-impl<K, V> ObjBase for VecOneMany<K, V>
+impl<K, V> Gc for VecOneMany<K, V>
+where
+    V: Gc,
+{
+    const SUPPORT_GC: bool = V::SUPPORT_GC;
+
+    fn gc(&mut self) {
+        self.map.values_mut().for_each(|v| v.gc());
+    }
+}
+
+impl<K, V> ObjTrxBase for VecOneMany<K, V>
 where
     K: Copy + Eq + Hash + Send + Sync + 'static,
     V: Gc + PartialEq + Send + Sync + 'static,
     usize: From<K>,
 {
-    const SUPPORT_GC: bool = V::SUPPORT_GC;
-
     type Log = Log<K, V>;
     type Trx<'a> = VecOneManyTrx<'a, K, V>;
 
@@ -95,10 +104,6 @@ where
         }
 
         changed
-    }
-
-    fn gc(&mut self) {
-        self.map.values_mut().for_each(|v| v.gc());
     }
 
     #[inline]

@@ -1,4 +1,4 @@
-use storm::{prelude::*, BoxFuture, EntityObj, HashOneMany, NoopLoad, Result, Trx};
+use storm::{prelude::*, BoxFuture, EntityTrx, HashOneMany, NoopLoad, NoopSave, Result, Trx};
 
 fn create_ctx() -> QueueRwLock<Ctx> {
     QueueRwLock::new(Default::default())
@@ -18,7 +18,7 @@ async fn create_async() -> Result<()> {
     .await
 }
 
-#[derive(Ctx, Default, NoopLoad, PartialEq)]
+#[derive(Ctx, Default, NoopLoad, PartialEq, NoopSave)]
 struct User {
     #[allow(dead_code)]
     pub name: String,
