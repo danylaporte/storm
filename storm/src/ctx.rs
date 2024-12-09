@@ -59,7 +59,7 @@ impl Ctx {
 
                     self.gc.register::<A>();
 
-                    Ok(self.objs.get_or_init_val(var, value).0)
+                    Ok(self.objs.get_or_init(var, || value))
                 },
                 id,
             )
@@ -73,7 +73,7 @@ impl Ctx {
     }
 
     pub fn clear_obj<A: Obj>(&mut self) {
-        if self.objs.replace(A::ctx_var(), None).is_some() {
+        if self.objs.take(A::ctx_var()).is_some() {
             Self::on_clear_obj::<A>().call(self);
         }
     }

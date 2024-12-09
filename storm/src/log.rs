@@ -38,7 +38,7 @@ impl Log {
     where
         Log: Default,
     {
-        self.logs.get_or_init_mut(token.var, || {
+        self.logs.get_mut_or_init(token.var, || {
             self.apply_list.push(token.apply_fn);
             Log::default()
         })
@@ -46,7 +46,7 @@ impl Log {
 }
 
 fn apply<A: Obj>(ctx: &mut Ctx, logs: &mut Logs) -> bool {
-    if let Some(log) = logs.replace(A::log_var(), None) {
+    if let Some(log) = logs.take(A::log_var()) {
         if let Some(obj) = ctx.objs.get_mut(A::ctx_var()) {
             return obj.apply_log(log);
         }
