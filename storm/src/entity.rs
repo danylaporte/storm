@@ -1,6 +1,6 @@
 use crate::{
-    BoxFuture, ChangeEvent, ChangedEvent, CtxVars, Gc, LogVars, Obj, ObjTrxBase, RemoveEvent,
-    Result, Trx,
+    BoxFuture, ChangeEvent, ChangedEvent, ClearObjEvent, Ctx, CtxVars, Gc, LogVars, Obj,
+    ObjTrxBase, RemoveEvent, Result, Trx,
 };
 use attached::Var;
 use std::fmt::Debug;
@@ -66,4 +66,9 @@ where
     fn changed() -> &'static ChangedEvent<Self>;
     fn remove() -> &'static RemoveEvent<Self::Key, Self::TrackCtx>;
     fn removed() -> &'static RemoveEvent<Self::Key, Self::TrackCtx>;
+
+    #[inline]
+    fn cleared() -> &'static ClearObjEvent {
+        Ctx::on_clear_obj::<Self::Tbl>()
+    }
 }

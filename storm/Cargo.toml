@@ -17,6 +17,7 @@ fxhash = "0.2"
 metrics = { workspace = true, optional = true }
 once_cell = "1"
 parking_lot = "0.12"
+paste = { workspace = true }
 pin-project-lite = "0.2"
 rayon = "1"
 serde = { workspace = true, features = ["derive"] }

@@ -1,4 +1,6 @@
-use storm::{prelude::*, BoxFuture, EntityTrx, HashOneMany, NoopLoad, NoopSave, Result, Trx};
+use storm::{
+    prelude::*, vec_one_many, BoxFuture, EntityTrx, HashOneMany, NoopLoad, NoopSave, Result, Trx,
+};
 
 fn create_ctx() -> QueueRwLock<Ctx> {
     QueueRwLock::new(Default::default())
@@ -22,6 +24,8 @@ async fn create_async() -> Result<()> {
 struct User {
     #[allow(dead_code)]
     pub name: String,
+
+    pub key: usize,
 }
 
 impl Entity for User {
@@ -70,3 +74,5 @@ fn user_changed<'a>(
         Ok(())
     })
 }
+
+vec_one_many!(UserIdByKey, User, usize, map_one: |(_, user)| user.key);

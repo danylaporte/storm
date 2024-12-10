@@ -28,6 +28,7 @@ mod len;
 mod log;
 pub mod mem;
 mod obj;
+mod one_many_macros;
 mod one_to_many;
 pub mod prelude;
 pub mod provider;
