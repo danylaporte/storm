@@ -61,14 +61,14 @@ impl<'a> Trx<'a> {
             .await
     }
 
-    pub fn obj<'b, A: Obj + ObjTrx>(&'b mut self) -> BoxFuture<'b, Result<A::Trx<'b>>> {
+    pub fn obj<A: Obj + ObjTrx>(&mut self) -> BoxFuture<'_, Result<A::Trx<'_>>> {
         Box::pin(async move {
             let obj = self.ctx.obj::<A>().await?;
             Ok(obj.trx(coerce(self), LogToken::from_obj::<A>()))
         })
     }
 
-    pub fn obj_opt<'b, A: Obj + ObjTrx>(&'b mut self) -> Option<A::Trx<'b>> {
+    pub fn obj_opt<A: Obj + ObjTrx>(&mut self) -> Option<A::Trx<'_>> {
         let obj = self.ctx.obj_opt::<A>()?;
         Some(obj.trx(coerce(self), LogToken::from_obj::<A>()))
     }
@@ -111,9 +111,9 @@ impl<'a> Trx<'a> {
     }
 
     #[inline]
-    pub fn tbl_of<'b, E: EntityTrx>(
-        &'b mut self,
-    ) -> BoxFuture<'b, Result<<E::Tbl as ObjTrxBase>::Trx<'b>>>
+    pub fn tbl_of<E: EntityTrx>(
+        &mut self,
+    ) -> BoxFuture<'_, Result<<E::Tbl as ObjTrxBase>::Trx<'_>>>
     where
         E::Tbl: ObjTrx,
     {
@@ -164,6 +164,6 @@ impl<'a> Trx<'a> {
 }
 
 /// coerce the lifetime of the transaction. This is safe because all entities must be 'static.
-fn coerce<'a, 'b>(trx: &'b mut Trx<'a>) -> &'b mut Trx<'b> {
+fn coerce<'a>(trx: &'a mut Trx<'_>) -> &'a mut Trx<'a> {
     unsafe { transmute(trx) }
 }

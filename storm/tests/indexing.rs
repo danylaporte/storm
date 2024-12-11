@@ -1,5 +1,5 @@
 use storm::{
-    prelude::*, vec_one_many, BoxFuture, EntityTrx, HashOneMany, NoopLoad, NoopSave, Result, Trx,
+    one_many, prelude::*, BoxFuture, EntityTrx, HashOneMany, NoopLoad, NoopSave, Result, Trx,
 };
 
 fn create_ctx() -> QueueRwLock<Ctx> {
@@ -75,4 +75,4 @@ fn user_changed<'a>(
     })
 }
 
-vec_one_many!(UserIdByKey, User, usize, map_one: |(_, user)| user.key);
+one_many!(UserIdByKey: VecOneMany<usize, usize> on User, map_one: |(_, user)| user.key);

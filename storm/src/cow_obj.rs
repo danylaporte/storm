@@ -73,6 +73,7 @@ impl<'a, T> DerefMut for CowTrx<'a, T>
 where
     T: Clone,
 {
+    #[allow(clippy::unwrap_used)]
     fn deref_mut(&mut self) -> &mut Self::Target {
         let log = self.trx.log.get_or_init_mut(&self.log_token);
 
