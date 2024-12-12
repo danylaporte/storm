@@ -75,4 +75,4 @@ fn user_changed<'a>(
     })
 }
 
-one_many!(UserIdByKey: VecOneMany<usize, usize> on User, map_one: |(_, user)| user.key);
+one_many!(UserIdByKey: VecOneMany<usize, usize> on User, map: |(id, user)| (*id, user.key));

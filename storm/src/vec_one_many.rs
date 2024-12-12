@@ -42,6 +42,25 @@ impl<K, V> Tag for VecOneMany<K, V> {
     }
 }
 
+impl<K, V> From<VecMap<K, Vec<V>>> for VecOneMany<K, V>
+where
+    K: Copy,
+    V: Ord,
+    usize: From<K>,
+{
+    fn from(mut map: VecMap<K, Vec<V>>) -> Self {
+        map.values_mut().for_each(|v| v.sort_unstable());
+
+        Self {
+            map: map
+                .into_iter()
+                .map(|(k, v)| (k, v.into_boxed_slice()))
+                .collect(),
+            tag: VersionTag::new(),
+        }
+    }
+}
+
 impl<K, V> FromIterator<(K, V)> for VecOneMany<K, V>
 where
     K: Copy + Eq + Hash,
