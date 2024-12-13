@@ -4,8 +4,8 @@ use crate::{
     obj::ObjTrx,
     provider::{Delete, LoadAll, LoadArgs, TransactionProvider, Upsert, UpsertMut},
     validate_on_change, BoxFuture, CtxTypeInfo, CtxVars, Entity, EntityObj, EntityValidate, Gc,
-    Get, GetMut, GetOwned, Insert, InsertMut, Obj, ObjTrxBase, ProviderContainer, Remove, Result,
-    Tag, Trx,
+    Get, GetMut, GetOwned, Insert, InsertMut, LoadedEvent, Obj, ObjTrxBase, ProviderContainer,
+    Remove, Result, Tag, Trx,
 };
 use attached::Var;
 use fxhash::FxHashMap;
@@ -95,6 +95,11 @@ where
 
     fn init(ctx: &crate::Ctx) -> impl Future<Output = Result<Self>> {
         ctx.provider.load_all_with_args(&(), LoadArgs::default())
+    }
+
+    #[inline]
+    fn loaded() -> &'static LoadedEvent {
+        E::loaded()
     }
 }
 

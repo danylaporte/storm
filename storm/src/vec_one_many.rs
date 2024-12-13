@@ -1,6 +1,11 @@
 use crate::{log::LogToken, Gc, ObjTrxBase, Tag, Trx};
 use fxhash::FxHashMap;
-use std::{collections::hash_map, hash::Hash};
+use std::{
+    borrow::Cow,
+    collections::hash_map,
+    hash::Hash,
+    mem::{take, transmute},
+};
 use vec_map::{Entry, VecMap};
 use version_tag::VersionTag;
 
@@ -89,7 +94,7 @@ where
 impl<K, V> ObjTrxBase for VecOneMany<K, V>
 where
     K: Copy + Eq + Hash + Send + Sync + 'static,
-    V: Gc + PartialEq + Send + Sync + 'static,
+    V: Clone + Gc + PartialEq + Send + Sync + 'static,
     usize: From<K>,
 {
     type Log = Log<K, V>;
@@ -131,20 +136,22 @@ where
             log_token,
             map: self,
             trx,
+            upd: Default::default(),
         }
     }
 }
 
-pub struct VecOneManyTrx<'a, K: Sync, V: Sync> {
+pub struct VecOneManyTrx<'a, K: Clone + Sync, V: Clone + Sync> {
     map: &'a VecOneMany<K, V>,
     trx: &'a mut Trx<'a>,
+    upd: FxHashMap<(Cow<'a, K>, Cow<'a, V>), Rec>,
     log_token: LogToken<Log<K, V>>,
 }
 
 impl<'a, K, V> VecOneManyTrx<'a, K, V>
 where
     K: Copy + Eq + Hash + Sync + 'static,
-    V: Sync,
+    V: Clone + Sync,
     usize: From<K>,
 {
     pub fn contains_key(&self, key: &K) -> bool {
@@ -241,6 +248,80 @@ where
     }
 }
 
+pub struct VecOneManyUpdater<'a, K, V>
+where
+    K: Copy + Eq + Hash + Sync + 'static,
+    V: Clone + Eq + Hash + Ord + Sync + 'static,
+    usize: From<K>,
+{
+    trx: &'a mut VecOneManyTrx<'a, K, V>,
+    upd: FxHashMap<(Cow<'a, K>, Cow<'a, V>), Rec>,
+}
+
+#[derive(Clone, Copy, Default)]
+struct Rec {
+    add: bool,
+    rem: bool,
+}
+
+impl<'a, K, V> VecOneManyUpdater<'a, K, V>
+where
+    K: Copy + Eq + Hash + Eq + Hash + Sync + 'static,
+    V: Clone + Eq + Hash + Ord + Sync + 'static,
+    usize: From<K>,
+{
+    pub fn insert(&mut self, one: Cow<'a, K>, many: Cow<'a, V>) {
+        self.upd.entry((one, many)).or_default().add = true;
+    }
+
+    pub fn insert_iter<I, IK, IV>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = (IK, IV)>,
+        IK: Into<Cow<'a, K>>,
+        IV: Into<Cow<'a, V>>,
+    {
+        for (one, many) in iter {
+            self.insert(one.into(), many.into());
+        }
+    }
+
+    pub fn remove(&mut self, one: Cow<'a, K>, many: Cow<'a, V>) {
+        self.upd.entry((one, many)).or_default().rem = true;
+    }
+
+    pub fn remove_iter<I, IK, IV>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = (IK, IV)>,
+        IK: Into<Cow<'a, K>>,
+        IV: Into<Cow<'a, V>>,
+    {
+        for (one, many) in iter {
+            self.remove(one.into(), many.into());
+        }
+    }
+}
+
+impl<'a, K, V> Drop for VecOneManyUpdater<'a, K, V>
+where
+    K: Copy + Eq + Hash + Sync + 'static,
+    V: Clone + Eq + Hash + Ord + Sync + 'static,
+    usize: From<K>,
+{
+    fn drop(&mut self) {
+        for ((one, many), rec) in self.upd.drain() {
+            if rec.rem && !rec.add {
+                self.trx.remove_key_value(*one, &many);
+            }
+
+            if rec.add && !rec.rem {
+                self.trx.insert(*one, many.into_owned());
+            }
+        }
+
+        self.trx.upd = coerce_hash_map_lifetime(take(&mut self.upd));
+    }
+}
+
 fn create_vec_map<K, V, I>(iter: I) -> VecMap<K, Box<[V]>>
 where
     K: Copy + Eq + Hash,
@@ -261,4 +342,14 @@ where
     map.into_iter()
         .map(|(k, v)| (k, v.into_boxed_slice()))
         .collect()
+}
+
+fn coerce_hash_map_lifetime<'a, 'b, K, V>(
+    map: FxHashMap<(Cow<'a, K>, Cow<'a, V>), Rec>,
+) -> FxHashMap<(Cow<'b, K>, Cow<'b, V>), Rec>
+where
+    K: Clone,
+    V: Clone,
+{
+    unsafe { transmute(map) }
 }

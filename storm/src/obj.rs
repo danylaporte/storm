@@ -1,10 +1,11 @@
-use crate::{log::LogToken, Ctx, CtxVars, Gc, LogVars, Result, Trx};
+use crate::{log::LogToken, Ctx, CtxVars, Gc, LoadedEvent, LogVars, Result, Trx};
 use attached::Var;
 use std::future::Future;
 
 pub trait Obj: Gc + Send + Sync + Sized + 'static {
     fn ctx_var() -> Var<Self, CtxVars>;
     fn init(ctx: &Ctx) -> impl Future<Output = Result<Self>> + Send + '_;
+    fn loaded() -> &'static LoadedEvent;
 }
 
 pub trait ObjTrx: ObjTrxBase {

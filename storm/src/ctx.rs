@@ -4,7 +4,7 @@ use crate::{
     cycle_dep,
     provider::{LoadAll, LoadArgs, LoadOne},
     trx_err_gate::TrxErrGate,
-    AsRefAsync, AsyncTryFrom, BoxFuture, ClearObjEvent, Entity, EntityObj, Log, Obj, ObjGc,
+    AsRefAsync, AsyncTryFrom, BoxFuture, ClearEvent, Entity, EntityObj, Log, Obj, ObjGc,
     ProviderContainer, Result, Tag, Trx,
 };
 use attached::{container, Container};
@@ -33,6 +33,20 @@ impl Ctx {
         log.apply(self)
     }
 
+    pub fn clear<A: Obj>(&mut self) {
+        if self.objs.take(A::ctx_var()).is_some() {
+            Self::on_clear_obj::<A>().call(self);
+        }
+    }
+
+    #[inline]
+    pub fn clear_tbl_of<E>(&mut self)
+    where
+        E: EntityObj,
+    {
+        self.clear::<E::Tbl>();
+    }
+
     pub fn obj<A: Obj>(&self) -> BoxFuture<'_, Result<&A>> {
         Box::pin(async move {
             let var = A::ctx_var();
@@ -43,7 +57,7 @@ impl Ctx {
 
             let id = TypeId::of::<A>();
 
-            cycle_dep::guard(
+            let (out, loaded) = cycle_dep::guard(
                 |should_lock| async move {
                     let _guard = if should_lock {
                         Some(self.provider.gate().await)
@@ -52,37 +66,31 @@ impl Ctx {
                     };
 
                     if let Some(o) = self.objs.get(var) {
-                        return Ok(o);
+                        return Ok((o, false));
                     }
 
                     let value = A::init(self).await?;
 
                     self.gc.register::<A>();
 
-                    Ok(self.objs.get_or_init(var, || value))
+                    Ok((self.objs.get_or_init(var, || value), true))
                 },
                 id,
             )
-            .await
+            .await?;
+
+            if loaded {
+                // To prevent cycle, we call the loaded event after loaded state.
+                A::loaded().call(self).await?;
+            }
+
+            Ok(out)
         })
     }
 
     #[inline]
     pub fn obj_opt<A: Obj>(&self) -> Option<&A> {
         self.objs.get(A::ctx_var())
-    }
-
-    pub fn clear_obj<A: Obj>(&mut self) {
-        if self.objs.take(A::ctx_var()).is_some() {
-            Self::on_clear_obj::<A>().call(self);
-        }
-    }
-
-    pub fn clear_tbl_of<E>(&mut self)
-    where
-        E: EntityObj,
-    {
-        self.clear_obj::<E::Tbl>();
     }
 
     pub fn gc(&mut self) {
@@ -94,9 +102,9 @@ impl Ctx {
     }
 
     #[inline]
-    pub fn on_clear_obj<A: Obj>() -> &'static ClearObjEvent {
+    pub fn on_clear_obj<A: Obj>() -> &'static ClearEvent {
         #[static_init::dynamic]
-        static EVENT: ClearObjEvent = Default::default();
+        static EVENT: ClearEvent = Default::default();
         &EVENT
     }
 

@@ -1,5 +1,5 @@
 use crate::{
-    BoxFuture, ChangeEvent, ChangedEvent, ClearObjEvent, Ctx, CtxVars, Gc, LogVars, Obj,
+    BoxFuture, ChangeEvent, ChangedEvent, ClearEvent, Ctx, CtxVars, Gc, LoadedEvent, LogVars, Obj,
     ObjTrxBase, RemoveEvent, Result, Trx,
 };
 use attached::Var;
@@ -54,6 +54,7 @@ pub trait EntityObj: Entity + Gc + 'static {
     type Tbl: Obj;
 
     fn ctx_var() -> Var<Self::Tbl, CtxVars>;
+    fn loaded() -> &'static LoadedEvent;
 }
 
 pub trait EntityTrx: EntityObj
@@ -68,7 +69,7 @@ where
     fn removed() -> &'static RemoveEvent<Self::Key, Self::TrackCtx>;
 
     #[inline]
-    fn cleared() -> &'static ClearObjEvent {
+    fn cleared() -> &'static ClearEvent {
         Ctx::on_clear_obj::<Self::Tbl>()
     }
 }

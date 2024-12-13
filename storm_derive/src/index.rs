@@ -49,6 +49,15 @@ fn index_fn(f: &ItemFn) -> TokenStream {
             async fn init(ctx: &storm::Ctx) -> storm::Result<Self> {
                 Self::init_imp(ctx).await.map(Self)
             }
+
+            #[allow(non_camel_case_types)]
+            #[inline]
+            fn loaded() -> &'static storm::LoadedEvent {
+                #[static_init::dynamic]
+                static EVENT: storm::LoadedEvent = Default::default();
+
+                &EVENT
+            }
         }
 
         impl storm::ObjTrx for #index_name {

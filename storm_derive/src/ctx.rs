@@ -38,6 +38,15 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                 storm::attached::var!(VAR: #table_alias, storm::CtxVars);
                 *VAR
             }
+
+            #[allow(non_camel_case_types)]
+            #[inline]
+            fn loaded() -> &'static storm::LoadedEvent {
+                #[static_init::dynamic]
+                static EVENT: storm::LoadedEvent = Default::default();
+
+                &EVENT
+            }
         }
 
         impl storm::EntityTrx for #entity {

@@ -3,8 +3,8 @@ use crate::{
     obj::ObjTrx,
     provider::{Delete, LoadAll, LoadArgs, TransactionProvider, Upsert, UpsertMut},
     validate_on_change, BoxFuture, CtxTypeInfo, CtxVars, Entity, EntityObj, EntityValidate, Gc,
-    Get, GetMut, GetOwned, Insert, InsertMut, LogToken, LogVars, NotifyTag, Obj, ObjTrxBase,
-    ProviderContainer, Remove, Result, Tag, Trx,
+    Get, GetMut, GetOwned, Insert, InsertMut, LoadedEvent, LogToken, LogVars, NotifyTag, Obj,
+    ObjTrxBase, ProviderContainer, Remove, Result, Tag, Trx,
 };
 use attached::Var;
 use fxhash::FxHashMap;
@@ -141,7 +141,7 @@ where
 
 impl<'a, E> IntoIterator for &'a HashTable<E>
 where
-    E: EntityObj<Tbl = Self>,
+    E: EntityObj<Tbl = HashTable<E>>,
 {
     type Item = (&'a E::Key, &'a E);
     type IntoIter = Iter<'a, E::Key, E>;
@@ -154,7 +154,7 @@ where
 
 impl<'a, E> IntoParallelIterator for &'a HashTable<E>
 where
-    E: EntityObj<Tbl = Self>,
+    E: EntityObj<Tbl = HashTable<E>>,
     E::Key: Eq + Hash,
 {
     type Item = (&'a E::Key, &'a E);
@@ -188,6 +188,11 @@ where
     #[inline]
     fn init(ctx: &crate::Ctx) -> impl Future<Output = Result<Self>> + Send {
         ctx.provider.load_all_with_args(&(), LoadArgs::default())
+    }
+
+    #[inline]
+    fn loaded() -> &'static LoadedEvent {
+        E::loaded()
     }
 }
 

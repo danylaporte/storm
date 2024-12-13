@@ -26,7 +26,8 @@ pub type ChangedEvent<E> = Event<
          + Sync),
 >;
 
-pub type ClearObjEvent = Event<(dyn Fn(&mut Ctx) + Sync)>;
+pub type ClearEvent = Event<(dyn Fn(&mut Ctx) + Sync)>;
+pub type LoadedEvent = Event<(dyn for<'a> Fn(&'a Ctx) -> Fut<'a> + Sync)>;
 
 pub type RemoveEvent<Key, Track> =
     Event<(dyn for<'a, 'b> Fn(&'b mut Trx<'a>, &'b Key, &'b Track) -> Fut<'b> + Sync)>;
@@ -90,7 +91,7 @@ impl<E: Entity> ChangedEvent<E> {
     }
 }
 
-impl ClearObjEvent {
+impl ClearEvent {
     pub(crate) fn call(&self, ctx: &mut Ctx) {
         for f in &*self.list() {
             f(ctx);
@@ -100,6 +101,16 @@ impl ClearObjEvent {
     /// Clear automatically the specified obj when this event is raised.
     pub fn register_clear_obj<A: Obj>(&self) {
         self.register(&clear_obj::<A>);
+    }
+}
+
+impl LoadedEvent {
+    pub(crate) async fn call<'a>(&'a self, ctx: &'a Ctx) -> Result<()> {
+        for f in &*self.list() {
+            f(ctx).await?;
+        }
+
+        Ok(())
     }
 }
 
@@ -124,7 +135,7 @@ impl<Key, Track> RemoveEvent<Key, Track> {
 }
 
 fn clear_obj<A: Obj>(ctx: &mut Ctx) {
-    ctx.clear_obj::<A>()
+    ctx.clear::<A>()
 }
 
 task_local! {
