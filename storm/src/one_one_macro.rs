@@ -18,10 +18,10 @@ macro_rules! one_one {
         paste::paste! {
             #[$crate::index]
             pub async fn [<$name:snake>](ctx: &$crate::Ctx) -> $crate::Result<$crate::HashOneOne<$k, $v>> {
-                <$entity as $crate::EntityTrx>::change().register(&[<__ $name:snake _on_ $entity:snake _change>]);
-                <$entity as $crate::EntityTrx>::changed().register(&[<__ $name:snake _on_ $entity:snake _changed>]);
-                <$entity as $crate::EntityTrx>::cleared().register_clear_obj::<Self>();
-                <$entity as $crate::EntityTrx>::removed().register(&[<__ $name:snake _on_ $entity:snake _removed>]);
+                <$entity as $crate::EntityObj>::change().register(&[<__ $name:snake _on_ $entity:snake _change>]);
+                <$entity as $crate::EntityObj>::changed().register(&[<__ $name:snake _on_ $entity:snake _changed>]);
+                <$entity as $crate::EntityObj>::cleared().register_clear_obj::<Self>();
+                <$entity as $crate::EntityObj>::removed().register(&[<__ $name:snake _on_ $entity:snake _removed>]);
 
                 let tbl = ctx.tbl_of::<$entity>().await?;
                 let mut map = $crate::FxHashMap::<$k, $v>::with_capacity_and_hasher(tbl.len(), Default::default());

@@ -1,4 +1,4 @@
-use crate::{Gc, LogToken, ObjTrxBase, Trx};
+use crate::{Gc, LogToken, ObjBase, Trx};
 use std::ops::{Deref, DerefMut};
 
 pub type Log<T> = Option<T>;
@@ -15,7 +15,7 @@ impl<T: Gc> Gc for CowObj<T> {
     }
 }
 
-impl<T> ObjTrxBase for CowObj<T>
+impl<T> ObjBase for CowObj<T>
 where
     T: PartialEq + Send + Sync + 'static,
 {

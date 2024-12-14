@@ -1,5 +1,5 @@
 use storm::{
-    one_many, prelude::*, BoxFuture, EntityTrx, HashOneMany, NoopLoad, NoopSave, Result, Trx,
+    one_many, prelude::*, BoxFuture, EntityObj, HashOneMany, NoopLoad, NoopSave, Result, Trx,
 };
 
 fn create_ctx() -> QueueRwLock<Ctx> {

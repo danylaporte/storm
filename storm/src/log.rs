@@ -1,4 +1,4 @@
-use crate::{async_cell_lock::QueueRwLockQueueGuard, Ctx, Obj, ObjTrx, Result};
+use crate::{async_cell_lock::QueueRwLockQueueGuard, Ctx, Obj, Result};
 use attached::{container, Container, Var};
 
 container!(pub LogVars);
@@ -45,7 +45,7 @@ impl Log {
     }
 }
 
-fn apply<A: Obj + ObjTrx>(ctx: &mut Ctx, logs: &mut Logs) -> bool {
+fn apply<A: Obj>(ctx: &mut Ctx, logs: &mut Logs) -> bool {
     if let Some(log) = logs.take(A::log_var()) {
         if let Some(obj) = ctx.objs.get_mut(A::ctx_var()) {
             return obj.apply_log(log);
@@ -61,7 +61,7 @@ pub struct LogToken<Log> {
 }
 
 impl<Log> LogToken<Log> {
-    pub(crate) fn from_obj<A: Obj + ObjTrx<Log = Log>>() -> Self {
+    pub(crate) fn from_obj<A: Obj<Log = Log>>() -> Self {
         Self {
             apply_fn: &apply::<A>,
             var: A::log_var(),

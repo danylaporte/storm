@@ -1,6 +1,6 @@
 use crate::{
-    entity::EntityTrx, log::LogToken, provider::TransactionProvider, BoxFuture, Ctx, GetOwned,
-    Insert, InsertMut, Log, Obj, ObjTrx, ObjTrxBase, Remove, Result, TrxErrGate,
+    provider::TransactionProvider, BoxFuture, Ctx, EntityObj, GetOwned, Insert, InsertMut, Log,
+    LogToken, Obj, ObjBase, Remove, Result, TrxErrGate,
 };
 use std::{borrow::Cow, mem::transmute};
 
@@ -21,9 +21,8 @@ impl<'a> Trx<'a> {
     #[inline]
     pub async fn get_entity<'b, E, Q>(&'b mut self, q: &Q) -> Result<Option<&'b E>>
     where
-        E: EntityTrx,
-        E::Tbl: ObjTrx,
-        <E::Tbl as ObjTrxBase>::Trx<'b>: GetOwned<'b, E, Q>,
+        E: EntityObj,
+        <E::Tbl as ObjBase>::Trx<'b>: GetOwned<'b, E, Q>,
     {
         self.tbl_of::<E>().await.map(|t| t.get_owned(q))
     }
@@ -36,9 +35,8 @@ impl<'a> Trx<'a> {
     ) -> BoxFuture<'b, Result<()>>
     where
         'a: 'b,
-        E: EntityTrx + PartialEq,
-        E::Tbl: ObjTrx,
-        for<'c> <E::Tbl as ObjTrxBase>::Trx<'c>: Insert<E>,
+        E: EntityObj,
+        for<'c> <E::Tbl as ObjBase>::Trx<'c>: Insert<E>,
     {
         Box::pin(async move { self.obj::<E::Tbl>().await?.insert(id, entity, track).await })
     }
@@ -51,9 +49,8 @@ impl<'a> Trx<'a> {
         track: &E::TrackCtx,
     ) -> Result<E::Key>
     where
-        E: EntityTrx + PartialEq,
-        E::Tbl: ObjTrx,
-        for<'c> <E::Tbl as ObjTrxBase>::Trx<'c>: InsertMut<E>,
+        E: EntityObj,
+        for<'c> <E::Tbl as ObjBase>::Trx<'c>: InsertMut<E>,
     {
         self.obj::<E::Tbl>()
             .await?
@@ -61,14 +58,14 @@ impl<'a> Trx<'a> {
             .await
     }
 
-    pub fn obj<A: Obj + ObjTrx>(&mut self) -> BoxFuture<'_, Result<A::Trx<'_>>> {
+    pub fn obj<A: Obj>(&mut self) -> BoxFuture<'_, Result<A::Trx<'_>>> {
         Box::pin(async move {
             let obj = self.ctx.obj::<A>().await?;
             Ok(obj.trx(coerce(self), LogToken::from_obj::<A>()))
         })
     }
 
-    pub fn obj_opt<A: Obj + ObjTrx>(&mut self) -> Option<A::Trx<'_>> {
+    pub fn obj_opt<A: Obj>(&mut self) -> Option<A::Trx<'_>> {
         let obj = self.ctx.obj_opt::<A>()?;
         Some(obj.trx(coerce(self), LogToken::from_obj::<A>()))
     }
@@ -81,9 +78,8 @@ impl<'a> Trx<'a> {
     #[inline]
     pub async fn remove<'b, E>(&'b mut self, id: E::Key, track: &E::TrackCtx) -> Result<()>
     where
-        E: EntityTrx,
-        E::Tbl: ObjTrx,
-        for<'c> <E::Tbl as ObjTrxBase>::Trx<'c>: Remove<E>,
+        E: EntityObj,
+        for<'c> <E::Tbl as ObjBase>::Trx<'c>: Remove<E>,
     {
         self.obj::<E::Tbl>().await?.remove(id, track).await
     }
@@ -95,12 +91,11 @@ impl<'a> Trx<'a> {
         track: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<()>>
     where
-        for<'c> <E::Tbl as ObjTrxBase>::Trx<'c>: Remove<E>,
-        E: EntityTrx,
-        E::Tbl: ObjTrx,
+        for<'c> <E::Tbl as ObjBase>::Trx<'c>: Remove<E>,
+        E: EntityObj,
         E::Key: Clone,
         F: FnMut(&E::Key, &E) -> bool + Send + 'b,
-        for<'c, 'd> &'d <E::Tbl as ObjTrxBase>::Trx<'c>: IntoIterator<Item = (&'d E::Key, &'d E)>,
+        for<'c, 'd> &'d <E::Tbl as ObjBase>::Trx<'c>: IntoIterator<Item = (&'d E::Key, &'d E)>,
     {
         Box::pin(async move {
             self.obj::<E::Tbl>()
@@ -111,12 +106,7 @@ impl<'a> Trx<'a> {
     }
 
     #[inline]
-    pub fn tbl_of<E: EntityTrx>(
-        &mut self,
-    ) -> BoxFuture<'_, Result<<E::Tbl as ObjTrxBase>::Trx<'_>>>
-    where
-        E::Tbl: ObjTrx,
-    {
+    pub fn tbl_of<E: EntityObj>(&mut self) -> BoxFuture<'_, Result<<E::Tbl as ObjBase>::Trx<'_>>> {
         self.obj::<E::Tbl>()
     }
 
@@ -127,12 +117,11 @@ impl<'a> Trx<'a> {
         track: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<()>>
     where
-        E: EntityTrx + PartialEq + ToOwned<Owned = E>,
+        E: EntityObj + ToOwned<Owned = E>,
         E::Key: Clone,
-        E::Tbl: ObjTrx,
         F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>) + Send + 'b,
-        for<'c, 'd> &'d <E::Tbl as ObjTrxBase>::Trx<'c>: IntoIterator<Item = (&'d E::Key, &'d E)>,
-        for<'c> <E::Tbl as ObjTrxBase>::Trx<'c>: Insert<E>,
+        for<'c, 'd> &'d <E::Tbl as ObjBase>::Trx<'c>: IntoIterator<Item = (&'d E::Key, &'d E)>,
+        for<'c> <E::Tbl as ObjBase>::Trx<'c>: Insert<E>,
     {
         Box::pin(async move {
             let mut obj = self.obj::<E::Tbl>().await?;
@@ -147,12 +136,11 @@ impl<'a> Trx<'a> {
         track: &'b E::TrackCtx,
     ) -> BoxFuture<'b, Result<()>>
     where
-        E: EntityTrx + PartialEq + ToOwned<Owned = E>,
+        E: EntityObj + ToOwned<Owned = E>,
         E::Key: Clone,
-        E::Tbl: ObjTrx,
         F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>) + Send + 'b,
-        for<'c, 'd> &'d <E::Tbl as ObjTrxBase>::Trx<'c>: IntoIterator<Item = (&'d E::Key, &'d E)>,
-        for<'c> <E::Tbl as ObjTrxBase>::Trx<'c>: InsertMut<E>,
+        for<'c, 'd> &'d <E::Tbl as ObjBase>::Trx<'c>: IntoIterator<Item = (&'d E::Key, &'d E)>,
+        for<'c> <E::Tbl as ObjBase>::Trx<'c>: InsertMut<E>,
     {
         Box::pin(async move {
             self.obj::<E::Tbl>()

@@ -47,13 +47,11 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
 
                 &EVENT
             }
-        }
 
-        impl storm::EntityTrx for #entity {
             #[allow(non_camel_case_types)]
             #[inline]
-            fn log_var() -> storm::attached::Var<<Self::Tbl as storm::ObjTrxBase>::Log, storm::LogVars> {
-                storm::attached::var!(VAR: <#table_alias as storm::ObjTrxBase>::Log, storm::LogVars);
+            fn log_var() -> storm::attached::Var<<Self::Tbl as storm::ObjBase>::Log, storm::LogVars> {
+                storm::attached::var!(VAR: <#table_alias as storm::ObjBase>::Log, storm::LogVars);
                 *VAR
             }
 

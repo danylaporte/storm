@@ -1,10 +1,8 @@
 use crate::{
-    entity::EntityTrx,
-    obj::ObjTrx,
     provider::{Delete, LoadAll, LoadArgs, TransactionProvider, Upsert, UpsertMut},
     validate_on_change, BoxFuture, CtxTypeInfo, CtxVars, Entity, EntityObj, EntityValidate, Gc,
     Get, GetMut, GetOwned, Insert, InsertMut, LoadedEvent, LogToken, LogVars, NotifyTag, Obj,
-    ObjTrxBase, ProviderContainer, Remove, Result, Tag, Trx,
+    ObjBase, ProviderContainer, Remove, Result, Tag, Trx,
 };
 use attached::Var;
 use fxhash::FxHashMap;
@@ -176,13 +174,18 @@ where
 
 impl<E> Obj for HashTable<E>
 where
-    E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>>,
+    E: CtxTypeInfo + EntityObj<Tbl = Self>,
     E::Key: Eq + Hash,
     ProviderContainer: LoadAll<E, (), Self>,
 {
     #[inline]
     fn ctx_var() -> Var<Self, CtxVars> {
         E::ctx_var()
+    }
+
+    #[inline]
+    fn log_var() -> Var<Self::Log, LogVars> {
+        E::log_var()
     }
 
     #[inline]
@@ -196,22 +199,10 @@ where
     }
 }
 
-impl<E> ObjTrx for HashTable<E>
+impl<E> ObjBase for HashTable<E>
 where
-    E: EntityTrx<Tbl = Self>,
-    Self: ObjTrxBase,
-{
-    #[inline]
-    fn log_var() -> Var<Self::Log, LogVars> {
-        E::log_var()
-    }
-}
-
-impl<E> ObjTrxBase for HashTable<E>
-where
-    E: CtxTypeInfo + EntityTrx<Tbl = Self> + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = Self>,
     E::Key: Eq + Hash,
-    Self: Obj,
 {
     type Log = Log<E>;
     type Trx<'a> = HashTableTrx<'a, E>;
@@ -269,9 +260,9 @@ pub struct HashTableTrx<'a, E: EntityObj<Tbl = HashTable<E>>> {
 
 impl<'a, E> HashTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityTrx<Tbl = HashTable<E>> + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>>,
     E::Key: Eq + Hash,
-    HashTable<E>: ObjTrxBase<Log = Log<E>>,
+    HashTable<E>: ObjBase<Log = Log<E>>,
 {
     #[inline]
     pub fn get<Q>(&self, q: &Q) -> Option<&E>
@@ -304,7 +295,7 @@ where
         track: &'b E::TrackCtx,
     ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, E>
     where
-        E: EntityTrx + EntityValidate,
+        E: EntityObj + EntityValidate,
         TransactionProvider<'a>: Upsert<E>,
     {
         async move {
@@ -341,7 +332,7 @@ where
         track: &'b E::TrackCtx,
     ) -> impl Future<Output = Result<E::Key>> + Send + use<'a, 'b, E>
     where
-        E: EntityTrx + EntityValidate,
+        E: EntityObj + EntityValidate,
         E::Key: Clone,
         TransactionProvider<'a>: UpsertMut<E>,
     {
@@ -393,7 +384,7 @@ where
         track: &'b E::TrackCtx,
     ) -> impl Future<Output = Result<()>> + Send + use<'a, 'b, E>
     where
-        E: EntityTrx,
+        E: EntityObj,
         TransactionProvider<'a>: Delete<E>,
     {
         async move {
@@ -431,7 +422,7 @@ where
     #[inline]
     pub async fn update_with<F>(&mut self, updater: F, track: &E::TrackCtx) -> Result<()>
     where
-        E: PartialEq + ToOwned<Owned = E>,
+        E: ToOwned<Owned = E>,
         E::Key: Clone,
         F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>),
         Self: Insert<E>,
@@ -442,7 +433,7 @@ where
     #[inline]
     pub async fn update_mut_with<F>(&mut self, updater: F, track: &E::TrackCtx) -> Result<()>
     where
-        E: PartialEq + ToOwned<Owned = E>,
+        E: ToOwned<Owned = E>,
         E::Key: Clone,
         F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>),
         Self: InsertMut<E>,
@@ -453,9 +444,9 @@ where
 
 impl<'a, E, Q> Get<E, Q> for HashTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityTrx<Tbl = HashTable<E>> + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>>,
     E::Key: Borrow<Q> + Eq + Hash,
-    HashTable<E>: ObjTrxBase<Log = Log<E>>,
+    HashTable<E>: ObjBase<Log = Log<E>>,
     Q: ?Sized + Eq + Hash,
 {
     #[inline]
@@ -466,9 +457,9 @@ where
 
 impl<'a, Q, E> GetOwned<'a, E, Q> for HashTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityTrx<Tbl = HashTable<E>> + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>>,
     E::Key: Borrow<Q> + Eq + Hash,
-    HashTable<E>: ObjTrxBase<Log = Log<E>>,
+    HashTable<E>: ObjBase<Log = Log<E>>,
     Q: ?Sized + Eq + Hash,
 {
     #[inline]
@@ -479,9 +470,9 @@ where
 
 impl<'a, E> Insert<E> for HashTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityTrx<Tbl = HashTable<E>> + EntityTrx + EntityValidate + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>> + EntityObj + EntityValidate,
     E::Key: Eq + Hash,
-    HashTable<E>: ObjTrxBase<Log = Log<E>>,
+    HashTable<E>: ObjBase<Log = Log<E>>,
     TransactionProvider<'a>: Upsert<E>,
 {
     fn insert<'b>(
@@ -496,9 +487,9 @@ where
 
 impl<'a, E> InsertMut<E> for HashTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityTrx<Tbl = HashTable<E>> + EntityTrx + EntityValidate + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>> + EntityObj + EntityValidate,
     E::Key: Clone + Eq + Hash,
-    HashTable<E>: ObjTrxBase<Log = Log<E>>,
+    HashTable<E>: ObjBase<Log = Log<E>>,
     TransactionProvider<'a>: UpsertMut<E>,
 {
     fn insert_mut<'b>(
@@ -513,9 +504,9 @@ where
 
 impl<'a, 'b, E> IntoIterator for &'b HashTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityTrx<Tbl = HashTable<E>> + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>>,
     E::Key: Eq + Hash,
-    HashTable<E>: ObjTrxBase<Log = Log<E>>,
+    HashTable<E>: ObjBase<Log = Log<E>>,
 {
     type Item = (&'b E::Key, &'b E);
     type IntoIter = HashTableTrxIter<'b, E>;
@@ -528,9 +519,9 @@ where
 
 impl<'a, E> Remove<E> for HashTableTrx<'a, E>
 where
-    E: CtxTypeInfo + EntityTrx<Tbl = HashTable<E>> + PartialEq,
+    E: CtxTypeInfo + EntityObj<Tbl = HashTable<E>>,
     E::Key: Eq + Hash,
-    HashTable<E>: ObjTrx<Log = Log<E>>,
+    HashTable<E>: ObjBase<Log = Log<E>>,
     for<'c> TransactionProvider<'c>: Delete<E>,
 {
     fn remove<'b>(

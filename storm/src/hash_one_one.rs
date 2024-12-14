@@ -1,4 +1,4 @@
-use crate::{log::LogToken, Gc, ObjTrxBase, Tag, Trx};
+use crate::{log::LogToken, Gc, ObjBase, Tag, Trx};
 use fxhash::FxHashMap;
 use std::{
     borrow::Borrow,
@@ -85,7 +85,7 @@ where
     }
 }
 
-impl<K, V> ObjTrxBase for HashOneOne<K, V>
+impl<K, V> ObjBase for HashOneOne<K, V>
 where
     K: Eq + Hash + Send + Sync + 'static,
     V: PartialEq + Send + Sync + 'static,

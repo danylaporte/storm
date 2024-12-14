@@ -1,4 +1,4 @@
-use crate::{log::LogToken, Gc, ObjTrxBase, Tag, Trx};
+use crate::{Gc, LogToken, ObjBase, Tag, Trx};
 use fxhash::FxHashMap;
 use std::{
     borrow::Cow,
@@ -91,7 +91,7 @@ where
     }
 }
 
-impl<K, V> ObjTrxBase for VecOneMany<K, V>
+impl<K, V> ObjBase for VecOneMany<K, V>
 where
     K: Copy + Eq + Hash + Send + Sync + 'static,
     V: Clone + Gc + PartialEq + Send + Sync + 'static,

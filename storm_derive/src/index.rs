@@ -58,23 +58,21 @@ fn index_fn(f: &ItemFn) -> TokenStream {
 
                 &EVENT
             }
-        }
 
-        impl storm::ObjTrx for #index_name {
             #[inline]
-            fn log_var() -> storm::attached::Var<<Self as storm::ObjTrxBase>::Log, storm::LogVars> {
-                storm::attached::var!(V: <#index_name as storm::ObjTrxBase>::Log, storm::LogVars);
+            fn log_var() -> storm::attached::Var<<Self as storm::ObjBase>::Log, storm::LogVars> {
+                storm::attached::var!(V: <#index_name as storm::ObjBase>::Log, storm::LogVars);
                 *V
             }
         }
 
-        impl storm::ObjTrxBase for #index_name {
-            type Log = <#obj as storm::ObjTrxBase>::Log;
-            type Trx<'a> = <#obj as storm::ObjTrxBase>::Trx::<'a>;
+        impl storm::ObjBase for #index_name {
+            type Log = <#obj as storm::ObjBase>::Log;
+            type Trx<'a> = <#obj as storm::ObjBase>::Trx::<'a>;
 
             #[inline]
             fn apply_log(&mut self, log: Self::Log) -> bool {
-                storm::ObjTrxBase::apply_log(&mut self.0, log)
+                storm::ObjBase::apply_log(&mut self.0, log)
             }
 
             #[inline]
@@ -83,7 +81,7 @@ fn index_fn(f: &ItemFn) -> TokenStream {
                 trx: &'a mut storm::Trx<'a>,
                 log: storm::LogToken<Self::Log>,
             ) -> Self::Trx<'a> {
-                storm::ObjTrxBase::trx(&self.0, trx, log)
+                storm::ObjBase::trx(&self.0, trx, log)
             }
         }
 

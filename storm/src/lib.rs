@@ -57,7 +57,7 @@ pub use change_state::ChangeState;
 pub use cow_obj::CowObj;
 pub use ctx::*;
 pub use ctx_type_info::CtxTypeInfo;
-pub use entity::{Entity, EntityObj, EntityTrx};
+pub use entity::{Entity, EntityObj};
 pub use entity_fields::{EntityFields, FieldsOrStr};
 pub use entity_validate::*;
 pub use error::Error;
@@ -77,7 +77,7 @@ pub use len::{macro_check_max_len, Len};
 pub use log::{Log, LogToken, LogVars};
 #[cfg(feature = "telemetry")]
 pub use metrics;
-pub use obj::{Obj, ObjTrx, ObjTrxBase};
+pub use obj::{Obj, ObjBase};
 pub use once_cell::sync::OnceCell;
 pub use one_to_many::{OneToMany, OneToManyFromIter};
 pub use parking_lot;

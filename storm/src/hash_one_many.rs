@@ -1,4 +1,4 @@
-use crate::{log::LogToken, Gc, ObjTrxBase, Tag, Trx};
+use crate::{log::LogToken, Gc, ObjBase, Tag, Trx};
 use fxhash::FxHashMap;
 use std::{borrow::Borrow, collections::hash_map::Entry, hash::Hash};
 use version_tag::VersionTag;
@@ -74,7 +74,7 @@ where
     }
 }
 
-impl<K, V> ObjTrxBase for HashOneMany<K, V>
+impl<K, V> ObjBase for HashOneMany<K, V>
 where
     K: Eq + Hash + Send + Sync + 'static,
     V: PartialEq + Send + Sync + 'static,

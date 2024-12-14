@@ -1,4 +1,4 @@
-use crate::{entity::EntityTrx, EntityObj, GetOwned, ObjTrx, ObjTrxBase, Result, Trx};
+use crate::{EntityObj, GetOwned, ObjBase, Result, Trx};
 
 pub enum ChangeState<T> {
     New(T),
@@ -14,10 +14,9 @@ impl<T> ChangeState<T> {
     ) -> Result<Option<Self>>
     where
         F: Fn(&E) -> T,
-        E: EntityTrx,
-        E::Tbl: ObjTrx,
+        E: EntityObj,
         T: PartialEq,
-        <E::Tbl as ObjTrxBase>::Trx<'a>: GetOwned<'a, E, Q>,
+        <E::Tbl as ObjBase>::Trx<'a>: GetOwned<'a, E, Q>,
     {
         let old = trx.get_entity(q).await?;
 

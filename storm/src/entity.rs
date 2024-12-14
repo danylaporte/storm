@@ -1,6 +1,6 @@
 use crate::{
     BoxFuture, ChangeEvent, ChangedEvent, ClearEvent, Ctx, CtxVars, Gc, LoadedEvent, LogVars, Obj,
-    ObjTrxBase, RemoveEvent, Result, Trx,
+    ObjBase, RemoveEvent, Result, Trx,
 };
 use attached::Var;
 use std::fmt::Debug;
@@ -50,21 +50,13 @@ fn box_future_ok() -> BoxFuture<'static, Result<()>> {
     Box::pin(std::future::ready(Ok(())))
 }
 
-pub trait EntityObj: Entity + Gc + 'static {
+pub trait EntityObj: Entity + Gc + PartialEq + 'static {
     type Tbl: Obj;
-
-    fn ctx_var() -> Var<Self::Tbl, CtxVars>;
-    fn loaded() -> &'static LoadedEvent;
-}
-
-pub trait EntityTrx: EntityObj
-where
-    Self::Tbl: ObjTrxBase,
-{
-    fn log_var() -> Var<<Self::Tbl as ObjTrxBase>::Log, LogVars>;
 
     fn change() -> &'static ChangeEvent<Self>;
     fn changed() -> &'static ChangedEvent<Self>;
+    fn ctx_var() -> Var<Self::Tbl, CtxVars>;
+    fn log_var() -> Var<<Self::Tbl as ObjBase>::Log, LogVars>;
     fn remove() -> &'static RemoveEvent<Self::Key, Self::TrackCtx>;
     fn removed() -> &'static RemoveEvent<Self::Key, Self::TrackCtx>;
 
@@ -72,4 +64,6 @@ where
     fn cleared() -> &'static ClearEvent {
         Ctx::on_clear_obj::<Self::Tbl>()
     }
+
+    fn loaded() -> &'static LoadedEvent;
 }
