@@ -20,9 +20,6 @@ tokio-util = { version = "0.7", features = ["compat"] }
 tracing = "0.1"
 uuid = { version = "1", features = ["v4", "serde"] }
 
-#[patch.'https://github.com/danylaporte/attached']
-#attached = { path = "../attached" }
-
 #[patch.'https://github.com/danylaporte/dec19x5']
 #dec19x5 = { path = "../dec19x5" }
 

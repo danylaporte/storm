@@ -1195,7 +1195,7 @@ where
     E::Tbl: Accessor + ApplyLog<Log<E>>,
 {
     fn apply(&self, vars: &mut Vars, log_ctx: &mut LogsVar) -> bool {
-        if let Some(log) = log_ctx.take(E::log_var()) {
+        if let Some(log) = log_ctx.replace(E::log_var(), None) {
             if let Some(tbl) = vars.get_mut(E::entity_var()) {
                 if tbl.apply_log(log) {
                     <E::Tbl as Accessor>::clear_deps(vars);
@@ -1215,7 +1215,7 @@ fn log<E: Entity + LogAccessor>(logs: &LogsVar) -> &Log<E> {
 }
 
 fn log_mut<E: Entity + LogAccessor>(logs: &mut LogsVar) -> &mut Log<E> {
-    logs.get_mut_or_init(E::log_var(), Default::default)
+    logs.get_or_init_mut(E::log_var(), Default::default)
 }
 
 #[doc(hidden)]
