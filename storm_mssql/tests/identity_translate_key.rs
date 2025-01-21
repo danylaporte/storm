@@ -6,7 +6,7 @@ use storm_mssql::{Execute, ExecuteArgs, FromSql, MssqlFactory, MssqlProvider, To
 use tiberius::Config;
 
 fn create_ctx() -> QueueRwLock<Ctx> {
-    QueueRwLock::new(provider().into())
+    QueueRwLock::new(provider().into(), "ctx")
 }
 fn provider() -> ProviderContainer {
     let mut config = Config::default();
@@ -80,7 +80,7 @@ async fn identity_translate_key() -> storm::Result<()> {
 
         println!("{v:?}");
         Ok(())
-    })
+    }, "identity_translate_key")
     .await
 }
 

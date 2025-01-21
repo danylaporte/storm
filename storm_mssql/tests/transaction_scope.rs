@@ -5,7 +5,7 @@ use storm_mssql::{Execute, ExecuteArgs, MssqlFactory, MssqlProvider, Transaction
 use tiberius::Config;
 
 fn create_ctx() -> QueueRwLock<Ctx> {
-    QueueRwLock::new(provider().into())
+    QueueRwLock::new(provider().into(), "ctx")
 }
 
 fn provider() -> ProviderContainer {
@@ -86,7 +86,7 @@ async fn transaction_scoped() -> Result<()> {
         assert!(entities1.get(&2).is_none());
 
         Ok(())
-    })
+    }, "transaction_scoped")
     .await
 }
 

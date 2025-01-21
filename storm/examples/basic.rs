@@ -3,34 +3,37 @@ use storm::{prelude::*, NoopDelete, NoopLoad, NoopSave, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    async_cell_lock::with_deadlock_check(async move {
-        let lock = QueueRwLock::new(Ctx::default());
+    async_cell_lock::with_deadlock_check(
+        async move {
+            let lock = QueueRwLock::new(Ctx::default(), "ctx");
 
-        let ctx = lock.read().await?;
-        let _topics = ctx.tbl_of::<Topic>().await?;
-        let _users = ctx.tbl_of::<User>().await?;
+            let ctx = lock.read().await?;
+            let _topics = ctx.tbl_of::<Topic>().await?;
+            let _users = ctx.tbl_of::<User>().await?;
 
-        let ctx = ctx.queue().await?;
-        let mut trx = ctx.transaction();
-        let mut users = trx.tbl_of::<User>().await?;
+            let ctx = ctx.queue().await?;
+            let mut trx = ctx.transaction();
+            let mut users = trx.tbl_of::<User>().await?;
 
-        users
-            .insert(
-                1,
-                User {
-                    name: "Test2".to_string(),
-                },
-                &(),
-            )
-            .await?;
+            users
+                .insert(
+                    1,
+                    User {
+                        name: "Test2".to_string(),
+                    },
+                    &(),
+                )
+                .await?;
 
-        users.remove(1, &()).await?;
+            users.remove(1, &()).await?;
 
-        let _topic = trx.tbl_of::<Topic>().await?;
-        trx.commit().await?.apply_log(ctx).await?;
+            let _topic = trx.tbl_of::<Topic>().await?;
+            trx.commit().await?.apply_log(ctx).await?;
 
-        Ok(())
-    })
+            Ok(())
+        },
+        "main",
+    )
     .await
 }
 

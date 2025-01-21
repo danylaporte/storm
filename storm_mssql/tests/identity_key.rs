@@ -5,7 +5,7 @@ use storm_mssql::{Execute, ExecuteArgs, MssqlFactory, MssqlProvider};
 use tiberius::Config;
 
 fn create_ctx() -> QueueRwLock<Ctx> {
-    QueueRwLock::new(provider().into())
+    QueueRwLock::new(provider().into(), "ctx")
 }
 
 fn provider() -> ProviderContainer {
@@ -91,7 +91,7 @@ async fn identity_key_crud() -> Result<()> {
         assert!(entities1.get(&2).is_none());
 
         Ok(())
-    }).await
+    }, "identity_key_crud").await
 }
 
 #[derive(Clone, Ctx, Debug, MssqlDelete, MssqlLoad, MssqlSave, PartialEq)]
