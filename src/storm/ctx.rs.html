@@ -1255,7 +1255,31 @@
 <a href="#1254" id="1254">1254</a>
 <a href="#1255" id="1255">1255</a>
 <a href="#1256" id="1256">1256</a>
-<a href="#1257" id="1257">1257</a></pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
+<a href="#1257" id="1257">1257</a>
+<a href="#1258" id="1258">1258</a>
+<a href="#1259" id="1259">1259</a>
+<a href="#1260" id="1260">1260</a>
+<a href="#1261" id="1261">1261</a>
+<a href="#1262" id="1262">1262</a>
+<a href="#1263" id="1263">1263</a>
+<a href="#1264" id="1264">1264</a>
+<a href="#1265" id="1265">1265</a>
+<a href="#1266" id="1266">1266</a>
+<a href="#1267" id="1267">1267</a>
+<a href="#1268" id="1268">1268</a>
+<a href="#1269" id="1269">1269</a>
+<a href="#1270" id="1270">1270</a>
+<a href="#1271" id="1271">1271</a>
+<a href="#1272" id="1272">1272</a>
+<a href="#1273" id="1273">1273</a>
+<a href="#1274" id="1274">1274</a>
+<a href="#1275" id="1275">1275</a>
+<a href="#1276" id="1276">1276</a>
+<a href="#1277" id="1277">1277</a>
+<a href="#1278" id="1278">1278</a>
+<a href="#1279" id="1279">1279</a>
+<a href="#1280" id="1280">1280</a></pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
+    on_commit::call_on_commit,
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
     Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity, EntityAccessor,
     EntityValidate, Gc, GcCtx, Get, HashTable, Insert, InsertIfChanged, InsertMut,
@@ -1531,9 +1555,10 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; CtxTransaction&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">pub fn </span>commit(<span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">'a</span>, <span class="prelude-ty">Result</span>&lt;Logs&gt;&gt; {
+    <span class="kw">pub fn </span>commit(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; BoxFuture&lt;<span class="lifetime">'a</span>, <span class="prelude-ty">Result</span>&lt;Logs&gt;&gt; {
         Box::pin(<span class="kw">async move </span>{
             <span class="self">self</span>.err_gate.check()<span class="question-mark">?</span>;
+            call_on_commit(<span class="kw-2">&amp;mut </span><span class="self">self</span>).<span class="kw">await</span><span class="question-mark">?</span>;
             <span class="self">self</span>.provider.commit().<span class="kw">await</span><span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(Logs(<span class="self">self</span>.log_ctx))
         })
@@ -1669,12 +1694,20 @@
         })
     }
 
+    <span class="doccomment">/// Indicate if the table specified ty the entity E has been touched, inserted or removed.
+    </span><span class="kw">pub fn </span>tbl_touched&lt;E&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool
+    <span class="kw">where
+        </span>E: LogAccessor,
+    {
+        <span class="self">self</span>.log_ctx.get(E::log_var()).is_some()
+    }
+
     <span class="kw">pub async fn </span>update_with&lt;<span class="lifetime">'b</span>, E, F&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'b </span><span class="kw-2">mut </span><span class="self">self</span>, updater: F, track: <span class="kw-2">&amp;</span>E::TrackCtx) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;
     <span class="kw">where
         </span>Ctx: AsRefAsync&lt;E::Tbl&gt;,
         E: EntityAccessor + LogAccessor + ToOwned&lt;Owned = E&gt;,
         E::Key: Clone + Eq + Hash,
-        F: <span class="kw">for</span>&lt;<span class="lifetime">'c</span>&gt; FnMut(<span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::Key, <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span>Cow&lt;E&gt;),
+        F: <span class="kw">for</span>&lt;<span class="lifetime">'c</span>&gt; FnMut(<span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::Key, <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span>Cow&lt;E&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;,
         <span class="kw">for</span>&lt;<span class="lifetime">'c</span>&gt; <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::Tbl: IntoIterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::Key, <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E)&gt; + Get&lt;E&gt;,
         TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;: Insert&lt;E&gt;,
     {
@@ -1690,7 +1723,7 @@
         </span>Ctx: AsRefAsync&lt;E::Tbl&gt;,
         E: EntityAccessor + LogAccessor + ToOwned&lt;Owned = E&gt;,
         E::Key: Clone + Eq + Hash,
-        F: <span class="kw">for</span>&lt;<span class="lifetime">'c</span>&gt; FnMut(<span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::Key, <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span>Cow&lt;E&gt;),
+        F: <span class="kw">for</span>&lt;<span class="lifetime">'c</span>&gt; FnMut(<span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::Key, <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span>Cow&lt;E&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;,
         <span class="kw">for</span>&lt;<span class="lifetime">'c</span>&gt; <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::Tbl: IntoIterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::Key, <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E)&gt; + Get&lt;E&gt;,
         TblTransaction&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, E&gt;: InsertMut&lt;E&gt;,
     {
@@ -1875,6 +1908,13 @@
     </span>E: Entity + EntityAccessor,
     E::Key: Eq + Hash,
 {
+    <span class="kw">pub fn </span>contains(<span class="kw-2">&amp;</span><span class="self">self</span>, k: <span class="kw-2">&amp;</span>E::Key) -&gt; bool
+    <span class="kw">where
+        </span><span class="self">Self</span>: Get&lt;E&gt;,
+    {
+        <span class="self">self</span>.get(k).is_some()
+    }
+
     <span class="doccomment">/// gets a reference from the log or the underlying ctx.
     ///
     /// You can take the TblTransaction by ownership and have a longer
@@ -2018,7 +2058,7 @@
     <span class="kw">where
         </span>E: EntityAccessor + LogAccessor + ToOwned&lt;Owned = E&gt;,
         E::Key: Clone + Eq + Hash,
-        F: <span class="kw">for</span>&lt;<span class="lifetime">'c</span>&gt; FnMut(<span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::Key, <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span>Cow&lt;E&gt;),
+        F: <span class="kw">for</span>&lt;<span class="lifetime">'c</span>&gt; FnMut(<span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::Key, <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span>Cow&lt;E&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;,
         <span class="kw">for</span>&lt;<span class="lifetime">'c</span>&gt; <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::Tbl: IntoIterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::Key, <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E)&gt; + Get&lt;E&gt;,
         <span class="self">Self</span>: Insert&lt;E&gt;,
     {
@@ -2029,16 +2069,19 @@
             .filter_map(|(id, state)| {
                 <span class="kw">if let </span>LogState::Inserted(e) = state {
                     <span class="kw">let </span><span class="kw-2">mut </span>e = Cow::Borrowed(e);
-                    updater(id, <span class="kw-2">&amp;mut </span>e);
+
+                    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = updater(id, <span class="kw-2">&amp;mut </span>e) {
+                        <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(err));
+                    }
 
                     <span class="kw">if let </span>Cow::Owned(e) = e {
-                        <span class="kw">return </span><span class="prelude-val">Some</span>((id.clone(), e));
+                        <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>((id.clone(), e)));
                     }
                 }
 
                 <span class="prelude-val">None
             </span>})
-            .collect::&lt;Vec&lt;(E::Key, E)&gt;&gt;();
+            .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;(E::Key, E)&gt;&gt;&gt;()<span class="question-mark">?</span>;
 
         <span class="self">self</span>.insert_all(vec, track).<span class="kw">await</span><span class="question-mark">?</span>;
 
@@ -2046,7 +2089,7 @@
             <span class="kw">if </span><span class="self">self</span>.log().map_or(<span class="bool-val">true</span>, |l| !l.contains_key(id)) {
                 <span class="kw">let </span><span class="kw-2">mut </span>e = Cow::Borrowed(e);
 
-                updater(id, <span class="kw-2">&amp;mut </span>e);
+                updater(id, <span class="kw-2">&amp;mut </span>e)<span class="question-mark">?</span>;
 
                 <span class="kw">if let </span>Cow::Owned(e) = e {
                     <span class="self">self</span>.insert(id.clone(), e, track).<span class="kw">await</span><span class="question-mark">?</span>;
@@ -2061,7 +2104,7 @@
     <span class="kw">where
         </span>E: EntityAccessor + LogAccessor + ToOwned&lt;Owned = E&gt;,
         E::Key: Clone + Eq + Hash,
-        F: <span class="kw">for</span>&lt;<span class="lifetime">'c</span>&gt; FnMut(<span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::Key, <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span>Cow&lt;E&gt;),
+        F: <span class="kw">for</span>&lt;<span class="lifetime">'c</span>&gt; FnMut(<span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::Key, <span class="kw-2">&amp;</span><span class="lifetime">'c </span><span class="kw-2">mut </span>Cow&lt;E&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;,
         <span class="kw">for</span>&lt;<span class="lifetime">'c</span>&gt; <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::Tbl: IntoIterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">'c </span>E::Key, <span class="kw-2">&amp;</span><span class="lifetime">'c </span>E)&gt; + Get&lt;E&gt;,
         <span class="self">Self</span>: InsertMut&lt;E&gt;,
     {
@@ -2072,16 +2115,19 @@
             .filter_map(|(id, state)| {
                 <span class="kw">if let </span>LogState::Inserted(e) = state {
                     <span class="kw">let </span><span class="kw-2">mut </span>e = Cow::Borrowed(e);
-                    updater(id, <span class="kw-2">&amp;mut </span>e);
+
+                    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = updater(id, <span class="kw-2">&amp;mut </span>e) {
+                        <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(err));
+                    };
 
                     <span class="kw">if let </span>Cow::Owned(e) = e {
-                        <span class="kw">return </span><span class="prelude-val">Some</span>((id.clone(), e));
+                        <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>((id.clone(), e)));
                     }
                 }
 
                 <span class="prelude-val">None
             </span>})
-            .collect::&lt;Vec&lt;(E::Key, E)&gt;&gt;();
+            .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;(E::Key, E)&gt;&gt;&gt;()<span class="question-mark">?</span>;
 
         <span class="self">self</span>.insert_mut_all(vec, track).<span class="kw">await</span><span class="question-mark">?</span>;
 
@@ -2089,7 +2135,7 @@
             <span class="kw">if </span><span class="self">self</span>.log().map_or(<span class="bool-val">true</span>, |l| !l.contains_key(id)) {
                 <span class="kw">let </span><span class="kw-2">mut </span>e = Cow::Borrowed(e);
 
-                updater(id, <span class="kw-2">&amp;mut </span>e);
+                updater(id, <span class="kw-2">&amp;mut </span>e)<span class="question-mark">?</span>;
 
                 <span class="kw">if let </span>Cow::Owned(e) = e {
                     <span class="self">self</span>.insert_mut(id.clone(), e, track).<span class="kw">await</span><span class="question-mark">?</span>;
