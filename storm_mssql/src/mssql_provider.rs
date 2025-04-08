@@ -1,4 +1,5 @@
 use crate::{execute::ExecuteArgs, Client, ClientFactory, Execute, Parameter, QueryRows, ToSql};
+use chrono::NaiveDateTime;
 use futures::{Stream, StreamExt, TryStreamExt};
 use std::{
     borrow::Cow,
@@ -15,8 +16,9 @@ use std::{
 use storm::{provider, BoxFuture, Error, Result};
 use tiberius::Row;
 use tokio::sync::{Mutex, MutexGuard};
+use tracing::info;
 
-pub const DEFAULT_LOCK_TIMEOUT: Duration = Duration::from_secs(15);
+pub const DEFAULT_LOCK_TIMEOUT: Duration = Duration::from_secs(90);
 
 pub struct MssqlProvider(Arc<Inner>);
 
@@ -123,7 +125,13 @@ impl Execute for MssqlProvider {
                 client_ref = &mut guard.client;
             };
 
-            let count = client.execute(statement, &output).await?.total();
+            let count = match client.execute(statement, &output).await.map(|v| v.total()) {
+                Ok(count) => count,
+                Err(e) => {
+                    let _ = trace_deadlock(&mut client).await;
+                    return Err(e.into());
+                }
+            };
 
             *client_ref = Some(client);
             Ok(count)
@@ -243,9 +251,62 @@ impl<'a> QueryConn<'a> {
     }
 }
 
+async fn trace_deadlock(client: &mut Client) -> Result<()> {
+    const SQL: &str = r#"
+        SELECT
+            a.session_id,
+            a.start_time,
+            a.[status],
+            a.command,
+            a.blocking_session_id,
+            a.wait_type,
+            a.wait_time,
+            a.open_transaction_count,
+            a.transaction_id,
+            a.total_elapsed_time,
+            definition = CAST(b.text AS VARCHAR(MAX))
+        FROM
+            SYS.DM_EXEC_REQUESTS a
+            CROSS APPLY sys.dm_exec_sql_text(a.sql_handle) b
+        WHERE
+            a.session_id != @@SPID
+            AND a.database_id = DB_ID()
+            AND blocking_session_id != 0
+    "#;
+
+    let deadlocks = client
+        .simple_query(SQL)
+        .await?
+        .into_first_result()
+        .await?
+        .into_iter()
+        .map(|row| {
+            serde_json::json!({
+                "session_id": row.get::<i16, _>(0),
+                "start_time": row.get::<NaiveDateTime, _>(1),
+                "status": row.get::<&str, _>(2).unwrap_or_default(),
+                "command": row.get::<&str, _>(3).unwrap_or_default(),
+                "blocking_session_id": row.get::<i16, _>(4),
+                "wait_type": row.get::<&str, _>(5).unwrap_or_default(),
+                "wait_time": row.get::<i32, _>(6),
+                "open_transaction_count": row.get::<i32, _>(7),
+                "transaction_id": row.get::<i64, _>(8),
+                "total_elapsed_time": row.get::<i32, _>(9),
+                "definition": row.get::<&str, _>(10).unwrap_or_default(),
+            })
+        })
+        .collect::<Vec<_>>();
+
+    if let Ok(json) = serde_json::to_string_pretty(&serde_json::json!(deadlocks)) {
+        info!(json = json, "potential sql deadlocks");
+    }
+
+    Ok(())
+}
+
 struct QueryStream<'a>(tiberius::QueryStream<'a>);
 
-impl<'a> QueryStream<'a> {
+impl QueryStream<'_> {
     async fn complete(self) -> Result<()> {
         self.0.into_results().await?;
         Ok(())
