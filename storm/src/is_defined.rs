@@ -11,7 +11,7 @@ where
     T: IsDefined,
 {
     fn is_defined(&self) -> bool {
-        self.as_ref().map_or(false, IsDefined::is_defined)
+        self.as_ref().is_some_and(IsDefined::is_defined)
     }
 }
 

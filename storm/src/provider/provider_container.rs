@@ -83,7 +83,7 @@ impl ProviderContainer {
             for r in &mut self.records {
                 if r.provider
                     .get_mut()
-                    .map_or(false, |r| *r.lru.get_mut() <= last_gc)
+                    .is_some_and(|r| *r.lru.get_mut() <= last_gc)
                 {
                     r.provider.take();
                 }

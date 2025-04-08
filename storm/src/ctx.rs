@@ -806,7 +806,7 @@ where
         self.insert_all(vec, track).await?;
 
         for (id, e) in self.tbl {
-            if self.log().map_or(true, |l| !l.contains_key(id)) {
+            if self.log().is_none_or(|l| !l.contains_key(id)) {
                 let mut e = Cow::Borrowed(e);
 
                 updater(id, &mut e)?;
@@ -852,7 +852,7 @@ where
         self.insert_mut_all(vec, track).await?;
 
         for (id, e) in self.tbl {
-            if self.log().map_or(true, |l| !l.contains_key(id)) {
+            if self.log().is_none_or(|l| !l.contains_key(id)) {
                 let mut e = Cow::Borrowed(e);
 
                 updater(id, &mut e)?;
@@ -955,7 +955,7 @@ where
         track: &'c E::TrackCtx,
     ) -> BoxFuture<'c, Result<()>> {
         Box::pin(async move {
-            if self.get(&k).map_or(true, |old| old != &v) {
+            if self.get(&k) != Some(&v) {
                 self.insert(k, v, track).await
             } else {
                 Ok(())
@@ -976,7 +976,7 @@ where
             let mut count = 0;
 
             for (k, v) in iter {
-                if self.get(&k).map_or(true, |old| old != &v) {
+                if self.get(&k) != Some(&v) {
                     self.insert(k, v, track).await?;
                     count += 1;
                 }
@@ -1060,7 +1060,7 @@ where
         track: &'c E::TrackCtx,
     ) -> BoxFuture<'c, Result<E::Key>> {
         Box::pin(async move {
-            if self.get(&k).map_or(true, |old| old != &v) {
+            if self.get(&k) != Some(&v) {
                 self.insert_mut(k, v, track).await
             } else {
                 Ok(k)
@@ -1081,7 +1081,7 @@ where
             let mut count = 0;
 
             for (k, v) in iter {
-                if self.get(&k).map_or(true, |old| old != &v) {
+                if self.get(&k) != Some(&v) {
                     self.insert_mut(k, v, track).await?;
                     count += 1;
                 }
@@ -1256,8 +1256,8 @@ fn register_apply_log_dyn(app: Box<dyn LogApplier>) {
 
 static LOG_APPLIERS: RwLock<Vec<Box<dyn LogApplier>>> = RwLock::new(Vec::new());
 
-async fn validate_on_change<'a, E>(
-    trx: &mut CtxTransaction<'a>,
+async fn validate_on_change<E>(
+    trx: &mut CtxTransaction<'_>,
     key: &E::Key,
     entity: &mut E,
     track: &E::TrackCtx,

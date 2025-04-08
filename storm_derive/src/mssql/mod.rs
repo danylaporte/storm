@@ -451,7 +451,7 @@ fn is_translated(t: &Type) -> bool {
             .segments
             .iter()
             .last()
-            .map_or(false, |s| &s.ident == "Translated"),
+            .is_some_and(|s| &s.ident == "Translated"),
         _ => false,
     }
 }
