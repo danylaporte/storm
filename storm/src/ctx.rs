@@ -403,6 +403,13 @@ impl<'a> CtxTransaction<'a> {
         self.tbl_of::<E>().await?.remove_filter(filter, track).await
     }
 
+    pub fn tbl_log<E>(&self) -> Option<&Log<E>>
+    where
+        E: LogAccessor,
+    {
+        self.log_ctx.get(E::log_var())
+    }
+
     pub fn tbl_of<'b, E>(&'b mut self) -> BoxFuture<'b, Result<TblTransaction<'a, 'b, E>>>
     where
         E: Entity + EntityAccessor + LogAccessor,
@@ -419,7 +426,7 @@ impl<'a> CtxTransaction<'a> {
     where
         E: LogAccessor,
     {
-        self.log_ctx.get(E::log_var()).is_some()
+        self.tbl_log::<E>().is_some()
     }
 
     pub async fn update_with<'b, E, F>(&'b mut self, updater: F, track: &E::TrackCtx) -> Result<()>
