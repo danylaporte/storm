@@ -144,7 +144,7 @@ where
 
 impl<K, V> Gc for VecMap<K, V>
 where
-    K: Copy + From<usize> + Send,
+    K: Copy + Send,
     V: Gc + Send,
 {
     const SUPPORT_GC: bool = V::SUPPORT_GC;

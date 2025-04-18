@@ -19,7 +19,7 @@ impl<ONE, MANY> OneToMany<ONE, MANY> {
 
 impl<ONE, MANY> Gc for OneToMany<ONE, MANY>
 where
-    ONE: Copy + From<usize> + Send,
+    ONE: Copy + Send,
     MANY: Gc + Send + Sync,
 {
     const SUPPORT_GC: bool = MANY::SUPPORT_GC;
@@ -110,7 +110,7 @@ where
 
 impl<ONE, MANY> FromIterator<(ONE, MANY)> for OneToMany<ONE, MANY>
 where
-    ONE: Copy + From<usize> + Into<usize>,
+    ONE: Copy + Into<usize>,
     MANY: Eq + Hash,
 {
     fn from_iter<T: IntoIterator<Item = (ONE, MANY)>>(iter: T) -> Self {
@@ -125,7 +125,7 @@ where
 
 pub trait OneToManyFromIter<ONE, MANY>: IntoIterator<Item = (ONE, MANY)> + Sized
 where
-    ONE: Copy + From<usize> + Into<usize>,
+    ONE: Copy + Into<usize>,
 {
     /// Collect the items and sort them.
     fn collect_sort<F>(self) -> OneToMany<ONE, MANY>
@@ -199,7 +199,7 @@ where
 impl<ONE, MANY, T> OneToManyFromIter<ONE, MANY> for T
 where
     T: IntoIterator<Item = (ONE, MANY)> + Sized,
-    ONE: Copy + From<usize> + Into<usize>,
+    ONE: Copy + Into<usize>,
 {
 }
 

@@ -113,12 +113,6 @@ impl<'a> FromSql<'a> for LabelId {
     }
 }
 
-impl From<usize> for LabelId {
-    fn from(v: usize) -> Self {
-        Self(v as _)
-    }
-}
-
 impl From<LabelId> for usize {
     fn from(id: LabelId) -> Self {
         id.0 as _

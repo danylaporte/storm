@@ -164,7 +164,7 @@ where
 impl<E> Gc for VecTable<E>
 where
     E: Entity + CtxTypeInfo + Gc,
-    E::Key: Copy + From<usize>,
+    E::Key: Copy,
 {
     const SUPPORT_GC: bool = E::SUPPORT_GC;
 
@@ -218,7 +218,7 @@ impl<'a, E: Entity> IntoIterator for &'a VecTable<E> {
 
 impl<'a, E: Entity> IntoParallelIterator for &'a VecTable<E>
 where
-    E::Key: Copy + From<usize>,
+    E::Key: Copy,
 {
     type Item = (&'a E::Key, &'a E);
     type Iter = ParIter<'a, E::Key, E>;
