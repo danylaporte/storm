@@ -10,12 +10,15 @@ mod derive_input_ext;
 #[cfg(feature = "mssql")]
 mod errors;
 mod field_ext;
+mod hierarchy;
 mod indexing;
+mod int_one_to_many;
 mod locks_await;
 #[cfg(feature = "mssql")]
 mod mssql;
 mod noop;
 mod rename_all;
+mod single_set;
 #[cfg(feature = "mssql")]
 mod string_ext;
 mod token_stream_ext;
@@ -41,9 +44,21 @@ pub fn ctx(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
+pub fn hierarchy(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(item as Item);
+    hierarchy::hierarchy(item).into()
+}
+
+#[proc_macro_attribute]
 pub fn indexing(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
     indexing::indexing(item).into()
+}
+
+#[proc_macro_attribute]
+pub fn int_one_to_many(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(item as Item);
+    int_one_to_many::int_one_to_many(item).into()
 }
 
 #[proc_macro_derive(LocksAwait, attributes(storm))]
@@ -89,4 +104,10 @@ pub fn noop_load(input: TokenStream) -> TokenStream {
 pub fn noop_save(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     noop::save(&input).into()
+}
+
+#[proc_macro_attribute]
+pub fn single_set(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(item as Item);
+    single_set::single_set(item).into()
 }

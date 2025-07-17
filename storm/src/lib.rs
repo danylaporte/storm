@@ -18,6 +18,7 @@ pub mod gc;
 mod get;
 mod get_mut;
 mod hash_table;
+pub mod indexing;
 mod init;
 mod insert;
 mod is_defined;
@@ -64,12 +65,13 @@ pub use gc::*;
 pub use get::Get;
 pub use get_mut::GetMut;
 pub use hash_table::HashTable;
-pub use init::Init;
+pub use init::{Init, Inits};
 pub use insert::*;
 pub use is_defined::IsDefined;
 pub use iterator_ext::*;
 pub use len::{macro_check_max_len, Len};
-pub use logs::Logs;
+pub use linkme;
+pub use logs::{Log, Logs};
 #[cfg(feature = "telemetry")]
 pub use metrics;
 pub use on_change::{change_depth, ChangeHandler, OnChange};
@@ -92,7 +94,6 @@ pub use vec_table::VecTable;
 pub use version_tag::{self, VersionTag};
 
 pub type BoxFuture<'a, T> = std::pin::Pin<Box<dyn std::future::Future<Output = T> + 'a + Send>>;
-pub type Log<E> = fxhash::FxHashMap<<E as Entity>::Key, LogState<E>>;
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub const EV_CREATED: &str = "created";
@@ -100,7 +101,10 @@ pub const OBJ_INDEX: &str = "index";
 pub const OBJ_TABLE: &str = "table";
 
 #[cfg(feature = "derive")]
-pub use storm_derive::{indexing, Ctx, LocksAwait, NoopDelete, NoopLoad, NoopSave};
+pub use storm_derive::{
+    hierarchy, indexing, int_one_to_many, single_set, Ctx, LocksAwait, NoopDelete, NoopLoad,
+    NoopSave,
+};
 #[cfg(feature = "mssql")]
 pub use storm_derive::{MssqlDelete, MssqlLoad, MssqlSave};
 

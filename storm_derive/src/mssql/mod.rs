@@ -450,7 +450,7 @@ fn is_translated(t: &Type) -> bool {
             .path
             .segments
             .iter()
-            .last()
+            .next_back()
             .is_some_and(|s| &s.ident == "Translated"),
         _ => false,
     }

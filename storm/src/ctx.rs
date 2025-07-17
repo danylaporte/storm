@@ -1,4 +1,5 @@
 use crate::{
+    indexing::{Index, IndexList, IndexTrx},
     on_commit::call_on_commit,
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
     Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity, EntityAccessor,
@@ -6,10 +7,13 @@ use crate::{
     InsertMutIfChanged, Log, LogAccessor, LogState, Logs, LogsVar, NotifyTag, ProviderContainer,
     Remove, Result, Tag, Transaction, TrxErrGate, Vars, VecTable,
 };
-use fxhash::FxHashMap;
+use linkme::distributed_slice;
 use parking_lot::RwLock;
-use std::{borrow::Cow, hash::Hash, marker::PhantomData};
+use std::{borrow::Cow, hash::Hash, marker::PhantomData, sync::Once};
 use version_tag::VersionTag;
+
+#[distributed_slice]
+pub static STORM_INITS: [fn()];
 
 pub struct Ctx {
     pub(crate) gc: GcCtx,
@@ -19,6 +23,10 @@ pub struct Ctx {
 
 impl Ctx {
     pub fn new(provider: ProviderContainer) -> Self {
+        static START: Once = Once::new();
+
+        START.call_once(|| STORM_INITS.iter().for_each(|f| f()));
+
         Ctx {
             gc: Default::default(),
             provider,
@@ -659,11 +667,26 @@ where
         E: LogAccessor,
         E::Tbl: Get<E>,
     {
-        match self.ctx.log_ctx.get(E::log_var()).and_then(|l| l.get(k)) {
+        match self
+            .ctx
+            .log_ctx
+            .get(E::log_var())
+            .and_then(|l| l.changes.get(k))
+        {
             Some(LogState::Inserted(v)) => Some(v),
             Some(LogState::Removed) => None,
             None => self.tbl.get(k),
         }
+    }
+
+    pub fn index<I>(&mut self) -> I::Trx<'_>
+    where
+        I: Index<E> + IndexTrx,
+        E: LogAccessor,
+        E::Tbl: AsRef<IndexList<E>>,
+    {
+        let index_logs = &mut log_mut::<E>(&mut self.ctx.log_ctx).indexes;
+        self.tbl.as_ref().trx::<I>(index_logs)
     }
 
     pub fn insert<'c>(
@@ -722,14 +745,19 @@ where
         E::Key: Eq + Hash,
         E::Tbl: Get<E>,
     {
-        match self.ctx.log_ctx.get(E::log_var()).and_then(|l| l.get(k)) {
+        match self
+            .ctx
+            .log_ctx
+            .get(E::log_var())
+            .and_then(|l| l.changes.get(k))
+        {
             Some(LogState::Inserted(v)) => Some(v),
             Some(LogState::Removed) => None,
             None => self.tbl.get(k),
         }
     }
 
-    pub fn log(&self) -> Option<&FxHashMap<E::Key, LogState<E>>>
+    pub fn log(&self) -> Option<&Log<E>>
     where
         E: Entity + EntityAccessor + LogAccessor,
     {
@@ -791,6 +819,7 @@ where
     {
         let vec = self
             .log()
+            .map(|l| &l.changes)
             .into_iter()
             .flatten()
             .filter_map(|(id, state)| {
@@ -813,7 +842,7 @@ where
         self.insert_all(vec, track).await?;
 
         for (id, e) in self.tbl {
-            if self.log().is_none_or(|l| !l.contains_key(id)) {
+            if self.log().is_none_or(|l| !l.changes.contains_key(id)) {
                 let mut e = Cow::Borrowed(e);
 
                 updater(id, &mut e)?;
@@ -837,6 +866,7 @@ where
     {
         let vec = self
             .log()
+            .map(|l| &l.changes)
             .into_iter()
             .flatten()
             .filter_map(|(id, state)| {
@@ -859,7 +889,7 @@ where
         self.insert_mut_all(vec, track).await?;
 
         for (id, e) in self.tbl {
-            if self.log().is_none_or(|l| !l.contains_key(id)) {
+            if self.log().is_none_or(|l| !l.changes.contains_key(id)) {
                 let mut e = Cow::Borrowed(e);
 
                 updater(id, &mut e)?;
@@ -881,7 +911,12 @@ where
     E::Tbl: Get<E>,
 {
     fn get(&self, k: &E::Key) -> Option<&E> {
-        match self.ctx.log_ctx.get(E::log_var()).and_then(|l| l.get(k)) {
+        match self
+            .ctx
+            .log_ctx
+            .get(E::log_var())
+            .and_then(|l| l.changes.get(k))
+        {
             Some(LogState::Inserted(v)) => Some(v),
             Some(LogState::Removed) => None,
             None => self.tbl.get(k),
@@ -893,7 +928,7 @@ impl<E> Insert<E> for TblTransaction<'_, '_, E>
 where
     for<'c> TransactionProvider<'c>: Upsert<E>,
     E: Entity + EntityAccessor + EntityValidate + LogAccessor,
-    E::Key: Eq + Hash,
+    E::Key: Clone + Eq + Hash,
     E::Tbl: Get<E>,
 {
     fn insert<'c>(
@@ -908,17 +943,11 @@ where
             validate_on_change(self.ctx, &k, &mut v, track).await?;
             self.ctx.provider.upsert(&k, &v).await?;
 
-            // remove first because if the track change the entity, we want to keep only the latest version.
-            log_mut::<E>(&mut self.ctx.log_ctx).remove(&k);
-
             // change tracking...
             let old = self.tbl.get(&k);
             let result = v.track_insert(&k, old, self.ctx, track).await;
 
-            // if the value is present, this is because the track has changed the value.
-            log_mut(&mut self.ctx.log_ctx)
-                .entry(k)
-                .or_insert(LogState::Inserted(v));
+            log_mut::<E>(&mut self.ctx.log_ctx).insert(self.tbl, k.clone(), v);
 
             if result.is_ok() {
                 gate.close();
@@ -1013,17 +1042,11 @@ where
             validate_on_change(self.ctx, &k, &mut v, track).await?;
             self.ctx.provider.upsert_mut(&mut k, &mut v).await?;
 
-            // remove first because if the track change the entity, we want to keep only the latest version.
-            log_mut::<E>(&mut self.ctx.log_ctx).remove(&k);
-
             // change tracking...
             let old = self.tbl.get(&k);
             let result = v.track_insert(&k, old, self.ctx, track).await;
 
-            // if the value is present, this is because the track has changed the value.
-            log_mut(&mut self.ctx.log_ctx)
-                .entry(k.clone())
-                .or_insert(LogState::Inserted(v));
+            log_mut::<E>(&mut self.ctx.log_ctx).insert(self.tbl, k.clone(), v);
 
             if result.is_ok() {
                 gate.close();
@@ -1110,9 +1133,7 @@ where
         Box::pin(async move {
             let gate = self.ctx.err_gate.open()?;
 
-            if let Some(LogState::Removed) =
-                log_mut::<E>(&mut self.ctx.log_ctx).insert(k.clone(), LogState::Removed)
-            {
+            if !log_mut::<E>(&mut self.ctx.log_ctx).remove(self.tbl, &k) {
                 gate.close();
                 return Ok(());
             }
@@ -1121,7 +1142,7 @@ where
 
             let mut result = Ok(());
 
-            if let Some(LogState::Removed) = log::<E>(&self.ctx.log_ctx).get(&k) {
+            if let Some(LogState::Removed) = log::<E>(&self.ctx.log_ctx).changes.get(&k) {
                 self.ctx.provider.delete(&k).await?;
 
                 if let Some(old) = self.tbl.get(&k) {
@@ -1210,7 +1231,11 @@ where
         }
 
         // load the table
-        let v = provider.load_all(&()).await?;
+        let mut v = provider.load_all(&()).await?;
+
+        // add indexes to the tables.
+        E::entity_inits().apply(&mut v);
+
         Ok(ctx.get_or_init(var, || v))
     })
 }
@@ -1240,11 +1265,11 @@ where
 
 struct EntityLogApplier<E: Entity + EntityAccessor + LogAccessor>(PhantomData<E>);
 
-fn log<E: Entity + LogAccessor>(logs: &LogsVar) -> &Log<E> {
+fn log<E: EntityAccessor + LogAccessor>(logs: &LogsVar) -> &Log<E> {
     logs.get_or_init(E::log_var(), Default::default)
 }
 
-fn log_mut<E: Entity + LogAccessor>(logs: &mut LogsVar) -> &mut Log<E> {
+fn log_mut<E: EntityAccessor + LogAccessor>(logs: &mut LogsVar) -> &mut Log<E> {
     logs.get_or_init_mut(E::log_var(), Default::default)
 }
 

@@ -14,8 +14,8 @@ where
     fn into_iter(self) -> Self::IntoIter {
         match self.log() {
             Some(log) => TrxIter::Log {
-                log,
-                log_iter: log.iter(),
+                log: &log.changes,
+                log_iter: log.changes.iter(),
                 tbl_iter: self.tbl().into_iter(),
             },
             None => TrxIter::Tbl(self.tbl().into_iter()),

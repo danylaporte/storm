@@ -53,6 +53,12 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             }
 
             #[inline]
+            fn entity_inits() -> &'static storm::Inits<#table_alias> {
+                static INITS: storm::Inits<#table_alias> = storm::Inits::new();
+                &INITS
+            }
+
+            #[inline]
             fn on_change() -> &'static storm::OnChange<Self> {
                 #[static_init::dynamic]
                 static E: storm::OnChange<#entity> = Default::default();

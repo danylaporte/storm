@@ -1,4 +1,4 @@
-use crate::{Entity, Log, OnChange, OnChanged, OnRemove};
+use crate::{indexing::IndexList, Entity, Inits, Log, OnChange, OnChanged, OnRemove};
 use attached::Var;
 use parking_lot::RwLock;
 
@@ -33,11 +33,13 @@ fn register_deps(deps: &'static Deps, f: Box<dyn Fn(&mut Vars) + Send + Sync + '
 }
 
 pub trait EntityAccessor: Entity + Sized + 'static {
-    type Tbl: Send + Sync;
+    type Tbl: AsRef<IndexList<Self>> + Send + Sync;
 
     fn entity_var() -> TblVar<Self::Tbl>;
 
     fn entity_deps() -> &'static Deps;
+
+    fn entity_inits() -> &'static Inits<Self::Tbl>;
 
     fn on_change() -> &'static OnChange<Self>;
 

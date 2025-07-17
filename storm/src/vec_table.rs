@@ -1,7 +1,9 @@
 use crate::{
-    on_changed::Changed, provider::LoadAll, Accessor, ApplyLog, BoxFuture, CtxTypeInfo, Deps,
-    Entity, EntityAccessor, EntityOf, Gc, GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag,
-    Result, Tag, TblVar,
+    indexing::{Index, IndexList},
+    on_changed::Changed,
+    provider::LoadAll,
+    Accessor, ApplyLog, BoxFuture, CtxTypeInfo, Deps, Entity, EntityAccessor, EntityOf, Gc, GcCtx,
+    Get, GetMut, Init, Log, LogState, NotifyTag, Result, Tag, TblVar,
 };
 use rayon::iter::IntoParallelIterator;
 use std::ops::Deref;
@@ -9,6 +11,7 @@ use vec_map::{Entry, Iter, Keys, ParIter, Values, VecMap};
 use version_tag::VersionTag;
 
 pub struct VecTable<E: Entity> {
+    indexes: IndexList<E>,
     map: VecMap<E::Key, E>,
     tag: VersionTag,
 }
@@ -16,9 +19,19 @@ pub struct VecTable<E: Entity> {
 impl<E: Entity> VecTable<E> {
     pub fn new() -> Self {
         Self {
+            indexes: IndexList::new(),
             map: VecMap::new(),
             tag: VersionTag::new(),
         }
+    }
+
+    #[track_caller]
+    #[inline]
+    pub fn index<I>(&self) -> &I
+    where
+        I: Index<E> + 'static,
+    {
+        self.indexes.get::<I>().0
     }
 
     #[inline]
@@ -29,6 +42,20 @@ impl<E: Entity> VecTable<E> {
     #[inline]
     pub fn keys(&self) -> Keys<E::Key, E> {
         self.map.keys()
+    }
+
+    pub fn register_index<I>(&mut self, mut index: I)
+    where
+        I: Index<E> + 'static,
+    {
+        let mut log = index.create_log();
+
+        for (k, v) in &self.map {
+            index.upsert(&mut *log, k, v, None);
+        }
+
+        index.apply_log(log);
+        self.indexes.register(index);
     }
 
     fn update_metrics(&self)
@@ -66,11 +93,11 @@ where
     E::Key: Copy + Into<usize>,
 {
     fn apply_log(&mut self, log: Log<E>) -> bool {
-        if log.is_empty() {
+        if log.changes.is_empty() {
             return false;
         }
 
-        for (k, state) in log {
+        for (k, state) in log.changes {
             match state {
                 LogState::Inserted(new) => match self.map.entry(k) {
                     Entry::Occupied(mut o) => {
@@ -98,6 +125,7 @@ where
             }
         }
 
+        self.indexes.apply_changes(log.indexes);
         self.update_metrics();
         self.tag.notify();
         true
@@ -111,16 +139,10 @@ impl<E: Entity> AsRef<Self> for VecTable<E> {
     }
 }
 
-impl<E> Clone for VecTable<E>
-where
-    E: Clone + Entity,
-    E::Key: Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            map: self.map.clone(),
-            tag: self.tag,
-        }
+impl<E: Entity> AsRef<IndexList<E>> for VecTable<E> {
+    #[inline]
+    fn as_ref(&self) -> &IndexList<E> {
+        &self.indexes
     }
 }
 

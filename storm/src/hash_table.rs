@@ -1,7 +1,9 @@
 use crate::{
-    on_changed::Changed, provider::LoadAll, Accessor, ApplyLog, BoxFuture, CtxTypeInfo, Deps,
-    Entity, EntityAccessor, EntityOf, Gc, GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag,
-    Result, Tag, TblVar,
+    indexing::{Index, IndexList},
+    on_changed::Changed,
+    provider::LoadAll,
+    Accessor, ApplyLog, BoxFuture, CtxTypeInfo, Deps, Entity, EntityAccessor, EntityOf, Gc, GcCtx,
+    Get, GetMut, Init, Log, LogState, NotifyTag, Result, Tag, TblVar,
 };
 use fxhash::FxHashMap;
 use rayon::{
@@ -16,6 +18,7 @@ use std::{
 use version_tag::VersionTag;
 
 pub struct HashTable<E: Entity> {
+    indexes: IndexList<E>,
     map: FxHashMap<E::Key, E>,
     tag: VersionTag,
 }
@@ -23,9 +26,19 @@ pub struct HashTable<E: Entity> {
 impl<E: Entity> HashTable<E> {
     pub fn new() -> Self {
         Self {
+            indexes: IndexList::new(),
             map: FxHashMap::default(),
             tag: VersionTag::new(),
         }
+    }
+
+    #[track_caller]
+    #[inline]
+    pub fn index<I>(&self) -> &I
+    where
+        I: Index<E> + 'static,
+    {
+        self.indexes.get::<I>().0
     }
 
     #[inline]
@@ -36,6 +49,21 @@ impl<E: Entity> HashTable<E> {
     #[inline]
     pub fn keys(&self) -> Keys<E::Key, E> {
         self.map.keys()
+    }
+
+    pub fn register_index<I>(&mut self, mut index: I)
+    where
+        I: Index<E> + 'static,
+    {
+        let mut log = index.create_log();
+
+        for (k, v) in &self.map {
+            index.upsert(&mut *log, k, v, None);
+        }
+
+        index.apply_log(log);
+
+        self.indexes.register(index);
     }
 
     fn update_metrics(&self)
@@ -73,11 +101,11 @@ where
     E::Key: Eq + Hash,
 {
     fn apply_log(&mut self, log: Log<E>) -> bool {
-        if log.is_empty() {
+        if log.changes.is_empty() {
             return false;
         }
 
-        for (k, state) in log {
+        for (k, state) in log.changes {
             match state {
                 LogState::Inserted(new) => {
                     match self.map.entry(k) {
@@ -107,6 +135,7 @@ where
             }
         }
 
+        self.indexes.apply_changes(log.indexes);
         self.update_metrics();
         self.tag.notify();
         true
@@ -117,6 +146,13 @@ impl<E: Entity> AsRef<Self> for HashTable<E> {
     #[inline]
     fn as_ref(&self) -> &Self {
         self
+    }
+}
+
+impl<E: Entity> AsRef<IndexList<E>> for HashTable<E> {
+    #[inline]
+    fn as_ref(&self) -> &IndexList<E> {
+        &self.indexes
     }
 }
 
