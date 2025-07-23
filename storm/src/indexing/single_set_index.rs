@@ -1,9 +1,9 @@
-use super::{set::Set, IndexLog};
+use super::IndexLog;
 use crate::{
     indexing::{Index, IndexTrx},
     Entity,
 };
-use roaring::RoaringBitmap;
+use fast_set::{AdaptiveBitmap, AdaptiveBitmapLog, AdaptiveBitmapTrx, IntSet, IntSetTrx};
 use std::{
     any::Any,
     fmt::{self, Debug, Formatter},
@@ -11,13 +11,13 @@ use std::{
     ops::Deref,
 };
 
-pub struct SingleSetIndex<K, A>(RoaringBitmap, PhantomData<(K, A)>);
+pub struct SingleSetIndex<K, A>(AdaptiveBitmap, PhantomData<(K, A)>);
 
-impl IndexLog for Option<RoaringBitmap> {}
+impl IndexLog for Option<AdaptiveBitmap> {}
 
 impl<K, A> SingleSetIndex<K, A> {
     pub fn new() -> Self {
-        Self(RoaringBitmap::new(), PhantomData)
+        Self(AdaptiveBitmap::new(), PhantomData)
     }
 
     #[inline]
@@ -30,13 +30,7 @@ impl<K, A> SingleSetIndex<K, A> {
 
     fn remove_impl(&self, log: &mut dyn IndexLog, old: Option<u32>) {
         if let Some(old) = old {
-            let o = roaring_mut(log);
-
-            if o.is_none() {
-                *o = Some(self.0.clone());
-            }
-
-            unsafe { o.as_mut().unwrap_unchecked() }.remove(old);
+            log_mut(log).remove(&self.0, old);
         }
     }
 
@@ -48,13 +42,7 @@ impl<K, A> SingleSetIndex<K, A> {
         self.remove_impl(log, old);
 
         if let Some(new) = new {
-            let o = roaring_mut(log);
-
-            if o.is_none() {
-                *o = Some(self.0.clone());
-            }
-
-            unsafe { o.as_mut().unwrap_unchecked() }.insert(new);
+            log_mut(log).insert(&self.0, new);
         }
     }
 }
@@ -65,17 +53,24 @@ impl<K, A> Default for SingleSetIndex<K, A> {
     }
 }
 
-impl<K, A> Deref for SingleSetIndex<K, A> {
-    type Target = Set<K>;
+impl<K, A> Deref for SingleSetIndex<K, A>
+where
+    usize: From<K>,
+{
+    type Target = IntSet<K>;
 
     #[inline]
     fn deref(&self) -> &Self::Target {
-        Set::from_roaring_bitmap_ref(&self.0)
+        unsafe { IntSet::from_bitmap_ref(&self.0) }
     }
 }
 
-fn roaring_mut(log: &mut dyn IndexLog) -> &mut Option<RoaringBitmap> {
-    <dyn Any>::downcast_mut(&mut *log).expect("RoaringBitmap")
+fn log_mut(log: &mut dyn IndexLog) -> &mut AdaptiveBitmapLog {
+    <dyn Any>::downcast_mut(&mut *log).expect("AdaptiveBitmapLog")
+}
+
+fn log_ref(log: &dyn IndexLog) -> &AdaptiveBitmapLog {
+    <dyn Any>::downcast_ref(log).expect("AdaptiveBitmapLog")
 }
 
 impl<K, A> Clone for SingleSetIndex<K, A> {
@@ -109,15 +104,12 @@ where
     usize: From<K>,
 {
     fn apply_log(&mut self, log: Box<dyn IndexLog>) {
-        if let Some(roar) =
-            *Box::<dyn Any>::downcast::<Option<RoaringBitmap>>(log).expect("RoaringBitmap")
-        {
-            self.0 = roar;
-        }
+        let log = *Box::<dyn Any>::downcast::<AdaptiveBitmapLog>(log).expect("AdaptiveBitmapLog");
+        self.0.apply(log);
     }
 
     fn create_log(&self) -> Box<dyn IndexLog> {
-        Box::new(Some(RoaringBitmap::new()))
+        Box::new(AdaptiveBitmapLog::new())
     }
 
     fn remove(&self, log: &mut dyn IndexLog, k: &E::Key, entity: &E)
@@ -144,20 +136,18 @@ where
     A: 'static,
     K: 'static,
 {
-    type Trx<'a> = SingleSetTrx<'a, K>;
+    type Trx<'a> = IntSetTrx<'a, K>;
 
-    fn trx<'a>(&'a self, log: &'a mut dyn IndexLog) -> Self::Trx<'a> {
-        SingleSetTrx {
-            _k: PhantomData,
-            changes: roaring_mut(log),
-            map: &self.0,
-        }
+    #[inline]
+    fn trx<'a>(&'a self, log: &'a dyn IndexLog) -> Self::Trx<'a> {
+        let trx = AdaptiveBitmapTrx::new(&self.0, log_ref(log));
+        unsafe { IntSetTrx::from_adaptive_bitmap_trx(trx) }
     }
 }
 
 pub struct SingleSetTrx<'a, K> {
-    changes: &'a mut Option<RoaringBitmap>,
-    map: &'a RoaringBitmap,
+    changes: &'a mut Option<AdaptiveBitmap>,
+    map: &'a AdaptiveBitmap,
     _k: PhantomData<K>,
 }
 
@@ -175,16 +165,19 @@ impl<K> SingleSetTrx<'_, K> {
     }
 
     #[inline]
-    fn get_impl(&self) -> &RoaringBitmap {
+    fn get_impl(&self) -> &AdaptiveBitmap {
         self.changes.as_ref().unwrap_or(self.map)
     }
 }
 
-impl<K> Deref for SingleSetTrx<'_, K> {
-    type Target = Set<K>;
+impl<K> Deref for SingleSetTrx<'_, K>
+where
+    usize: From<K>,
+{
+    type Target = IntSet<K>;
 
     fn deref(&self) -> &Self::Target {
-        Set::from_roaring_bitmap_ref(self.get_impl())
+        unsafe { IntSet::from_bitmap_ref(self.get_impl()) }
     }
 }
 

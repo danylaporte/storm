@@ -105,6 +105,8 @@ where
     }
 }
 
+impl<T> Gc for fast_set::IntSet<T> {}
+
 impl<T> Gc for once_cell::sync::OnceCell<T>
 where
     T: Gc,

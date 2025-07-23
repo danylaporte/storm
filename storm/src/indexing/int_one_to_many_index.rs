@@ -1,154 +1,80 @@
-use super::{
-    set::{empty, Set},
-    IndexLog,
-};
+use super::IndexLog;
 use crate::{
     indexing::{Index, IndexTrx},
     Entity,
 };
-use roaring::RoaringBitmap;
-use std::{
-    any::Any,
-    collections::hash_map::Entry,
-    fmt::{self, Debug, Formatter},
-    marker::PhantomData,
-};
+use fast_set::{IntSet, IntSetTrx, OneU32ManyU32, OneU32ManyU32Log};
+use std::{any::Any, marker::PhantomData};
 
-#[derive(Default)]
-struct IntOneToManyLog {
-    map: nohash::IntMap<u32, RoaringBitmap>,
-    none: Option<RoaringBitmap>,
-}
-
-impl IndexLog for IntOneToManyLog {}
+impl IndexLog for OneU32ManyU32Log {}
 
 pub struct IntOneToManyIndex<K, V, A> {
-    map: nohash::IntMap<u32, RoaringBitmap>,
-    none: RoaringBitmap,
-    _kva: PhantomData<(K, V, A)>,
+    _a: PhantomData<(K, V, A)>,
+    map: OneU32ManyU32,
 }
 
 impl<K, V, A> IntOneToManyIndex<K, V, A> {
     pub fn new() -> Self {
         Self {
+            _a: PhantomData,
             map: Default::default(),
-            none: RoaringBitmap::default(),
-            _kva: PhantomData,
         }
     }
 
-    pub fn contains(&self, k: K, v: V) -> bool
+    #[inline]
+    pub fn contains(&self, key: K, val: V) -> bool
     where
         usize: From<K> + From<V>,
     {
-        self.contains_impl(usize::from(k) as u32, usize::from(v) as u32)
+        self.map
+            .contains(usize::from(key) as u32, usize::from(val) as u32)
     }
 
-    pub fn contains_opt(&self, k: Option<K>, v: V) -> bool
+    #[inline]
+    pub fn contains_none(&self, val: V) -> bool
+    where
+        usize: From<V>,
+    {
+        self.map.contains_none(usize::from(val) as u32)
+    }
+
+    #[inline]
+    pub fn get(&self, key: K) -> &IntSet<V>
     where
         usize: From<K> + From<V>,
     {
+        let b = self.map.get(usize::from(key) as u32);
+        unsafe { IntSet::from_bitmap_ref(b) }
+    }
+
+    fn insert_impl2(&self, log: &mut OneU32ManyU32Log, k: Option<u32>, value: u32) {
         match k {
-            Some(k) => self.contains(k, v),
-            None => self.none.contains(usize::from(v) as u32),
-        }
+            Some(k) => log.insert(&self.map, k, value),
+            None => log.insert_none(&self.map, value),
+        };
     }
 
-    fn contains_impl(&self, k: u32, v: u32) -> bool {
-        match self.map.get(&k) {
-            Some(b) => b.contains(v),
-            None => false,
-        }
-    }
-
-    pub fn get(&self, k: K) -> &Set<V>
+    #[inline]
+    pub fn none(&self) -> &IntSet<V>
     where
-        usize: From<K>,
+        usize: From<V>,
     {
-        Set::from_roaring_bitmap_ref(self.get_impl(usize::from(k) as u32))
-    }
-
-    pub fn get_opt(&self, k: Option<K>) -> &Set<V>
-    where
-        usize: From<K>,
-    {
-        match k {
-            Some(k) => self.get(k),
-            None => Set::from_roaring_bitmap_ref(&self.none),
-        }
-    }
-
-    fn get_impl(&self, k: u32) -> &RoaringBitmap {
-        self.map.get(&k).unwrap_or_else(empty)
-    }
-
-    fn insert_impl2(&self, log: &mut IntOneToManyLog, k: Option<u32>, value: u32) {
-        match k {
-            Some(k) => match log.map.entry(k) {
-                Entry::Occupied(mut o) => {
-                    o.get_mut().insert(value);
-                }
-                Entry::Vacant(v) => {
-                    let mut set = if let Some(set) = self.map.get(&k) {
-                        if set.contains(value) {
-                            return;
-                        }
-
-                        set.clone()
-                    } else {
-                        RoaringBitmap::new()
-                    };
-
-                    set.insert(value);
-                    v.insert(set);
-                }
-            },
-            None => {
-                if log.none.is_none() {
-                    log.none = Some(self.none.clone());
-                }
-
-                unsafe { log.none.as_mut().unwrap_unchecked() }.insert(value);
-            }
-        }
-    }
-
-    pub fn none(&self) -> &Set<V> {
-        Set::from_roaring_bitmap_ref(&self.none)
+        let b = self.map.none();
+        unsafe { IntSet::from_bitmap_ref(b) }
     }
 
     fn remove_impl(&self, log: &mut dyn IndexLog, old: Option<(Option<u32>, u32)>) {
         if let Some((k, v)) = old {
-            let log = index_map_mut(log);
+            let log = log_mut(log);
             self.remove_impl2(log, k, v);
         }
     }
 
-    fn remove_impl2(&self, log: &mut IntOneToManyLog, k: Option<u32>, value: u32) {
+    fn remove_impl2(&self, log: &mut OneU32ManyU32Log, k: Option<u32>, value: u32) {
         match k {
-            Some(k) => match log.map.entry(k) {
-                Entry::Occupied(mut o) => {
-                    o.get_mut().remove(value);
-                }
-                Entry::Vacant(v) => {
-                    if let Some(set) = self.map.get(&k) {
-                        if set.contains(value) {
-                            let mut set = set.clone();
-
-                            set.remove(value);
-                            v.insert(set);
-                        }
-                    }
-                }
-            },
-            None => {
-                if log.none.is_none() {
-                    log.none = Some(self.none.clone());
-                }
-
-                unsafe { log.none.as_mut().unwrap_unchecked() }.remove(value);
-            }
-        }
+            Some(k) => log.remove(&self.map, k, value),
+            None => log.remove_none(&self.map, value),
+        };
     }
 
     fn upsert_impl(
@@ -158,7 +84,7 @@ impl<K, V, A> IntOneToManyIndex<K, V, A> {
         new: Option<(Option<u32>, u32)>,
     ) {
         if old != new {
-            let log = index_map_mut(log);
+            let log = log_mut(log);
 
             if let Some((k, v)) = old {
                 self.remove_impl2(log, k, v);
@@ -172,40 +98,18 @@ impl<K, V, A> IntOneToManyIndex<K, V, A> {
 }
 
 impl<K, V, A> Default for IntOneToManyIndex<K, V, A> {
+    #[inline]
     fn default() -> Self {
         Self::new()
     }
 }
 
-fn index_map_mut(log: &mut dyn IndexLog) -> &mut IntOneToManyLog {
-    <dyn Any>::downcast_mut(&mut *log).expect("IndexMap")
+fn log_mut(log: &mut dyn IndexLog) -> &mut OneU32ManyU32Log {
+    <dyn Any>::downcast_mut(&mut *log).expect("OneU32ManyU32Log")
 }
 
-impl<K, V, A> Clone for IntOneToManyIndex<K, V, A> {
-    #[inline]
-    fn clone(&self) -> Self {
-        Self {
-            map: self.map.clone(),
-            none: self.none.clone(),
-            _kva: PhantomData,
-        }
-    }
-}
-
-impl<K, V, A> Debug for IntOneToManyIndex<K, V, A> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_struct("IntOneToManyIndex")
-            .field("map", &self.map)
-            .field("none", &self.none)
-            .finish()
-    }
-}
-
-impl<K, V, A> PartialEq for IntOneToManyIndex<K, V, A> {
-    #[inline]
-    fn eq(&self, other: &Self) -> bool {
-        self.map == other.map && self.none == other.none
-    }
+fn log_ref(log: &dyn IndexLog) -> &OneU32ManyU32Log {
+    <dyn Any>::downcast_ref(log).expect("OneU32ManyU32Log")
 }
 
 impl<K, V, E, A> Index<E> for IntOneToManyIndex<K, V, A>
@@ -217,33 +121,15 @@ where
     usize: From<K> + From<V>,
 {
     fn apply_log(&mut self, log: Box<dyn IndexLog>) {
-        let log = *Box::<dyn Any + Send + Sync>::downcast::<IntOneToManyLog>(log)
+        let log = *Box::<dyn Any + Send + Sync>::downcast::<OneU32ManyU32Log>(log)
             .expect("IntOneToManyLog");
 
-        for (k, set) in log.map {
-            match self.map.entry(k) {
-                Entry::Occupied(mut o) => {
-                    if set.is_empty() {
-                        o.remove();
-                    } else {
-                        o.insert(set);
-                    }
-                }
-                Entry::Vacant(v) => {
-                    if !set.is_empty() {
-                        v.insert(set);
-                    }
-                }
-            }
-        }
-
-        if let Some(none) = log.none {
-            self.none = none;
-        }
+        self.map.apply(log);
     }
 
+    #[inline]
     fn create_log(&self) -> Box<dyn IndexLog> {
-        Box::new(IntOneToManyLog::default())
+        Box::new(OneU32ManyU32Log::default())
     }
 
     fn remove(&self, log: &mut dyn IndexLog, k: &E::Key, entity: &E)
@@ -274,75 +160,60 @@ where
 {
     type Trx<'a> = IntOneToManyTrx<'a, K, V>;
 
-    fn trx<'a>(&'a self, log: &'a mut dyn IndexLog) -> Self::Trx<'a> {
+    fn trx<'a>(&'a self, log: &'a dyn IndexLog) -> Self::Trx<'a> {
         IntOneToManyTrx {
             _kv: PhantomData,
-            changes: index_map_mut(log),
-            map: &self.map,
-            none: &self.none,
+            commit: &self.map,
+            log: log_ref(log),
         }
     }
 }
 
 pub struct IntOneToManyTrx<'a, K, V> {
-    changes: &'a mut IntOneToManyLog,
-    map: &'a nohash::IntMap<u32, RoaringBitmap>,
-    none: &'a RoaringBitmap,
     _kv: PhantomData<(K, V)>,
+    commit: &'a OneU32ManyU32,
+    log: &'a OneU32ManyU32Log,
 }
 
 impl<K, V> IntOneToManyTrx<'_, K, V> {
+    #[inline]
     pub fn contains(&self, key: K, value: V) -> bool
     where
         usize: From<K> + From<V>,
     {
-        self.contains_impl(usize::from(key) as u32, usize::from(value) as u32)
+        self.log.contains(
+            self.commit,
+            usize::from(key) as u32,
+            usize::from(value) as u32,
+        )
     }
 
-    fn contains_impl(&self, key: u32, value: u32) -> bool {
-        match self.changes.map.get(&key) {
-            Some(set) => set.contains(value),
-            None => match self.map.get(&key) {
-                Some(set) => set.contains(value),
-                None => false,
-            },
-        }
-    }
-
-    pub fn get(&self, key: K) -> &Set<V>
+    #[inline]
+    pub fn get(&self, key: K) -> IntSetTrx<V>
     where
         usize: From<K> + From<V>,
     {
-        Set::from_roaring_bitmap_ref(self.get_impl(usize::from(key) as u32))
+        let b = self.log.get(self.commit, usize::from(key) as u32);
+        unsafe { IntSetTrx::from_adaptive_bitmap_trx(b) }
     }
 
-    pub fn get_opt(&self, key: Option<K>) -> &Set<V>
+    pub fn get_opt(&self, key: Option<K>) -> IntSetTrx<V>
     where
         usize: From<K> + From<V>,
     {
-        Set::from_roaring_bitmap_ref(self.get_opt_impl(key.map(|key| usize::from(key) as u32)))
-    }
-
-    fn get_impl(&self, key: u32) -> &RoaringBitmap {
-        match self.changes.map.get(&key) {
-            Some(set) => set,
-            None => self.map.get(&key).unwrap_or_else(empty),
-        }
-    }
-
-    fn get_opt_impl(&self, key: Option<u32>) -> &RoaringBitmap {
         match key {
-            Some(key) => self.get_impl(key),
-            None => self.none_impl(),
+            Some(key) => self.get(key),
+            None => self.none(),
         }
     }
 
-    pub fn none(&self) -> &Set<V> {
-        Set::from_roaring_bitmap_ref(self.none_impl())
-    }
-
-    fn none_impl(&self) -> &RoaringBitmap {
-        self.changes.none.as_ref().unwrap_or(self.none)
+    #[inline]
+    pub fn none(&self) -> IntSetTrx<V>
+    where
+        usize: From<V>,
+    {
+        let b = self.log.none(self.commit);
+        unsafe { IntSetTrx::from_adaptive_bitmap_trx(b) }
     }
 }
 
