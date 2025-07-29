@@ -22,6 +22,15 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     let table_name = entity_name.to_plural();
     let table_name_lit = LitStr::new(&entity_name, entity.span());
     let table_alias = Ident::new(&table_name, entity.span());
+    let const_name = entity_name.to_screaming_snake_case();
+
+    let init_tbl_fn = Ident::new(
+        &format!("__ctx_init_{}", entity_name.to_snake_case()),
+        entity.span(),
+    );
+
+    let ctx_var = Ident::new(&format!("__CTX_VAR{const_name}"), entity.span());
+    let log_var = Ident::new(&format!("__LOG_VAR{const_name}"), entity.span());
 
     let coll_ty = args.collection.ty(entity);
     let (gc, gc_collect) = gc(input)?;
@@ -29,21 +38,23 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
     Ok(quote! {
         #vis type #table_alias = #coll_ty;
 
+        storm::extobj::extobj!(
+            impl storm::CtxExt { #ctx_var: std::sync::OnceLock<#table_alias> },
+            init = #init_tbl_fn(),
+            crate_path = storm::extobj
+        );
+
+        storm::extobj::extobj!(
+            impl storm::LogExt { #log_var: std::sync::OnceLock<storm::Log<#entity>> },
+            crate_path = storm::extobj
+        );
+
         impl storm::EntityAccessor for #entity {
             type Tbl = #table_alias;
 
-            #[allow(non_camel_case_types)]
             #[inline]
-            fn entity_var() -> storm::TblVar<Self::Tbl> {
-                storm::attached::var!(T: #table_alias, storm::vars::Tbl);
-
-                // Garbage collection static registering
-                #[static_init::dynamic]
-                static G: () = {
-                    #gc_collect
-                };
-
-                *T
+            fn ctx_var() -> storm::CtxVar<Self::Tbl> {
+                *#ctx_var
             }
 
             #[inline]
@@ -58,42 +69,37 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
                 &INITS
             }
 
-            #[inline]
             fn on_change() -> &'static storm::OnChange<Self> {
-                #[static_init::dynamic]
-                static E: storm::OnChange<#entity> = Default::default();
-                &E
+                static E: std::sync::OnceLock<storm::OnChange<#entity>> = std::sync::OnceLock::new();
+                E.get_or_init(Default::default)
             }
 
-            #[inline]
             fn on_changed() -> &'static storm::OnChanged<Self> {
-                #[static_init::dynamic]
-                static E: storm::OnChanged<#entity> = Default::default();
-                &E
+                static E: std::sync::OnceLock<storm::OnChanged<#entity>> = std::sync::OnceLock::new();
+                E.get_or_init(Default::default)
             }
 
-            #[inline]
             fn on_remove() -> &'static storm::OnRemove<Self> {
-                #[static_init::dynamic]
-                static E: storm::OnRemove<#entity> = Default::default();
-                &E
+                static E: std::sync::OnceLock<storm::OnRemove<#entity>> = std::sync::OnceLock::new();
+                E.get_or_init(Default::default)
             }
         }
 
         impl storm::LogAccessor for #entity {
             #[inline]
             fn log_var() -> storm::LogVar<storm::Log<Self>> {
-                storm::attached::var!(L: storm::Log<#entity>, storm::vars::Log);
-
-                #[static_init::dynamic]
-                static R: () = storm::register_apply_log::<#entity>();
-
-                *L
+                *#log_var
             }
         }
 
         impl storm::CtxTypeInfo for #entity {
             const NAME: &'static str = #table_name_lit;
+        }
+
+        #[doc(hidden)]
+        fn #init_tbl_fn() {
+            #gc_collect
+            storm::register_apply_log::<#entity>();
         }
 
         #gc

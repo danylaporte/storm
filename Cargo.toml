@@ -14,6 +14,7 @@ extobj = { git = "https://github.com/danylaporte/extobj.git" }
 futures = "0.3"
 fast-set = { path = "../fast-set" }
 metrics = { version = "0.22" }
+nohash = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 str_utils = { git = "https://github.com/danylaporte/str_utils.git" }

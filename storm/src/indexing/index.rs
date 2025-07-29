@@ -1,6 +1,6 @@
 use fast_set::AdaptiveBitmapLog;
 
-use crate::Entity;
+use crate::{logs::LogId, Entity, Logs};
 use std::any::{type_name, Any, TypeId};
 
 pub trait Index<E>: Any + Send + Sync {
@@ -22,7 +22,7 @@ pub trait IndexTrx {
     where
         Self: 'a;
 
-    fn trx<'a>(&'a self, log: &'a dyn IndexLog) -> Self::Trx<'a>;
+    fn trx<'a>(&'a self, log: &'a mut Logs) -> Self::Trx<'a>;
 }
 
 pub trait IndexLog: Any + Send + Sync {}

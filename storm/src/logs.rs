@@ -1,11 +1,27 @@
 use crate::{
     async_cell_lock::QueueRwLockQueueGuard, indexing::IndexLogs, ApplyLog, Ctx, Entity,
-    EntityAccessor, Get, LogState, LogsVar, Result,
+    EntityAccessor, Get, LogState, Result,
 };
 use fxhash::FxHashMap;
-use std::{collections::hash_map::Entry, hash::Hash, mem::replace};
+use nohash::IntMap;
+use std::{
+    any::Any,
+    collections::hash_map::Entry,
+    hash::Hash,
+    mem::replace,
+    sync::atomic::{AtomicU32, Ordering},
+};
 
-pub struct Logs(pub(crate) LogsVar);
+pub type LogId = u32;
+
+/// This is use in macro to generate new log id.
+#[doc(hidden)]
+pub fn next_log_id() -> LogId {
+    static ID: AtomicU32 = AtomicU32::new(1);
+    ID.fetch_add(0, Ordering::Relaxed)
+}
+
+pub struct Logs(pub(crate) IntMap<LogId, Option<Box<dyn Any + Send + Sync>>>);
 
 impl Logs {
     pub async fn apply_log(self, ctx: QueueRwLockQueueGuard<'_, Ctx>) -> Result<bool> {

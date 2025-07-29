@@ -2,10 +2,10 @@ use crate::{
     indexing::{Index, IndexList, IndexTrx},
     on_commit::call_on_commit,
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
-    Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity, EntityAccessor,
-    EntityValidate, Gc, GcCtx, Get, HashTable, Insert, InsertIfChanged, InsertMut,
-    InsertMutIfChanged, Log, LogAccessor, LogState, Logs, LogsVar, NotifyTag, ProviderContainer,
-    Remove, Result, Tag, Transaction, TrxErrGate, Vars, VecTable,
+    Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxExtObj, CtxTypeInfo, Entity,
+    EntityAccessor, EntityValidate, Gc, GcCtx, Get, HashTable, Insert, InsertIfChanged, InsertMut,
+    InsertMutIfChanged, Log, LogState, Logs, NotifyTag, ProviderContainer,
+    Remove, Result, Tag, Transaction, TrxErrGate, VecTable,
 };
 use linkme::distributed_slice;
 use parking_lot::RwLock;
@@ -18,7 +18,7 @@ pub static STORM_INITS: [fn()];
 pub struct Ctx {
     pub(crate) gc: GcCtx,
     pub(crate) provider: ProviderContainer,
-    vars: Vars,
+    ctx_ext_obj: CtxExtObj,
 }
 
 impl Ctx {
@@ -30,7 +30,7 @@ impl Ctx {
         Ctx {
             gc: Default::default(),
             provider,
-            vars: Vars::new(),
+            ctx_ext_obj: CtxExtObj::new(),
         }
     }
 
@@ -39,16 +39,17 @@ impl Ctx {
         E: Entity + EntityAccessor,
         E::Tbl: Accessor,
     {
-        <E::Tbl as Accessor>::clear_deps(&mut self.vars);
-        self.vars.clear(E::entity_var());
+        <E::Tbl as Accessor>::clear_deps(&mut self.ctx_ext_obj);
+        self.ctx_ext_obj.get_mut(E::ctx_var()).take();
     }
 
+    #[inline]
     #[doc(hidden)]
     pub fn index_gc<I>(&mut self)
     where
         I: Accessor + CtxTypeInfo + Gc,
     {
-        if let Some(idx) = self.vars.get_mut(I::var()) {
+        if let Some(idx) = self.ctx_ext_obj.get_mut(I::var()).get_mut() {
             idx.gc(&self.gc);
         }
     }
@@ -75,12 +76,13 @@ impl Ctx {
         self.as_ref_async()
     }
 
+    #[inline]
     pub fn tbl_of_opt<E>(&self) -> Option<&E::Tbl>
     where
         E: Entity + EntityAccessor,
         E::Tbl: Accessor,
     {
-        self.vars.get(<E::Tbl as Accessor>::var())
+        self.ctx_ext_obj.get(<E::Tbl as Accessor>::var()).get()
     }
 
     pub fn tbl_of_mut<E>(&mut self) -> Option<&mut E::Tbl>
@@ -88,9 +90,9 @@ impl Ctx {
         E: Entity + EntityAccessor,
         E::Tbl: Accessor + NotifyTag,
     {
-        <E::Tbl as Accessor>::clear_deps(&mut self.vars);
+        <E::Tbl as Accessor>::clear_deps(&mut self.ctx_ext_obj);
 
-        match self.vars.get_mut(E::entity_var()) {
+        match self.ctx_ext_obj.get_mut(E::ctx_var()).get_mut() {
             Some(ret) => {
                 ret.notify_tag();
                 Some(ret)
@@ -105,18 +107,19 @@ impl Ctx {
         E: CtxTypeInfo + Entity + EntityAccessor,
         E::Tbl: Accessor + NotifyTag + Gc,
     {
-        if let Some(tbl) = self.vars.get_mut(E::entity_var()) {
+        if let Some(tbl) = self.ctx_ext_obj.get_mut(E::ctx_var()).get_mut() {
             tbl.gc(&self.gc);
         }
     }
 
     #[inline]
-    pub fn vars(&self) -> &Vars {
-        &self.vars
+    pub fn ctx_ext_obj(&self) -> &CtxExtObj {
+        &self.ctx_ext_obj
     }
 }
 
 impl Default for Ctx {
+    #[inline]
     fn default() -> Self {
         Self::new(Default::default())
     }
@@ -128,8 +131,9 @@ where
     E::Key: Eq + Hash,
     ProviderContainer: LoadAll<E, (), E::Tbl>,
 {
+    #[inline]
     fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ E::Tbl>> {
-        table_as_ref_async::<E, _>(&self.vars, &self.provider)
+        table_as_ref_async::<E, _>(&self.ctx_ext_obj, &self.provider)
     }
 }
 
@@ -139,12 +143,14 @@ where
     E::Key: Copy + Into<usize>,
     ProviderContainer: LoadAll<E, (), E::Tbl>,
 {
+    #[inline]
     fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ E::Tbl>> {
-        table_as_ref_async::<E, _>(&self.vars, &self.provider)
+        table_as_ref_async::<E, _>(&self.ctx_ext_obj, &self.provider)
     }
 }
 
 impl From<ProviderContainer> for Ctx {
+    #[inline]
     fn from(provider: ProviderContainer) -> Self {
         Self::new(provider)
     }
@@ -277,7 +283,7 @@ where
 
 pub struct CtxTransaction<'a> {
     err_gate: TrxErrGate,
-    log_ctx: LogsVar,
+    logs: Logs,
     provider: TransactionProvider<'a>,
     pub ctx: &'a Ctx,
 }
@@ -288,7 +294,7 @@ impl<'a> CtxTransaction<'a> {
             self.err_gate.check()?;
             call_on_commit(&mut self).await?;
             self.provider.commit().await?;
-            Ok(Logs(self.log_ctx))
+            Ok(self.logs)
         })
     }
 
@@ -299,7 +305,7 @@ impl<'a> CtxTransaction<'a> {
 
     pub async fn get_entity<'b, E>(&'b mut self, k: &E::Key) -> Result<Option<&'b E>>
     where
-        E: EntityAccessor + LogAccessor,
+        E: EntityAccessor,
         E::Key: Eq + Hash,
         E::Tbl: Get<E>,
         Ctx: AsRefAsync<E::Tbl>,
@@ -307,6 +313,7 @@ impl<'a> CtxTransaction<'a> {
         self.tbl_of::<E>().await.map(|t| t.get_owned(k))
     }
 
+    #[inline]
     pub fn insert<'b, E>(
         &'b mut self,
         k: E::Key,
@@ -320,6 +327,7 @@ impl<'a> CtxTransaction<'a> {
         Insert::insert(self, k, v, track)
     }
 
+    #[inline]
     pub fn insert_all<'b, E, I>(
         &'b mut self,
         iter: I,
@@ -334,6 +342,7 @@ impl<'a> CtxTransaction<'a> {
         Insert::insert_all(self, iter, track)
     }
 
+    #[inline]
     pub fn insert_mut<'b, E>(
         &'b mut self,
         k: E::Key,
@@ -347,6 +356,7 @@ impl<'a> CtxTransaction<'a> {
         InsertMut::insert_mut(self, k, v, track)
     }
 
+    #[inline]
     pub fn insert_mut_all<'b, E, I>(
         &'b mut self,
         iter: I,
@@ -369,6 +379,7 @@ impl<'a> CtxTransaction<'a> {
         self.as_ref_async()
     }
 
+    #[inline]
     pub fn remove<'b, E>(
         &'b mut self,
         k: E::Key,
@@ -381,6 +392,7 @@ impl<'a> CtxTransaction<'a> {
         Remove::remove(self, k, track)
     }
 
+    #[inline]
     pub fn remove_all<'b, E, K>(
         &'b mut self,
         keys: K,
@@ -395,6 +407,7 @@ impl<'a> CtxTransaction<'a> {
         Remove::remove_all(self, keys, track)
     }
 
+    #[inline]
     pub async fn remove_filter<'b, E, F>(
         &'b mut self,
         filter: F,
@@ -402,7 +415,7 @@ impl<'a> CtxTransaction<'a> {
     ) -> Result<()>
     where
         Ctx: AsRefAsync<E::Tbl>,
-        E: EntityAccessor + LogAccessor,
+        E: EntityAccessor,
         E::Key: Clone + Eq + Hash,
         F: FnMut(&E::Key, &E) -> bool,
         for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
@@ -411,16 +424,18 @@ impl<'a> CtxTransaction<'a> {
         self.tbl_of::<E>().await?.remove_filter(filter, track).await
     }
 
+    #[inline]
     pub fn tbl_log<E>(&self) -> Option<&Log<E>>
     where
-        E: LogAccessor,
+        E: EntityAccessor,
     {
-        self.log_ctx.get(E::log_var())
+        E::log(&self.logs)
     }
 
+    #[inline]
     pub fn tbl_of<'b, E>(&'b mut self) -> BoxFuture<'b, Result<TblTransaction<'a, 'b, E>>>
     where
-        E: Entity + EntityAccessor + LogAccessor,
+        E: Entity + EntityAccessor,
         Ctx: AsRefAsync<E::Tbl>,
     {
         Box::pin(async move {
@@ -430,17 +445,19 @@ impl<'a> CtxTransaction<'a> {
     }
 
     /// Indicate if the table specified ty the entity E has been touched, inserted or removed.
+    #[inline]
     pub fn tbl_touched<E>(&self) -> bool
     where
-        E: LogAccessor,
+        E: EntityAccessor,
     {
         self.tbl_log::<E>().is_some()
     }
 
+    #[inline]
     pub async fn update_with<'b, E, F>(&'b mut self, updater: F, track: &E::TrackCtx) -> Result<()>
     where
         Ctx: AsRefAsync<E::Tbl>,
-        E: EntityAccessor + LogAccessor + ToOwned<Owned = E>,
+        E: EntityAccessor + ToOwned<Owned = E>,
         E::Key: Clone + Eq + Hash,
         F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>) -> Result<()>,
         for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
@@ -449,6 +466,7 @@ impl<'a> CtxTransaction<'a> {
         self.tbl_of::<E>().await?.update_with(updater, track).await
     }
 
+    #[inline]
     pub async fn update_mut_with<'b, E, F>(
         &'b mut self,
         updater: F,
@@ -456,7 +474,7 @@ impl<'a> CtxTransaction<'a> {
     ) -> Result<()>
     where
         Ctx: AsRefAsync<E::Tbl>,
-        E: EntityAccessor + LogAccessor + ToOwned<Owned = E>,
+        E: EntityAccessor + ToOwned<Owned = E>,
         E::Key: Clone + Eq + Hash,
         F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>) -> Result<()>,
         for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
@@ -469,10 +487,19 @@ impl<'a> CtxTransaction<'a> {
     }
 }
 
+/// Macro Helpers
+#[doc(hidden)]
+impl<'a> CtxTransaction<'a> {
+    #[inline]
+    pub fn __tbl_log_ref<'b, E>(&'b self) -> Option<&'b Log<E>> where E: EntityAccessor {
+        self.logs.get(E::log_id())
+    }
+}
+
 impl<'a, E> Insert<E> for CtxTransaction<'a>
 where
     Ctx: AsRefAsync<E::Tbl>,
-    E: Entity + EntityAccessor + LogAccessor,
+    E: Entity + EntityAccessor,
     for<'b> TblTransaction<'a, 'b, E>: Insert<E>,
 {
     fn insert<'c>(
@@ -500,7 +527,7 @@ where
 impl<'a, E> InsertIfChanged<E> for CtxTransaction<'a>
 where
     Ctx: AsRefAsync<E::Tbl>,
-    E: Entity + EntityAccessor + LogAccessor,
+    E: Entity + EntityAccessor,
     for<'b> TblTransaction<'a, 'b, E>: InsertIfChanged<E>,
 {
     fn insert_if_changed<'b>(
@@ -538,7 +565,7 @@ where
 impl<'a, E> InsertMut<E> for CtxTransaction<'a>
 where
     Ctx: AsRefAsync<E::Tbl>,
-    E: Entity + EntityAccessor + LogAccessor,
+    E: Entity + EntityAccessor,
     for<'b> TblTransaction<'a, 'b, E>: InsertMut<E>,
 {
     fn insert_mut<'b>(
@@ -566,7 +593,7 @@ where
 impl<'a, E> InsertMutIfChanged<E> for CtxTransaction<'a>
 where
     Ctx: AsRefAsync<E::Tbl>,
-    E: Entity + EntityAccessor + LogAccessor,
+    E: Entity + EntityAccessor,
     for<'b> TblTransaction<'a, 'b, E>: InsertMutIfChanged<E>,
 {
     fn insert_mut_if_changed<'b>(
@@ -604,7 +631,7 @@ where
 impl<'a, E> Remove<E> for CtxTransaction<'a>
 where
     Ctx: AsRefAsync<E::Tbl>,
-    E: Entity + EntityAccessor + LogAccessor,
+    E: Entity + EntityAccessor,
     for<'b> TblTransaction<'a, 'b, E>: Remove<E>,
 {
     fn remove<'b>(&'b mut self, k: E::Key, track: &'b E::TrackCtx) -> BoxFuture<'b, Result<()>> {
@@ -664,15 +691,10 @@ where
     /// Gets a reference by consuming the tbl transaction. This provide a longer reference.
     pub fn get_owned(self, k: &E::Key) -> Option<&'b E>
     where
-        E: LogAccessor,
+        E: EntityAccessor,
         E::Tbl: Get<E>,
     {
-        match self
-            .ctx
-            .log_ctx
-            .get(E::log_var())
-            .and_then(|l| l.changes.get(k))
-        {
+        match E::log_ref(&self.ctx.logs).and_then(|l| l.changes.get(k)) {
             Some(LogState::Inserted(v)) => Some(v),
             Some(LogState::Removed) => None,
             None => self.tbl.get(k),
@@ -682,11 +704,8 @@ where
     pub fn index<I>(&mut self) -> I::Trx<'_>
     where
         I: Index<E> + IndexTrx,
-        E: LogAccessor,
-        E::Tbl: AsRef<IndexList<E>>,
     {
-        let index_logs = &mut log_mut::<E>(&mut self.ctx.log_ctx).indexes;
-        self.tbl.as_ref().trx::<I>(index_logs)
+        self.tbl.as_ref().trx::<I>(&mut self.ctx.logs)
     }
 
     pub fn insert<'c>(
@@ -741,14 +760,15 @@ where
 
     pub fn into_ref(self, k: &E::Key) -> Option<&'b E>
     where
-        E: Entity + EntityAccessor + LogAccessor,
+        E: Entity + EntityAccessor,
         E::Key: Eq + Hash,
         E::Tbl: Get<E>,
     {
         match self
             .ctx
-            .log_ctx
+            .logs
             .get(E::log_var())
+            .get()
             .and_then(|l| l.changes.get(k))
         {
             Some(LogState::Inserted(v)) => Some(v),
@@ -757,11 +777,12 @@ where
         }
     }
 
+    #[inline]
     pub fn log(&self) -> Option<&Log<E>>
     where
-        E: Entity + EntityAccessor + LogAccessor,
+        E: EntityAccessor,
     {
-        self.ctx.log_ctx.get(E::log_var())
+        E::log_ref(&self.ctx.logs)
     }
 
     pub fn remove<'c>(&'c mut self, k: E::Key, track: &'c E::TrackCtx) -> BoxFuture<'c, Result<()>>
@@ -913,8 +934,9 @@ where
     fn get(&self, k: &E::Key) -> Option<&E> {
         match self
             .ctx
-            .log_ctx
+            .logs
             .get(E::log_var())
+            .get()
             .and_then(|l| l.changes.get(k))
         {
             Some(LogState::Inserted(v)) => Some(v),
@@ -947,7 +969,7 @@ where
             let old = self.tbl.get(&k);
             let result = v.track_insert(&k, old, self.ctx, track).await;
 
-            log_mut::<E>(&mut self.ctx.log_ctx).insert(self.tbl, k.clone(), v);
+            log_mut::<E>(&mut self.ctx.logs).insert(self.tbl, k.clone(), v);
 
             if result.is_ok() {
                 gate.close();
@@ -1046,7 +1068,7 @@ where
             let old = self.tbl.get(&k);
             let result = v.track_insert(&k, old, self.ctx, track).await;
 
-            log_mut::<E>(&mut self.ctx.log_ctx).insert(self.tbl, k.clone(), v);
+            log_mut::<E>(&mut self.ctx.logs).insert(self.tbl, k.clone(), v);
 
             if result.is_ok() {
                 gate.close();
@@ -1133,7 +1155,7 @@ where
         Box::pin(async move {
             let gate = self.ctx.err_gate.open()?;
 
-            if !log_mut::<E>(&mut self.ctx.log_ctx).remove(self.tbl, &k) {
+            if !log_mut::<E>(&mut self.ctx.logs).remove(self.tbl, &k) {
                 gate.close();
                 return Ok(());
             }
@@ -1142,7 +1164,7 @@ where
 
             let mut result = Ok(());
 
-            if let Some(LogState::Removed) = log::<E>(&self.ctx.log_ctx).changes.get(&k) {
+            if let Some(LogState::Removed) = log::<E>(&self.ctx.logs).changes.get(&k) {
                 self.ctx.provider.delete(&k).await?;
 
                 if let Some(old) = self.tbl.get(&k) {
@@ -1187,7 +1209,7 @@ impl ApplyLog<Logs> for async_cell_lock::QueueRwLockWriteGuard<'_, Ctx> {
         let mut changed = false;
 
         for applier in &*appliers {
-            changed = applier.apply(&mut self.vars, &mut log.0) || changed;
+            changed = applier.apply(&mut self.ctx_ext_obj, &mut log.0) || changed;
         }
 
         changed
@@ -1199,14 +1221,14 @@ impl Transaction for async_cell_lock::QueueRwLockQueueGuard<'_, Ctx> {
         CtxTransaction {
             ctx: self,
             err_gate: Default::default(),
-            log_ctx: Default::default(),
+            logs: Default::default(),
             provider: self.provider.transaction(),
         }
     }
 }
 
 fn table_as_ref_async<'a, E, T>(
-    ctx: &'a Vars,
+    ctx: &'a CtxExtObj,
     provider: &'a ProviderContainer,
 ) -> BoxFuture<'a, Result<&'a T>>
 where
@@ -1215,10 +1237,10 @@ where
     ProviderContainer: LoadAll<E, (), T>,
 {
     Box::pin(async move {
-        let var = T::var();
+        let slot = ctx.get(T::var());
 
         // get the table if already initialized.
-        if let Some(v) = ctx.get(var) {
+        if let Some(v) = slot.get() {
             return Ok(v);
         }
 
@@ -1226,7 +1248,7 @@ where
         let _gate = provider.gate().await;
 
         // if the table is already loaded when we gain access to the provider.
-        if let Some(v) = ctx.get(var) {
+        if let Some(v) = slot.get() {
             return Ok(v);
         }
 
@@ -1236,12 +1258,12 @@ where
         // add indexes to the tables.
         E::entity_inits().apply(&mut v);
 
-        Ok(ctx.get_or_init(var, || v))
+        Ok(slot.get_or_init(|| v))
     })
 }
 
 trait LogApplier: Send + Sync {
-    fn apply(&self, vars: &mut Vars, log_ctx: &mut LogsVar) -> bool;
+    fn apply(&self, ctx_ext_obj: &mut CtxExtObj, log_ctx: &mut LogExtObj) -> bool;
 }
 
 impl<E> LogApplier for EntityLogApplier<E>
@@ -1249,11 +1271,11 @@ where
     E: Entity + EntityAccessor + LogAccessor,
     E::Tbl: Accessor + ApplyLog<Log<E>>,
 {
-    fn apply(&self, vars: &mut Vars, log_ctx: &mut LogsVar) -> bool {
-        if let Some(log) = log_ctx.replace(E::log_var(), None) {
-            if let Some(tbl) = vars.get_mut(E::entity_var()) {
+    fn apply(&self, ctx_ext_obj: &mut CtxExtObj, log_ctx: &mut LogExtObj) -> bool {
+        if let Some(log) = log_ctx.get_mut(E::log_var()).take() {
+            if let Some(tbl) = ctx_ext_obj.get_mut(E::ctx_var()).get_mut() {
                 if tbl.apply_log(log) {
-                    <E::Tbl as Accessor>::clear_deps(vars);
+                    <E::Tbl as Accessor>::clear_deps(ctx_ext_obj);
                     return true;
                 }
             }
@@ -1265,12 +1287,19 @@ where
 
 struct EntityLogApplier<E: Entity + EntityAccessor + LogAccessor>(PhantomData<E>);
 
-fn log<E: EntityAccessor + LogAccessor>(logs: &LogsVar) -> &Log<E> {
-    logs.get_or_init(E::log_var(), Default::default)
+#[inline]
+fn log<E: EntityAccessor + LogAccessor>(logs: &LogExtObj) -> &Log<E> {
+    logs.get(E::log_var()).get_or_init(Default::default)
 }
 
-fn log_mut<E: EntityAccessor + LogAccessor>(logs: &mut LogsVar) -> &mut Log<E> {
-    logs.get_or_init_mut(E::log_var(), Default::default)
+#[inline]
+fn log_mut<E: EntityAccessor + LogAccessor>(logs: &mut LogExtObj) -> &mut Log<E> {
+    let slot = logs.get_mut(E::log_var());
+    slot.get_or_init(Default::default);
+
+    // This is safe because the value has been initialized by the get_or_init
+    // and the LogExtObj is mut.
+    unsafe { slot.get_mut().unwrap_unchecked() }
 }
 
 #[doc(hidden)]

@@ -1,5 +1,7 @@
 use cache::CacheIsland;
-use storm::{prelude::*, NoopDelete, NoopLoad, NoopSave, Result};
+use storm::{prelude::*, CtxExt, NoopDelete, NoopLoad, NoopSave, Result};
+
+storm::extobj::extobj!(impl CtxExt { V: u32 });
 
 #[tokio::main]
 async fn main() -> Result<()> {

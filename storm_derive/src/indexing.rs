@@ -17,6 +17,7 @@ fn gc(index_name: &Ident, index_ty: &Type) -> (TokenStream, TokenStream) {
             impl storm::Gc for #index_name {
                 const SUPPORT_GC: bool = <#index_ty as storm::Gc>::SUPPORT_GC;
 
+                #[inline]
                 fn gc(&mut self, ctx: &storm::GcCtx) {
                     self.0.gc(ctx);
                 }
@@ -36,6 +37,13 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
     let name_str = &name.to_string().to_pascal_case();
     let index_name = Ident::new(name_str, name.span());
     let index_name_lit = LitStr::new(name_str, name.span());
+    let const_name = name_str.to_screaming_snake_case();
+    let index_init_ident = Ident::new(
+        &format!("__idx_init_{}", name_str.to_snake_case()),
+        name.span(),
+    );
+
+    let ctx_var = Ident::new(&format!("__CTX_VAR{const_name}"), name.span());
 
     let ty = match &f.sig.output {
         ReturnType::Type(_, t) => t,
@@ -104,19 +112,16 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
     quote! {
         #vis struct #index_name(#ty, storm::VersionTag);
 
+        storm::extobj::extobj!{
+            impl storm::CtxExt { #ctx_var: std::sync::OnceLock<#index_name> },
+            init = #index_init_ident(),
+            crate_path = storm::extobj
+        }
+
         impl storm::Accessor for #index_name {
-            #[allow(non_camel_case_types)]
             #[inline]
-            fn var() -> storm::TblVar<Self> {
-                storm::attached::var!(T: #index_name, storm::vars::Tbl);
-
-                #[static_init::dynamic]
-                static R: () = {
-                    #(#deps)*
-                    #gc_collect
-                };
-
-                *T
+            fn var() -> storm::CtxVar<Self> {
+                *#ctx_var
             }
 
             #[inline]
@@ -124,6 +129,12 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
                 static DEPS: storm::Deps = storm::parking_lot::RwLock::new(Vec::new());
                 &DEPS
             }
+        }
+
+        #[doc(hidden)]
+        fn #index_init_ident() {
+            #(#deps)*
+            #gc_collect
         }
 
         impl std::ops::Deref for #index_name {
@@ -138,7 +149,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         impl<'a, L> AsRef<#index_name> for storm::CtxLocks<'a, L> #as_ref_wheres {
             fn as_ref(&self) -> &#index_name {
                 #(#as_ref_decl)*
-                self.ctx.vars().get_or_init(<#index_name as storm::Accessor>::var(), move || #get_or_init)
+                self.ctx.ctx_ext_obj().get(<#index_name as storm::Accessor>::var()).get_or_init(move || #get_or_init)
             }
         }
 
@@ -147,19 +158,20 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
                 let var = <#index_name as storm::Accessor>::var();
 
                 Box::pin(async move {
-                    let ctx = self.vars();
+                    let ctx = self.ctx_ext_obj();
 
-                    if let Some(v) = ctx.get(var) {
+                    if let Some(v) = ctx.get(var).get() {
                         return Ok(v);
                     }
 
                     #(#as_ref_decl_async)*
-                    Ok(ctx.get_or_init(var, || #get_or_init))
+                    Ok(ctx.get(var).get_or_init(|| #get_or_init))
                 })
             }
         }
 
         impl storm::Tag for #index_name {
+            #[inline]
             fn tag(&self) -> storm::VersionTag {
                 self.1
             }

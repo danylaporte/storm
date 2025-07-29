@@ -2,8 +2,8 @@ use crate::{
     indexing::{Index, IndexList},
     on_changed::Changed,
     provider::LoadAll,
-    Accessor, ApplyLog, BoxFuture, CtxTypeInfo, Deps, Entity, EntityAccessor, EntityOf, Gc, GcCtx,
-    Get, GetMut, Init, Log, LogState, NotifyTag, Result, Tag, TblVar,
+    Accessor, ApplyLog, BoxFuture, CtxTypeInfo, CtxVar, Deps, Entity, EntityAccessor, EntityOf, Gc,
+    GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag, Result, Tag,
 };
 use rayon::iter::IntoParallelIterator;
 use std::ops::Deref;
@@ -77,8 +77,8 @@ where
     E: Entity + EntityAccessor<Tbl = VecTable<E>>,
 {
     #[inline]
-    fn var() -> TblVar<Self> {
-        E::entity_var()
+    fn var() -> CtxVar<Self> {
+        E::ctx_var()
     }
 
     #[inline]

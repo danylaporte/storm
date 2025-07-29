@@ -1,41 +1,62 @@
-use crate::{indexing::IndexList, Entity, Inits, Log, OnChange, OnChanged, OnRemove};
-use attached::Var;
+use crate::{indexing::{Index, IndexList}, logs::LogId, CtxTransaction, Entity, Inits, Log, LogState, Logs, OnChange, OnChanged, OnRemove};
+use extobj::{extobj, ExtObj, Var};
 use parking_lot::RwLock;
+use std::{any::Any, collections::hash_map::Entry, sync::OnceLock};
 
-pub type Deps = RwLock<Vec<Box<dyn Fn(&mut Vars) + Send + Sync>>>;
-pub type LogVar<T> = Var<T, vars::Log>;
-pub type TblVar<T> = Var<T, vars::Tbl>;
+pub type Deps = RwLock<Vec<Box<dyn Fn(&mut CtxExtObj) + Send + Sync>>>;
+pub type CtxVar<T> = Var<CtxExt, OnceLock<T>>;
+pub type LogVar<T> = Var<LogExt, OnceLock<T>>;
+
+extobj!(pub struct CtxExt);
+
+pub type CtxExtObj = ExtObj<CtxExt>;
 
 pub trait Accessor: Sized + 'static {
-    fn var() -> TblVar<Self>;
+    fn var() -> CtxVar<Self>;
     fn deps() -> &'static Deps;
 
-    fn clear(ctx: &mut Vars) {
-        ctx.clear(Self::var());
+    fn clear(ctx: &mut CtxExtObj) {
+        // clear the variable.
+        ctx.get_mut(Self::var()).take();
         Self::clear_deps(ctx);
     }
 
-    fn clear_deps(ctx: &mut Vars) {
+    fn clear_deps(ctx: &mut CtxExtObj) {
         clear_deps(Self::deps(), ctx);
     }
 
-    fn register_deps<F: Fn(&mut Vars) + Send + Sync + 'static>(f: F) {
+    fn register_deps<F: Fn(&mut CtxExtObj) + Send + Sync + 'static>(f: F) {
         register_deps(Self::deps(), Box::new(f));
     }
 }
 
-fn clear_deps(deps: &'static Deps, ctx: &mut Vars) {
+fn clear_deps(deps: &'static Deps, ctx: &mut CtxExtObj) {
     deps.read().iter().for_each(|f| f(ctx));
 }
 
-fn register_deps(deps: &'static Deps, f: Box<dyn Fn(&mut Vars) + Send + Sync + 'static>) {
+fn register_deps(deps: &'static Deps, f: Box<dyn Fn(&mut CtxExtObj) + Send + Sync + 'static>) {
     deps.write().push(f);
 }
 
 pub trait EntityAccessor: Entity + Sized + 'static {
-    type Tbl: AsRef<IndexList<Self>> + Send + Sync;
+    type Tbl: Send + Sync;
 
-    fn entity_var() -> TblVar<Self::Tbl>;
+    fn ctx_var() -> CtxVar<Self::Tbl>;
+
+    fn log_id() -> LogId;
+
+    fn log_mut(logs: &mut Logs) -> &mut Log<Self> {
+        Any::downcast_mut(&**match logs.0.entry(Self::log_id()) {
+            Entry::Occupied(o) =>  o.into_mut(),
+            Entry::Vacant(v) => v.insert(Box::new(Log::default()))
+        })
+    }
+
+    fn log_ref(logs: &Logs) -> Option<&Log<Self>> {
+        logs.0.get(&Self::log_id()).map(|v| Any::downcast_ref(&**v))
+    }
+
+    fn register_index()
 
     fn entity_deps() -> &'static Deps;
 
@@ -48,17 +69,41 @@ pub trait EntityAccessor: Entity + Sized + 'static {
     fn on_remove() -> &'static OnRemove<Self>;
 }
 
-pub trait LogAccessor: Entity + Sized + 'static {
-    fn log_var() -> LogVar<Log<Self>>;
+pub struct TblIndexRegistry<E>(std::sync::Mutex<Vec<fn() -> Box<dyn TblIndex<E>>>>);
+
+pub trait TblIndexAddr {
+    fn id() -> usize;
 }
 
-// typed variable contexts
-pub type LogsVar = attached::Container<vars::Log>;
-pub type Vars = attached::Container<vars::Tbl>;
+impl<E> TblIndexRegistry<E> {
+    pub fn register(&self, init: fn() -> Box<dyn TblIndex<E>>) -> u32 {
+        let mut gate = self.0.lock().unwrap();
+        let id = gate.len();
 
-pub mod vars {
-    use attached::container;
+        gate.push(init);
+        
+        id
+    }
 
-    container!(pub Tbl);
-    container!(pub Log);
+    pub fn create_tbl_index_list(&self) -> IndexList<E> {
+        let gate = self.0.lock().unwrap();
+    }
 }
+
+pub struct TblIndexList<E>(Vec<usize>);
+
+impl<E> TblIndexList<E> {
+    #[inline]
+    pub fn get<I>(&self) -> &TblIndex<E> where I: TblIndex + TblIndexAddr {
+        let id = I::id();
+        unsafe { self.0.get_unchecked(I::id()) }
+    }
+
+    #[inline]
+    pub fn get_mut<I>(&mut self) -> &mut TblIndex<E> where I: TblIndex + TblIndexAddr {
+        let id = I::id();
+        unsafe  { self.0.get_unchecked_mut(id) }
+    }
+}
+
+pub struct TblIndexLog<E>
