@@ -1,9 +1,7 @@
 use crate::{
-    indexing::{Index, IndexList},
-    on_changed::Changed,
-    provider::LoadAll,
-    Accessor, ApplyLog, BoxFuture, CtxTypeInfo, CtxVar, Deps, Entity, EntityAccessor, EntityOf, Gc,
-    GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag, Result, Tag,
+    provider::LoadAll, AsRefAsync, BoxFuture, Ctx, CtxTypeInfo, Entity, EntityAccessor, EntityOf,
+    Gc, Get, GetMut, Logs, NotifyTag, ProviderContainer, RefIntoIterator, Result, Table, Tag,
+    Touchable, TouchedEvent,
 };
 use rayon::iter::IntoParallelIterator;
 use std::ops::Deref;
@@ -11,7 +9,6 @@ use vec_map::{Entry, Iter, Keys, ParIter, Values, VecMap};
 use version_tag::VersionTag;
 
 pub struct VecTable<E: Entity> {
-    indexes: IndexList<E>,
     map: VecMap<E::Key, E>,
     tag: VersionTag,
 }
@@ -19,19 +16,53 @@ pub struct VecTable<E: Entity> {
 impl<E: Entity> VecTable<E> {
     pub fn new() -> Self {
         Self {
-            indexes: IndexList::new(),
             map: VecMap::new(),
             tag: VersionTag::new(),
         }
     }
 
-    #[track_caller]
-    #[inline]
-    pub fn index<I>(&self) -> &I
+    /// Used by the macro.
+    #[doc(hidden)]
+    pub fn __apply_log(ctx: &mut Ctx, logs: &mut Logs) -> bool
     where
-        I: Index<E> + 'static,
+        E: CtxTypeInfo + EntityAccessor<Tbl = VecTable<E>>,
+        E::Key: Into<u32>,
     {
-        self.indexes.get::<I>().0
+        let Some(log) = logs.remove(E::tbl_var()) else {
+            return false;
+        };
+
+        if log.is_empty() {
+            return false;
+        }
+
+        let Some(tbl) = ctx.ctx_ext_obj.get_mut(E::tbl_var()).get_mut() else {
+            return false;
+        };
+
+        for (k, state) in log {
+            match state {
+                Some(new) => match tbl.map.entry(k) {
+                    Entry::Occupied(mut o) => {
+                        E::applied().call(o.key(), Some(o.get()), Some(&new));
+                        o.insert(new);
+                    }
+                    Entry::Vacant(v) => {
+                        E::applied().call(v.key(), None, Some(&new));
+                        v.insert(new);
+                    }
+                },
+                None => {
+                    if let Some(old) = tbl.map.remove(&k) {
+                        E::applied().call(&k, Some(&old), None);
+                    }
+                }
+            }
+        }
+
+        tbl.update_metrics();
+        tbl.tag.notify();
+        true
     }
 
     #[inline]
@@ -42,20 +73,6 @@ impl<E: Entity> VecTable<E> {
     #[inline]
     pub fn keys(&self) -> Keys<E::Key, E> {
         self.map.keys()
-    }
-
-    pub fn register_index<I>(&mut self, mut index: I)
-    where
-        I: Index<E> + 'static,
-    {
-        let mut log = index.create_log();
-
-        for (k, v) in &self.map {
-            index.upsert(&mut *log, k, v, None);
-        }
-
-        index.apply_log(log);
-        self.indexes.register(index);
     }
 
     fn update_metrics(&self)
@@ -72,66 +89,6 @@ impl<E: Entity> VecTable<E> {
     }
 }
 
-impl<E> Accessor for VecTable<E>
-where
-    E: Entity + EntityAccessor<Tbl = VecTable<E>>,
-{
-    #[inline]
-    fn var() -> CtxVar<Self> {
-        E::ctx_var()
-    }
-
-    #[inline]
-    fn deps() -> &'static Deps {
-        E::entity_deps()
-    }
-}
-
-impl<E> ApplyLog<Log<E>> for VecTable<E>
-where
-    E: CtxTypeInfo + Entity + EntityAccessor,
-    E::Key: Copy + Into<usize>,
-{
-    fn apply_log(&mut self, log: Log<E>) -> bool {
-        if log.changes.is_empty() {
-            return false;
-        }
-
-        for (k, state) in log.changes {
-            match state {
-                LogState::Inserted(new) => match self.map.entry(k) {
-                    Entry::Occupied(mut o) => {
-                        let entity = Changed::Inserted {
-                            old: Some(o.get()),
-                            new: &new,
-                        };
-                        E::on_changed().__call(o.key(), entity);
-                        o.insert(new);
-                    }
-                    Entry::Vacant(v) => {
-                        let entity = Changed::Inserted {
-                            old: None,
-                            new: &new,
-                        };
-                        E::on_changed().__call(v.key(), entity);
-                        v.insert(new);
-                    }
-                },
-                LogState::Removed => {
-                    if let Some(old) = self.map.remove(&k) {
-                        E::on_changed().__call(&k, Changed::Removed { old: &old });
-                    }
-                }
-            }
-        }
-
-        self.indexes.apply_changes(log.indexes);
-        self.update_metrics();
-        self.tag.notify();
-        true
-    }
-}
-
 impl<E: Entity> AsRef<Self> for VecTable<E> {
     #[inline]
     fn as_ref(&self) -> &Self {
@@ -139,10 +96,15 @@ impl<E: Entity> AsRef<Self> for VecTable<E> {
     }
 }
 
-impl<E: Entity> AsRef<IndexList<E>> for VecTable<E> {
+impl<E> AsRefAsync<VecTable<E>> for Ctx
+where
+    E: EntityAccessor<Tbl = VecTable<E>> + CtxTypeInfo + Send,
+    E::Key: Into<u32>,
+    ProviderContainer: LoadAll<E, (), VecTable<E>>,
+{
     #[inline]
-    fn as_ref(&self) -> &IndexList<E> {
-        &self.indexes
+    fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ VecTable<E>>> {
+        E::tbl_from(self)
     }
 }
 
@@ -169,7 +131,7 @@ impl<E: Entity> EntityOf for VecTable<E> {
 impl<E> Extend<(E::Key, E)> for VecTable<E>
 where
     E: CtxTypeInfo + Entity,
-    E::Key: Copy + Into<usize>,
+    E::Key: Into<u32>,
 {
     fn extend<T>(&mut self, iter: T)
     where
@@ -186,19 +148,18 @@ where
 impl<E> Gc for VecTable<E>
 where
     E: Entity + CtxTypeInfo + Gc,
-    E::Key: Copy,
 {
     const SUPPORT_GC: bool = E::SUPPORT_GC;
 
     #[inline]
-    fn gc(&mut self, ctx: &GcCtx) {
-        self.map.gc(ctx);
+    fn gc(&mut self) {
+        self.map.gc();
     }
 }
 
 impl<E: Entity> Get<E> for VecTable<E>
 where
-    E::Key: Copy + Into<usize>,
+    E::Key: Into<u32>,
 {
     #[inline]
     fn get(&self, k: &E::Key) -> Option<&E> {
@@ -208,23 +169,11 @@ where
 
 impl<E: Entity> GetMut<E> for VecTable<E>
 where
-    E::Key: Copy + Into<usize>,
+    E::Key: Into<u32>,
 {
     #[inline]
     fn get_mut(&mut self, k: &E::Key) -> Option<&mut E> {
         self.map.get_mut(k)
-    }
-}
-
-impl<'a, P, E> Init<'a, P> for VecTable<E>
-where
-    E: CtxTypeInfo + Entity + Send,
-    E::Key: Copy + Into<usize> + Send,
-    P: Sync + LoadAll<E, (), Self>,
-{
-    #[inline]
-    fn init(provider: &'a P) -> BoxFuture<'a, Result<Self>> {
-        provider.load_all(&())
     }
 }
 
@@ -260,5 +209,33 @@ impl<E: Entity> NotifyTag for VecTable<E> {
 impl<E: Entity> Tag for VecTable<E> {
     fn tag(&self) -> VersionTag {
         self.tag
+    }
+}
+
+impl<E: EntityAccessor> Touchable for VecTable<E> {
+    #[inline]
+    fn touched() -> &'static TouchedEvent {
+        E::touched()
+    }
+}
+
+impl<E: Entity> RefIntoIterator for VecTable<E> {
+    type Item<'a> = (&'a E::Key, &'a E);
+    type Iter<'a> = Iter<'a, E::Key, E>;
+
+    #[inline]
+    fn ref_iter(&self) -> Self::Iter<'_> {
+        self.iter()
+    }
+}
+
+impl<E: Entity> Table<E> for VecTable<E>
+where
+    E: CtxTypeInfo,
+    E::Key: Into<u32>,
+{
+    #[inline]
+    fn get(&self, key: &E::Key) -> Option<&E> {
+        self.map.get(key)
     }
 }

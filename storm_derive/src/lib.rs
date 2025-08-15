@@ -10,18 +10,21 @@ mod derive_input_ext;
 #[cfg(feature = "mssql")]
 mod errors;
 mod field_ext;
+mod flat_set_index;
 mod hierarchy;
 mod indexing;
-mod int_one_to_many;
 mod locks_await;
 #[cfg(feature = "mssql")]
 mod mssql;
+mod node_set_index;
 mod noop;
+mod register;
 mod rename_all;
 mod single_set;
 #[cfg(feature = "mssql")]
 mod string_ext;
 mod token_stream_ext;
+mod tree_index;
 mod type_ext;
 
 use derive_input_ext::DeriveInputExt;
@@ -44,6 +47,12 @@ pub fn ctx(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
+pub fn flat_set_index(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(item as Item);
+    flat_set_index::flat_set_index(item).into()
+}
+
+#[proc_macro_attribute]
 pub fn hierarchy(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
     hierarchy::hierarchy(item).into()
@@ -53,12 +62,6 @@ pub fn hierarchy(_attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn indexing(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
     indexing::indexing(item).into()
-}
-
-#[proc_macro_attribute]
-pub fn int_one_to_many(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let item = parse_macro_input!(item as Item);
-    int_one_to_many::int_one_to_many(item).into()
 }
 
 #[proc_macro_derive(LocksAwait, attributes(storm))]
@@ -88,6 +91,12 @@ pub fn mssql_save(input: TokenStream) -> TokenStream {
     mssql::save(&input).into()
 }
 
+#[proc_macro_attribute]
+pub fn node_set_index(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(item as Item);
+    node_set_index::node_set_index(item).into()
+}
+
 #[proc_macro_derive(NoopDelete)]
 pub fn noop_delete(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -107,7 +116,18 @@ pub fn noop_save(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
+pub fn register(attr: TokenStream, item: TokenStream) -> TokenStream {
+    register::register(attr, item)
+}
+
+#[proc_macro_attribute]
 pub fn single_set(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
     single_set::single_set(item).into()
+}
+
+#[proc_macro_attribute]
+pub fn tree_index(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(item as Item);
+    tree_index::tree_index(item).into()
 }

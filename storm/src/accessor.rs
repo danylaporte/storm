@@ -1,109 +1,344 @@
-use crate::{indexing::{Index, IndexList}, logs::LogId, CtxTransaction, Entity, Inits, Log, LogState, Logs, OnChange, OnChanged, OnRemove};
+use crate::{
+    provider::{Delete, LoadAll, TransactionProvider, Upsert, UpsertMut},
+    AppliedEvent, BoxFuture, ClearEvent, Ctx, CtxTransaction, Entity, EntityValidate, Gc,
+    ProviderContainer, RefIntoIterator, RemovedEvent, RemovingEvent, Result, Table, TouchedEvent,
+    UpsertedEvent, UpsertingEvent,
+};
 use extobj::{extobj, ExtObj, Var};
 use parking_lot::RwLock;
-use std::{any::Any, collections::hash_map::Entry, sync::OnceLock};
+use std::{any::TypeId, borrow::Cow, sync::OnceLock};
+use tracing::error;
 
 pub type Deps = RwLock<Vec<Box<dyn Fn(&mut CtxExtObj) + Send + Sync>>>;
 pub type CtxVar<T> = Var<CtxExt, OnceLock<T>>;
-pub type LogVar<T> = Var<LogExt, OnceLock<T>>;
 
 extobj!(pub struct CtxExt);
 
 pub type CtxExtObj = ExtObj<CtxExt>;
 
-pub trait Accessor: Sized + 'static {
-    fn var() -> CtxVar<Self>;
-    fn deps() -> &'static Deps;
-
-    fn clear(ctx: &mut CtxExtObj) {
-        // clear the variable.
-        ctx.get_mut(Self::var()).take();
-        Self::clear_deps(ctx);
-    }
-
-    fn clear_deps(ctx: &mut CtxExtObj) {
-        clear_deps(Self::deps(), ctx);
-    }
-
-    fn register_deps<F: Fn(&mut CtxExtObj) + Send + Sync + 'static>(f: F) {
-        register_deps(Self::deps(), Box::new(f));
-    }
-}
-
-fn clear_deps(deps: &'static Deps, ctx: &mut CtxExtObj) {
-    deps.read().iter().for_each(|f| f(ctx));
-}
-
-fn register_deps(deps: &'static Deps, f: Box<dyn Fn(&mut CtxExtObj) + Send + Sync + 'static>) {
-    deps.write().push(f);
-}
-
 pub trait EntityAccessor: Entity + Sized + 'static {
-    type Tbl: Send + Sync;
+    type Tbl: Table<Self> + for<'a> RefIntoIterator<Item<'a> = (&'a Self::Key, &'a Self)>;
 
-    fn ctx_var() -> CtxVar<Self::Tbl>;
+    fn applied() -> &'static AppliedEvent<Self>;
+    fn cleared() -> &'static ClearEvent;
+    fn removed() -> &'static RemovedEvent<Self>;
+    fn removing() -> &'static RemovingEvent<Self>;
+    fn tbl_var() -> CtxVar<Self::Tbl>;
+    fn touched() -> &'static TouchedEvent;
+    fn upserted() -> &'static UpsertedEvent<Self>;
+    fn upserting() -> &'static UpsertingEvent<Self>;
 
-    fn log_id() -> LogId;
+    fn clear(ctx: &mut Ctx) {
+        if ctx.ctx_ext_obj.get_mut(Self::tbl_var()).take().is_some() {
+            Self::cleared().call(ctx);
+        }
+    }
 
-    fn log_mut(logs: &mut Logs) -> &mut Log<Self> {
-        Any::downcast_mut(&**match logs.0.entry(Self::log_id()) {
-            Entry::Occupied(o) =>  o.into_mut(),
-            Entry::Vacant(v) => v.insert(Box::new(Log::default()))
+    fn entity_from<'a>(
+        trx: &'a CtxTransaction<'_>,
+        key: &'a Self::Key,
+    ) -> BoxFuture<'a, Result<Option<&'a Self>>>
+    where
+        ProviderContainer: LoadAll<Self, (), Self::Tbl>,
+    {
+        Box::pin(async move {
+            let var = Self::tbl_var();
+            let ctx = trx.ctx;
+
+            // check if the table is already loaded in the transaction logs.
+            Ok(match trx.logs.get(var).and_then(|map| map.get(key)) {
+                Some(v) => v.as_ref(),
+                None => Self::tbl_from(ctx).await?.get(key),
+            })
         })
     }
 
-    fn log_ref(logs: &Logs) -> Option<&Log<Self>> {
-        logs.0.get(&Self::log_id()).map(|v| Any::downcast_ref(&**v))
+    fn tbl_from(ctx: &Ctx) -> BoxFuture<'_, Result<&Self::Tbl>>
+    where
+        ProviderContainer: LoadAll<Self, (), Self::Tbl>,
+    {
+        Box::pin(async move {
+            let slot = ctx.ctx_ext_obj.get(Self::tbl_var());
+
+            // get the table if already initialized.
+            if let Some(v) = slot.get() {
+                return Ok(v);
+            }
+
+            // lock the provider to load the table.
+            let _gate = ctx.provider.gate().await;
+
+            // if the table is already loaded when we gain access to the provider.
+            if let Some(v) = slot.get() {
+                return Ok(v);
+            }
+
+            // load the table
+            let v = ctx.provider.load_all(&()).await.inspect_err(|e| {
+                error!({ error = %e, ty = ?TypeId::of::<Self>() }, "table load failed");
+            })?;
+
+            Ok(slot.get_or_init(|| v))
+        })
     }
 
-    fn register_index()
-
-    fn entity_deps() -> &'static Deps;
-
-    fn entity_inits() -> &'static Inits<Self::Tbl>;
-
-    fn on_change() -> &'static OnChange<Self>;
-
-    fn on_changed() -> &'static OnChanged<Self>;
-
-    fn on_remove() -> &'static OnRemove<Self>;
-}
-
-pub struct TblIndexRegistry<E>(std::sync::Mutex<Vec<fn() -> Box<dyn TblIndex<E>>>>);
-
-pub trait TblIndexAddr {
-    fn id() -> usize;
-}
-
-impl<E> TblIndexRegistry<E> {
-    pub fn register(&self, init: fn() -> Box<dyn TblIndex<E>>) -> u32 {
-        let mut gate = self.0.lock().unwrap();
-        let id = gate.len();
-
-        gate.push(init);
-        
-        id
-    }
-
-    pub fn create_tbl_index_list(&self) -> IndexList<E> {
-        let gate = self.0.lock().unwrap();
-    }
-}
-
-pub struct TblIndexList<E>(Vec<usize>);
-
-impl<E> TblIndexList<E> {
-    #[inline]
-    pub fn get<I>(&self) -> &TblIndex<E> where I: TblIndex + TblIndexAddr {
-        let id = I::id();
-        unsafe { self.0.get_unchecked(I::id()) }
-    }
-
-    #[inline]
-    pub fn get_mut<I>(&mut self) -> &mut TblIndex<E> where I: TblIndex + TblIndexAddr {
-        let id = I::id();
-        unsafe  { self.0.get_unchecked_mut(id) }
+    fn tbl_gc(ctx: &mut Ctx)
+    where
+        Self::Tbl: Gc,
+    {
+        if let Some(tbl) = ctx.ctx_ext_obj.get_mut(Self::tbl_var()).get_mut() {
+            tbl.gc();
+        }
     }
 }
 
-pub struct TblIndexLog<E>
+pub trait EntityRemove: EntityAccessor {
+    fn remove<'a>(trx: &'a mut CtxTransaction<'_>, k: Self::Key) -> BoxFuture<'a, Result<bool>>
+    where
+        ProviderContainer: LoadAll<Self, (), Self::Tbl>,
+        for<'b> TransactionProvider<'b>: Delete<Self>,
+    {
+        let var = Self::tbl_var();
+
+        Box::pin(async move {
+            let ctx = trx.ctx;
+            let gate = trx.err_gate.open()?;
+
+            let old_opt: Option<Option<Self>> =
+                trx.logs.get_mut_or_default(var).insert(k.clone(), None);
+
+            let old = match old_opt.as_ref() {
+                Some(None) => None,
+                Some(Some(old)) => Some(old),
+                None => Self::tbl_from(ctx).await?.get(&k),
+            };
+
+            let Some(old) = old else {
+                // nothing to remove.
+                gate.close();
+                return Ok(false);
+            };
+
+            Self::removing().call(trx, &k).await.inspect_err(|e| {
+                error!({ error = %e, id = ?k, ty = ?TypeId::of::<Self>() }, "EntityAccessor::removing event error")
+            })?;
+
+            if trx
+                .logs
+                .get(var)
+                .is_some_and(|v| v.get(&k).is_some_and(Option::is_none))
+            {
+                trx.provider().delete(&k).await?;
+                old.track_remove(&k, trx).await?;
+
+                Self::removed().call(trx, &k, old).await.inspect_err(|e| {
+                    error!({ error = %e, id = ?k, ty = ?TypeId::of::<Self>() }, "EntityAccessor::removed event error")
+                })?;
+            }
+
+            gate.close();
+
+            Ok(true)
+        })
+    }
+
+    fn remove_all<'a>(
+        trx: &'a mut CtxTransaction<'_>,
+        keys: Cow<'a, [Self::Key]>,
+    ) -> BoxFuture<'a, Result<usize>>
+    where
+        ProviderContainer: LoadAll<Self, (), Self::Tbl>,
+        for<'b> TransactionProvider<'b>: Delete<Self>,
+    {
+        Box::pin(async move {
+            let mut count = 0;
+
+            for key in &*keys {
+                if Self::remove(trx, key.clone()).await? {
+                    count += 1;
+                }
+            }
+
+            Ok(count)
+        })
+    }
+}
+
+pub trait EntityUpsert: EntityAccessor + EntityValidate + PartialEq {
+    fn upsert<'a>(
+        trx: &'a mut CtxTransaction<'_>,
+        k: Self::Key,
+        mut entity: Self,
+    ) -> BoxFuture<'a, Result<bool>>
+    where
+        ProviderContainer: LoadAll<Self, (), Self::Tbl>,
+        for<'b> TransactionProvider<'b>: Upsert<Self>,
+    {
+        let var = Self::tbl_var();
+
+        Box::pin(async move {
+            let ctx = trx.ctx;
+            let has_changed = Self::entity_from(trx, &k)
+                .await?
+                .is_none_or(|e| *e != entity);
+
+            if !has_changed {
+                return Ok(false);
+            }
+
+            let gate = trx.err_gate.open()?;
+
+            validate_on_change(trx, &k, &mut entity).await?;
+
+            trx.provider().upsert(&k, &mut entity).await.inspect_err(
+                |e| error!({ error = %e, id = ?k, ty = ?TypeId::of::<Self>() }, "upsert error"),
+            )?;
+
+            entity.track_insert(&k, trx).await.inspect_err(|e| {
+                error!({ error = %e, id = ?k, ty = ?TypeId::of::<Self>() }, "track_insert error")
+            })?;
+
+            let old = trx
+                .logs
+                .get_mut_or_default(var)
+                .insert(k.clone(), Some(entity));
+
+            let old = match old.as_ref() {
+                None => Self::tbl_from(ctx).await?.get(&k),
+                Some(None) => None,
+                Some(Some(old)) => Some(old),
+            };
+
+            Self::upserted().call(trx, &k, old).await.inspect_err(|e| error!({ error = %e, id = ?k, ty = ?TypeId::of::<Self>() }, "EntityAccessor::upserted event error"))?;
+            gate.close();
+            Ok(true)
+        })
+    }
+
+    fn upsert_all<'a>(
+        trx: &'a mut CtxTransaction<'_>,
+        entities: Vec<(Self::Key, Self)>,
+    ) -> BoxFuture<'a, Result<usize>>
+    where
+        ProviderContainer: LoadAll<Self, (), Self::Tbl>,
+        for<'b> TransactionProvider<'b>: Upsert<Self>,
+    {
+        Box::pin(async move {
+            let mut count = 0;
+
+            for (key, entity) in entities {
+                if Self::upsert(trx, key, entity).await? {
+                    count += 1;
+                }
+            }
+
+            Ok(count)
+        })
+    }
+}
+
+pub trait EntityUpsertMut: EntityAccessor + EntityValidate + PartialEq {
+    fn upsert_mut<'a>(
+        trx: &'a mut CtxTransaction<'_>,
+        k: &'a mut Self::Key,
+        mut entity: Self,
+    ) -> BoxFuture<'a, Result<bool>>
+    where
+        ProviderContainer: LoadAll<Self, (), Self::Tbl>,
+        for<'b> TransactionProvider<'b>: UpsertMut<Self>,
+    {
+        let var = Self::tbl_var();
+
+        Box::pin(async move {
+            let ctx = trx.ctx;
+            let has_changed = Self::entity_from(trx, k)
+                .await?
+                .is_none_or(|e| *e != entity);
+
+            if !has_changed {
+                return Ok(false);
+            }
+
+            let gate = trx.err_gate.open()?;
+
+            validate_on_change(trx, &*k, &mut entity).await?;
+
+            trx.provider()
+                .upsert_mut(k, &mut entity)
+                .await
+                .inspect_err(
+                    |e| error!({ error = %e, id = ?k, ty = ?TypeId::of::<Self>() }, "upsert error"),
+                )?;
+
+            entity.track_insert(k, trx).await.inspect_err(|e| {
+                error!({ error = %e, id = ?k, ty = ?TypeId::of::<Self>() }, "track_insert error")
+            })?;
+
+            let old = trx
+                .logs
+                .get_mut_or_default(var)
+                .insert(k.clone(), Some(entity));
+
+            let old = match old.as_ref() {
+                None => Self::tbl_from(ctx).await?.get(k),
+                Some(None) => None,
+                Some(Some(old)) => Some(old),
+            };
+
+            Self::upserted().call(trx, k, old).await.inspect_err(|e| error!({ error = %e, id = ?k, ty = ?TypeId::of::<Self>() }, "EntityAccessor::upserted event error"))?;
+            gate.close();
+            Ok(true)
+        })
+    }
+
+    fn upsert_all_mut<'a>(
+        trx: &'a mut CtxTransaction<'_>,
+        entities: Vec<(Self::Key, Self)>,
+    ) -> BoxFuture<'a, Result<usize>>
+    where
+        ProviderContainer: LoadAll<Self, (), Self::Tbl>,
+        for<'b> TransactionProvider<'b>: UpsertMut<Self>,
+    {
+        Box::pin(async move {
+            let mut count = 0;
+
+            for (mut key, entity) in entities {
+                if Self::upsert_mut(trx, &mut key, entity).await? {
+                    count += 1;
+                }
+            }
+
+            Ok(count)
+        })
+    }
+}
+
+async fn validate_on_change<E>(
+    trx: &mut CtxTransaction<'_>,
+    key: &E::Key,
+    entity: &mut E,
+) -> Result<()>
+where
+    E: EntityAccessor + EntityValidate,
+{
+    let mut error = None;
+    let mut has_error = false;
+
+    if let Err(e) = E::upserting().call(trx, key, entity).await {
+        error!({ id = ?key, ty = ?TypeId::of::<E>() }, "EntityAccessor::upserting event error");
+        error = Some(e);
+        has_error = true;
+    }
+
+    EntityValidate::entity_validate(&*entity, &mut error);
+
+    match error {
+        Some(e) => {
+            if !has_error {
+                error!({ id = ?key, ty = ?TypeId::of::<E>() }, "entity_validate error");
+            }
+            Err(e)
+        }
+        None => Ok(()),
+    }
+}

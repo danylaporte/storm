@@ -1,25 +1,23 @@
 use crate::{BoxFuture, CtxTransaction, Result};
-use std::fmt::Debug;
+use std::{fmt::Debug, hash::Hash};
 
 pub trait Entity: Send + Sync + 'static {
-    type Key: Send + Sync;
-    type TrackCtx: Debug + Sync;
+    type Key: Clone + Debug + Eq + Hash + Send + Sync;
 
+    #[allow(unused_variables)]
     fn track_insert<'a>(
         &'a self,
-        _key: &'a Self::Key,
-        _old: Option<&'a Self>,
-        _ctx: &'a mut CtxTransaction,
-        _track: &'a Self::TrackCtx,
+        key: &'a Self::Key,
+        ctx: &'a mut CtxTransaction,
     ) -> BoxFuture<'a, Result<()>> {
         box_future_ok()
     }
 
+    #[allow(unused_variables)]
     fn track_remove<'a>(
         &'a self,
-        _key: &'a Self::Key,
-        _ctx: &'a mut CtxTransaction,
-        _track: &'a Self::TrackCtx,
+        key: &'a Self::Key,
+        trx: &'a mut CtxTransaction,
     ) -> BoxFuture<'a, Result<()>> {
         box_future_ok()
     }
@@ -31,7 +29,6 @@ where
     T: Entity,
 {
     type Key = T::Key;
-    type TrackCtx = T::TrackCtx;
 }
 
 impl<T> Entity for Option<T>
@@ -39,7 +36,6 @@ where
     T: Entity,
 {
     type Key = T::Key;
-    type TrackCtx = T::TrackCtx;
 }
 
 fn box_future_ok() -> BoxFuture<'static, Result<()>> {

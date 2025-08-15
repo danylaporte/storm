@@ -13,39 +13,38 @@ mod entity_fields;
 mod entity_of;
 mod entity_validate;
 mod error;
+mod events;
 mod fields;
 pub mod gc;
 mod get;
 mod get_mut;
 mod hash_table;
 pub mod indexing;
-mod init;
-mod insert;
 mod is_defined;
 mod iterator_ext;
 mod len;
 mod logs;
 pub mod mem;
-mod on_change;
-mod on_changed;
 mod on_commit;
-mod on_remove;
 mod one_to_many;
 pub mod prelude;
 pub mod provider;
-mod remove;
-mod state;
+pub mod registry;
+mod table;
 mod tag;
 #[cfg(feature = "telemetry")]
 #[doc(hidden)]
 pub mod telemetry;
+mod touchable;
 mod transaction;
 mod trx_err_gate;
 pub mod trx_iter;
+mod trx_of;
 mod vec_table;
 
 pub use accessor::*;
-pub use apply_log::ApplyLog;
+use apply_log::perform_apply_log;
+pub use apply_log::{ApplyLog, ApplyOrder, __register_apply};
 pub use as_ref_async::AsRefAsync;
 pub use as_ref_opt::{AsRefOpt, FromRefOpt};
 pub use async_cell_lock::{self, AsyncOnceCell, QueueRwLock};
@@ -59,35 +58,36 @@ pub use entity_fields::{EntityFields, FieldsOrStr};
 pub use entity_of::EntityOf;
 pub use entity_validate::EntityValidate;
 pub use error::Error;
+pub use events::*;
 pub use extobj;
+pub use fast_set::IntSet;
 pub use fields::Fields;
+pub use fxhash;
 pub use gc::*;
 pub use get::Get;
 pub use get_mut::GetMut;
 pub use hash_table::HashTable;
-pub use init::{Init, Inits};
-pub use insert::*;
 pub use is_defined::IsDefined;
 pub use iterator_ext::*;
 pub use len::{macro_check_max_len, Len};
 pub use linkme;
-pub use logs::{Log, Logs};
+pub use logs::{LogOf, Logs};
 #[cfg(feature = "telemetry")]
 pub use metrics;
-pub use on_change::{change_depth, ChangeHandler, OnChange};
-pub use on_changed::{Changed, ChangedHandler, OnChanged};
 pub use on_commit::{register_on_commit_handler, CommitHandler};
-pub use on_remove::{OnRemove, RemoveHandler};
+pub use once_cell::sync::OnceCell;
 pub use one_to_many::{OneToMany, OneToManyFromIter};
 pub use parking_lot;
 pub use provider::ProviderContainer;
-pub use remove::Remove;
-pub use state::LogState;
+pub use registry::set_date_provider;
+pub use table::Table;
 pub use tag::{NotifyTag, Tag};
 pub use tokio;
+pub use touchable::Touchable;
 pub use transaction::Transaction;
 use trx_err_gate::TrxErrGate;
 pub use trx_iter::TrxIter;
+pub use trx_of::TrxOf;
 pub use vec_map::{self, VecMap};
 pub use vec_table::VecTable;
 pub use version_tag::{self, VersionTag};
@@ -101,8 +101,8 @@ pub const OBJ_TABLE: &str = "table";
 
 #[cfg(feature = "derive")]
 pub use storm_derive::{
-    hierarchy, indexing, int_one_to_many, single_set, Ctx, LocksAwait, NoopDelete, NoopLoad,
-    NoopSave,
+    flat_set_index, hierarchy, indexing, node_set_index, register, single_set, tree_index, Ctx,
+    LocksAwait, NoopDelete, NoopLoad, NoopSave,
 };
 #[cfg(feature = "mssql")]
 pub use storm_derive::{MssqlDelete, MssqlLoad, MssqlSave};

@@ -28,7 +28,15 @@ pub(crate) fn delete(input: &DeriveInput) -> TokenStream {
 
     let provider = attrs.provider();
 
+    let no_ctx = if attrs.no_ctx {
+        quote! {}
+    } else {
+        quote! { impl storm::EntityRemove for #ident {} }
+    };
+
     quote! {
+        #no_ctx
+
         impl storm::provider::Delete<#ident> for storm::provider::TransactionProvider<'_> {
             fn delete<'a>(&'a self, k: &'a <#ident as storm::Entity>::Key) -> storm::BoxFuture<'a, storm::Result<()>> {
                 storm_mssql::metrics_helper::delete_wrap(async move {
@@ -412,6 +420,14 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
     let enum_fields = enum_fields_impl(vis, ident, enum_fields, &enum_fields_ident);
     let entity_validate = entity_validate(entity_validations, ident);
 
+    let no_ctx = if attrs.no_ctx {
+        quote! {}
+    } else if attrs.reload_on_upsert_or_identity() {
+        quote! { impl storm::EntityUpsertMut for #ident {} }
+    } else {
+        quote! { impl storm::EntityUpsert for #ident {} }
+    };
+
     quote! {
         impl #upsert_trait for storm::provider::TransactionProvider<'_> {
             #upsert_sig {
@@ -441,6 +457,8 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
                 #save_part
             }
         }
+
+        #no_ctx
     }
 }
 

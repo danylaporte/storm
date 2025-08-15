@@ -69,7 +69,8 @@ impl ProviderContainer {
         }
     }
 
-    pub(crate) async fn gate(&self) -> MutexGuard<'_, ()> {
+    #[doc(hidden)]
+    pub async fn gate(&self) -> MutexGuard<'_, ()> {
         self.lock.lock().await
     }
 

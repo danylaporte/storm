@@ -18,14 +18,14 @@ fn gc(index_name: &Ident, index_ty: &Type) -> (TokenStream, TokenStream) {
                 const SUPPORT_GC: bool = <#index_ty as storm::Gc>::SUPPORT_GC;
 
                 #[inline]
-                fn gc(&mut self, ctx: &storm::GcCtx) {
-                    self.0.gc(ctx);
+                fn gc(&mut self) {
+                    self.0.gc();
                 }
             }
         },
         quote! {
             if <#index_ty as storm::Gc>::SUPPORT_GC {
-                storm::gc::collectables::register(|ctx| ctx.index_gc::<#index_name>());
+                storm::Ctx::on_gc_collect(<#index_name as storm::indexing::RebuildIndex>::index_gc);
             }
         },
     )
@@ -37,13 +37,10 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
     let name_str = &name.to_string().to_pascal_case();
     let index_name = Ident::new(name_str, name.span());
     let index_name_lit = LitStr::new(name_str, name.span());
-    let const_name = name_str.to_screaming_snake_case();
     let index_init_ident = Ident::new(
         &format!("__idx_init_{}", name_str.to_snake_case()),
         name.span(),
     );
-
-    let ctx_var = Ident::new(&format!("__CTX_VAR{const_name}"), name.span());
 
     let ty = match &f.sig.output {
         ReturnType::Type(_, t) => t,
@@ -70,7 +67,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
     let mut as_ref_tag = Vec::new();
     let mut as_ref_async_wheres = quote!();
     let mut as_ref_wheres = quote!();
-    let mut deps = Vec::new();
+    let mut registering = Vec::new();
 
     for (index, arg) in args.iter().enumerate() {
         let ty = unref(&arg.ty);
@@ -85,9 +82,10 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
             as_ref_decl_async.push(
                 quote!(let #ident = storm::tri!(storm::AsRefAsync::as_ref_async(self).await);),
             );
+
             as_ref_tag.push(quote!(storm::Tag::tag(#ident)));
+            registering.push(quote!(<#index_name as storm::indexing::RebuildIndex>::register_touchable::<#ty>();));
             as_ref_args.push(ident);
-            deps.push(quote!(<#ty as storm::Accessor>::register_deps(<#index_name as storm::Accessor>::clear);));
 
             let ref_async = quote!(storm::AsRefAsync<#ty>);
             let ref_sync = quote!(AsRef<#ty>);
@@ -112,28 +110,23 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
     quote! {
         #vis struct #index_name(#ty, storm::VersionTag);
 
-        storm::extobj::extobj!{
-            impl storm::CtxExt { #ctx_var: std::sync::OnceLock<#index_name> },
-            init = #index_init_ident(),
-            crate_path = storm::extobj
-        }
-
-        impl storm::Accessor for #index_name {
+        impl storm::indexing::RebuildIndex for #index_name {
             #[inline]
             fn var() -> storm::CtxVar<Self> {
-                *#ctx_var
-            }
+                storm::extobj::extobj!(
+                    impl storm::CtxExt {
+                        V: std::sync::OnceLock<#index_name>,
+                    },
+                    crate_path = storm::extobj
+                );
 
-            #[inline]
-            fn deps() -> &'static storm::Deps {
-                static DEPS: storm::Deps = storm::parking_lot::RwLock::new(Vec::new());
-                &DEPS
+                *V
             }
         }
 
-        #[doc(hidden)]
+        #[storm::register]
         fn #index_init_ident() {
-            #(#deps)*
+            #(#registering)*
             #gc_collect
         }
 
@@ -149,23 +142,29 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         impl<'a, L> AsRef<#index_name> for storm::CtxLocks<'a, L> #as_ref_wheres {
             fn as_ref(&self) -> &#index_name {
                 #(#as_ref_decl)*
-                self.ctx.ctx_ext_obj().get(<#index_name as storm::Accessor>::var()).get_or_init(move || #get_or_init)
+                self.ctx.ctx_ext_obj().get(<#index_name as storm::indexing::RebuildIndex>::var()).get_or_init(move || #get_or_init)
             }
         }
 
         impl storm::AsRefAsync<#index_name> for storm::Ctx #as_ref_async_wheres {
             fn as_ref_async(&self) -> storm::BoxFuture<'_, storm::Result<&'_ #index_name>> {
-                let var = <#index_name as storm::Accessor>::var();
-
                 Box::pin(async move {
-                    let ctx = self.ctx_ext_obj();
+                    let var = <#index_name as storm::indexing::RebuildIndex>::var();
+                    let ext = self.ctx_ext_obj();
 
-                    if let Some(v) = ctx.get(var).get() {
+                    if let Some(v) = ext.get(var).get() {
                         return Ok(v);
                     }
 
                     #(#as_ref_decl_async)*
-                    Ok(ctx.get(var).get_or_init(|| #get_or_init))
+
+                    if let Some(v) = ext.get(var).get() {
+                        return Ok(v);
+                    }
+
+                    let _gate = self.provider().gate();
+
+                    Ok(ext.get(var).get_or_init(|| #get_or_init))
                 })
             }
         }
@@ -174,6 +173,14 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
             #[inline]
             fn tag(&self) -> storm::VersionTag {
                 self.1
+            }
+        }
+
+        impl storm::Touchable for #index_name {
+            #[inline]
+            fn touched() -> &'static storm::TouchedEvent {
+                static E: storm::TouchedEvent = storm::TouchedEvent::new();
+                &E
             }
         }
 

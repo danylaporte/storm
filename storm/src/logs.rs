@@ -1,91 +1,71 @@
-use crate::{
-    async_cell_lock::QueueRwLockQueueGuard, indexing::IndexLogs, ApplyLog, Ctx, Entity,
-    EntityAccessor, Get, LogState, Result,
-};
+use crate::{ApplyLog, Ctx, CtxExt, Entity, HashTable, Result, VecTable};
+use async_cell_lock::QueueRwLockQueueGuard;
+use extobj::{DynObj, Var, VarId};
 use fxhash::FxHashMap;
-use nohash::IntMap;
-use std::{
-    any::Any,
-    collections::hash_map::Entry,
-    hash::Hash,
-    mem::replace,
-    sync::atomic::{AtomicU32, Ordering},
-};
+use std::sync::OnceLock;
 
-pub type LogId = u32;
-
-/// This is use in macro to generate new log id.
-#[doc(hidden)]
-pub fn next_log_id() -> LogId {
-    static ID: AtomicU32 = AtomicU32::new(1);
-    ID.fetch_add(0, Ordering::Relaxed)
+pub trait LogOf {
+    type Log: Default + Send + 'static;
 }
 
-pub struct Logs(pub(crate) IntMap<LogId, Option<Box<dyn Any + Send + Sync>>>);
+impl<E: Entity> LogOf for HashTable<E> {
+    type Log = TableLog<E>;
+}
+
+impl<T: LogOf> LogOf for OnceLock<T> {
+    type Log = T::Log;
+}
+
+impl<E: Entity> LogOf for VecTable<E> {
+    type Log = TableLog<E>;
+}
+
+#[derive(Default)]
+pub struct Logs(FxHashMap<VarId<CtxExt>, DynObj>);
 
 impl Logs {
     pub async fn apply_log(self, ctx: QueueRwLockQueueGuard<'_, Ctx>) -> Result<bool> {
         Ok(ctx.write().await?.apply_log(self))
     }
-}
 
-pub struct Log<E: Entity> {
-    pub changes: FxHashMap<E::Key, LogState<E>>,
-    pub(crate) indexes: IndexLogs,
-}
-
-impl<E> Log<E>
-where
-    E: EntityAccessor,
-    E::Tbl: Get<E>,
-    E::Key: Clone + Eq + Hash,
-{
-    pub fn insert(&mut self, tbl: &E::Tbl, key: E::Key, value: E) {
-        match self.changes.entry(key) {
-            Entry::Occupied(mut o) => {
-                let old = match o.get() {
-                    LogState::Inserted(o) => Some(o),
-                    LogState::Removed => None,
-                };
-
-                tbl.as_ref().upsert(&mut self.indexes, o.key(), &value, old);
-                o.insert(LogState::Inserted(value));
-            }
-            Entry::Vacant(v) => {
-                let old = tbl.get(v.key());
-                tbl.as_ref().upsert(&mut self.indexes, v.key(), &value, old);
-                v.insert(LogState::Inserted(value));
-            }
-        }
+    #[inline]
+    pub(crate) fn contains<T: LogOf>(&self, var: Var<CtxExt, T>) -> bool {
+        self.0.contains_key(&var.var_id())
     }
 
-    /// Returns true if the value is present
-    pub fn remove(&mut self, tbl: &E::Tbl, key: &E::Key) -> bool {
-        match self.changes.entry(key.clone()) {
-            Entry::Occupied(mut o) => match replace(o.get_mut(), LogState::Removed) {
-                LogState::Inserted(v) => {
-                    tbl.as_ref().remove(&mut self.indexes, key, &v);
-                    true
-                }
-                LogState::Removed => false,
-            },
-            Entry::Vacant(v) => match tbl.get(key) {
-                Some(e) => {
-                    tbl.as_ref().remove(&mut self.indexes, key, e);
-                    v.insert(LogState::Removed);
-                    true
-                }
-                None => false,
-            },
-        }
+    #[inline]
+    pub(crate) fn get<T: LogOf>(&self, var: Var<CtxExt, T>) -> Option<&T::Log> {
+        self.0.get(&var.var_id()).map(|d| unsafe { d.get() })
+    }
+
+    #[inline]
+    pub(crate) fn get_mut<T: LogOf>(&mut self, var: Var<CtxExt, T>) -> Option<&mut T::Log> {
+        self.0
+            .get_mut(&var.var_id())
+            .map(|d| unsafe { d.get_mut() })
+    }
+
+    #[inline]
+    pub(crate) fn get_mut_or_default<T: LogOf>(&mut self, var: Var<CtxExt, T>) -> &mut T::Log {
+        let d = self
+            .0
+            .entry(var.var_id())
+            .or_insert_with(|| DynObj::new(T::Log::default()));
+
+        unsafe { d.get_mut() }
+    }
+
+    #[inline]
+    pub(crate) fn insert<T: LogOf>(&mut self, var: Var<CtxExt, T>, log: T::Log) {
+        self.0.insert(var.var_id(), DynObj::new(log));
+    }
+
+    #[inline]
+    pub(crate) fn remove<T: LogOf>(&mut self, var: Var<CtxExt, T>) -> Option<T::Log> {
+        self.0
+            .remove(&var.var_id())
+            .map(|d| unsafe { d.into_inner() })
     }
 }
 
-impl<E: Entity> Default for Log<E> {
-    fn default() -> Self {
-        Self {
-            changes: Default::default(),
-            indexes: Default::default(),
-        }
-    }
-}
+pub type TableLog<E> = FxHashMap<<E as Entity>::Key, Option<E>>;

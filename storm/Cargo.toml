@@ -15,9 +15,10 @@ dec19x5 = { workspace = true, optional = true }
 extobj = { workspace = true }
 fast-set = { workspace = true }
 fxhash = "0.2"
-linkme = "0.3"
 metrics = { workspace = true, optional = true }
 nohash = { workspace = true }
+linkme = "0.3"
+once_cell = "1"
 parking_lot = "0.12"
 rayon = "1"
 serde = { workspace = true, features = ["derive"] }
@@ -27,7 +28,7 @@ tiberius = { version = "0.12", default-features = false, optional = true }
 tokio = { workspace = true, features = ["parking_lot", "sync"], default-features = false }
 tracing = { workspace = true }
 uuid = { workspace = true, optional = true, features = ["v4", "serde"] }
-vec-map = { git = "https://github.com/danylaporte/vec-map.git", features = ["rayon"] }
+vec-map = { workspace = true }
 version_tag = { git = "https://github.com/danylaporte/version_tag.git" }
 
 [dev-dependencies]

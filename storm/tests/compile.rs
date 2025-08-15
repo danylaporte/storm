@@ -1,4 +1,5 @@
 use storm::{prelude::*, NoopDelete, NoopLoad, NoopSave, Result};
+use uuid::Uuid;
 
 fn create_ctx() -> QueueRwLock<Ctx> {
     QueueRwLock::new(Default::default(), "ctx")
@@ -13,7 +14,7 @@ async fn flow() -> Result<()> {
             let ctx = ctx.read().await?;
             let ctx = ctx.queue().await?;
 
-            let trx = ctx.transaction();
+            let trx = ctx.transaction(Uuid::nil());
             let log = trx.commit().await?;
 
             let mut ctx = ctx.write().await?;
@@ -57,20 +58,18 @@ async fn transaction() -> Result<()> {
     async_cell_lock::with_deadlock_check(
         async move {
             let ctx = create_ctx();
-            let track = ();
-
             let ctx = ctx.queue().await?;
-            let mut trx = ctx.transaction();
+            let mut trx = ctx.transaction(Uuid::nil());
 
             let mut entity1s = trx.tbl_of::<Entity1>().await?;
             let _ = entity1s.get(&0).is_none();
-            entity1s.insert(1, Entity1::default(), &track).await?;
-            entity1s.remove(2, &track).await?;
+            entity1s.insert(1, Entity1::default()).await?;
+            entity1s.remove(2).await?;
 
             let mut entity2s = trx.tbl_of::<Entity2>().await?;
             let _ = entity2s.get(&0).is_none();
-            entity2s.insert(1, Entity2::default(), &track).await?;
-            entity2s.remove(2, &track).await?;
+            entity2s.insert(1, Entity2::default()).await?;
+            entity2s.remove(2).await?;
 
             Ok(())
         },
@@ -90,15 +89,14 @@ struct Locks<'a> {
 
 macro_rules! entity {
     ($n:ident) => {
-        #[derive(Ctx, Default, NoopDelete, NoopLoad, NoopSave)]
+        #[derive(Ctx, Default, NoopDelete, NoopLoad, NoopSave, PartialEq)]
         struct $n {
             #[allow(dead_code)]
             pub name: String,
         }
 
         impl Entity for $n {
-            type Key = usize;
-            type TrackCtx = ();
+            type Key = u32;
         }
     };
 }

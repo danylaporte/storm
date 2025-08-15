@@ -47,7 +47,7 @@ macro_rules! to_sql {
         impl ToSql for $t {
             #[inline]
             fn to_sql(&self) -> ColumnData {
-                ColumnData::$n(Some(*self))
+                ColumnData::$n(Some(*self as _))
             }
         }
 
@@ -118,6 +118,7 @@ to_sql!(copied f64 => F64);
 to_sql!(copied i16 => I16);
 to_sql!(copied i32 => I32);
 to_sql!(copied i64 => I64);
+to_sql!(copied u32 => I32);
 to_sql!(copied u8 => U8);
 
 to_sql!(deref Arc<[u8]>, Binary);

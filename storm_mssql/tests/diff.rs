@@ -1,9 +1,9 @@
 #![allow(clippy::unwrap_used)]
 
-use std::future::ready;
-use storm::{prelude::*, MssqlLoad, MssqlSave, Result};
+use storm::{prelude::*, EntityAccessor, MssqlLoad, MssqlSave, Result};
 use storm_mssql::{Execute, ExecuteArgs, MssqlFactory, MssqlProvider};
 use tiberius::Config;
+use uuid::Uuid;
 
 fn create_ctx() -> QueueRwLock<Ctx> {
     QueueRwLock::new(provider().into(), "ctx")
@@ -22,7 +22,7 @@ fn provider() -> ProviderContainer {
     provider
 }
 
-#[derive(Ctx, MssqlLoad, MssqlSave)]
+#[derive(Ctx, MssqlLoad, MssqlSave, PartialEq)]
 #[storm(
     table = "##Tbl",
     keys = "id",
@@ -36,17 +36,17 @@ pub struct Entity1 {
 
 impl Entity for Entity1 {
     type Key = i32;
-    type TrackCtx = ();
 
     fn track_insert<'a>(
         &'a self,
-        _key: &'a Self::Key,
-        old: Option<&'a Self>,
-        _ctx: &'a mut storm::CtxTransaction,
-        _track: &'a Self::TrackCtx,
+        key: &'a Self::Key,
+        ctx: &'a mut storm::CtxTransaction,
     ) -> storm::BoxFuture<'a, Result<()>> {
-        println!("current: {}, old: {:?}", self.v, old.map(|e| e.v));
-        Box::pin(ready(Ok(())))
+        Box::pin(async move {
+            let old = Self::entity_from(ctx, key).await?;
+            println!("current: {}, old: {:?}", self.v, old.map(|e| e.v));
+            Ok(())
+        })
     }
 }
 
@@ -54,6 +54,8 @@ impl Entity for Entity1 {
 async fn diff_insert() -> Result<()> {
     async_cell_lock::with_deadlock_check(
         async move {
+            const USER_ID: Uuid = Uuid::nil();
+
             let lock = create_ctx();
             let ctx = lock.read().await?;
             let provider = ctx.provider().provide::<MssqlProvider>("").await?;
@@ -69,25 +71,25 @@ async fn diff_insert() -> Result<()> {
                 .await?;
 
             let ctx = ctx.queue().await?;
-            let mut trx = ctx.transaction();
+            let mut trx = ctx.transaction(USER_ID);
             let mut entities1 = trx.tbl_of::<Entity1>().await?;
 
             let e1 = Entity1 { v: 1 };
 
             // insert
-            entities1.insert(1, e1, &()).await?;
+            entities1.insert(1, e1).await?;
 
             let log = trx.commit().await?;
             ctx.write().await?.apply_log(log);
 
             let ctx = lock.queue().await?;
 
-            let mut trx = ctx.transaction();
+            let mut trx = ctx.transaction(USER_ID);
             let mut entities1 = trx.tbl_of::<Entity1>().await?;
 
             let e1 = Entity1 { v: 2 };
 
-            entities1.insert(1, e1, &()).await?;
+            entities1.insert(1, e1).await?;
 
             Ok(())
         },

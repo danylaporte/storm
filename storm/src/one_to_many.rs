@@ -7,7 +7,7 @@ pub struct OneToMany<ONE, MANY>(VecMap<ONE, Box<[MANY]>>);
 impl<ONE, MANY> OneToMany<ONE, MANY> {
     pub fn get(&self, index: &ONE) -> &[MANY]
     where
-        ONE: Copy + Into<usize>,
+        ONE: Clone + Into<u32>,
     {
         self.0.get(index).map_or(&[], |v| &**v)
     }
@@ -19,13 +19,13 @@ impl<ONE, MANY> OneToMany<ONE, MANY> {
 
 impl<ONE, MANY> Gc for OneToMany<ONE, MANY>
 where
-    ONE: Copy + Send,
+    ONE: Clone + Send,
     MANY: Gc + Send + Sync,
 {
     const SUPPORT_GC: bool = MANY::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &crate::GcCtx) {
-        self.0.iter_mut().for_each(|(_, item)| item.gc(ctx));
+    fn gc(&mut self) {
+        self.0.iter_mut().for_each(|(_, item)| item.gc());
     }
 }
 
@@ -40,7 +40,7 @@ impl<'a, ONE, MANY> IntoIterator for &'a OneToMany<ONE, MANY> {
 
 impl<ONE, MANY> Index<&ONE> for OneToMany<ONE, MANY>
 where
-    ONE: Copy + Into<usize>,
+    ONE: Clone + Into<u32>,
 {
     type Output = [MANY];
 
@@ -52,8 +52,7 @@ where
 
 impl<ONE, MANY, S> From<HashMap<ONE, Box<[MANY]>, S>> for OneToMany<ONE, MANY>
 where
-    ONE: Copy,
-    usize: From<ONE>,
+    ONE: Clone + Into<u32>,
 {
     fn from(m: HashMap<ONE, Box<[MANY]>, S>) -> Self {
         let mut vec = VecMap::with_capacity(m.len());
@@ -68,8 +67,7 @@ where
 
 impl<ONE, MANY, S> From<HashMap<ONE, Vec<MANY>, S>> for OneToMany<ONE, MANY>
 where
-    ONE: Copy,
-    usize: From<ONE>,
+    ONE: Clone + Into<u32>,
 {
     fn from(m: HashMap<ONE, Vec<MANY>, S>) -> Self {
         let mut vec = VecMap::with_capacity(m.len());
@@ -84,8 +82,7 @@ where
 
 impl<ONE, MANY> From<VecMap<ONE, Box<[MANY]>>> for OneToMany<ONE, MANY>
 where
-    ONE: Copy,
-    usize: From<ONE>,
+    ONE: Clone + Into<u32>,
 {
     fn from(m: VecMap<ONE, Box<[MANY]>>) -> Self {
         Self(m)
@@ -94,8 +91,7 @@ where
 
 impl<ONE, MANY> From<VecMap<ONE, Vec<MANY>>> for OneToMany<ONE, MANY>
 where
-    ONE: Copy,
-    usize: From<ONE>,
+    ONE: Clone + Into<u32>,
 {
     fn from(m: VecMap<ONE, Vec<MANY>>) -> Self {
         let mut vec = VecMap::with_capacity(m.len());
@@ -110,7 +106,8 @@ where
 
 impl<ONE, MANY> FromIterator<(ONE, MANY)> for OneToMany<ONE, MANY>
 where
-    ONE: Copy + Into<usize>,
+    ONE: Clone + Into<u32>,
+    ONE: Copy + Into<u32>,
     MANY: Eq + Hash,
 {
     fn from_iter<T: IntoIterator<Item = (ONE, MANY)>>(iter: T) -> Self {
@@ -125,7 +122,7 @@ where
 
 pub trait OneToManyFromIter<ONE, MANY>: IntoIterator<Item = (ONE, MANY)> + Sized
 where
-    ONE: Copy + Into<usize>,
+    ONE: Clone + Into<u32>,
 {
     /// Collect the items and sort them.
     fn collect_sort<F>(self) -> OneToMany<ONE, MANY>
@@ -199,14 +196,14 @@ where
 impl<ONE, MANY, T> OneToManyFromIter<ONE, MANY> for T
 where
     T: IntoIterator<Item = (ONE, MANY)> + Sized,
-    ONE: Copy + Into<usize>,
+    ONE: Clone + Into<u32>,
 {
 }
 
 fn collect_vec_map<ONE, MANY, I>(iter: I) -> VecMap<ONE, Vec<MANY>>
 where
     I: Iterator<Item = (ONE, MANY)>,
-    ONE: Copy + Into<usize>,
+    ONE: Clone + Into<u32>,
 {
     iter.fold(VecMap::<ONE, Vec<MANY>>::new(), |mut map, (one, many)| {
         match map.entry(one) {
