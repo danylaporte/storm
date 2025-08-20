@@ -1,222 +1,318 @@
-use super::IndexLog;
 use crate::{
-    indexing::{Index, IndexTrx},
-    Entity,
+    provider::LoadAll, AsRefAsync, BoxFuture, Ctx, CtxTransaction, CtxTypeInfo, CtxVar, Entity,
+    EntityAccessor, Get, LogOf, Logs, NotifyTag, ProviderContainer, RefIntoIterator, Result, Tag,
+    Touchable, TouchedEvent, TrxOf, __register_apply,
 };
-use fast_set::{AdaptiveBitmap, AdaptiveBitmapLog, AdaptiveBitmapTrx, IntSet, IntSetTrx};
-use std::{
-    any::Any,
-    fmt::{self, Debug, Formatter},
-    marker::PhantomData,
-    ops::Deref,
-};
+use fast_set::IntSet;
+use std::{future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
+use version_tag::VersionTag;
 
-pub struct SingleSetIndex<K, A>(AdaptiveBitmap, PhantomData<(K, A)>);
-
-impl IndexLog for Option<AdaptiveBitmap> {}
-
-impl<K, A> SingleSetIndex<K, A> {
-    pub fn new() -> Self {
-        Self(AdaptiveBitmap::new(), PhantomData)
-    }
-
+impl<A: SingleSetAdapt> AsRefAsync<SingleSetIndex<A>> for Ctx
+where
+    Ctx: AsRefAsync<<A::Entity as EntityAccessor>::Tbl>,
+    ProviderContainer: LoadAll<A::Entity, (), <A::Entity as EntityAccessor>::Tbl>,
+{
     #[inline]
-    pub fn contains(&self, k: K) -> bool
-    where
-        usize: From<K>,
-    {
-        self.0.contains(usize::from(k) as u32)
-    }
-
-    fn remove_impl(&self, log: &mut dyn IndexLog, old: Option<u32>) {
-        if let Some(old) = old {
-            log_mut(log).remove(&self.0, old);
-        }
-    }
-
-    fn upsert_impl(&self, log: &mut dyn IndexLog, old: Option<u32>, new: Option<u32>) {
-        if old == new {
-            return;
-        }
-
-        self.remove_impl(log, old);
-
-        if let Some(new) = new {
-            log_mut(log).insert(&self.0, new);
-        }
+    fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ SingleSetIndex<A>>> {
+        A::get_or_init(self)
     }
 }
 
-impl<K, A> Default for SingleSetIndex<K, A> {
+pub struct SingleSetIndex<A: SingleSetAdapt> {
+    index: IntSet<A::K>,
+    tag: VersionTag,
+    _a: PhantomData<A>,
+}
+
+impl<A: SingleSetAdapt> SingleSetIndex<A> {
+    #[inline]
+    fn apply(&mut self, log: IntSet<A::K>) -> bool {
+        let changed = self.index != log;
+
+        if changed {
+            self.index = log;
+            self.tag.notify();
+        }
+
+        changed
+    }
+}
+
+impl<A: SingleSetAdapt> Default for SingleSetIndex<A> {
+    #[inline]
     fn default() -> Self {
-        Self::new()
+        Self {
+            index: Default::default(),
+            tag: VersionTag::new(),
+            _a: PhantomData,
+        }
     }
 }
 
-impl<K, A> Deref for SingleSetIndex<K, A>
-where
-    usize: From<K>,
-{
-    type Target = IntSet<K>;
+impl<A: SingleSetAdapt> Deref for SingleSetIndex<A> {
+    type Target = fast_set::IntSet<A::K>;
 
     #[inline]
     fn deref(&self) -> &Self::Target {
-        unsafe { IntSet::from_bitmap_ref(&self.0) }
+        &self.index
     }
 }
 
-fn log_mut(log: &mut dyn IndexLog) -> &mut AdaptiveBitmapLog {
-    <dyn Any>::downcast_mut(&mut *log).expect("AdaptiveBitmapLog")
-}
+pub type BaseAndLog<'a, 'b, A> = Option<(
+    &'a SingleSetIndex<A>,
+    &'b mut IntSet<<A as SingleSetAdapt>::K>,
+)>;
 
-fn log_ref(log: &dyn IndexLog) -> &AdaptiveBitmapLog {
-    <dyn Any>::downcast_ref(log).expect("AdaptiveBitmapLog")
-}
+pub trait SingleSetAdapt: Send + Sized + Sync + Touchable + 'static {
+    type Entity: EntityAccessor<Key = Self::K> + CtxTypeInfo + Send;
+    type K: Copy + Eq + From<u32> + Hash + Into<u32> + Into<usize> + Send + Sync;
 
-impl<K, A> Clone for SingleSetIndex<K, A> {
-    #[inline]
-    fn clone(&self) -> Self {
-        Self(self.0.clone(), PhantomData)
-    }
-}
+    fn adapt(id: &<Self::Entity as Entity>::Key, entity: &Self::Entity) -> bool;
 
-impl<K, A> Debug for SingleSetIndex<K, A> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("SingleSetIndex")
-            .field(&self.0)
-            .field(&self.1)
-            .finish()
-    }
-}
+    fn index_var() -> CtxVar<SingleSetIndex<Self>>;
 
-impl<K, A> PartialEq for SingleSetIndex<K, A> {
-    #[inline]
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
+    fn apply_log(ctx: &mut Ctx, logs: &mut Logs) -> bool {
+        let Some((_, log)) = Self::base_and_log(ctx, logs) else {
+            return false;
+        };
 
-impl<K, E, A> Index<E> for SingleSetIndex<K, A>
-where
-    A: SingleSetAdapt<E> + Send + Sync + 'static,
-    E: Entity<Key = K>,
-    K: Copy + Send + Sync + 'static,
-    usize: From<K>,
-{
-    fn apply_log(&mut self, log: Box<dyn IndexLog>) {
-        let log = *Box::<dyn Any>::downcast::<AdaptiveBitmapLog>(log).expect("AdaptiveBitmapLog");
-        self.0.apply(log);
+        let changed = ctx
+            .ctx_ext_obj
+            .get_mut(Self::index_var())
+            .get_mut()
+            .is_some_and(|idx| idx.apply(take(log)));
+
+        if changed {
+            Self::touched().call(ctx);
+        }
+
+        changed
     }
 
-    fn create_log(&self) -> Box<dyn IndexLog> {
-        Box::new(AdaptiveBitmapLog::new())
+    fn base_and_log<'a, 'b>(ctx: &'a Ctx, logs: &'b mut Logs) -> BaseAndLog<'a, 'b, Self> {
+        let index_var = Self::index_var();
+        let base = ctx.ctx_ext_obj.get(index_var).get()?;
+
+        if !logs.contains(index_var) {
+            let tbl_var = Self::Entity::tbl_var();
+            let tbl_log = logs.get(tbl_var)?;
+            let tbl = ctx.ctx_ext_obj.get(tbl_var).get()?;
+
+            let mut log = base.index.clone();
+
+            for (k, new) in tbl_log {
+                let new = new.as_ref().is_some_and(|new| Self::adapt(k, new));
+                let old = tbl.get(k).is_some_and(|old| Self::adapt(k, old));
+
+                if old != new {
+                    if old {
+                        log.remove(*k);
+                    } else {
+                        log.insert(*k);
+                    }
+                }
+            }
+
+            logs.insert(index_var, log);
+        }
+
+        logs.get_mut(index_var).map(|log| (base, log))
     }
 
-    fn remove(&self, log: &mut dyn IndexLog, k: &E::Key, entity: &E)
+    fn get_or_init(ctx: &Ctx) -> BoxFuture<'_, Result<&SingleSetIndex<Self>>>
     where
-        E: Entity,
+        Ctx: AsRefAsync<<Self::Entity as EntityAccessor>::Tbl>,
+        ProviderContainer: LoadAll<Self::Entity, (), <Self::Entity as EntityAccessor>::Tbl>,
     {
-        let old = adapt_u32::<A, E>(k, entity);
-        self.remove_impl(log, old);
+        Box::pin(async move {
+            let slot = ctx.ctx_ext_obj.get(Self::index_var());
+
+            if let Some(idx) = slot.get() {
+                return Ok(idx);
+            }
+
+            let tbl = ctx.tbl_of::<Self::Entity>().await?;
+            let _gate = ctx.provider.gate().await;
+
+            Ok(slot.get_or_init(|| {
+                let mut index = fast_set::IntSet::<Self::K>::default();
+
+                for (id, entity) in tbl.ref_iter() {
+                    if Self::adapt(id, entity) {
+                        index.insert(*id);
+                    }
+                }
+
+                SingleSetIndex {
+                    index,
+                    tag: VersionTag::new(),
+                    _a: PhantomData,
+                }
+            }))
+        })
     }
 
-    fn upsert(&self, log: &mut dyn IndexLog, k: &E::Key, entity: &E, old: Option<&E>)
-    where
-        E: Entity,
-    {
-        let old = old.and_then(|old| adapt_u32::<A, E>(k, old));
-        let new = adapt_u32::<A, E>(k, entity);
+    fn handle_clear(ctx: &mut Ctx) {
+        ctx.ctx_ext_obj.get_mut(Self::index_var()).take();
+    }
 
-        self.upsert_impl(log, old, new);
+    fn handle_removed<'a>(
+        trx: &'a mut CtxTransaction<'_>,
+        id: &'a <Self::Entity as Entity>::Key,
+        entity: &'a Self::Entity,
+    ) -> BoxFuture<'a, Result<()>> {
+        Box::pin(async move {
+            if let Some((_base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs) {
+                if Self::adapt(id, entity) {
+                    log.remove(*id);
+                }
+            }
+
+            Ok(())
+        })
+    }
+
+    fn handle_upserted<'a>(
+        trx: &'a mut CtxTransaction<'_>,
+        id: &'a <Self::Entity as Entity>::Key,
+        old: Option<&'a Self::Entity>,
+    ) -> BoxFuture<'a, Result<()>> {
+        let tbl_var = Self::Entity::tbl_var();
+
+        // Because we cannot use 2 mut references of the log at the same time, we remove the new entity from the log
+        // before updating the index.
+        // We then reinsert it back to the log at the end.
+        if let Some(new) = trx.logs.get_mut(tbl_var).and_then(|map| map.remove(id)) {
+            if let Some(new) = new.as_ref() {
+                if let Some((_base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs) {
+                    let old = old.is_some_and(|old| Self::adapt(id, old));
+                    let new = Self::adapt(id, new);
+
+                    if old != new {
+                        if old {
+                            log.remove(*id);
+                        } else {
+                            log.insert(*id);
+                        }
+                    }
+                }
+            }
+
+            trx.logs.get_mut_or_default(tbl_var).insert(*id, new);
+        }
+
+        Box::pin(ready(Ok(())))
+    }
+
+    fn register() {
+        __register_apply(Self::apply_log, crate::ApplyOrder::FlatSet);
+        <Self::Entity as EntityAccessor>::cleared().on(Self::handle_clear);
+        <Self::Entity as EntityAccessor>::removed().on(Self::handle_removed);
+        <Self::Entity as EntityAccessor>::upserted().on(Self::handle_upserted);
     }
 }
 
-impl<K, A> IndexTrx for SingleSetIndex<K, A>
+impl<A: SingleSetAdapt> LogOf for SingleSetIndex<A> {
+    type Log = IntSet<A::K>;
+}
+
+impl<A: SingleSetAdapt> NotifyTag for SingleSetIndex<A> {
+    #[inline]
+    fn notify_tag(&mut self) {
+        self.tag.notify()
+    }
+}
+
+impl<A: SingleSetAdapt> Tag for SingleSetIndex<A> {
+    #[inline]
+    fn tag(&self) -> VersionTag {
+        self.tag
+    }
+}
+
+impl<A: SingleSetAdapt> Touchable for SingleSetIndex<A> {
+    #[inline]
+    fn touched() -> &'static TouchedEvent {
+        A::touched()
+    }
+}
+
+impl<A: SingleSetAdapt> TrxOf for SingleSetIndex<A>
 where
-    A: 'static,
-    K: 'static,
+    Ctx: AsRefAsync<<A::Entity as EntityAccessor>::Tbl>,
+    ProviderContainer: LoadAll<A::Entity, (), <A::Entity as EntityAccessor>::Tbl>,
 {
-    type Trx<'a> = IntSetTrx<'a, K>;
-
-    #[inline]
-    fn trx<'a>(&'a self, log: &'a dyn IndexLog) -> Self::Trx<'a> {
-        let trx = AdaptiveBitmapTrx::new(&self.0, log_ref(log));
-        unsafe { IntSetTrx::from_adaptive_bitmap_trx(trx) }
-    }
-}
-
-pub struct SingleSetTrx<'a, K> {
-    changes: &'a mut Option<AdaptiveBitmap>,
-    map: &'a AdaptiveBitmap,
-    _k: PhantomData<K>,
-}
-
-impl<K> SingleSetTrx<'_, K> {
-    #[inline]
-    pub fn contains(&self, key: K) -> bool
+    type Trx<'a>
+        = SingleSetIndexTrx<'a, A>
     where
-        usize: From<K>,
-    {
-        self.contains_impl(usize::from(key))
-    }
+        Self: 'a;
 
-    fn contains_impl(&self, key: usize) -> bool {
-        self.get_impl().contains(key as u32)
-    }
+    fn trx<'a>(trx: &'a mut CtxTransaction) -> BoxFuture<'a, Result<Self::Trx<'a>>> {
+        Box::pin(async move {
+            // force loading the index.
+            A::get_or_init(trx.ctx).await?;
 
-    #[inline]
-    fn get_impl(&self) -> &AdaptiveBitmap {
-        self.changes.as_ref().unwrap_or(self.map)
+            // extract the index log and init if required.
+            let (_base, log) =
+                A::base_and_log(trx.ctx, &mut trx.logs).expect("extract base and log");
+
+            Ok(SingleSetIndexTrx(log))
+        })
     }
 }
 
-impl<K> Deref for SingleSetTrx<'_, K>
-where
-    usize: From<K>,
-{
-    type Target = IntSet<K>;
+pub struct SingleSetIndexTrx<'a, A: SingleSetAdapt>(&'a IntSet<A::K>);
 
+impl<'a, A: SingleSetAdapt> Deref for SingleSetIndexTrx<'a, A> {
+    type Target = IntSet<A::K>;
+
+    #[inline]
     fn deref(&self) -> &Self::Target {
-        unsafe { IntSet::from_bitmap_ref(self.get_impl()) }
+        self.0
     }
-}
-
-pub trait SingleSetAdapt<E: Entity> {
-    fn adapt(k: &E::Key, v: &E) -> bool;
-}
-
-fn adapt_u32<A, E>(k: &E::Key, e: &E) -> Option<u32>
-where
-    A: SingleSetAdapt<E>,
-    E: Entity,
-    E::Key: Copy,
-    usize: From<E::Key>,
-{
-    A::adapt(k, e).then(|| usize::from(*k) as u32)
 }
 
 #[macro_export]
 macro_rules! single_set_adapt {
-    ($adapt:ident, $alias:ident, $init:ident, $vis:vis fn $n:ident($id:ident: &$entity_key:ty, $entity:ident: &$entity_ty:ty $(,)?) -> bool {
+    ($adapt:ident, $alias:ident, $init:ident,
+        $vis:vis fn $n:ident($id:ident: &$entity_key:ty, $entity:ident: &$entity_ty:ty $(,)?) -> bool {
         $($t:tt)*
     }) => {
         $vis struct $adapt;
 
-        impl storm::indexing::SingleSetAdapt<$entity_ty> for $adapt {
+        impl storm::indexing::SingleSetAdapt for $adapt {
+            type Entity = $entity_ty;
+            type K = $entity_key;
+
             #[allow(unused_variables)]
-            fn adapt($id: &$entity_key, $entity: &$entity_ty) -> bool {
+            fn adapt($id: &<Self::Entity as storm::Entity>::Key, $entity: &Self::Entity) -> bool {
                 $($t)*
+            }
+
+            fn index_var() -> storm::CtxVar<storm::indexing::SingleSetIndex<Self>> {
+                storm::extobj::extobj!(
+                    impl storm::CtxExt {
+                        V: std::sync::OnceLock<storm::indexing::SingleSetIndex<$adapt>>,
+                    },
+                    crate_path = storm::extobj
+                );
+
+                *V
             }
         }
 
-        $vis type $alias = storm::indexing::SingleSetIndex<$entity_key, $adapt>;
+        impl storm::Touchable for $adapt {
+            fn touched() -> &'static storm::TouchedEvent {
+                static E: storm::TouchedEvent = storm::TouchedEvent::new();
+                &E
+            }
+        }
 
-        #[$crate::linkme::distributed_slice($crate::STORM_INITS)]
-        #[linkme(crate = $crate::linkme)]
+        $vis type $alias = storm::indexing::SingleSetIndex<$adapt>;
+
+        #[storm::register]
         fn $init() {
-            <$entity_ty as $crate::EntityAccessor>::entity_inits().register(|tbl| {
-                tbl.register_index($alias::new());
-            });
+            <$adapt as storm::indexing::SingleSetAdapt>::register();
         }
     };
 }

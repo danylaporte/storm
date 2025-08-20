@@ -1,7 +1,7 @@
 use crate::{
     provider::LoadAll, AsRefAsync, BoxFuture, Ctx, CtxTypeInfo, Entity, EntityAccessor, EntityOf,
-    Gc, Get, GetMut, Logs, NotifyTag, ProviderContainer, RefIntoIterator, Result, Table, Tag,
-    Touchable, TouchedEvent,
+    Gc, Get, GetMut, Logs, NotifyTag, ProviderContainer, RefIntoIterator, Result, Tag, Touchable,
+    TouchedEvent,
 };
 use rayon::iter::IntoParallelIterator;
 use std::ops::Deref;
@@ -201,12 +201,14 @@ where
 }
 
 impl<E: Entity> NotifyTag for VecTable<E> {
+    #[inline]
     fn notify_tag(&mut self) {
         self.tag.notify()
     }
 }
 
 impl<E: Entity> Tag for VecTable<E> {
+    #[inline]
     fn tag(&self) -> VersionTag {
         self.tag
     }
@@ -226,16 +228,5 @@ impl<E: Entity> RefIntoIterator for VecTable<E> {
     #[inline]
     fn ref_iter(&self) -> Self::Iter<'_> {
         self.iter()
-    }
-}
-
-impl<E: Entity> Table<E> for VecTable<E>
-where
-    E: CtxTypeInfo,
-    E::Key: Into<u32>,
-{
-    #[inline]
-    fn get(&self, key: &E::Key) -> Option<&E> {
-        self.map.get(key)
     }
 }

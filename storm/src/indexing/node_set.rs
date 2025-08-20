@@ -2,11 +2,12 @@ use crate::{
     indexing::{TreeEntity, TreeIndex},
     provider::LoadAll,
     ApplyOrder, AsRefAsync, BoxFuture, Ctx, CtxTransaction, CtxTypeInfo, CtxVar, EntityAccessor,
-    LogOf, Logs, ProviderContainer, Result, Touchable, TouchedEvent, TrxOf, VecTable,
-    __register_apply,
+    LogOf, Logs, NotifyTag, ProviderContainer, Result, Tag, Touchable, TouchedEvent, TrxOf,
+    VecTable, __register_apply,
 };
-use fast_set::{flat_set_index, node_set_index, Tree, TreeIndexLog};
-use std::{future::ready, hash::Hash, marker::PhantomData, mem::take};
+use fast_set::{node_set_index, NodeSetIndexLog, Tree, TreeIndexLog};
+use std::{future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
+use version_tag::VersionTag;
 
 impl<A: NodeSetAdapt> AsRefAsync<NodeSetIndex<A>> for Ctx
 where
@@ -20,8 +21,8 @@ where
 }
 
 pub struct NodeSetIndex<A: NodeSetAdapt> {
-    pub kv: node_set_index::NodeSetIndex<A::K, A::V>,
-    pub vk: flat_set_index::FlatSetIndex<A::V, A::K>,
+    kv: node_set_index::NodeSetIndex<A::K, A::V>,
+    tag: VersionTag,
     _a: PhantomData<A>,
 }
 
@@ -30,9 +31,18 @@ impl<A: NodeSetAdapt> Default for NodeSetIndex<A> {
     fn default() -> Self {
         Self {
             kv: Default::default(),
-            vk: Default::default(),
+            tag: VersionTag::new(),
             _a: PhantomData,
         }
+    }
+}
+
+impl<A: NodeSetAdapt> Deref for NodeSetIndex<A> {
+    type Target = node_set_index::NodeSetIndex<A::K, A::V>;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.kv
     }
 }
 
@@ -45,7 +55,7 @@ impl<A: NodeSetAdapt + Touchable> Touchable for NodeSetIndex<A> {
 
 pub type BaseAndLog<'a, 'b, A> = Option<(
     &'a NodeSetIndex<A>,
-    &'b mut NodeSetIndexLog<A>,
+    &'b mut NodeSetIndexLog<<A as NodeSetAdapt>::K, <A as NodeSetAdapt>::V>,
     &'a TreeIndex<<A as NodeSetAdapt>::TreeEntity>,
     &'b TreeIndexLog<<A as NodeSetAdapt>::K>,
 )>;
@@ -69,8 +79,13 @@ pub trait NodeSetAdapt: Touchable + Send + Sized + Sync + 'static {
             .get_mut(Self::index_var())
             .get_mut()
             .is_some_and(|idx| {
-                let log = take(log);
-                idx.kv.apply(log.kv) | idx.vk.apply(log.vk)
+                let changed = idx.kv.apply(take(log));
+
+                if changed {
+                    idx.tag.notify();
+                }
+
+                changed
             });
 
         if changed {
@@ -91,7 +106,7 @@ pub trait NodeSetAdapt: Touchable + Send + Sized + Sync + 'static {
             let tbl_var = Self::FlatEntity::tbl_var();
             let tree_var = Self::TreeEntity::tree_var();
 
-            let mut log = NodeSetIndexLog::<Self>::default();
+            let mut log = NodeSetIndexLog::<Self::K, Self::V>::default();
 
             // If there is data already in the change log for the related table / tree
             // create the log accordingly.
@@ -151,23 +166,19 @@ pub trait NodeSetAdapt: Touchable + Send + Sized + Sync + 'static {
 
             Ok(slot.get_or_init(|| {
                 let mut kv = fast_set::NodeSetIndex::<Self::K, Self::V>::default();
-                let mut vk = fast_set::FlatSetIndex::<Self::V, Self::K>::default();
-                let mut log_kv = node_set_index::NodeSetIndexLog::<Self::K, Self::V>::default();
-                let mut log_vk = flat_set_index::FlatSetIndexLog::<Self::V, Self::K>::default();
+                let mut log_kv = NodeSetIndexLog::<Self::K, Self::V>::default();
 
                 for (v, entity) in tbl.iter() {
                     if let Some(k) = Self::adapt(v, entity) {
                         log_kv.insert(&kv, tree, &tree_log, k, *v);
-                        log_vk.insert(&vk, *v, k);
                     }
                 }
 
                 kv.apply(log_kv);
-                vk.apply(log_vk);
 
                 NodeSetIndex {
                     kv,
-                    vk,
+                    tag: VersionTag::new(),
                     _a: PhantomData,
                 }
             }))
@@ -199,8 +210,7 @@ pub trait NodeSetAdapt: Touchable + Send + Sized + Sync + 'static {
 
                 let log = trx.logs.get_mut_or_default(Self::index_var());
 
-                log.kv.remove(&base.kv, tree, tree_log_ref, k, *v);
-                log.vk.remove(&base.vk, *v, k);
+                log.remove(&base.kv, tree, tree_log_ref, k, *v);
 
                 if let Some(tree_log) = tree_log {
                     // put back the log.
@@ -252,7 +262,7 @@ pub trait NodeSetAdapt: Touchable + Send + Sized + Sync + 'static {
 
     fn upsert_or_remove(
         base: &NodeSetIndex<Self>,
-        log: &mut NodeSetIndexLog<Self>,
+        log: &mut NodeSetIndexLog<Self::K, Self::V>,
         tree: &Tree<Self::K>,
         tree_log: &TreeIndexLog<Self::K>,
         v: &Self::V,
@@ -264,37 +274,32 @@ pub trait NodeSetAdapt: Touchable + Send + Sized + Sync + 'static {
 
         if new_k != old_k {
             if let Some(old_k) = old_k {
-                log.kv.remove(&base.kv, tree, tree_log, old_k, *v);
-                log.vk.remove(&base.vk, *v, old_k);
+                log.remove(&base.kv, tree, tree_log, old_k, *v);
             }
 
             if let Some(new_k) = new_k {
-                log.kv.insert(&base.kv, tree, tree_log, new_k, *v);
-                log.vk.insert(&base.vk, *v, new_k);
+                log.insert(&base.kv, tree, tree_log, new_k, *v);
             }
-        }
-    }
-}
-
-pub struct NodeSetIndexLog<A: NodeSetAdapt> {
-    kv: node_set_index::NodeSetIndexLog<A::K, A::V>,
-    vk: flat_set_index::FlatSetIndexLog<A::V, A::K>,
-    _a: PhantomData<A>,
-}
-
-impl<A: NodeSetAdapt> Default for NodeSetIndexLog<A> {
-    #[inline]
-    fn default() -> Self {
-        Self {
-            kv: Default::default(),
-            vk: Default::default(),
-            _a: PhantomData,
         }
     }
 }
 
 impl<A: NodeSetAdapt> LogOf for NodeSetIndex<A> {
-    type Log = NodeSetIndexLog<A>;
+    type Log = NodeSetIndexLog<A::K, A::V>;
+}
+
+impl<A: NodeSetAdapt> NotifyTag for NodeSetIndex<A> {
+    #[inline]
+    fn notify_tag(&mut self) {
+        self.tag.notify()
+    }
+}
+
+impl<A: NodeSetAdapt> Tag for NodeSetIndex<A> {
+    #[inline]
+    fn tag(&self) -> VersionTag {
+        self.tag
+    }
 }
 
 impl<A: NodeSetAdapt> TrxOf for NodeSetIndex<A>
@@ -315,17 +320,22 @@ where
             let (base, log, _, _) =
                 A::base_and_log(trx.ctx, &mut trx.logs).expect("extract base and log");
 
-            Ok(NodeSetIndexTrx {
-                kv: node_set_index::NodeSetIndexTrx::new(&base.kv, &log.kv),
-                vk: flat_set_index::FlatSetIndexTrx::new(&base.vk, &log.vk),
-            })
+            Ok(NodeSetIndexTrx(node_set_index::NodeSetIndexTrx::new(
+                &base.kv, log,
+            )))
         })
     }
 }
 
-pub struct NodeSetIndexTrx<'a, A: NodeSetAdapt> {
-    pub kv: node_set_index::NodeSetIndexTrx<'a, A::K, A::V>,
-    pub vk: flat_set_index::FlatSetIndexTrx<'a, A::V, A::K>,
+pub struct NodeSetIndexTrx<'a, A: NodeSetAdapt>(node_set_index::NodeSetIndexTrx<'a, A::K, A::V>);
+
+impl<'a, A: NodeSetAdapt> Deref for NodeSetIndexTrx<'a, A> {
+    type Target = node_set_index::NodeSetIndexTrx<'a, A::K, A::V>;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 #[macro_export]
@@ -342,6 +352,7 @@ macro_rules! node_set_index_adapt {
             type K = $k;
             type V = $entity_key;
 
+            #[allow(unused_variables)]
             fn adapt($id: &Self::V, $entity: &Self::FlatEntity) -> Option<Self::K> {
                 $($t)*
             }
@@ -369,7 +380,7 @@ macro_rules! node_set_index_adapt {
 
         #[storm::register]
         fn $init() {
-            $adapt::register();
+            <$adapt as storm::indexing::NodeSetAdapt>::register();
         }
     };
 }

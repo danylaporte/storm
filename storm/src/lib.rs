@@ -30,7 +30,6 @@ mod one_to_many;
 pub mod prelude;
 pub mod provider;
 pub mod registry;
-mod table;
 mod tag;
 #[cfg(feature = "telemetry")]
 #[doc(hidden)]
@@ -60,7 +59,7 @@ pub use entity_validate::EntityValidate;
 pub use error::Error;
 pub use events::*;
 pub use extobj;
-pub use fast_set::IntSet;
+pub use fast_set::{self, IntSet};
 pub use fields::Fields;
 pub use fxhash;
 pub use gc::*;
@@ -80,7 +79,6 @@ pub use one_to_many::{OneToMany, OneToManyFromIter};
 pub use parking_lot;
 pub use provider::ProviderContainer;
 pub use registry::set_date_provider;
-pub use table::Table;
 pub use tag::{NotifyTag, Tag};
 pub use tokio;
 pub use touchable::Touchable;

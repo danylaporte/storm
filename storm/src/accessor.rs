@@ -1,7 +1,8 @@
 use crate::{
+    logs::TableLog,
     provider::{Delete, LoadAll, TransactionProvider, Upsert, UpsertMut},
-    AppliedEvent, BoxFuture, ClearEvent, Ctx, CtxTransaction, Entity, EntityValidate, Gc,
-    ProviderContainer, RefIntoIterator, RemovedEvent, RemovingEvent, Result, Table, TouchedEvent,
+    AppliedEvent, BoxFuture, ClearEvent, Ctx, CtxTransaction, Entity, EntityValidate, Gc, Get,
+    LogOf, ProviderContainer, RefIntoIterator, RemovedEvent, RemovingEvent, Result, TouchedEvent,
     UpsertedEvent, UpsertingEvent,
 };
 use extobj::{extobj, ExtObj, Var};
@@ -17,7 +18,13 @@ extobj!(pub struct CtxExt);
 pub type CtxExtObj = ExtObj<CtxExt>;
 
 pub trait EntityAccessor: Entity + Sized + 'static {
-    type Tbl: Table<Self> + for<'a> RefIntoIterator<Item<'a> = (&'a Self::Key, &'a Self)>;
+    type Tbl: Default
+        + Extend<(Self::Key, Self)>
+        + Get<Self>
+        + LogOf<Log = TableLog<Self>>
+        + for<'a> RefIntoIterator<Item<'a> = (&'a Self::Key, &'a Self)>
+        + Send
+        + Sync;
 
     fn applied() -> &'static AppliedEvent<Self>;
     fn cleared() -> &'static ClearEvent;
@@ -190,7 +197,7 @@ pub trait EntityUpsert: EntityAccessor + EntityValidate + PartialEq {
 
             validate_on_change(trx, &k, &mut entity).await?;
 
-            trx.provider().upsert(&k, &mut entity).await.inspect_err(
+            trx.provider().upsert(&k, &entity).await.inspect_err(
                 |e| error!({ error = %e, id = ?k, ty = ?TypeId::of::<Self>() }, "upsert error"),
             )?;
 

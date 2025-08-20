@@ -1,7 +1,7 @@
 use crate::{
     provider::LoadAll, AsRefAsync, BoxFuture, Ctx, CtxTypeInfo, Entity, EntityAccessor, EntityOf,
-    Gc, Get, GetMut, Logs, NotifyTag, ProviderContainer, RefIntoIterator, Result, Table, Tag,
-    Touchable, TouchedEvent,
+    Gc, Get, GetMut, Logs, NotifyTag, ProviderContainer, RefIntoIterator, Result, Tag, Touchable,
+    TouchedEvent,
 };
 use fxhash::FxHashMap;
 use rayon::{
@@ -203,18 +203,21 @@ where
     type Item = (&'a E::Key, &'a E);
     type Iter = ParIter<'a, E::Key, E>;
 
+    #[inline]
     fn into_par_iter(self) -> Self::Iter {
         self.par_iter()
     }
 }
 
 impl<E: Entity> NotifyTag for HashTable<E> {
+    #[inline]
     fn notify_tag(&mut self) {
         self.tag.notify()
     }
 }
 
 impl<E: Entity> Tag for HashTable<E> {
+    #[inline]
     fn tag(&self) -> VersionTag {
         self.tag
     }
@@ -234,12 +237,5 @@ impl<E: Entity> RefIntoIterator for HashTable<E> {
     #[inline]
     fn ref_iter(&self) -> Self::Iter<'_> {
         self.iter()
-    }
-}
-
-impl<E: CtxTypeInfo + Entity> Table<E> for HashTable<E> {
-    #[inline]
-    fn get(&self, key: &E::Key) -> Option<&E> {
-        self.map.get(key)
     }
 }

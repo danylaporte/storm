@@ -1,10 +1,11 @@
 use crate::{
     provider::LoadAll, ApplyOrder, AsRefAsync, BoxFuture, Ctx, CtxTransaction, CtxTypeInfo, CtxVar,
-    EntityAccessor, LogOf, Logs, ProviderContainer, Result, Touchable, TouchedEvent, TrxOf,
-    VecTable, __register_apply,
+    EntityAccessor, LogOf, Logs, NotifyTag, ProviderContainer, Result, Tag, Touchable,
+    TouchedEvent, TrxOf, VecTable, __register_apply,
 };
 use fast_set::tree::{TreeIndexLog, TreeTrx};
 use std::{future::ready, marker::PhantomData, mem::take, ops::Deref};
+use version_tag::VersionTag;
 
 impl<E: TreeEntity> AsRefAsync<TreeIndex<E>> for Ctx
 where
@@ -18,12 +19,12 @@ where
     }
 }
 
-pub struct TreeIndex<E: TreeEntity>(fast_set::Tree<E::Key>, PhantomData<E>);
+pub struct TreeIndex<E: TreeEntity>(fast_set::Tree<E::Key>, PhantomData<E>, VersionTag);
 
 impl<E: TreeEntity> Default for TreeIndex<E> {
     #[inline]
     fn default() -> Self {
-        Self(Default::default(), PhantomData)
+        Self(Default::default(), PhantomData, VersionTag::new())
     }
 }
 
@@ -42,7 +43,11 @@ where
 {
     #[inline]
     fn from_iter<T: IntoIterator<Item = (E::Key, Option<E::Key>)>>(iter: T) -> Self {
-        Self(fast_set::Tree::from_iter(iter), PhantomData)
+        Self(
+            fast_set::Tree::from_iter(iter),
+            PhantomData,
+            VersionTag::new(),
+        )
     }
 }
 
@@ -82,6 +87,20 @@ where
     }
 }
 
+impl<E: TreeEntity> NotifyTag for TreeIndex<E> {
+    #[inline]
+    fn notify_tag(&mut self) {
+        self.2.notify()
+    }
+}
+
+impl<E: TreeEntity> Tag for TreeIndex<E> {
+    #[inline]
+    fn tag(&self) -> VersionTag {
+        self.2
+    }
+}
+
 pub trait TreeEntity: EntityAccessor<Tbl = VecTable<Self>> + CtxTypeInfo + Send {
     fn parent(&self) -> Option<Self::Key>;
     fn tree_touched() -> &'static TouchedEvent;
@@ -99,7 +118,15 @@ pub trait TreeEntity: EntityAccessor<Tbl = VecTable<Self>> + CtxTypeInfo + Send 
             .ctx_ext_obj
             .get_mut(Self::tree_var())
             .get_mut()
-            .is_some_and(|idx| idx.0.apply(take(log)));
+            .is_some_and(|idx| {
+                let changed = idx.0.apply(take(log));
+
+                if changed {
+                    idx.2.notify();
+                }
+
+                changed
+            });
 
         if changed {
             Self::tree_touched().call(ctx);

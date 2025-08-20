@@ -4,8 +4,8 @@ use crate::{
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
     registry::{perform_registration, provide_date},
     ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxExtObj, Entity, EntityAccessor, EntityRemove,
-    EntityUpsert, EntityUpsertMut, Get, HashTable, Logs, ProviderContainer, Result, Tag,
-    Transaction, TrxErrGate, VecTable,
+    EntityUpsert, EntityUpsertMut, Get, HashTable, Logs, ProviderContainer, RefIntoIterator,
+    Result, Tag, Transaction, TrxErrGate, VecTable,
 };
 use chrono::NaiveDateTime;
 use std::{borrow::Cow, hash::Hash};
@@ -242,7 +242,6 @@ impl<'a> CtxTransaction<'a> {
     where
         E: EntityAccessor,
         E::Key: Eq + Hash,
-        E::Tbl: Get<E>,
         Ctx: AsRefAsync<E::Tbl>,
     {
         self.tbl_of::<E>().await.map(|t| t.get_owned(k))
@@ -332,7 +331,7 @@ impl<'a> CtxTransaction<'a> {
         E: EntityRemove,
         F: FnMut(&E::Key, &E) -> bool,
         ProviderContainer: LoadAll<E, (), E::Tbl>,
-        for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
+        for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)>,
         for<'c> TransactionProvider<'c>: Delete<E>,
     {
         let tbl = self.ctx.tbl_of::<E>().await?;
@@ -372,7 +371,6 @@ impl<'a> CtxTransaction<'a> {
         E: EntityUpsert + ToOwned<Owned = E>,
         F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>) -> Result<()>,
         ProviderContainer: LoadAll<E, (), E::Tbl>,
-        for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
         for<'c> TransactionProvider<'c>: Upsert<E>,
     {
         let vec = self
@@ -402,7 +400,7 @@ impl<'a> CtxTransaction<'a> {
 
         let tbl = E::tbl_from(self.ctx).await?;
 
-        for (id, e) in tbl {
+        for (id, e) in tbl.ref_iter() {
             if self
                 .logs
                 .get(E::tbl_var())
@@ -448,10 +446,7 @@ where
     E::Key: Eq + Hash,
 {
     #[inline]
-    pub fn contains(&self, k: &E::Key) -> bool
-    where
-        Self: Get<E>,
-    {
+    pub fn contains(&self, k: &E::Key) -> bool {
         self.get(k).is_some()
     }
 
@@ -460,10 +455,7 @@ where
     /// You can take the TblTransaction by ownership and have a longer
     /// lifetime for the & by using the [Self::into_ref] method.
     #[inline]
-    pub fn get<'c>(&'c self, k: &E::Key) -> Option<&'c E>
-    where
-        Self: Get<E>,
-    {
+    pub fn get<'c>(&'c self, k: &E::Key) -> Option<&'c E> {
         Get::get(self, k)
     }
 
@@ -530,7 +522,6 @@ where
     where
         E: Entity + EntityAccessor,
         E::Key: Eq + Hash,
-        E::Tbl: Get<E>,
     {
         match self.ctx.logs.get(E::tbl_var()).and_then(|l| l.get(k)) {
             Some(Some(v)) => Some(v),
@@ -592,17 +583,12 @@ where
     }
 }
 
-impl<E> Get<E> for TblTransaction<'_, '_, E>
-where
-    E: Entity + EntityAccessor,
-    E::Key: Eq + Hash,
-    E::Tbl: Get<E>,
-{
-    fn get(&self, k: &E::Key) -> Option<&E> {
-        match self.ctx.logs.get(E::tbl_var()).and_then(|l| l.get(k)) {
+impl<'a, 'b, E: EntityAccessor> Get<E> for TblTransaction<'a, 'b, E> {
+    fn get(&self, key: &E::Key) -> Option<&E> {
+        match self.ctx.logs.get(E::tbl_var()).and_then(|l| l.get(key)) {
             Some(Some(v)) => Some(v),
             Some(None) => None,
-            None => self.tbl.get(k),
+            None => self.tbl.get(key),
         }
     }
 }

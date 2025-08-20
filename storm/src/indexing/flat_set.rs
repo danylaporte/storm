@@ -1,11 +1,12 @@
 use crate::{
     provider::LoadAll, AsRefAsync, BoxFuture, Ctx, CtxTransaction, CtxTypeInfo, CtxVar, Entity,
-    EntityAccessor, LogOf, Logs, ProviderContainer, RefIntoIterator, Result, Table, Touchable,
-    TouchedEvent, TrxOf, __register_apply,
+    EntityAccessor, Get, LogOf, Logs, NotifyTag, ProviderContainer, RefIntoIterator, Result, Tag,
+    Touchable, TouchedEvent, TrxOf, __register_apply,
 };
-use fast_set::flat_set_index;
+use fast_set::{flat_set_index, FlatSetIndexLog};
 use fxhash::FxHashSet;
-use std::{future::ready, hash::Hash, marker::PhantomData, mem::take};
+use std::{future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
+use version_tag::VersionTag;
 
 impl<A: FlatSetAdapt> AsRefAsync<FlatSetIndex<A>> for Ctx
 where
@@ -19,19 +20,15 @@ where
 }
 
 pub struct FlatSetIndex<A: FlatSetAdapt> {
-    pub kv: flat_set_index::FlatSetIndex<A::K, A::V>,
-    pub vk: flat_set_index::FlatSetIndex<A::V, A::K>,
+    index: flat_set_index::FlatSetIndex<A::K, A::V>,
+    tag: VersionTag,
     _a: PhantomData<A>,
 }
 
 impl<A: FlatSetAdapt> FlatSetIndex<A> {
+    #[inline]
     fn apply(&mut self, log: FlatSetIndexLog<A::K, A::V>) -> bool {
-        let mut changed = false;
-
-        changed |= self.kv.apply(log.0);
-        changed |= self.vk.apply(log.1);
-
-        changed
+        self.index.apply(log)
     }
 }
 
@@ -39,12 +36,23 @@ impl<A: FlatSetAdapt> Default for FlatSetIndex<A> {
     #[inline]
     fn default() -> Self {
         Self {
-            kv: Default::default(),
-            vk: Default::default(),
+            index: Default::default(),
+            tag: VersionTag::new(),
             _a: PhantomData,
         }
     }
 }
+
+impl<A: FlatSetAdapt> Deref for FlatSetIndex<A> {
+    type Target = flat_set_index::FlatSetIndex<A::K, A::V>;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.index
+    }
+}
+
+type HashSet<A> = FxHashSet<(Option<<A as FlatSetAdapt>::K>, <A as FlatSetAdapt>::V)>;
 
 pub type BaseAndLog<'a, 'b, A> = Option<(
     &'a FlatSetIndex<A>,
@@ -56,11 +64,7 @@ pub trait FlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
     type K: Copy + Eq + From<u32> + Hash + Into<u32> + Into<usize> + Send + Sync;
     type V: Copy + Eq + From<u32> + Hash + Into<u32> + Send + Sync;
 
-    fn adapt(
-        id: &<Self::Entity as Entity>::Key,
-        entity: &Self::Entity,
-        out: &mut FxHashSet<(Option<Self::K>, Option<Self::V>)>,
-    );
+    fn adapt(id: &<Self::Entity as Entity>::Key, entity: &Self::Entity, out: &mut HashSet<Self>);
 
     fn index_var() -> CtxVar<FlatSetIndex<Self>>;
 
@@ -135,41 +139,33 @@ pub trait FlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
             let _gate = ctx.provider.gate().await;
 
             Ok(slot.get_or_init(|| {
-                let mut base_kv = fast_set::FlatSetIndex::<Self::K, Self::V>::default();
-                let mut base_vk = fast_set::FlatSetIndex::<Self::V, Self::K>::default();
-                let mut log_kv = fast_set::FlatSetIndexLog::<Self::K, Self::V>::default();
-                let mut log_vk = fast_set::FlatSetIndexLog::<Self::V, Self::K>::default();
+                let mut base = fast_set::FlatSetIndex::<Self::K, Self::V>::default();
+                let mut log = fast_set::FlatSetIndexLog::<Self::K, Self::V>::default();
                 let mut set = FxHashSet::default();
 
                 for (id, entity) in tbl.ref_iter() {
                     set.clear();
 
-                    Self::adapt(&id, entity, &mut set);
+                    Self::adapt(id, entity, &mut set);
 
                     for (k, v) in set.drain() {
-                        match (k, v) {
-                            (Some(k), Some(v)) => {
-                                log_kv.insert(&base_kv, k.clone(), v.clone());
-                                log_vk.insert(&base_vk, v, k);
+                        match k {
+                            Some(k) => {
+                                log.insert(&base, k, v);
                             }
-                            (None, Some(v)) => {
-                                log_kv.insert_none(&base_kv, v);
+                            None => {
+                                log.insert_none(&base, v);
                             }
-                            (Some(k), None) => {
-                                log_vk.insert_none(&base_vk, k);
-                            }
-                            (None, None) => {}
                         }
                     }
                 }
 
-                base_kv.apply(log_kv);
-                base_vk.apply(log_vk);
+                base.apply(log);
 
                 FlatSetIndex {
                     _a: PhantomData,
-                    kv: base_kv,
-                    vk: base_vk,
+                    index: base,
+                    tag: VersionTag::new(),
                 }
             }))
         })
@@ -251,8 +247,8 @@ pub trait FlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
         key: &<Self::Entity as Entity>::Key,
         new: Option<&Self::Entity>,
         old: Option<&Self::Entity>,
-        old_set: &mut FxHashSet<(Option<Self::K>, Option<Self::V>)>,
-        new_set: &mut FxHashSet<(Option<Self::K>, Option<Self::V>)>,
+        old_set: &mut HashSet<Self>,
+        new_set: &mut HashSet<Self>,
     ) {
         if let Some(new) = new {
             Self::adapt(key, new, new_set);
@@ -264,47 +260,46 @@ pub trait FlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
 
         if old_set != new_set {
             for (k, v) in &*old_set - &*new_set {
-                match (k, v) {
-                    (Some(k), Some(v)) => {
-                        log.0.remove(&base.kv, k.clone(), v.clone());
-                        log.1.remove(&base.vk, v, k);
+                match k {
+                    Some(k) => {
+                        log.remove(&base.index, k, v);
                     }
-                    (None, Some(v)) => {
-                        log.0.remove_none(&base.kv, v);
+                    None => {
+                        log.remove_none(&base.index, v);
                     }
-                    (Some(k), None) => {
-                        log.1.remove_none(&base.vk, k);
-                    }
-                    (None, None) => {}
                 }
             }
 
             for (k, v) in &*new_set - &*old_set {
-                match (k, v) {
-                    (Some(k), Some(v)) => {
-                        log.0.insert(&base.kv, k.clone(), v.clone());
-                        log.1.insert(&base.vk, v, k);
+                match k {
+                    Some(k) => {
+                        log.insert(&base.index, k, v);
                     }
-                    (None, Some(v)) => {
-                        log.0.insert_none(&base.kv, v);
+                    None => {
+                        log.insert_none(&base.index, v);
                     }
-                    (Some(k), None) => {
-                        log.1.insert_none(&base.vk, k);
-                    }
-                    (None, None) => {}
                 }
             }
         }
     }
 }
 
-type FlatSetIndexLog<K, V> = (
-    flat_set_index::FlatSetIndexLog<K, V>,
-    flat_set_index::FlatSetIndexLog<V, K>,
-);
-
 impl<A: FlatSetAdapt> LogOf for FlatSetIndex<A> {
     type Log = FlatSetIndexLog<A::K, A::V>;
+}
+
+impl<A: FlatSetAdapt> NotifyTag for FlatSetIndex<A> {
+    #[inline]
+    fn notify_tag(&mut self) {
+        self.tag.notify()
+    }
+}
+
+impl<A: FlatSetAdapt> Tag for FlatSetIndex<A> {
+    #[inline]
+    fn tag(&self) -> VersionTag {
+        self.tag
+    }
 }
 
 impl<A: FlatSetAdapt> Touchable for FlatSetIndex<A> {
@@ -333,39 +328,28 @@ where
             let (base, log) =
                 A::base_and_log(trx.ctx, &mut trx.logs).expect("extract base and log");
 
-            let trx = FlatSetIndexTrx {
-                base,
-                kv: &log.0,
-                vk: &log.1,
-            };
-
-            Ok(trx)
+            Ok(FlatSetIndexTrx(flat_set_index::FlatSetIndexTrx::new(
+                base, log,
+            )))
         })
     }
 }
 
-pub struct FlatSetIndexTrx<'a, A: FlatSetAdapt> {
-    base: &'a FlatSetIndex<A>,
-    kv: &'a flat_set_index::FlatSetIndexLog<A::K, A::V>,
-    vk: &'a flat_set_index::FlatSetIndexLog<A::V, A::K>,
-}
+pub struct FlatSetIndexTrx<'a, A: FlatSetAdapt>(flat_set_index::FlatSetIndexTrx<'a, A::K, A::V>);
 
-impl<A: FlatSetAdapt> FlatSetIndexTrx<'_, A> {
-    #[inline]
-    pub fn kv(&self) -> flat_set_index::FlatSetIndexTrx<'_, A::K, A::V> {
-        flat_set_index::FlatSetIndexTrx::new(&self.base.kv, self.kv)
-    }
+impl<'a, A: FlatSetAdapt> Deref for FlatSetIndexTrx<'a, A> {
+    type Target = flat_set_index::FlatSetIndexTrx<'a, A::K, A::V>;
 
     #[inline]
-    pub fn vk(&self) -> flat_set_index::FlatSetIndexTrx<'_, A::V, A::K> {
-        flat_set_index::FlatSetIndexTrx::new(&self.base.vk, self.vk)
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
 #[macro_export]
 macro_rules! flat_set_adapt {
     ($adapt:ident, $alias:ident, $init:ident,
-        $vis:vis fn $n:ident($id:ident: &$entity_key:ty, $entity:ident: &$entity_ty:ty, $out:ident: &mut FxHashSet<(Option<$k:ty>, Option<$v:ty> $(,)?)> $(,)?) {
+        $vis:vis fn $n:ident($id:ident: &$entity_key:ty, $entity:ident: &$entity_ty:ty $(,)?) -> Option<(Option<$k:ty>, $v:ty $(,)?)> {
         $($t:tt)*
     }) => {
         $vis struct $adapt;
@@ -375,7 +359,57 @@ macro_rules! flat_set_adapt {
             type K = $k;
             type V = $v;
 
-            fn adapt($id: &<Self::Entity as storm::Entity>::Key, $entity: &Self::Entity, $out: &mut storm::fxhash::FxHashSet<(Option<Self::K>, Option<Self::V>)>) {
+            #[allow(unused_variables)]
+            fn adapt(id: &<Self::Entity as storm::Entity>::Key, entity: &Self::Entity, set: &mut storm::fxhash::FxHashSet<(Option<Self::K>, Self::V)>) {
+                fn f($id: &$entity_key, $entity: &$entity_ty) -> Option<(Option<$k>, $v)> {
+                    $($t)*
+                }
+
+                if let Some((k, v)) = f(id, entity) {
+                    set.insert((k, v));
+                }
+            }
+
+            fn index_var() -> storm::CtxVar<storm::indexing::FlatSetIndex<Self>> {
+                storm::extobj::extobj!(
+                    impl storm::CtxExt {
+                        V: std::sync::OnceLock<storm::indexing::FlatSetIndex<$adapt>>,
+                    },
+                    crate_path = storm::extobj
+                );
+
+                *V
+            }
+        }
+
+        impl storm::Touchable for $adapt {
+            fn touched() -> &'static storm::TouchedEvent {
+                static E: storm::TouchedEvent = storm::TouchedEvent::new();
+                &E
+            }
+        }
+
+        $vis type $alias = storm::indexing::FlatSetIndex<$adapt>;
+
+        #[storm::register]
+        fn $init() {
+            <$adapt as storm::indexing::FlatSetAdapt>::register();
+        }
+    };
+
+    ($adapt:ident, $alias:ident, $init:ident,
+        $vis:vis fn $n:ident($id:ident: &$entity_key:ty, $entity:ident: &$entity_ty:ty, $out:ident: &mut FxHashSet<(Option<$k:ty>, $v:ty $(,)?)> $(,)?) {
+        $($t:tt)*
+    }) => {
+        $vis struct $adapt;
+
+        impl storm::indexing::FlatSetAdapt for $adapt {
+            type Entity = $entity_ty;
+            type K = $k;
+            type V = $v;
+
+            #[allow(unused_variables)]
+            fn adapt($id: &<Self::Entity as storm::Entity>::Key, $entity: &Self::Entity, $out: &mut storm::fxhash::FxHashSet<(Option<Self::K>, Self::V)>) {
                 $($t)*
             }
 
@@ -402,7 +436,7 @@ macro_rules! flat_set_adapt {
 
         #[storm::register]
         fn $init() {
-            $adapt::register();
+            <$adapt as storm::indexing::FlatSetAdapt>::register();
         }
     };
 }

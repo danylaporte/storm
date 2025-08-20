@@ -111,6 +111,8 @@ where
     }
 }
 
+impl<K, V> Gc for fast_set::flat_set_index::FlatSetIndex<K, V> {}
+
 impl<T> Gc for fast_set::IntSet<T> {}
 
 impl<T> Gc for once_cell::sync::OnceCell<T>

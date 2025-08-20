@@ -1,5 +1,3 @@
-use fxhash::FxHashSet;
-
 use crate::{registry::InitCell, BoxFuture, Ctx, CtxTransaction, Entity, Result};
 
 type EventInner<T> = InitCell<Vec<T>>;
@@ -38,10 +36,17 @@ impl<T> ChangedEvent<T> {
         Self(EventInner::new(Vec::new()))
     }
 
-    pub async fn call<'a>(&'static self, trx: &'a mut CtxTransaction<'_>, old: &'a Option<T>, new: &'a Option<T>) -> Result<()> {
+    pub async fn call<'a>(
+        &'static self,
+        trx: &'a mut CtxTransaction<'_>,
+        old: &'a Option<T>,
+        new: &'a Option<T>,
+    ) -> Result<()> {
         for f in self.0.get() {
             f(trx, old, new).await?;
         }
+
+        Ok(())
     }
 
     pub fn on(&'static self, f: ChangedEventFn<T>) {
@@ -56,7 +61,11 @@ impl<T> Default for ChangedEvent<T> {
     }
 }
 
-type ChangedEventFn<T> = for<'a> fn(trx: &'a mut CtxTransaction<'_>, old: &'a Option<T>, new: &'a Option<T>) -> BoxFuture<'a, Result<()>>;
+type ChangedEventFn<T> = for<'a> fn(
+    trx: &'a mut CtxTransaction<'_>,
+    old: &'a Option<T>,
+    new: &'a Option<T>,
+) -> BoxFuture<'a, Result<()>>;
 
 pub struct ClearEvent(EventInner<ClearEventFn>);
 
