@@ -137,8 +137,23 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
 
         impl<'a, L> AsRef<#index_name> for storm::CtxLocks<'a, L> #as_ref_wheres {
             fn as_ref(&self) -> &#index_name {
+                let var = <#index_name as storm::Accessor>::var();
+                let ctx = self.ctx.vars();
+
+                if let Some(v) = ctx.get(var) {
+                    return v;
+                }
+
                 #(#as_ref_decl)*
-                self.ctx.vars().get_or_init(<#index_name as storm::Accessor>::var(), move || #get_or_init)
+
+                if let Some(v) = ctx.get(var) {
+                    return v;
+                }
+
+                let instant = std::time::Instant::now();
+                let r = ctx.get_or_init(var, move || #get_or_init);
+                storm::debug_index_get_or_init_elapsed(instant, #index_name_lit);
+                r
             }
         }
 
@@ -154,6 +169,12 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
                     }
 
                     #(#as_ref_decl_async)*
+
+                    if let Some(v) = ctx.get(var) {
+                        return Ok(v);
+                    }
+
+                    let _gate = self.provider().gate(#index_name_lit).await;
                     Ok(ctx.get_or_init(var, || #get_or_init))
                 })
             }

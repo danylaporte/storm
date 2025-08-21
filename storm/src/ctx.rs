@@ -8,7 +8,7 @@ use crate::{
 };
 use fxhash::FxHashMap;
 use parking_lot::RwLock;
-use std::{borrow::Cow, hash::Hash, marker::PhantomData};
+use std::{any::type_name, borrow::Cow, hash::Hash, marker::PhantomData, time::Instant};
 use version_tag::VersionTag;
 
 pub struct Ctx {
@@ -1162,11 +1162,23 @@ where
 
 impl ApplyLog<Logs> for async_cell_lock::QueueRwLockWriteGuard<'_, Ctx> {
     fn apply_log(&mut self, mut log: Logs) -> bool {
+        #[cfg(feature = "telemetry")]
+        let instant = Instant::now();
+
         let appliers = LOG_APPLIERS.read();
         let mut changed = false;
 
         for applier in &*appliers {
             changed = applier.apply(&mut self.vars, &mut log.0) || changed;
+        }
+
+        #[cfg(feature = "telemetry")]
+        {
+            let elapsed = instant.elapsed().as_millis();
+
+            if elapsed > 250 {
+                tracing::warn!(elapsed_ms = elapsed, "apply_log took too long",);
+            }
         }
 
         changed
@@ -1202,7 +1214,7 @@ where
         }
 
         // lock the provider to load the table.
-        let _gate = provider.gate().await;
+        let _gate = provider.gate(type_name::<T>()).await;
 
         // if the table is already loaded when we gain access to the provider.
         if let Some(v) = ctx.get(var) {

@@ -1,5 +1,10 @@
 use crate::Gc;
-use std::{cmp::Ordering, collections::HashMap, hash::Hash, ops::Index};
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+    hash::Hash,
+    ops::Index,
+};
 use vec_map::{Entry, VecMap};
 
 pub struct OneToMany<ONE, MANY>(VecMap<ONE, Box<[MANY]>>);
@@ -60,6 +65,22 @@ where
 
         for (k, v) in m {
             vec.insert(k, v);
+        }
+
+        Self(vec)
+    }
+}
+
+impl<ONE, MANY, S, S2> From<HashMap<ONE, HashSet<MANY, S2>, S>> for OneToMany<ONE, MANY>
+where
+    ONE: Copy,
+    usize: From<ONE>,
+{
+    fn from(m: HashMap<ONE, HashSet<MANY, S2>, S>) -> Self {
+        let mut vec = VecMap::with_capacity(m.len());
+
+        for (k, v) in m {
+            vec.insert(k, v.into_iter().collect::<Vec<_>>().into_boxed_slice());
         }
 
         Self(vec)

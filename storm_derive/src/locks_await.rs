@@ -35,10 +35,15 @@ pub(crate) fn locks_await(input: &DeriveInput) -> TokenStream {
     quote! {
         impl<'a> storm::AsyncTryFrom<'a, &'a storm::Ctx> for #type_ident<'a> {
             fn async_try_from(ctx: &'a storm::Ctx) -> storm::BoxFuture<'a, storm::Result<#type_ident<'a>>> {
+                let instant = std::time::Instant::now();
+
                 Box::pin(async move {
-                    Ok(#type_ident {
+                    let r = #type_ident {
                         #init_fields
-                    })
+                    };
+
+                    storm::debug_locks_await_elapsed(instant);
+                    Ok(r)
                 })
             }
         }
