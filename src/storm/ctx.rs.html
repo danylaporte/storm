@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm/src/ctx.rs`."><title>ctx.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="storm" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../../static.files/storage-3a5871a4.js"></script><script defer src="../../static.files/src-script-b8d3f215.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">storm/</div>ctx.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use crate</span>::{
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `storm/src/ctx.rs`."><title>ctx.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-84e720fa.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="storm" data-themes="" data-resource-suffix="" data-rustdoc-version="1.89.0 (29483883e 2025-08-04)" data-channel="1.89.0" data-search-js="search-92309212.js" data-settings-js="settings-5514c975.js" ><script src="../../static.files/storage-4e99c027.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fd3af306.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-32bb7600.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">storm/</div>ctx.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use crate</span>::{
 <a href=#2 id=2 data-nosnippet>2</a>    on_commit::call_on_commit,
 <a href=#3 id=3 data-nosnippet>3</a>    provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
 <a href=#4 id=4 data-nosnippet>4</a>    Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity, EntityAccessor,
@@ -8,7 +8,7 @@
 <a href=#8 id=8 data-nosnippet>8</a>};
 <a href=#9 id=9 data-nosnippet>9</a><span class="kw">use </span>fxhash::FxHashMap;
 <a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span>parking_lot::RwLock;
-<a href=#11 id=11 data-nosnippet>11</a><span class="kw">use </span>std::{borrow::Cow, hash::Hash, marker::PhantomData};
+<a href=#11 id=11 data-nosnippet>11</a><span class="kw">use </span>std::{any::type_name, borrow::Cow, hash::Hash, marker::PhantomData, time::Instant};
 <a href=#12 id=12 data-nosnippet>12</a><span class="kw">use </span>version_tag::VersionTag;
 <a href=#13 id=13 data-nosnippet>13</a>
 <a href=#14 id=14 data-nosnippet>14</a><span class="kw">pub struct </span>Ctx {
@@ -1162,126 +1162,138 @@
 <a href=#1162 id=1162 data-nosnippet>1162</a>
 <a href=#1163 id=1163 data-nosnippet>1163</a><span class="kw">impl </span>ApplyLog&lt;Logs&gt; <span class="kw">for </span>async_cell_lock::QueueRwLockWriteGuard&lt;<span class="lifetime">'_</span>, Ctx&gt; {
 <a href=#1164 id=1164 data-nosnippet>1164</a>    <span class="kw">fn </span>apply_log(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>log: Logs) -&gt; bool {
-<a href=#1165 id=1165 data-nosnippet>1165</a>        <span class="kw">let </span>appliers = LOG_APPLIERS.read();
-<a href=#1166 id=1166 data-nosnippet>1166</a>        <span class="kw">let </span><span class="kw-2">mut </span>changed = <span class="bool-val">false</span>;
+<a href=#1165 id=1165 data-nosnippet>1165</a>        <span class="attr">#[cfg(feature = <span class="string">"telemetry"</span>)]
+<a href=#1166 id=1166 data-nosnippet>1166</a>        </span><span class="kw">let </span>instant = Instant::now();
 <a href=#1167 id=1167 data-nosnippet>1167</a>
-<a href=#1168 id=1168 data-nosnippet>1168</a>        <span class="kw">for </span>applier <span class="kw">in </span><span class="kw-2">&amp;*</span>appliers {
-<a href=#1169 id=1169 data-nosnippet>1169</a>            changed = applier.apply(<span class="kw-2">&amp;mut </span><span class="self">self</span>.vars, <span class="kw-2">&amp;mut </span>log.<span class="number">0</span>) || changed;
-<a href=#1170 id=1170 data-nosnippet>1170</a>        }
-<a href=#1171 id=1171 data-nosnippet>1171</a>
-<a href=#1172 id=1172 data-nosnippet>1172</a>        changed
-<a href=#1173 id=1173 data-nosnippet>1173</a>    }
-<a href=#1174 id=1174 data-nosnippet>1174</a>}
-<a href=#1175 id=1175 data-nosnippet>1175</a>
-<a href=#1176 id=1176 data-nosnippet>1176</a><span class="kw">impl </span>Transaction <span class="kw">for </span>async_cell_lock::QueueRwLockQueueGuard&lt;<span class="lifetime">'_</span>, Ctx&gt; {
-<a href=#1177 id=1177 data-nosnippet>1177</a>    <span class="kw">fn </span>transaction(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; CtxTransaction&lt;<span class="lifetime">'_</span>&gt; {
-<a href=#1178 id=1178 data-nosnippet>1178</a>        CtxTransaction {
-<a href=#1179 id=1179 data-nosnippet>1179</a>            ctx: <span class="self">self</span>,
-<a href=#1180 id=1180 data-nosnippet>1180</a>            err_gate: Default::default(),
-<a href=#1181 id=1181 data-nosnippet>1181</a>            log_ctx: Default::default(),
-<a href=#1182 id=1182 data-nosnippet>1182</a>            provider: <span class="self">self</span>.provider.transaction(),
-<a href=#1183 id=1183 data-nosnippet>1183</a>        }
-<a href=#1184 id=1184 data-nosnippet>1184</a>    }
-<a href=#1185 id=1185 data-nosnippet>1185</a>}
-<a href=#1186 id=1186 data-nosnippet>1186</a>
-<a href=#1187 id=1187 data-nosnippet>1187</a><span class="kw">fn </span>table_as_ref_async&lt;<span class="lifetime">'a</span>, E, T&gt;(
-<a href=#1188 id=1188 data-nosnippet>1188</a>    ctx: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Vars,
-<a href=#1189 id=1189 data-nosnippet>1189</a>    provider: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ProviderContainer,
-<a href=#1190 id=1190 data-nosnippet>1190</a>) -&gt; BoxFuture&lt;<span class="lifetime">'a</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>T&gt;&gt;
-<a href=#1191 id=1191 data-nosnippet>1191</a><span class="kw">where
-<a href=#1192 id=1192 data-nosnippet>1192</a>    </span>T: Accessor + Default + Extend&lt;(E::Key, E)&gt; + Send + Sync,
-<a href=#1193 id=1193 data-nosnippet>1193</a>    E: Entity + EntityAccessor&lt;Tbl = T&gt;,
-<a href=#1194 id=1194 data-nosnippet>1194</a>    ProviderContainer: LoadAll&lt;E, (), T&gt;,
-<a href=#1195 id=1195 data-nosnippet>1195</a>{
-<a href=#1196 id=1196 data-nosnippet>1196</a>    Box::pin(<span class="kw">async move </span>{
-<a href=#1197 id=1197 data-nosnippet>1197</a>        <span class="kw">let </span>var = T::var();
+<a href=#1168 id=1168 data-nosnippet>1168</a>        <span class="kw">let </span>appliers = LOG_APPLIERS.read();
+<a href=#1169 id=1169 data-nosnippet>1169</a>        <span class="kw">let </span><span class="kw-2">mut </span>changed = <span class="bool-val">false</span>;
+<a href=#1170 id=1170 data-nosnippet>1170</a>
+<a href=#1171 id=1171 data-nosnippet>1171</a>        <span class="kw">for </span>applier <span class="kw">in </span><span class="kw-2">&amp;*</span>appliers {
+<a href=#1172 id=1172 data-nosnippet>1172</a>            changed = applier.apply(<span class="kw-2">&amp;mut </span><span class="self">self</span>.vars, <span class="kw-2">&amp;mut </span>log.<span class="number">0</span>) || changed;
+<a href=#1173 id=1173 data-nosnippet>1173</a>        }
+<a href=#1174 id=1174 data-nosnippet>1174</a>
+<a href=#1175 id=1175 data-nosnippet>1175</a>        <span class="attr">#[cfg(feature = <span class="string">"telemetry"</span>)]
+<a href=#1176 id=1176 data-nosnippet>1176</a>        </span>{
+<a href=#1177 id=1177 data-nosnippet>1177</a>            <span class="kw">let </span>elapsed = instant.elapsed().as_millis();
+<a href=#1178 id=1178 data-nosnippet>1178</a>
+<a href=#1179 id=1179 data-nosnippet>1179</a>            <span class="kw">if </span>elapsed &gt; <span class="number">250 </span>{
+<a href=#1180 id=1180 data-nosnippet>1180</a>                <span class="macro">tracing::warn!</span>(elapsed_ms = elapsed, <span class="string">"apply_log took too long"</span>,);
+<a href=#1181 id=1181 data-nosnippet>1181</a>            }
+<a href=#1182 id=1182 data-nosnippet>1182</a>        }
+<a href=#1183 id=1183 data-nosnippet>1183</a>
+<a href=#1184 id=1184 data-nosnippet>1184</a>        changed
+<a href=#1185 id=1185 data-nosnippet>1185</a>    }
+<a href=#1186 id=1186 data-nosnippet>1186</a>}
+<a href=#1187 id=1187 data-nosnippet>1187</a>
+<a href=#1188 id=1188 data-nosnippet>1188</a><span class="kw">impl </span>Transaction <span class="kw">for </span>async_cell_lock::QueueRwLockQueueGuard&lt;<span class="lifetime">'_</span>, Ctx&gt; {
+<a href=#1189 id=1189 data-nosnippet>1189</a>    <span class="kw">fn </span>transaction(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; CtxTransaction&lt;<span class="lifetime">'_</span>&gt; {
+<a href=#1190 id=1190 data-nosnippet>1190</a>        CtxTransaction {
+<a href=#1191 id=1191 data-nosnippet>1191</a>            ctx: <span class="self">self</span>,
+<a href=#1192 id=1192 data-nosnippet>1192</a>            err_gate: Default::default(),
+<a href=#1193 id=1193 data-nosnippet>1193</a>            log_ctx: Default::default(),
+<a href=#1194 id=1194 data-nosnippet>1194</a>            provider: <span class="self">self</span>.provider.transaction(),
+<a href=#1195 id=1195 data-nosnippet>1195</a>        }
+<a href=#1196 id=1196 data-nosnippet>1196</a>    }
+<a href=#1197 id=1197 data-nosnippet>1197</a>}
 <a href=#1198 id=1198 data-nosnippet>1198</a>
-<a href=#1199 id=1199 data-nosnippet>1199</a>        <span class="comment">// get the table if already initialized.
-<a href=#1200 id=1200 data-nosnippet>1200</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(v) = ctx.get(var) {
-<a href=#1201 id=1201 data-nosnippet>1201</a>            <span class="kw">return </span><span class="prelude-val">Ok</span>(v);
-<a href=#1202 id=1202 data-nosnippet>1202</a>        }
-<a href=#1203 id=1203 data-nosnippet>1203</a>
-<a href=#1204 id=1204 data-nosnippet>1204</a>        <span class="comment">// lock the provider to load the table.
-<a href=#1205 id=1205 data-nosnippet>1205</a>        </span><span class="kw">let </span>_gate = provider.gate().<span class="kw">await</span>;
-<a href=#1206 id=1206 data-nosnippet>1206</a>
-<a href=#1207 id=1207 data-nosnippet>1207</a>        <span class="comment">// if the table is already loaded when we gain access to the provider.
-<a href=#1208 id=1208 data-nosnippet>1208</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(v) = ctx.get(var) {
-<a href=#1209 id=1209 data-nosnippet>1209</a>            <span class="kw">return </span><span class="prelude-val">Ok</span>(v);
-<a href=#1210 id=1210 data-nosnippet>1210</a>        }
-<a href=#1211 id=1211 data-nosnippet>1211</a>
-<a href=#1212 id=1212 data-nosnippet>1212</a>        <span class="comment">// load the table
-<a href=#1213 id=1213 data-nosnippet>1213</a>        </span><span class="kw">let </span>v = provider.load_all(<span class="kw-2">&amp;</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
-<a href=#1214 id=1214 data-nosnippet>1214</a>        <span class="prelude-val">Ok</span>(ctx.get_or_init(var, || v))
-<a href=#1215 id=1215 data-nosnippet>1215</a>    })
-<a href=#1216 id=1216 data-nosnippet>1216</a>}
-<a href=#1217 id=1217 data-nosnippet>1217</a>
-<a href=#1218 id=1218 data-nosnippet>1218</a><span class="kw">trait </span>LogApplier: Send + Sync {
-<a href=#1219 id=1219 data-nosnippet>1219</a>    <span class="kw">fn </span>apply(<span class="kw-2">&amp;</span><span class="self">self</span>, vars: <span class="kw-2">&amp;mut </span>Vars, log_ctx: <span class="kw-2">&amp;mut </span>LogsVar) -&gt; bool;
-<a href=#1220 id=1220 data-nosnippet>1220</a>}
-<a href=#1221 id=1221 data-nosnippet>1221</a>
-<a href=#1222 id=1222 data-nosnippet>1222</a><span class="kw">impl</span>&lt;E&gt; LogApplier <span class="kw">for </span>EntityLogApplier&lt;E&gt;
-<a href=#1223 id=1223 data-nosnippet>1223</a><span class="kw">where
-<a href=#1224 id=1224 data-nosnippet>1224</a>    </span>E: Entity + EntityAccessor + LogAccessor,
-<a href=#1225 id=1225 data-nosnippet>1225</a>    E::Tbl: Accessor + ApplyLog&lt;Log&lt;E&gt;&gt;,
-<a href=#1226 id=1226 data-nosnippet>1226</a>{
-<a href=#1227 id=1227 data-nosnippet>1227</a>    <span class="kw">fn </span>apply(<span class="kw-2">&amp;</span><span class="self">self</span>, vars: <span class="kw-2">&amp;mut </span>Vars, log_ctx: <span class="kw-2">&amp;mut </span>LogsVar) -&gt; bool {
-<a href=#1228 id=1228 data-nosnippet>1228</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(log) = log_ctx.replace(E::log_var(), <span class="prelude-val">None</span>) {
-<a href=#1229 id=1229 data-nosnippet>1229</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(tbl) = vars.get_mut(E::entity_var()) {
-<a href=#1230 id=1230 data-nosnippet>1230</a>                <span class="kw">if </span>tbl.apply_log(log) {
-<a href=#1231 id=1231 data-nosnippet>1231</a>                    &lt;E::Tbl <span class="kw">as </span>Accessor&gt;::clear_deps(vars);
-<a href=#1232 id=1232 data-nosnippet>1232</a>                    <span class="kw">return </span><span class="bool-val">true</span>;
-<a href=#1233 id=1233 data-nosnippet>1233</a>                }
-<a href=#1234 id=1234 data-nosnippet>1234</a>            }
-<a href=#1235 id=1235 data-nosnippet>1235</a>        }
-<a href=#1236 id=1236 data-nosnippet>1236</a>
-<a href=#1237 id=1237 data-nosnippet>1237</a>        <span class="bool-val">false
-<a href=#1238 id=1238 data-nosnippet>1238</a>    </span>}
-<a href=#1239 id=1239 data-nosnippet>1239</a>}
-<a href=#1240 id=1240 data-nosnippet>1240</a>
-<a href=#1241 id=1241 data-nosnippet>1241</a><span class="kw">struct </span>EntityLogApplier&lt;E: Entity + EntityAccessor + LogAccessor&gt;(PhantomData&lt;E&gt;);
-<a href=#1242 id=1242 data-nosnippet>1242</a>
-<a href=#1243 id=1243 data-nosnippet>1243</a><span class="kw">fn </span>log&lt;E: Entity + LogAccessor&gt;(logs: <span class="kw-2">&amp;</span>LogsVar) -&gt; <span class="kw-2">&amp;</span>Log&lt;E&gt; {
-<a href=#1244 id=1244 data-nosnippet>1244</a>    logs.get_or_init(E::log_var(), Default::default)
-<a href=#1245 id=1245 data-nosnippet>1245</a>}
-<a href=#1246 id=1246 data-nosnippet>1246</a>
-<a href=#1247 id=1247 data-nosnippet>1247</a><span class="kw">fn </span>log_mut&lt;E: Entity + LogAccessor&gt;(logs: <span class="kw-2">&amp;mut </span>LogsVar) -&gt; <span class="kw-2">&amp;mut </span>Log&lt;E&gt; {
-<a href=#1248 id=1248 data-nosnippet>1248</a>    logs.get_or_init_mut(E::log_var(), Default::default)
-<a href=#1249 id=1249 data-nosnippet>1249</a>}
-<a href=#1250 id=1250 data-nosnippet>1250</a>
-<a href=#1251 id=1251 data-nosnippet>1251</a><span class="attr">#[doc(hidden)]
-<a href=#1252 id=1252 data-nosnippet>1252</a></span><span class="kw">pub fn </span>register_apply_log&lt;E&gt;()
-<a href=#1253 id=1253 data-nosnippet>1253</a><span class="kw">where
-<a href=#1254 id=1254 data-nosnippet>1254</a>    </span>E: Entity + EntityAccessor + LogAccessor,
-<a href=#1255 id=1255 data-nosnippet>1255</a>    E::Tbl: Accessor + ApplyLog&lt;Log&lt;E&gt;&gt;,
-<a href=#1256 id=1256 data-nosnippet>1256</a>{
-<a href=#1257 id=1257 data-nosnippet>1257</a>    register_apply_log_dyn(Box::new(EntityLogApplier::&lt;E&gt;(PhantomData)));
-<a href=#1258 id=1258 data-nosnippet>1258</a>}
-<a href=#1259 id=1259 data-nosnippet>1259</a>
-<a href=#1260 id=1260 data-nosnippet>1260</a><span class="kw">fn </span>register_apply_log_dyn(app: Box&lt;<span class="kw">dyn </span>LogApplier&gt;) {
-<a href=#1261 id=1261 data-nosnippet>1261</a>    LOG_APPLIERS.write().push(app);
-<a href=#1262 id=1262 data-nosnippet>1262</a>}
-<a href=#1263 id=1263 data-nosnippet>1263</a>
-<a href=#1264 id=1264 data-nosnippet>1264</a><span class="kw">static </span>LOG_APPLIERS: RwLock&lt;Vec&lt;Box&lt;<span class="kw">dyn </span>LogApplier&gt;&gt;&gt; = RwLock::new(Vec::new());
-<a href=#1265 id=1265 data-nosnippet>1265</a>
-<a href=#1266 id=1266 data-nosnippet>1266</a><span class="kw">async fn </span>validate_on_change&lt;E&gt;(
-<a href=#1267 id=1267 data-nosnippet>1267</a>    trx: <span class="kw-2">&amp;mut </span>CtxTransaction&lt;<span class="lifetime">'_</span>&gt;,
-<a href=#1268 id=1268 data-nosnippet>1268</a>    key: <span class="kw-2">&amp;</span>E::Key,
-<a href=#1269 id=1269 data-nosnippet>1269</a>    entity: <span class="kw-2">&amp;mut </span>E,
-<a href=#1270 id=1270 data-nosnippet>1270</a>    track: <span class="kw-2">&amp;</span>E::TrackCtx,
-<a href=#1271 id=1271 data-nosnippet>1271</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;
-<a href=#1272 id=1272 data-nosnippet>1272</a><span class="kw">where
-<a href=#1273 id=1273 data-nosnippet>1273</a>    </span>E: EntityAccessor + EntityValidate,
-<a href=#1274 id=1274 data-nosnippet>1274</a>{
-<a href=#1275 id=1275 data-nosnippet>1275</a>    <span class="kw">let </span><span class="kw-2">mut </span>error = <span class="prelude-val">None</span>;
-<a href=#1276 id=1276 data-nosnippet>1276</a>
-<a href=#1277 id=1277 data-nosnippet>1277</a>    <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = E::on_change().call(trx, key, entity, track).<span class="kw">await </span>{
-<a href=#1278 id=1278 data-nosnippet>1278</a>        error = <span class="prelude-val">Some</span>(e);
-<a href=#1279 id=1279 data-nosnippet>1279</a>    }
-<a href=#1280 id=1280 data-nosnippet>1280</a>
-<a href=#1281 id=1281 data-nosnippet>1281</a>    EntityValidate::entity_validate(<span class="kw-2">&amp;*</span>entity, <span class="kw-2">&amp;mut </span>error);
-<a href=#1282 id=1282 data-nosnippet>1282</a>
-<a href=#1283 id=1283 data-nosnippet>1283</a>    <span class="kw">match </span>error {
-<a href=#1284 id=1284 data-nosnippet>1284</a>        <span class="prelude-val">Some</span>(e) =&gt; <span class="prelude-val">Err</span>(e),
-<a href=#1285 id=1285 data-nosnippet>1285</a>        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(()),
-<a href=#1286 id=1286 data-nosnippet>1286</a>    }
-<a href=#1287 id=1287 data-nosnippet>1287</a>}</code></pre></div></section></main></body></html>
+<a href=#1199 id=1199 data-nosnippet>1199</a><span class="kw">fn </span>table_as_ref_async&lt;<span class="lifetime">'a</span>, E, T&gt;(
+<a href=#1200 id=1200 data-nosnippet>1200</a>    ctx: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Vars,
+<a href=#1201 id=1201 data-nosnippet>1201</a>    provider: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ProviderContainer,
+<a href=#1202 id=1202 data-nosnippet>1202</a>) -&gt; BoxFuture&lt;<span class="lifetime">'a</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>T&gt;&gt;
+<a href=#1203 id=1203 data-nosnippet>1203</a><span class="kw">where
+<a href=#1204 id=1204 data-nosnippet>1204</a>    </span>T: Accessor + Default + Extend&lt;(E::Key, E)&gt; + Send + Sync,
+<a href=#1205 id=1205 data-nosnippet>1205</a>    E: Entity + EntityAccessor&lt;Tbl = T&gt;,
+<a href=#1206 id=1206 data-nosnippet>1206</a>    ProviderContainer: LoadAll&lt;E, (), T&gt;,
+<a href=#1207 id=1207 data-nosnippet>1207</a>{
+<a href=#1208 id=1208 data-nosnippet>1208</a>    Box::pin(<span class="kw">async move </span>{
+<a href=#1209 id=1209 data-nosnippet>1209</a>        <span class="kw">let </span>var = T::var();
+<a href=#1210 id=1210 data-nosnippet>1210</a>
+<a href=#1211 id=1211 data-nosnippet>1211</a>        <span class="comment">// get the table if already initialized.
+<a href=#1212 id=1212 data-nosnippet>1212</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(v) = ctx.get(var) {
+<a href=#1213 id=1213 data-nosnippet>1213</a>            <span class="kw">return </span><span class="prelude-val">Ok</span>(v);
+<a href=#1214 id=1214 data-nosnippet>1214</a>        }
+<a href=#1215 id=1215 data-nosnippet>1215</a>
+<a href=#1216 id=1216 data-nosnippet>1216</a>        <span class="comment">// lock the provider to load the table.
+<a href=#1217 id=1217 data-nosnippet>1217</a>        </span><span class="kw">let </span>_gate = provider.gate(type_name::&lt;T&gt;()).<span class="kw">await</span>;
+<a href=#1218 id=1218 data-nosnippet>1218</a>
+<a href=#1219 id=1219 data-nosnippet>1219</a>        <span class="comment">// if the table is already loaded when we gain access to the provider.
+<a href=#1220 id=1220 data-nosnippet>1220</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(v) = ctx.get(var) {
+<a href=#1221 id=1221 data-nosnippet>1221</a>            <span class="kw">return </span><span class="prelude-val">Ok</span>(v);
+<a href=#1222 id=1222 data-nosnippet>1222</a>        }
+<a href=#1223 id=1223 data-nosnippet>1223</a>
+<a href=#1224 id=1224 data-nosnippet>1224</a>        <span class="comment">// load the table
+<a href=#1225 id=1225 data-nosnippet>1225</a>        </span><span class="kw">let </span>v = provider.load_all(<span class="kw-2">&amp;</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
+<a href=#1226 id=1226 data-nosnippet>1226</a>        <span class="prelude-val">Ok</span>(ctx.get_or_init(var, || v))
+<a href=#1227 id=1227 data-nosnippet>1227</a>    })
+<a href=#1228 id=1228 data-nosnippet>1228</a>}
+<a href=#1229 id=1229 data-nosnippet>1229</a>
+<a href=#1230 id=1230 data-nosnippet>1230</a><span class="kw">trait </span>LogApplier: Send + Sync {
+<a href=#1231 id=1231 data-nosnippet>1231</a>    <span class="kw">fn </span>apply(<span class="kw-2">&amp;</span><span class="self">self</span>, vars: <span class="kw-2">&amp;mut </span>Vars, log_ctx: <span class="kw-2">&amp;mut </span>LogsVar) -&gt; bool;
+<a href=#1232 id=1232 data-nosnippet>1232</a>}
+<a href=#1233 id=1233 data-nosnippet>1233</a>
+<a href=#1234 id=1234 data-nosnippet>1234</a><span class="kw">impl</span>&lt;E&gt; LogApplier <span class="kw">for </span>EntityLogApplier&lt;E&gt;
+<a href=#1235 id=1235 data-nosnippet>1235</a><span class="kw">where
+<a href=#1236 id=1236 data-nosnippet>1236</a>    </span>E: Entity + EntityAccessor + LogAccessor,
+<a href=#1237 id=1237 data-nosnippet>1237</a>    E::Tbl: Accessor + ApplyLog&lt;Log&lt;E&gt;&gt;,
+<a href=#1238 id=1238 data-nosnippet>1238</a>{
+<a href=#1239 id=1239 data-nosnippet>1239</a>    <span class="kw">fn </span>apply(<span class="kw-2">&amp;</span><span class="self">self</span>, vars: <span class="kw-2">&amp;mut </span>Vars, log_ctx: <span class="kw-2">&amp;mut </span>LogsVar) -&gt; bool {
+<a href=#1240 id=1240 data-nosnippet>1240</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(log) = log_ctx.replace(E::log_var(), <span class="prelude-val">None</span>) {
+<a href=#1241 id=1241 data-nosnippet>1241</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(tbl) = vars.get_mut(E::entity_var()) {
+<a href=#1242 id=1242 data-nosnippet>1242</a>                <span class="kw">if </span>tbl.apply_log(log) {
+<a href=#1243 id=1243 data-nosnippet>1243</a>                    &lt;E::Tbl <span class="kw">as </span>Accessor&gt;::clear_deps(vars);
+<a href=#1244 id=1244 data-nosnippet>1244</a>                    <span class="kw">return </span><span class="bool-val">true</span>;
+<a href=#1245 id=1245 data-nosnippet>1245</a>                }
+<a href=#1246 id=1246 data-nosnippet>1246</a>            }
+<a href=#1247 id=1247 data-nosnippet>1247</a>        }
+<a href=#1248 id=1248 data-nosnippet>1248</a>
+<a href=#1249 id=1249 data-nosnippet>1249</a>        <span class="bool-val">false
+<a href=#1250 id=1250 data-nosnippet>1250</a>    </span>}
+<a href=#1251 id=1251 data-nosnippet>1251</a>}
+<a href=#1252 id=1252 data-nosnippet>1252</a>
+<a href=#1253 id=1253 data-nosnippet>1253</a><span class="kw">struct </span>EntityLogApplier&lt;E: Entity + EntityAccessor + LogAccessor&gt;(PhantomData&lt;E&gt;);
+<a href=#1254 id=1254 data-nosnippet>1254</a>
+<a href=#1255 id=1255 data-nosnippet>1255</a><span class="kw">fn </span>log&lt;E: Entity + LogAccessor&gt;(logs: <span class="kw-2">&amp;</span>LogsVar) -&gt; <span class="kw-2">&amp;</span>Log&lt;E&gt; {
+<a href=#1256 id=1256 data-nosnippet>1256</a>    logs.get_or_init(E::log_var(), Default::default)
+<a href=#1257 id=1257 data-nosnippet>1257</a>}
+<a href=#1258 id=1258 data-nosnippet>1258</a>
+<a href=#1259 id=1259 data-nosnippet>1259</a><span class="kw">fn </span>log_mut&lt;E: Entity + LogAccessor&gt;(logs: <span class="kw-2">&amp;mut </span>LogsVar) -&gt; <span class="kw-2">&amp;mut </span>Log&lt;E&gt; {
+<a href=#1260 id=1260 data-nosnippet>1260</a>    logs.get_or_init_mut(E::log_var(), Default::default)
+<a href=#1261 id=1261 data-nosnippet>1261</a>}
+<a href=#1262 id=1262 data-nosnippet>1262</a>
+<a href=#1263 id=1263 data-nosnippet>1263</a><span class="attr">#[doc(hidden)]
+<a href=#1264 id=1264 data-nosnippet>1264</a></span><span class="kw">pub fn </span>register_apply_log&lt;E&gt;()
+<a href=#1265 id=1265 data-nosnippet>1265</a><span class="kw">where
+<a href=#1266 id=1266 data-nosnippet>1266</a>    </span>E: Entity + EntityAccessor + LogAccessor,
+<a href=#1267 id=1267 data-nosnippet>1267</a>    E::Tbl: Accessor + ApplyLog&lt;Log&lt;E&gt;&gt;,
+<a href=#1268 id=1268 data-nosnippet>1268</a>{
+<a href=#1269 id=1269 data-nosnippet>1269</a>    register_apply_log_dyn(Box::new(EntityLogApplier::&lt;E&gt;(PhantomData)));
+<a href=#1270 id=1270 data-nosnippet>1270</a>}
+<a href=#1271 id=1271 data-nosnippet>1271</a>
+<a href=#1272 id=1272 data-nosnippet>1272</a><span class="kw">fn </span>register_apply_log_dyn(app: Box&lt;<span class="kw">dyn </span>LogApplier&gt;) {
+<a href=#1273 id=1273 data-nosnippet>1273</a>    LOG_APPLIERS.write().push(app);
+<a href=#1274 id=1274 data-nosnippet>1274</a>}
+<a href=#1275 id=1275 data-nosnippet>1275</a>
+<a href=#1276 id=1276 data-nosnippet>1276</a><span class="kw">static </span>LOG_APPLIERS: RwLock&lt;Vec&lt;Box&lt;<span class="kw">dyn </span>LogApplier&gt;&gt;&gt; = RwLock::new(Vec::new());
+<a href=#1277 id=1277 data-nosnippet>1277</a>
+<a href=#1278 id=1278 data-nosnippet>1278</a><span class="kw">async fn </span>validate_on_change&lt;E&gt;(
+<a href=#1279 id=1279 data-nosnippet>1279</a>    trx: <span class="kw-2">&amp;mut </span>CtxTransaction&lt;<span class="lifetime">'_</span>&gt;,
+<a href=#1280 id=1280 data-nosnippet>1280</a>    key: <span class="kw-2">&amp;</span>E::Key,
+<a href=#1281 id=1281 data-nosnippet>1281</a>    entity: <span class="kw-2">&amp;mut </span>E,
+<a href=#1282 id=1282 data-nosnippet>1282</a>    track: <span class="kw-2">&amp;</span>E::TrackCtx,
+<a href=#1283 id=1283 data-nosnippet>1283</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;
+<a href=#1284 id=1284 data-nosnippet>1284</a><span class="kw">where
+<a href=#1285 id=1285 data-nosnippet>1285</a>    </span>E: EntityAccessor + EntityValidate,
+<a href=#1286 id=1286 data-nosnippet>1286</a>{
+<a href=#1287 id=1287 data-nosnippet>1287</a>    <span class="kw">let </span><span class="kw-2">mut </span>error = <span class="prelude-val">None</span>;
+<a href=#1288 id=1288 data-nosnippet>1288</a>
+<a href=#1289 id=1289 data-nosnippet>1289</a>    <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = E::on_change().call(trx, key, entity, track).<span class="kw">await </span>{
+<a href=#1290 id=1290 data-nosnippet>1290</a>        error = <span class="prelude-val">Some</span>(e);
+<a href=#1291 id=1291 data-nosnippet>1291</a>    }
+<a href=#1292 id=1292 data-nosnippet>1292</a>
+<a href=#1293 id=1293 data-nosnippet>1293</a>    EntityValidate::entity_validate(<span class="kw-2">&amp;*</span>entity, <span class="kw-2">&amp;mut </span>error);
+<a href=#1294 id=1294 data-nosnippet>1294</a>
+<a href=#1295 id=1295 data-nosnippet>1295</a>    <span class="kw">match </span>error {
+<a href=#1296 id=1296 data-nosnippet>1296</a>        <span class="prelude-val">Some</span>(e) =&gt; <span class="prelude-val">Err</span>(e),
+<a href=#1297 id=1297 data-nosnippet>1297</a>        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(()),
+<a href=#1298 id=1298 data-nosnippet>1298</a>    }
+<a href=#1299 id=1299 data-nosnippet>1299</a>}</code></pre></div></section></main></body></html>
