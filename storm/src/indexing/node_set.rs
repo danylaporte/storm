@@ -6,7 +6,7 @@ use crate::{
     VecTable, __register_apply,
 };
 use fast_set::{node_set_index, NodeSetIndexLog, Tree, TreeIndexLog};
-use std::{future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
+use std::{any::type_name, future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
 use version_tag::VersionTag;
 
 impl<A: NodeSetAdapt> AsRefAsync<NodeSetIndex<A>> for Ctx
@@ -162,7 +162,7 @@ pub trait NodeSetAdapt: Touchable + Send + Sized + Sync + 'static {
             let tree = Self::TreeEntity::tree_get_or_init(ctx).await?;
             let tree_log = TreeIndexLog::default();
 
-            let _gate = ctx.provider.gate().await;
+            let _gate = ctx.provider.gate(type_name::<Self>()).await;
 
             Ok(slot.get_or_init(|| {
                 let mut kv = fast_set::NodeSetIndex::<Self::K, Self::V>::default();

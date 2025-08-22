@@ -4,7 +4,7 @@ use crate::{
     Touchable, TouchedEvent, TrxOf, __register_apply,
 };
 use fast_set::IntSet;
-use std::{future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
+use std::{any::type_name, future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
 use version_tag::VersionTag;
 
 impl<A: SingleSetAdapt> AsRefAsync<SingleSetIndex<A>> for Ctx
@@ -132,7 +132,7 @@ pub trait SingleSetAdapt: Send + Sized + Sync + Touchable + 'static {
             }
 
             let tbl = ctx.tbl_of::<Self::Entity>().await?;
-            let _gate = ctx.provider.gate().await;
+            let _gate = ctx.provider.gate(type_name::<Self>()).await;
 
             Ok(slot.get_or_init(|| {
                 let mut index = fast_set::IntSet::<Self::K>::default();

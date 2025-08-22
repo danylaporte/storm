@@ -4,7 +4,7 @@ use crate::{
     TouchedEvent, TrxOf, VecTable, __register_apply,
 };
 use fast_set::tree::{TreeIndexLog, TreeTrx};
-use std::{future::ready, marker::PhantomData, mem::take, ops::Deref};
+use std::{any::type_name, future::ready, marker::PhantomData, mem::take, ops::Deref};
 use version_tag::VersionTag;
 
 impl<E: TreeEntity> AsRefAsync<TreeIndex<E>> for Ctx
@@ -222,7 +222,7 @@ pub trait TreeEntity: EntityAccessor<Tbl = VecTable<Self>> + CtxTypeInfo + Send 
             }
 
             let tbl = Self::tbl_from(ctx).await?;
-            let _gate = ctx.provider.gate().await;
+            let _gate = ctx.provider.gate(type_name::<Self>()).await;
 
             Ok(slot.get_or_init(|| {
                 TreeIndex::from_iter(tbl.iter().map(|(k, e)| (k.clone(), e.parent())))

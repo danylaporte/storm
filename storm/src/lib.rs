@@ -39,6 +39,7 @@ mod transaction;
 mod trx_err_gate;
 pub mod trx_iter;
 mod trx_of;
+mod utils;
 mod vec_table;
 
 pub use accessor::*;
@@ -86,6 +87,7 @@ pub use transaction::Transaction;
 use trx_err_gate::TrxErrGate;
 pub use trx_iter::TrxIter;
 pub use trx_of::TrxOf;
+pub use utils::*;
 pub use vec_map::{self, VecMap};
 pub use vec_table::VecTable;
 pub use version_tag::{self, VersionTag};

@@ -7,7 +7,11 @@ use crate::{
 };
 use extobj::{extobj, ExtObj, Var};
 use parking_lot::RwLock;
-use std::{any::TypeId, borrow::Cow, sync::OnceLock};
+use std::{
+    any::{type_name, TypeId},
+    borrow::Cow,
+    sync::OnceLock,
+};
 use tracing::error;
 
 pub type Deps = RwLock<Vec<Box<dyn Fn(&mut CtxExtObj) + Send + Sync>>>;
@@ -73,7 +77,7 @@ pub trait EntityAccessor: Entity + Sized + 'static {
             }
 
             // lock the provider to load the table.
-            let _gate = ctx.provider.gate().await;
+            let _gate = ctx.provider.gate(type_name::<Self>()).await;
 
             // if the table is already loaded when we gain access to the provider.
             if let Some(v) = slot.get() {

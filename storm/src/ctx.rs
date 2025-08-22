@@ -594,9 +594,22 @@ impl<'a, 'b, E: EntityAccessor> Get<E> for TblTransaction<'a, 'b, E> {
 }
 
 impl ApplyLog<Logs> for async_cell_lock::QueueRwLockWriteGuard<'_, Ctx> {
-    #[inline]
     fn apply_log(&mut self, logs: Logs) -> bool {
-        perform_apply_log(&mut *self, logs)
+        #[cfg(feature = "telemetry")]
+        let instant = Instant::now();
+
+        let changed = perform_apply_log(&mut *self, logs);
+
+        #[cfg(feature = "telemetry")]
+        {
+            let elapsed = instant.elapsed().as_millis();
+
+            if elapsed > 250 {
+                tracing::warn!(elapsed_ms = elapsed, "apply_log took too long",);
+            }
+        }
+
+        changed
     }
 }
 

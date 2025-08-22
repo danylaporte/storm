@@ -5,7 +5,7 @@ use crate::{
 };
 use fast_set::{flat_set_index, FlatSetIndexLog};
 use fxhash::FxHashSet;
-use std::{future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
+use std::{any::type_name, future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
 use version_tag::VersionTag;
 
 impl<A: FlatSetAdapt> AsRefAsync<FlatSetIndex<A>> for Ctx
@@ -136,7 +136,7 @@ pub trait FlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
             }
 
             let tbl = ctx.tbl_of::<Self::Entity>().await?;
-            let _gate = ctx.provider.gate().await;
+            let _gate = ctx.provider.gate(type_name::<Self>()).await;
 
             Ok(slot.get_or_init(|| {
                 let mut base = fast_set::FlatSetIndex::<Self::K, Self::V>::default();

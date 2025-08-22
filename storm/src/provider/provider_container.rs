@@ -5,9 +5,10 @@ use std::{
     any::TypeId,
     marker::PhantomData,
     sync::atomic::{AtomicU64, Ordering::Relaxed},
+    time::Instant,
 };
 use tokio::sync::{Mutex, MutexGuard};
-use tracing::error;
+use tracing::{error, warn};
 
 /// Last recent use counter
 type Lru = AtomicU64;
@@ -70,8 +71,26 @@ impl ProviderContainer {
     }
 
     #[doc(hidden)]
-    pub async fn gate(&self) -> MutexGuard<'_, ()> {
-        self.lock.lock().await
+    /// Internal. Used by macro.
+    pub async fn gate<'a>(&'a self, name: &'a str) -> ProviderGuard<'a> {
+        let instant = Instant::now();
+        let guard = self.lock.lock().await;
+
+        let elapsed = instant.elapsed().as_millis();
+
+        if elapsed > 250 {
+            warn!(
+                elapsed_ms = elapsed,
+                name = name,
+                "Provider gate took too long to acquire"
+            );
+        }
+
+        ProviderGuard {
+            instant: Instant::now(),
+            _guard: guard,
+            name,
+        }
     }
 
     /// A method to garbage collect all unused provider. This is intended to close database
@@ -189,4 +208,25 @@ impl Rec {
 
 fn rec_key(rec: &Rec) -> (TypeId, &str) {
     (rec.type_id, &rec.name)
+}
+
+/// For Internal Use.
+#[doc(hidden)]
+pub struct ProviderGuard<'a> {
+    instant: Instant,
+    _guard: MutexGuard<'a, ()>,
+    name: &'a str,
+}
+
+impl Drop for ProviderGuard<'_> {
+    fn drop(&mut self) {
+        let elapsed = self.instant.elapsed().as_millis();
+        if elapsed > 250 {
+            warn!(
+                elapsed_ms = elapsed,
+                name = self.name,
+                "Provider gate held for too long"
+            );
+        }
+    }
 }
