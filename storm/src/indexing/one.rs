@@ -1,7 +1,7 @@
 use crate::{
     provider::LoadAll, ApplyOrder, AsRefAsync, BoxFuture, Ctx, CtxLocks, CtxTransaction,
     CtxTypeInfo, CtxVar, EntityAccessor, LogOf, Logs, NotifyTag, ProviderContainer, Result, Tag,
-    Touchable, TouchedEvent, TrxOf, VecTable, __register_apply,
+    Touchable, TouchedEvent, VecTable, __register_apply, indexing::AsyncAsIdxTrx,
 };
 use fast_set::one_index;
 use std::{any::type_name, future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
@@ -57,6 +57,25 @@ impl<A: OneAdapt + Touchable> Touchable for OneIndex<A> {
     #[inline]
     fn touched() -> &'static TouchedEvent {
         A::touched()
+    }
+}
+
+impl<A: OneAdapt> AsyncAsIdxTrx for OneIndex<A>
+where
+    ProviderContainer: LoadAll<A::Entity, (), VecTable<A::Entity>>,
+{
+    type Trx<'a> = OneIndexTrx<'a, A>;
+
+    fn async_as_idx_trx<'a>(trx: &'a mut CtxTransaction) -> BoxFuture<'a, Result<Self::Trx<'a>>> {
+        Box::pin(async move {
+            // force loading the index.
+            A::get_or_init(trx.ctx).await?;
+
+            let (base, log) =
+                A::base_and_log(trx.ctx, &mut trx.logs).expect("extract base and log");
+
+            Ok(OneIndexTrx(one_index::OneIndexTrx::new(&base.base, log)))
+        })
     }
 }
 
@@ -260,33 +279,9 @@ impl<A: OneAdapt> Tag for OneIndex<A> {
     }
 }
 
-impl<A: OneAdapt> TrxOf for OneIndex<A>
-where
-    ProviderContainer: LoadAll<A::Entity, (), VecTable<A::Entity>>,
-{
-    type Trx<'a>
-        = NodeSetIndexTrx<'a, A>
-    where
-        Self: 'a;
+pub struct OneIndexTrx<'a, A: OneAdapt>(one_index::OneIndexTrx<'a, A::K, A::V>);
 
-    fn trx<'a>(trx: &'a mut CtxTransaction) -> BoxFuture<'a, Result<Self::Trx<'a>>> {
-        Box::pin(async move {
-            // force loading the index.
-            A::get_or_init(trx.ctx).await?;
-
-            let (base, log) =
-                A::base_and_log(trx.ctx, &mut trx.logs).expect("extract base and log");
-
-            Ok(NodeSetIndexTrx(one_index::OneIndexTrx::new(
-                &base.base, log,
-            )))
-        })
-    }
-}
-
-pub struct NodeSetIndexTrx<'a, A: OneAdapt>(one_index::OneIndexTrx<'a, A::K, A::V>);
-
-impl<'a, A: OneAdapt> Deref for NodeSetIndexTrx<'a, A> {
+impl<'a, A: OneAdapt> Deref for OneIndexTrx<'a, A> {
     type Target = one_index::OneIndexTrx<'a, A::K, A::V>;
 
     #[inline]

@@ -65,7 +65,9 @@ pub trait EntityAccessor: Entity + Sized + 'static {
     }
 
     fn manual_sync(trx: &mut CtxTransaction, key: Self::Key, new: Option<Self>) {
-        trx.logs.get_mut_or_default(Self::tbl_var()).insert(key, new);
+        trx.logs
+            .get_mut_or_default(Self::tbl_var())
+            .insert(key, new);
     }
 
     fn tbl_from(ctx: &Ctx) -> BoxFuture<'_, Result<&Self::Tbl>>

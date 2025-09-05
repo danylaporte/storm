@@ -1,4 +1,5 @@
 use crate::{
+    indexing::AsyncAsIdxTrx,
     perform_apply_log,
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
     registry::{perform_registration, provide_date},
@@ -258,6 +259,14 @@ impl<'a> CtxTransaction<'a> {
     #[inline]
     pub fn provider(&self) -> &TransactionProvider<'a> {
         &self.provider
+    }
+
+    #[inline]
+    pub async fn index_trx<A>(&mut self) -> BoxFuture<'_, Result<A::Trx<'_>>>
+    where
+        A: AsyncAsIdxTrx,
+    {
+        A::async_as_idx_trx(self)
     }
 
     pub async fn get_entity<'b, E>(&'b mut self, k: &E::Key) -> Result<Option<&'b E>>

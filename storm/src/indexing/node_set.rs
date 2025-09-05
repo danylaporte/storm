@@ -1,9 +1,9 @@
 use crate::{
-    indexing::{TreeEntity, TreeIndex},
+    indexing::{AsyncAsIdxTrx, TreeEntity, TreeIndex},
     provider::LoadAll,
     ApplyOrder, AsRefAsync, BoxFuture, Ctx, CtxLocks, CtxTransaction, CtxTypeInfo, CtxVar,
     EntityAccessor, LogOf, Logs, NotifyTag, ProviderContainer, Result, Tag, Touchable,
-    TouchedEvent, TrxOf, VecTable, __register_apply,
+    TouchedEvent, VecTable, __register_apply,
 };
 use fast_set::{node_set_index, NodeSetIndexLog, Tree, TreeIndexLog};
 use std::{any::type_name, future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
@@ -61,6 +61,28 @@ impl<A: NodeSetAdapt + Touchable> Touchable for NodeSetIndex<A> {
     #[inline]
     fn touched() -> &'static TouchedEvent {
         A::touched()
+    }
+}
+
+impl<A: NodeSetAdapt> AsyncAsIdxTrx for NodeSetIndex<A>
+where
+    ProviderContainer: LoadAll<A::FlatEntity, (), VecTable<A::FlatEntity>>,
+    ProviderContainer: LoadAll<A::TreeEntity, (), VecTable<A::TreeEntity>>,
+{
+    type Trx<'a> = NodeSetIndexTrx<'a, A>;
+
+    fn async_as_idx_trx<'a>(trx: &'a mut CtxTransaction) -> BoxFuture<'a, Result<Self::Trx<'a>>> {
+        Box::pin(async move {
+            // force loading the index.
+            A::get_or_init(trx.ctx).await?;
+
+            let (base, log, _, _) =
+                A::base_and_log(trx.ctx, &mut trx.logs).expect("extract base and log");
+
+            Ok(NodeSetIndexTrx(node_set_index::NodeSetIndexTrx::new(
+                &base.kv, log,
+            )))
+        })
     }
 }
 
@@ -330,31 +352,6 @@ impl<A: NodeSetAdapt> Tag for NodeSetIndex<A> {
     #[inline]
     fn tag(&self) -> VersionTag {
         self.tag
-    }
-}
-
-impl<A: NodeSetAdapt> TrxOf for NodeSetIndex<A>
-where
-    ProviderContainer: LoadAll<A::FlatEntity, (), VecTable<A::FlatEntity>>,
-    ProviderContainer: LoadAll<A::TreeEntity, (), VecTable<A::TreeEntity>>,
-{
-    type Trx<'a>
-        = NodeSetIndexTrx<'a, A>
-    where
-        Self: 'a;
-
-    fn trx<'a>(trx: &'a mut CtxTransaction) -> BoxFuture<'a, Result<Self::Trx<'a>>> {
-        Box::pin(async move {
-            // force loading the index.
-            A::get_or_init(trx.ctx).await?;
-
-            let (base, log, _, _) =
-                A::base_and_log(trx.ctx, &mut trx.logs).expect("extract base and log");
-
-            Ok(NodeSetIndexTrx(node_set_index::NodeSetIndexTrx::new(
-                &base.kv, log,
-            )))
-        })
     }
 }
 

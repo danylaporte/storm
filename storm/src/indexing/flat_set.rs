@@ -1,7 +1,7 @@
 use crate::{
     provider::LoadAll, AsRefAsync, BoxFuture, Ctx, CtxLocks, CtxTransaction, CtxTypeInfo, CtxVar,
     Entity, EntityAccessor, Get, LogOf, Logs, NotifyTag, ProviderContainer, RefIntoIterator,
-    Result, Tag, Touchable, TouchedEvent, TrxOf, __register_apply,
+    Result, Tag, Touchable, TouchedEvent, __register_apply, indexing::AsyncAsIdxTrx,
 };
 use fast_set::flat_set_index;
 use fxhash::FxHashSet;
@@ -59,6 +59,30 @@ impl<A: FlatSetAdapt> Deref for FlatSetIndex<A> {
     #[inline]
     fn deref(&self) -> &Self::Target {
         &self.index
+    }
+}
+
+impl<A> AsyncAsIdxTrx for FlatSetIndex<A>
+where
+    A: FlatSetAdapt,
+    Ctx: AsRefAsync<<A::Entity as EntityAccessor>::Tbl>,
+    ProviderContainer: LoadAll<A::Entity, (), <A::Entity as EntityAccessor>::Tbl>,
+{
+    type Trx<'a> = FlatSetIndexTrx<'a, A>;
+
+    fn async_as_idx_trx<'a>(trx: &'a mut CtxTransaction) -> BoxFuture<'a, Result<Self::Trx<'a>>> {
+        Box::pin(async move {
+            // force loading the index.
+            A::get_or_init(trx.ctx).await?;
+
+            // extract the index log and init if required.
+            let (base, log) =
+                A::base_and_log(trx.ctx, &mut trx.logs).expect("extract base and log");
+
+            Ok(FlatSetIndexTrx(flat_set_index::FlatSetIndexTrx::new(
+                base, log,
+            )))
+        })
     }
 }
 
@@ -330,32 +354,6 @@ impl<A: FlatSetAdapt> Touchable for FlatSetIndex<A> {
     #[inline]
     fn touched() -> &'static TouchedEvent {
         A::touched()
-    }
-}
-
-impl<A: FlatSetAdapt> TrxOf for FlatSetIndex<A>
-where
-    Ctx: AsRefAsync<<A::Entity as EntityAccessor>::Tbl>,
-    ProviderContainer: LoadAll<A::Entity, (), <A::Entity as EntityAccessor>::Tbl>,
-{
-    type Trx<'a>
-        = FlatSetIndexTrx<'a, A>
-    where
-        Self: 'a;
-
-    fn trx<'a>(trx: &'a mut CtxTransaction) -> BoxFuture<'a, Result<Self::Trx<'a>>> {
-        Box::pin(async move {
-            // force loading the index.
-            A::get_or_init(trx.ctx).await?;
-
-            // extract the index log and init if required.
-            let (base, log) =
-                A::base_and_log(trx.ctx, &mut trx.logs).expect("extract base and log");
-
-            Ok(FlatSetIndexTrx(flat_set_index::FlatSetIndexTrx::new(
-                base, log,
-            )))
-        })
     }
 }
 

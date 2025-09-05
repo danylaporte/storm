@@ -1,7 +1,7 @@
 use crate::{
     provider::LoadAll, ApplyOrder, AsRefAsync, BoxFuture, Ctx, CtxLocks, CtxTransaction,
     CtxTypeInfo, CtxVar, EntityAccessor, LogOf, Logs, NotifyTag, ProviderContainer, Result, Tag,
-    Touchable, TouchedEvent, TrxOf, VecTable, __register_apply,
+    Touchable, TouchedEvent, VecTable, __register_apply, indexing::AsyncAsIdxTrx,
 };
 use fast_set::tree::{TreeIndexLog, TreeTrx};
 use std::{any::type_name, future::ready, marker::PhantomData, mem::take, ops::Deref};
@@ -73,31 +73,6 @@ impl<E: TreeEntity> Touchable for TreeIndex<E> {
     }
 }
 
-impl<E: TreeEntity> TrxOf for TreeIndex<E>
-where
-    E::Key: Into<u32>,
-    ProviderContainer: LoadAll<E, (), VecTable<E>>,
-{
-    type Trx<'a>
-        = TreeTrx<'a, E::Key>
-    where
-        Self: 'a;
-
-    fn trx<'a>(trx: &'a mut CtxTransaction) -> BoxFuture<'a, Result<Self::Trx<'a>>> {
-        Box::pin(async move {
-            // force loading the index.
-            E::tree_get_or_init(trx.ctx).await?;
-
-            let (base, log) =
-                E::base_and_log(trx.ctx, &mut trx.logs).expect("extract base and log");
-
-            let trx = TreeTrx::new(base, log);
-
-            Ok(trx)
-        })
-    }
-}
-
 impl<E: TreeEntity> NotifyTag for TreeIndex<E> {
     #[inline]
     fn notify_tag(&mut self) {
@@ -109,6 +84,29 @@ impl<E: TreeEntity> Tag for TreeIndex<E> {
     #[inline]
     fn tag(&self) -> VersionTag {
         self.2
+    }
+}
+
+impl<E: TreeEntity> AsyncAsIdxTrx for TreeIndex<E>
+where
+    Ctx: AsRefAsync<E::Tbl>,
+    ProviderContainer: LoadAll<E, (), E::Tbl>,
+    E::Key: Into<u32>,
+{
+    type Trx<'a> = TreeTrx<'a, E::Key>;
+
+    fn async_as_idx_trx<'a>(trx: &'a mut CtxTransaction) -> BoxFuture<'a, Result<Self::Trx<'a>>> {
+        Box::pin(async move {
+            // force loading the index.
+            E::tree_get_or_init(trx.ctx).await?;
+
+            let (base, log) =
+                E::base_and_log(trx.ctx, &mut trx.logs).expect("extract base and log");
+
+            let trx = TreeTrx::new(base, log);
+
+            Ok(trx)
+        })
     }
 }
 
