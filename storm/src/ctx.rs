@@ -262,7 +262,7 @@ impl<'a> CtxTransaction<'a> {
     }
 
     #[inline]
-    pub async fn index_trx<A>(&mut self) -> BoxFuture<'_, Result<A::Trx<'_>>>
+    pub fn index<A>(&mut self) -> BoxFuture<'_, Result<A::Trx<'_>>>
     where
         A: AsyncAsIdxTrx,
     {
