@@ -26,6 +26,7 @@ impl<'a> TransactionProvider<'a> {
         })
     }
 
+    #[inline]
     pub fn container(&self) -> &'a ProviderContainer {
         self.0
     }
@@ -34,6 +35,7 @@ impl<'a> TransactionProvider<'a> {
 impl Deref for TransactionProvider<'_> {
     type Target = ProviderContainer;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         self.0
     }

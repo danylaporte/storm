@@ -3,46 +3,46 @@ use crate::{
     Entity, EntityAccessor, Get, LogOf, Logs, NotifyTag, ProviderContainer, RefIntoIterator,
     Result, Tag, Touchable, TouchedEvent, TrxOf, __register_apply,
 };
-use fast_set::flat_set_index;
+use fast_set::hash_flat_set_index;
 use fxhash::FxHashSet;
 use std::{any::type_name, future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
 use version_tag::VersionTag;
 
-impl<A: FlatSetAdapt> AsRefAsync<FlatSetIndex<A>> for Ctx
+impl<A: HashFlatSetAdapt> AsRefAsync<HashFlatSetIndex<A>> for Ctx
 where
     Ctx: AsRefAsync<<A::Entity as EntityAccessor>::Tbl>,
     ProviderContainer: LoadAll<A::Entity, (), <A::Entity as EntityAccessor>::Tbl>,
 {
     #[inline]
-    fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ FlatSetIndex<A>>> {
+    fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ HashFlatSetIndex<A>>> {
         A::get_or_init(self)
     }
 }
 
-impl<A: FlatSetAdapt, L> AsRef<FlatSetIndex<A>> for CtxLocks<'_, L>
+impl<A: HashFlatSetAdapt, L> AsRef<HashFlatSetIndex<A>> for CtxLocks<'_, L>
 where
     L: AsRef<<A::Entity as EntityAccessor>::Tbl>,
 {
     #[inline]
-    fn as_ref(&self) -> &FlatSetIndex<A> {
+    fn as_ref(&self) -> &HashFlatSetIndex<A> {
         A::get_or_init_sync(self.ctx, self.locks.as_ref())
     }
 }
 
-pub struct FlatSetIndex<A: FlatSetAdapt> {
-    index: flat_set_index::FlatSetIndex<A::K, A::V>,
+pub struct HashFlatSetIndex<A: HashFlatSetAdapt> {
+    index: hash_flat_set_index::HashFlatSetIndex<A::K, A::V>,
     tag: VersionTag,
     _a: PhantomData<A>,
 }
 
-impl<A: FlatSetAdapt> FlatSetIndex<A> {
+impl<A: HashFlatSetAdapt> HashFlatSetIndex<A> {
     #[inline]
-    fn apply(&mut self, log: flat_set_index::FlatSetIndexLog<A::K, A::V>) -> bool {
+    fn apply(&mut self, log: hash_flat_set_index::HashFlatSetIndexLog<A::K, A::V>) -> bool {
         self.index.apply(log)
     }
 }
 
-impl<A: FlatSetAdapt> Default for FlatSetIndex<A> {
+impl<A: HashFlatSetAdapt> Default for HashFlatSetIndex<A> {
     #[inline]
     fn default() -> Self {
         Self {
@@ -53,8 +53,8 @@ impl<A: FlatSetAdapt> Default for FlatSetIndex<A> {
     }
 }
 
-impl<A: FlatSetAdapt> Deref for FlatSetIndex<A> {
-    type Target = flat_set_index::FlatSetIndex<A::K, A::V>;
+impl<A: HashFlatSetAdapt> Deref for HashFlatSetIndex<A> {
+    type Target = hash_flat_set_index::HashFlatSetIndex<A::K, A::V>;
 
     #[inline]
     fn deref(&self) -> &Self::Target {
@@ -62,21 +62,27 @@ impl<A: FlatSetAdapt> Deref for FlatSetIndex<A> {
     }
 }
 
-type HashSet<A> = FxHashSet<(Option<<A as FlatSetAdapt>::K>, <A as FlatSetAdapt>::V)>;
-
-pub type BaseAndLog<'a, 'b, A> = Option<(
-    &'a FlatSetIndex<A>,
-    &'b mut flat_set_index::FlatSetIndexLog<<A as FlatSetAdapt>::K, <A as FlatSetAdapt>::V>,
+type HashSet<A> = FxHashSet<(
+    Option<<A as HashFlatSetAdapt>::K>,
+    <A as HashFlatSetAdapt>::V,
 )>;
 
-pub trait FlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
+pub type BaseAndLog<'a, 'b, A> = Option<(
+    &'a HashFlatSetIndex<A>,
+    &'b mut hash_flat_set_index::HashFlatSetIndexLog<
+        <A as HashFlatSetAdapt>::K,
+        <A as HashFlatSetAdapt>::V,
+    >,
+)>;
+
+pub trait HashFlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
     type Entity: EntityAccessor + CtxTypeInfo + Send;
-    type K: Copy + Eq + From<u32> + Hash + Into<u32> + Send + Sync;
-    type V: Copy + Eq + From<u32> + Hash + Into<u32> + Send + Sync;
+    type K: Clone + Eq + Hash + Send + Sync;
+    type V: Clone + Eq + From<u32> + Hash + Into<u32> + Send + Sync;
 
     fn adapt(id: &<Self::Entity as Entity>::Key, entity: &Self::Entity, out: &mut HashSet<Self>);
 
-    fn index_var() -> CtxVar<FlatSetIndex<Self>>;
+    fn index_var() -> CtxVar<HashFlatSetIndex<Self>>;
 
     fn apply_log(ctx: &mut Ctx, logs: &mut Logs) -> bool {
         let Some((_, log)) = Self::base_and_log(ctx, logs) else {
@@ -105,7 +111,7 @@ pub trait FlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
             let tbl_log = logs.get(tbl_var)?;
             let tbl = ctx.ctx_ext_obj.get(tbl_var).get()?;
 
-            let mut log = flat_set_index::FlatSetIndexLog::default();
+            let mut log = hash_flat_set_index::HashFlatSetIndexLog::default();
 
             let mut old_set = FxHashSet::default();
             let mut new_set = FxHashSet::default();
@@ -133,7 +139,7 @@ pub trait FlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
         logs.get_mut(index_var).map(|log| (base, log))
     }
 
-    fn get_or_init(ctx: &Ctx) -> BoxFuture<'_, Result<&FlatSetIndex<Self>>>
+    fn get_or_init(ctx: &Ctx) -> BoxFuture<'_, Result<&HashFlatSetIndex<Self>>>
     where
         Ctx: AsRefAsync<<Self::Entity as EntityAccessor>::Tbl>,
         ProviderContainer: LoadAll<Self::Entity, (), <Self::Entity as EntityAccessor>::Tbl>,
@@ -160,12 +166,12 @@ pub trait FlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
     fn get_or_init_sync<'a>(
         ctx: &'a Ctx,
         tbl: &'a <Self::Entity as EntityAccessor>::Tbl,
-    ) -> &'a FlatSetIndex<Self> {
+    ) -> &'a HashFlatSetIndex<Self> {
         let slot = ctx.ctx_ext_obj.get(Self::index_var());
 
         slot.get_or_init(|| {
-            let mut base = fast_set::FlatSetIndex::<Self::K, Self::V>::default();
-            let mut log = fast_set::FlatSetIndexLog::<Self::K, Self::V>::default();
+            let mut base = hash_flat_set_index::HashFlatSetIndex::<Self::K, Self::V>::default();
+            let mut log = hash_flat_set_index::HashFlatSetIndexLog::<Self::K, Self::V>::default();
             let mut set = FxHashSet::default();
 
             for (id, entity) in tbl.ref_iter() {
@@ -187,7 +193,7 @@ pub trait FlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
 
             base.apply(log);
 
-            FlatSetIndex {
+            HashFlatSetIndex {
                 _a: PhantomData,
                 index: base,
                 tag: VersionTag::new(),
@@ -266,8 +272,8 @@ pub trait FlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
     }
 
     fn upsert_or_remove(
-        base: &FlatSetIndex<Self>,
-        log: &mut flat_set_index::FlatSetIndexLog<Self::K, Self::V>,
+        base: &HashFlatSetIndex<Self>,
+        log: &mut hash_flat_set_index::HashFlatSetIndexLog<Self::K, Self::V>,
         key: &<Self::Entity as Entity>::Key,
         new: Option<&Self::Entity>,
         old: Option<&Self::Entity>,
@@ -308,32 +314,32 @@ pub trait FlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
     }
 }
 
-impl<A: FlatSetAdapt> LogOf for FlatSetIndex<A> {
-    type Log = flat_set_index::FlatSetIndexLog<A::K, A::V>;
+impl<A: HashFlatSetAdapt> LogOf for HashFlatSetIndex<A> {
+    type Log = hash_flat_set_index::HashFlatSetIndexLog<A::K, A::V>;
 }
 
-impl<A: FlatSetAdapt> NotifyTag for FlatSetIndex<A> {
+impl<A: HashFlatSetAdapt> NotifyTag for HashFlatSetIndex<A> {
     #[inline]
     fn notify_tag(&mut self) {
         self.tag.notify()
     }
 }
 
-impl<A: FlatSetAdapt> Tag for FlatSetIndex<A> {
+impl<A: HashFlatSetAdapt> Tag for HashFlatSetIndex<A> {
     #[inline]
     fn tag(&self) -> VersionTag {
         self.tag
     }
 }
 
-impl<A: FlatSetAdapt> Touchable for FlatSetIndex<A> {
+impl<A: HashFlatSetAdapt> Touchable for HashFlatSetIndex<A> {
     #[inline]
     fn touched() -> &'static TouchedEvent {
         A::touched()
     }
 }
 
-impl<A: FlatSetAdapt> TrxOf for FlatSetIndex<A>
+impl<A: HashFlatSetAdapt> TrxOf for HashFlatSetIndex<A>
 where
     Ctx: AsRefAsync<<A::Entity as EntityAccessor>::Tbl>,
     ProviderContainer: LoadAll<A::Entity, (), <A::Entity as EntityAccessor>::Tbl>,
@@ -352,17 +358,19 @@ where
             let (base, log) =
                 A::base_and_log(trx.ctx, &mut trx.logs).expect("extract base and log");
 
-            Ok(FlatSetIndexTrx(flat_set_index::FlatSetIndexTrx::new(
-                base, log,
-            )))
+            Ok(FlatSetIndexTrx(
+                hash_flat_set_index::HashFlatSetIndexTrx::new(base, log),
+            ))
         })
     }
 }
 
-pub struct FlatSetIndexTrx<'a, A: FlatSetAdapt>(flat_set_index::FlatSetIndexTrx<'a, A::K, A::V>);
+pub struct FlatSetIndexTrx<'a, A: HashFlatSetAdapt>(
+    hash_flat_set_index::HashFlatSetIndexTrx<'a, A::K, A::V>,
+);
 
-impl<'a, A: FlatSetAdapt> Deref for FlatSetIndexTrx<'a, A> {
-    type Target = flat_set_index::FlatSetIndexTrx<'a, A::K, A::V>;
+impl<'a, A: HashFlatSetAdapt> Deref for FlatSetIndexTrx<'a, A> {
+    type Target = hash_flat_set_index::HashFlatSetIndexTrx<'a, A::K, A::V>;
 
     #[inline]
     fn deref(&self) -> &Self::Target {
@@ -371,14 +379,14 @@ impl<'a, A: FlatSetAdapt> Deref for FlatSetIndexTrx<'a, A> {
 }
 
 #[macro_export]
-macro_rules! flat_set_adapt {
+macro_rules! hash_flat_set_adapt {
     ($adapt:ident, $alias:ident, $init:ident,
         $vis:vis fn $n:ident($id:ident: &$entity_key:ty, $entity:ident: &$entity_ty:ty $(,)?) -> Option<(Option<$k:ty>, $v:ty $(,)?)> {
         $($t:tt)*
     }) => {
         $vis struct $adapt;
 
-        impl storm::indexing::FlatSetAdapt for $adapt {
+        impl storm::indexing::HashFlatSetAdapt for $adapt {
             type Entity = $entity_ty;
             type K = $k;
             type V = $v;
@@ -394,10 +402,10 @@ macro_rules! flat_set_adapt {
                 }
             }
 
-            fn index_var() -> storm::CtxVar<storm::indexing::FlatSetIndex<Self>> {
+            fn index_var() -> storm::CtxVar<storm::indexing::HashFlatSetIndex<Self>> {
                 storm::extobj::extobj!(
                     impl storm::CtxExt {
-                        V: std::sync::OnceLock<storm::indexing::FlatSetIndex<$adapt>>,
+                        V: std::sync::OnceLock<storm::indexing::HashFlatSetIndex<$adapt>>,
                     },
                     crate_path = storm::extobj
                 );
@@ -413,11 +421,11 @@ macro_rules! flat_set_adapt {
             }
         }
 
-        $vis type $alias = storm::indexing::FlatSetIndex<$adapt>;
+        $vis type $alias = storm::indexing::HashFlatSetIndex<$adapt>;
 
         #[storm::register]
         fn $init() {
-            <$adapt as storm::indexing::FlatSetAdapt>::register();
+            <$adapt as storm::indexing::HashFlatSetAdapt>::register();
         }
     };
 
@@ -427,7 +435,7 @@ macro_rules! flat_set_adapt {
     }) => {
         $vis struct $adapt;
 
-        impl storm::indexing::FlatSetAdapt for $adapt {
+        impl storm::indexing::HashFlatSetAdapt for $adapt {
             type Entity = $entity_ty;
             type K = $k;
             type V = $v;
@@ -437,10 +445,10 @@ macro_rules! flat_set_adapt {
                 $($t)*
             }
 
-            fn index_var() -> storm::CtxVar<storm::indexing::FlatSetIndex<Self>> {
+            fn index_var() -> storm::CtxVar<storm::indexing::HashFlatSetIndex<Self>> {
                 storm::extobj::extobj!(
                     impl storm::CtxExt {
-                        V: std::sync::OnceLock<storm::indexing::FlatSetIndex<$adapt>>,
+                        V: std::sync::OnceLock<storm::indexing::HashFlatSetIndex<$adapt>>,
                     },
                     crate_path = storm::extobj
                 );
@@ -456,11 +464,11 @@ macro_rules! flat_set_adapt {
             }
         }
 
-        $vis type $alias = storm::indexing::FlatSetIndex<$adapt>;
+        $vis type $alias = storm::indexing::HashFlatSetIndex<$adapt>;
 
         #[storm::register]
         fn $init() {
-            <$adapt as storm::indexing::FlatSetAdapt>::register();
+            <$adapt as storm::indexing::HashFlatSetAdapt>::register();
         }
     };
 }

@@ -1,14 +1,15 @@
 use crate::{
-    on_commit::call_on_commit,
     perform_apply_log,
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
     registry::{perform_registration, provide_date},
-    ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxExtObj, Entity, EntityAccessor, EntityRemove,
-    EntityUpsert, EntityUpsertMut, Get, HashTable, Logs, ProviderContainer, RefIntoIterator,
-    Result, Tag, Transaction, TrxErrGate, VecTable,
+    trx_iter::TblChangedIter,
+    ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CommitEvent, CtxExtObj, Entity, EntityAccessor,
+    EntityRemove, EntityUpsert, EntityUpsertMut, EventDepth, Get, HashTable, Logs,
+    ProviderContainer, RefIntoIterator, Result, Tag, Transaction, TrxErrGate, VecTable,
 };
 use chrono::NaiveDateTime;
-use std::{borrow::Cow, hash::Hash};
+use fxhash::FxHashMap;
+use std::{borrow::Cow, collections::hash_map, hash::Hash};
 use uuid::Uuid;
 use version_tag::VersionTag;
 
@@ -214,6 +215,7 @@ pub struct CtxTransaction<'a> {
     pub(crate) err_gate: TrxErrGate,
     pub(crate) logs: Logs,
     pub(crate) user_id: Uuid,
+    depth: EventDepth,
     provider: TransactionProvider<'a>,
     pub ctx: &'a Ctx,
 }
@@ -222,15 +224,35 @@ impl<'a> CtxTransaction<'a> {
     pub fn commit(mut self) -> BoxFuture<'a, Result<Logs>> {
         Box::pin(async move {
             self.err_gate.check()?;
-            call_on_commit(&mut self).await?;
+            Self::commiting().call(&mut self).await?;
             self.provider.commit().await?;
             Ok(self.logs)
         })
     }
 
     #[inline]
+    pub fn commiting() -> &'static CommitEvent {
+        static EVENT: CommitEvent = CommitEvent::new();
+        &EVENT
+    }
+
+    #[inline]
     pub fn date(&self) -> NaiveDateTime {
         self.date
+    }
+
+    #[inline]
+    pub fn depth(&self) -> usize {
+        self.depth.val()
+    }
+
+    #[inline]
+    pub fn set_date(&mut self, date: NaiveDateTime) {
+        self.date = date;
+    }
+
+    pub(crate) fn track_depth(&self) -> EventDepth {
+        self.depth.clone()
     }
 
     #[inline]
@@ -270,7 +292,7 @@ impl<'a> CtxTransaction<'a> {
     }
 
     #[inline]
-    pub fn insert_all_mut<'b, E, I>(&'b mut self, entities: I) -> BoxFuture<'b, Result<usize>>
+    pub fn insert_mut_all<'b, E, I>(&'b mut self, entities: I) -> BoxFuture<'b, Result<usize>>
     where
         E: EntityUpsertMut,
         I: IntoIterator<Item = (E::Key, E)>,
@@ -278,15 +300,15 @@ impl<'a> CtxTransaction<'a> {
         for<'c> TransactionProvider<'c>: UpsertMut<E>,
     {
         let vec = entities.into_iter().collect();
-        E::upsert_all_mut(self, vec)
+        E::upsert_mut_all(self, vec)
     }
 
     #[inline]
     pub fn insert_mut<'b, E>(
         &'b mut self,
-        key: &'b mut E::Key,
+        key: E::Key,
         entity: E,
-    ) -> BoxFuture<'b, Result<bool>>
+    ) -> BoxFuture<'b, Result<(E::Key, bool)>>
     where
         E: EntityUpsertMut,
         ProviderContainer: LoadAll<E, (), E::Tbl>,
@@ -348,13 +370,20 @@ impl<'a> CtxTransaction<'a> {
     #[inline]
     pub fn tbl_of<'b, E>(&'b mut self) -> BoxFuture<'b, Result<TblTransaction<'a, 'b, E>>>
     where
-        E: Entity + EntityAccessor,
+        E: EntityAccessor,
         Ctx: AsRefAsync<E::Tbl>,
     {
         Box::pin(async move {
             let tbl = self.ctx.tbl_of::<E>().await?;
             Ok(TblTransaction { tbl, ctx: self })
         })
+    }
+
+    pub fn tbl_changes<E: EntityAccessor>(&self) -> TblChangedIter<'_, E> {
+        TblChangedIter {
+            log_iter: self.logs.get(E::tbl_var()).map(|h| h.iter()),
+            tbl: self.ctx.ctx_ext_obj.get(E::tbl_var()).get(),
+        }
     }
 
     /// Indicate if the table specified ty the entity E has been touched, inserted or removed.
@@ -419,6 +448,59 @@ impl<'a> CtxTransaction<'a> {
         Ok(())
     }
 
+    pub async fn update_mut_with<E, F>(&mut self, mut updater: F) -> Result<()>
+    where
+        E: EntityUpsertMut + ToOwned<Owned = E>,
+        F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>) -> Result<()>,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'c> TransactionProvider<'c>: UpsertMut<E>,
+    {
+        let vec = self
+            .logs
+            .get(E::tbl_var())
+            .map(|l| l.iter())
+            .into_iter()
+            .flatten()
+            .filter_map(|(id, state)| {
+                if let Some(e) = state {
+                    let mut e = Cow::Borrowed(e);
+
+                    if let Err(err) = updater(id, &mut e) {
+                        return Some(Err(err));
+                    }
+
+                    if let Cow::Owned(e) = e {
+                        return Some(Ok((id.clone(), e)));
+                    }
+                }
+
+                None
+            })
+            .collect::<Result<Vec<(E::Key, E)>>>()?;
+
+        E::upsert_mut_all(self, vec).await?;
+
+        let tbl = E::tbl_from(self.ctx).await?;
+
+        for (id, e) in tbl.ref_iter() {
+            if self
+                .logs
+                .get(E::tbl_var())
+                .is_none_or(|l| !l.contains_key(id))
+            {
+                let mut e = Cow::Borrowed(e);
+
+                updater(id, &mut e)?;
+
+                if let Cow::Owned(e) = e {
+                    E::upsert_mut(self, id.clone(), e).await?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     #[inline]
     pub fn user_id<U: From<Uuid>>(&self) -> U {
         self.user_id.into()
@@ -435,19 +517,24 @@ where
     }
 }
 
-pub struct TblTransaction<'a, 'b, E: Entity + EntityAccessor> {
+pub struct TblTransaction<'a, 'b, E: EntityAccessor> {
     pub(crate) ctx: &'b mut CtxTransaction<'a>,
     tbl: &'a E::Tbl,
 }
 
 impl<'a, 'b, E> TblTransaction<'a, 'b, E>
 where
-    E: Entity + EntityAccessor,
+    E: EntityAccessor,
     E::Key: Eq + Hash,
 {
     #[inline]
     pub fn contains(&self, k: &E::Key) -> bool {
         self.get(k).is_some()
+    }
+
+    #[inline]
+    pub fn date(&self) -> NaiveDateTime {
+        self.ctx.date
     }
 
     /// gets a reference from the log or the underlying ctx.
@@ -487,29 +574,29 @@ where
     where
         E: EntityUpsert,
         I: IntoIterator<Item = (E::Key, E)>,
-        ProviderContainer: LoadAll<E, (), E::Tbl> + Upsert<E>,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
         for<'c> TransactionProvider<'c>: Upsert<E>,
     {
         self.ctx.insert_all::<E, _>(entities)
     }
 
     #[inline]
-    pub fn insert_all_mut<I>(&mut self, entities: I) -> BoxFuture<'_, Result<usize>>
+    pub fn insert_mut_all<I>(&mut self, entities: I) -> BoxFuture<'_, Result<usize>>
     where
         E: EntityUpsertMut,
         I: IntoIterator<Item = (E::Key, E)>,
-        ProviderContainer: LoadAll<E, (), E::Tbl> + Upsert<E>,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
         for<'c> TransactionProvider<'c>: UpsertMut<E>,
     {
-        self.ctx.insert_all_mut::<E, _>(entities)
+        self.ctx.insert_mut_all::<E, _>(entities)
     }
 
     #[inline]
     pub fn insert_mut<'c>(
         &'c mut self,
-        key: &'c mut E::Key,
+        key: E::Key,
         entity: E,
-    ) -> BoxFuture<'c, Result<bool>>
+    ) -> BoxFuture<'c, Result<(E::Key, bool)>>
     where
         E: EntityUpsertMut,
         ProviderContainer: LoadAll<E, (), E::Tbl>,
@@ -518,9 +605,21 @@ where
         E::upsert_mut(self.ctx, key, entity)
     }
 
+    pub fn keys(&self) -> impl Iterator<Item = &E::Key> {
+        let tbl = self.ctx.ctx.ctx_ext_obj.get(E::tbl_var()).get();
+        let log = self.ctx.logs.get(E::tbl_var());
+
+        tbl.zip(log).into_iter().flat_map(|(tbl, log)| {
+            tbl.ref_iter()
+                .map(|(k, _)| k)
+                .filter(|k| !log.contains_key(k))
+                .chain(log.keys())
+        })
+    }
+
     pub fn into_ref(self, k: &E::Key) -> Option<&'b E>
     where
-        E: Entity + EntityAccessor,
+        E: EntityAccessor,
         E::Key: Eq + Hash,
     {
         match self.ctx.logs.get(E::tbl_var()).and_then(|l| l.get(k)) {
@@ -566,6 +665,11 @@ where
     }
 
     #[inline]
+    pub fn trx(&self) -> &CtxTransaction {
+        self.ctx
+    }
+
+    #[inline]
     pub fn tbl(&self) -> &'a E::Tbl {
         self.tbl
     }
@@ -581,6 +685,23 @@ where
     {
         self.ctx.update_with::<E, F>(updater).await
     }
+
+    #[inline]
+    pub async fn update_mut_with<F>(&mut self, updater: F) -> Result<()>
+    where
+        E: EntityUpsertMut + ToOwned<Owned = E>,
+        F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>) -> Result<()>,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
+        for<'c> TransactionProvider<'c>: UpsertMut<E>,
+    {
+        self.ctx.update_mut_with::<E, F>(updater).await
+    }
+
+    #[inline]
+    pub fn user_id<U: From<Uuid>>(&self) -> U {
+        self.ctx.user_id()
+    }
 }
 
 impl<'a, 'b, E: EntityAccessor> Get<E> for TblTransaction<'a, 'b, E> {
@@ -593,10 +714,61 @@ impl<'a, 'b, E: EntityAccessor> Get<E> for TblTransaction<'a, 'b, E> {
     }
 }
 
+pub struct TblTransactionIter<'a, E: EntityAccessor> {
+    tbl_iter: <E::Tbl as RefIntoIterator>::Iter<'a>,
+    log: Option<&'a FxHashMap<E::Key, Option<E>>>,
+    log_iter: Option<hash_map::Iter<'a, E::Key, Option<E>>>,
+}
+
+impl<'a, E> Iterator for TblTransactionIter<'a, E>
+where
+    E: EntityAccessor,
+{
+    type Item = (&'a E::Key, &'a E);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        for (id, e) in self.tbl_iter.by_ref() {
+            if self.log.is_none_or(|log| !log.contains_key(id)) {
+                return Some((id, e));
+            }
+        }
+
+        if let Some(log_iter) = self.log_iter.as_mut() {
+            for (id, e) in log_iter.by_ref() {
+                if let Some(v) = e.as_ref() {
+                    return Some((id, v));
+                }
+            }
+        }
+
+        None
+    }
+}
+
+impl<'a, 'b, E: EntityAccessor> RefIntoIterator for TblTransaction<'a, 'b, E> {
+    type Item<'c>
+        = (&'c E::Key, &'c E)
+    where
+        Self: 'c;
+    type Iter<'c>
+        = TblTransactionIter<'c, E>
+    where
+        Self: 'c;
+
+    fn ref_iter(&self) -> Self::Iter<'_> {
+        let log = self.ctx.logs.get(E::tbl_var());
+        TblTransactionIter {
+            tbl_iter: self.tbl.ref_iter(),
+            log_iter: log.map(|log| log.iter()),
+            log,
+        }
+    }
+}
+
 impl ApplyLog<Logs> for async_cell_lock::QueueRwLockWriteGuard<'_, Ctx> {
     fn apply_log(&mut self, logs: Logs) -> bool {
         #[cfg(feature = "telemetry")]
-        let instant = Instant::now();
+        let instant = std::time::Instant::now();
 
         let changed = perform_apply_log(&mut *self, logs);
 
@@ -621,6 +793,7 @@ impl Transaction for async_cell_lock::QueueRwLockQueueGuard<'_, Ctx> {
         CtxTransaction {
             ctx: self,
             date: provide_date(),
+            depth: Default::default(),
             err_gate: Default::default(),
             logs: Default::default(),
             provider: self.provider.transaction(),

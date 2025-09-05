@@ -66,3 +66,20 @@ where
         }
     }
 }
+
+pub struct TblChangedIter<'a, E: EntityAccessor> {
+    pub(crate) log_iter: Option<std::collections::hash_map::Iter<'a, E::Key, Option<E>>>,
+    pub(crate) tbl: Option<&'a E::Tbl>,
+}
+
+impl<'a, E: EntityAccessor> Iterator for TblChangedIter<'a, E> {
+    type Item = (&'a E::Key, Option<&'a E>, Option<&'a E>);
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        let (k, new) = self.log_iter.as_mut()?.next()?;
+        let old = self.tbl.and_then(|t| t.get(k));
+
+        Some((k, old, new.as_ref()))
+    }
+}

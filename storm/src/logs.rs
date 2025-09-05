@@ -5,7 +5,7 @@ use fxhash::FxHashMap;
 use std::sync::OnceLock;
 
 pub trait LogOf {
-    type Log: Default + Send + 'static;
+    type Log: Default + Send + Sync + 'static;
 }
 
 impl<E: Entity> LogOf for HashTable<E> {

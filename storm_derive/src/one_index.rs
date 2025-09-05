@@ -3,7 +3,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{spanned::Spanned, Error, Ident, Item, ItemFn};
 
-pub(crate) fn hierarchy(item: Item) -> TokenStream {
+pub(crate) fn one_index(item: Item) -> TokenStream {
     match &item {
         Item::Fn(f) => indexing_fn(f),
         _ => Error::new(item.span(), "Only function is supported.").to_compile_error(),
@@ -18,7 +18,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
     let init = Ident::new(&format!("__{snake}_init"), f.sig.ident.span());
 
     quote! {
-        storm::hierarchy_adapt! {
+        storm::one_adapt! {
             #adapt,
             #alias,
             #init,

@@ -1,7 +1,7 @@
 use crate::{
-    provider::LoadAll, ApplyOrder, AsRefAsync, BoxFuture, Ctx, CtxTransaction, CtxTypeInfo, CtxVar,
-    EntityAccessor, LogOf, Logs, NotifyTag, ProviderContainer, Result, Tag, Touchable,
-    TouchedEvent, TrxOf, VecTable, __register_apply,
+    provider::LoadAll, ApplyOrder, AsRefAsync, BoxFuture, Ctx, CtxLocks, CtxTransaction,
+    CtxTypeInfo, CtxVar, EntityAccessor, LogOf, Logs, NotifyTag, ProviderContainer, Result, Tag,
+    Touchable, TouchedEvent, TrxOf, VecTable, __register_apply,
 };
 use fast_set::tree::{TreeIndexLog, TreeTrx};
 use std::{any::type_name, future::ready, marker::PhantomData, mem::take, ops::Deref};
@@ -16,6 +16,17 @@ where
     #[inline]
     fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ TreeIndex<E>>> {
         E::tree_get_or_init(self)
+    }
+}
+
+impl<E: TreeEntity, L> AsRef<TreeIndex<E>> for CtxLocks<'_, L>
+where
+    L: AsRef<<E as EntityAccessor>::Tbl>,
+    E::Key: Into<u32>,
+{
+    #[inline]
+    fn as_ref(&self) -> &TreeIndex<E> {
+        E::tree_get_or_init_sync(self.ctx, self.locks.as_ref())
     }
 }
 
@@ -222,12 +233,24 @@ pub trait TreeEntity: EntityAccessor<Tbl = VecTable<Self>> + CtxTypeInfo + Send 
             }
 
             let tbl = Self::tbl_from(ctx).await?;
+
+            if let Some(idx) = slot.get() {
+                return Ok(idx);
+            }
+
             let _gate = ctx.provider.gate(type_name::<Self>()).await;
 
-            Ok(slot.get_or_init(|| {
-                TreeIndex::from_iter(tbl.iter().map(|(k, e)| (k.clone(), e.parent())))
-            }))
+            Ok(Self::tree_get_or_init_sync(ctx, tbl))
         })
+    }
+
+    fn tree_get_or_init_sync<'a>(ctx: &'a Ctx, tbl: &'a VecTable<Self>) -> &'a TreeIndex<Self>
+    where
+        Self::Key: Into<u32>,
+    {
+        let slot = ctx.ctx_ext_obj.get(Self::tree_var());
+
+        slot.get_or_init(|| TreeIndex::from_iter(tbl.iter().map(|(k, e)| (k.clone(), e.parent()))))
     }
 
     fn tree_register()

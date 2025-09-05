@@ -1,3 +1,8 @@
+use std::sync::{
+    atomic::{AtomicUsize, Ordering::Relaxed},
+    Arc,
+};
+
 use crate::{registry::InitCell, BoxFuture, Ctx, CtxTransaction, Entity, Result};
 
 type EventInner<T> = InitCell<Vec<T>>;
@@ -93,6 +98,35 @@ impl Default for ClearEvent {
 }
 
 type ClearEventFn = fn(ctx: &mut Ctx);
+
+pub struct CommitEvent(EventInner<CommitEventFn>);
+
+impl CommitEvent {
+    pub const fn new() -> Self {
+        Self(EventInner::new(Vec::new()))
+    }
+
+    pub async fn call(&'static self, trx: &mut CtxTransaction<'_>) -> Result<()> {
+        for f in self.0.get() {
+            f(trx).await?;
+        }
+
+        Ok(())
+    }
+
+    pub fn on(&'static self, f: CommitEventFn) {
+        self.0.get_mut().push(f);
+    }
+}
+
+impl Default for CommitEvent {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+type CommitEventFn = for<'a> fn(ctx: &'a mut CtxTransaction<'_>) -> BoxFuture<'a, Result<()>>;
 
 pub struct GcEvent(EventInner<GcEventFn>);
 
@@ -271,7 +305,7 @@ impl<E: Entity> UpsertingEvent<E> {
         &'static self,
         trx: &'a mut CtxTransaction<'_>,
         id: &'a <E as Entity>::Key,
-        entity: &'a E,
+        entity: &'a mut E,
     ) -> Result<()> {
         for f in self.0.get() {
             f(trx, id, entity).await?;
@@ -295,5 +329,27 @@ impl<E: Entity> Default for UpsertingEvent<E> {
 type UpsertingEventFn<E> = for<'a> fn(
     trx: &'a mut CtxTransaction<'_>,
     key: &'a <E as Entity>::Key,
-    new: &'a E,
+    new: &'a mut E,
 ) -> BoxFuture<'a, Result<()>>;
+
+#[derive(Default)]
+pub(crate) struct EventDepth(Arc<AtomicUsize>);
+
+impl EventDepth {
+    pub(crate) fn val(&self) -> usize {
+        self.0.load(Relaxed)
+    }
+}
+
+impl Clone for EventDepth {
+    fn clone(&self) -> Self {
+        self.0.fetch_add(1, Relaxed);
+        Self(self.0.clone())
+    }
+}
+
+impl Drop for EventDepth {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Relaxed);
+    }
+}

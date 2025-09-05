@@ -25,7 +25,6 @@ mod iterator_ext;
 mod len;
 mod logs;
 pub mod mem;
-mod on_commit;
 mod one_to_many;
 pub mod prelude;
 pub mod provider;
@@ -74,7 +73,6 @@ pub use linkme;
 pub use logs::{LogOf, Logs};
 #[cfg(feature = "telemetry")]
 pub use metrics;
-pub use on_commit::{register_on_commit_handler, CommitHandler};
 pub use once_cell::sync::OnceCell;
 pub use one_to_many::{OneToMany, OneToManyFromIter};
 pub use parking_lot;
@@ -101,8 +99,8 @@ pub const OBJ_TABLE: &str = "table";
 
 #[cfg(feature = "derive")]
 pub use storm_derive::{
-    flat_set_index, hierarchy, indexing, node_set_index, register, single_set, tree_index, Ctx,
-    LocksAwait, NoopDelete, NoopLoad, NoopSave,
+    flat_set_index, hash_flat_set_index, indexing, node_set_index, one_index, register, single_set,
+    tree_index, Ctx, LocksAwait, NoopDelete, NoopLoad, NoopSave,
 };
 #[cfg(feature = "mssql")]
 pub use storm_derive::{MssqlDelete, MssqlLoad, MssqlSave};

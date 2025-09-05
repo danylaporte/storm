@@ -53,11 +53,11 @@ async fn identity_translate_key() -> storm::Result<()> {
         let mut trx = ctx.transaction(Uuid::nil());
 
         let mut labels = trx.tbl_of::<Label>().await?;
-        let mut id = 2;
+        let id = 2;
 
         labels
             .insert_mut(
-                &mut id,
+                id,
                 Label {
                     name: Translated {
                         en: "english".to_owned(),

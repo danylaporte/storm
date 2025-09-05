@@ -1,9 +1,9 @@
 use crate::{
     indexing::{TreeEntity, TreeIndex},
     provider::LoadAll,
-    ApplyOrder, AsRefAsync, BoxFuture, Ctx, CtxTransaction, CtxTypeInfo, CtxVar, EntityAccessor,
-    LogOf, Logs, NotifyTag, ProviderContainer, Result, Tag, Touchable, TouchedEvent, TrxOf,
-    VecTable, __register_apply,
+    ApplyOrder, AsRefAsync, BoxFuture, Ctx, CtxLocks, CtxTransaction, CtxTypeInfo, CtxVar,
+    EntityAccessor, LogOf, Logs, NotifyTag, ProviderContainer, Result, Tag, Touchable,
+    TouchedEvent, TrxOf, VecTable, __register_apply,
 };
 use fast_set::{node_set_index, NodeSetIndexLog, Tree, TreeIndexLog};
 use std::{any::type_name, future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
@@ -17,6 +17,17 @@ where
     #[inline]
     fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ NodeSetIndex<A>>> {
         A::get_or_init(self)
+    }
+}
+
+impl<A: NodeSetAdapt, L> AsRef<NodeSetIndex<A>> for CtxLocks<'_, L>
+where
+    L: AsRef<<A::FlatEntity as EntityAccessor>::Tbl>
+        + AsRef<<A::TreeEntity as EntityAccessor>::Tbl>,
+{
+    #[inline]
+    fn as_ref(&self) -> &NodeSetIndex<A> {
+        A::get_or_init_sync(self.ctx, self.locks.as_ref(), self.locks.as_ref())
     }
 }
 
@@ -159,29 +170,49 @@ pub trait NodeSetAdapt: Touchable + Send + Sized + Sync + 'static {
             }
 
             let tbl = ctx.tbl_of::<Self::FlatEntity>().await?;
-            let tree = Self::TreeEntity::tree_get_or_init(ctx).await?;
-            let tree_log = TreeIndexLog::default();
+            let tree = ctx.tbl_of::<Self::TreeEntity>().await?;
+
+            if let Some(idx) = slot.get() {
+                return Ok(idx);
+            }
 
             let _gate = ctx.provider.gate(type_name::<Self>()).await;
 
-            Ok(slot.get_or_init(|| {
-                let mut kv = fast_set::NodeSetIndex::<Self::K, Self::V>::default();
-                let mut log_kv = NodeSetIndexLog::<Self::K, Self::V>::default();
+            Ok(Self::get_or_init_sync(ctx, tbl, tree))
+        })
+    }
 
-                for (v, entity) in tbl.iter() {
-                    if let Some(k) = Self::adapt(v, entity) {
-                        log_kv.insert(&kv, tree, &tree_log, k, *v);
-                    }
+    fn get_or_init_sync<'a>(
+        ctx: &'a Ctx,
+        flat: &'a <Self::FlatEntity as EntityAccessor>::Tbl,
+        tree: &'a <Self::TreeEntity as EntityAccessor>::Tbl,
+    ) -> &'a NodeSetIndex<Self> {
+        let slot = ctx.ctx_ext_obj.get(Self::index_var());
+
+        if let Some(idx) = slot.get() {
+            return idx;
+        }
+
+        let tree = Self::TreeEntity::tree_get_or_init_sync(ctx, tree);
+
+        slot.get_or_init(|| {
+            let mut kv = fast_set::NodeSetIndex::<Self::K, Self::V>::default();
+            let mut log_kv = NodeSetIndexLog::<Self::K, Self::V>::default();
+            let tree_log = TreeIndexLog::default();
+
+            for (v, entity) in flat.iter() {
+                if let Some(k) = Self::adapt(v, entity) {
+                    log_kv.insert(&kv, tree, &tree_log, k, *v);
                 }
+            }
 
-                kv.apply(log_kv);
+            kv.apply(log_kv);
 
-                NodeSetIndex {
-                    kv,
-                    tag: VersionTag::new(),
-                    _a: PhantomData,
-                }
-            }))
+            NodeSetIndex {
+                kv,
+                tag: VersionTag::new(),
+                _a: PhantomData,
+            }
         })
     }
 

@@ -30,8 +30,8 @@ vec-map = { git = "https://github.com/danylaporte/vec-map.git", features = ["ray
 #[patch.'https://github.com/danylaporte/str_utils']
 #str_utils = { path = "../str_utils" }
 
-[patch.'https://github.com/danylaporte/extobj']
-extobj = { path = "../extobj/extobj" }
+#[patch.'https://github.com/danylaporte/extobj']
+#extobj = { path = "../extobj/extobj" }
 
 [patch.'https://github.com/danylaporte/vec-map']
 vec-map = { path = "../vec-map" }

@@ -64,6 +64,10 @@ pub trait EntityAccessor: Entity + Sized + 'static {
         })
     }
 
+    fn manual_sync(trx: &mut CtxTransaction, key: Self::Key, new: Option<Self>) {
+        trx.logs.get_mut_or_default(Self::tbl_var()).insert(key, new);
+    }
+
     fn tbl_from(ctx: &Ctx) -> BoxFuture<'_, Result<&Self::Tbl>>
     where
         ProviderContainer: LoadAll<Self, (), Self::Tbl>,
@@ -129,6 +133,8 @@ pub trait EntityRemove: EntityAccessor {
                 gate.close();
                 return Ok(false);
             };
+
+            let _event_depth = trx.track_depth();
 
             Self::removing().call(trx, &k).await.inspect_err(|e| {
                 error!({ error = %e, id = ?k, ty = ?TypeId::of::<Self>() }, "EntityAccessor::removing event error")
@@ -198,6 +204,7 @@ pub trait EntityUpsert: EntityAccessor + EntityValidate + PartialEq {
             }
 
             let gate = trx.err_gate.open()?;
+            let _event_depth = trx.track_depth();
 
             validate_on_change(trx, &k, &mut entity).await?;
 
@@ -251,9 +258,9 @@ pub trait EntityUpsert: EntityAccessor + EntityValidate + PartialEq {
 pub trait EntityUpsertMut: EntityAccessor + EntityValidate + PartialEq {
     fn upsert_mut<'a>(
         trx: &'a mut CtxTransaction<'_>,
-        k: &'a mut Self::Key,
+        mut k: Self::Key,
         mut entity: Self,
-    ) -> BoxFuture<'a, Result<bool>>
+    ) -> BoxFuture<'a, Result<(Self::Key, bool)>>
     where
         ProviderContainer: LoadAll<Self, (), Self::Tbl>,
         for<'b> TransactionProvider<'b>: UpsertMut<Self>,
@@ -262,26 +269,27 @@ pub trait EntityUpsertMut: EntityAccessor + EntityValidate + PartialEq {
 
         Box::pin(async move {
             let ctx = trx.ctx;
-            let has_changed = Self::entity_from(trx, k)
+            let has_changed = Self::entity_from(trx, &k)
                 .await?
                 .is_none_or(|e| *e != entity);
 
             if !has_changed {
-                return Ok(false);
+                return Ok((k, false));
             }
 
             let gate = trx.err_gate.open()?;
+            let _event_depth = trx.track_depth();
 
-            validate_on_change(trx, &*k, &mut entity).await?;
+            validate_on_change(trx, &k, &mut entity).await?;
 
             trx.provider()
-                .upsert_mut(k, &mut entity)
+                .upsert_mut(&mut k, &mut entity)
                 .await
                 .inspect_err(
                     |e| error!({ error = %e, id = ?k, ty = ?TypeId::of::<Self>() }, "upsert error"),
                 )?;
 
-            entity.track_insert(k, trx).await.inspect_err(|e| {
+            entity.track_insert(&k, trx).await.inspect_err(|e| {
                 error!({ error = %e, id = ?k, ty = ?TypeId::of::<Self>() }, "track_insert error")
             })?;
 
@@ -291,18 +299,18 @@ pub trait EntityUpsertMut: EntityAccessor + EntityValidate + PartialEq {
                 .insert(k.clone(), Some(entity));
 
             let old = match old.as_ref() {
-                None => Self::tbl_from(ctx).await?.get(k),
+                None => Self::tbl_from(ctx).await?.get(&k),
                 Some(None) => None,
                 Some(Some(old)) => Some(old),
             };
 
-            Self::upserted().call(trx, k, old).await.inspect_err(|e| error!({ error = %e, id = ?k, ty = ?TypeId::of::<Self>() }, "EntityAccessor::upserted event error"))?;
+            Self::upserted().call(trx, &k, old).await.inspect_err(|e| error!({ error = %e, id = ?k, ty = ?TypeId::of::<Self>() }, "EntityAccessor::upserted event error"))?;
             gate.close();
-            Ok(true)
+            Ok((k, true))
         })
     }
 
-    fn upsert_all_mut<'a>(
+    fn upsert_mut_all<'a>(
         trx: &'a mut CtxTransaction<'_>,
         entities: Vec<(Self::Key, Self)>,
     ) -> BoxFuture<'a, Result<usize>>
@@ -313,8 +321,8 @@ pub trait EntityUpsertMut: EntityAccessor + EntityValidate + PartialEq {
         Box::pin(async move {
             let mut count = 0;
 
-            for (mut key, entity) in entities {
-                if Self::upsert_mut(trx, &mut key, entity).await? {
+            for (key, entity) in entities {
+                if Self::upsert_mut(trx, key, entity).await?.1 {
                     count += 1;
                 }
             }

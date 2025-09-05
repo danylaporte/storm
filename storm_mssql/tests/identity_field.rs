@@ -50,7 +50,7 @@ async fn identity_field_crud() -> Result<()> {
         };
 
         // insert
-        entities1.insert_mut(&mut 1, e1).await?;
+        entities1.insert_mut(1, e1).await?;
 
         let mut e1 = entities1.get(&1).unwrap().clone();
 
@@ -58,7 +58,7 @@ async fn identity_field_crud() -> Result<()> {
         e1.o = Some(5);
 
         // update
-        entities1.insert_mut(&mut 1, e1).await?;
+        entities1.insert_mut(1, e1).await?;
 
         let e2 = Entity1 {
             name: "E2".to_string(),
@@ -66,7 +66,7 @@ async fn identity_field_crud() -> Result<()> {
             o: None,
         };
 
-        entities1.insert_mut(&mut 2, e2).await?;
+        entities1.insert_mut(2, e2).await?;
 
         let e2 = entities1.get(&2).unwrap();
 
