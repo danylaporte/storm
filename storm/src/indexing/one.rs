@@ -87,7 +87,7 @@ pub type BaseAndLog<'a, 'b, A> = Option<(
 pub trait OneAdapt: Touchable + Send + Sized + Sync + 'static {
     type Entity: EntityAccessor<Key = Self::K, Tbl = VecTable<Self::Entity>> + CtxTypeInfo;
     type K: Copy + Eq + From<u32> + Hash + Into<u32> + Send + Sync;
-    type V: Copy + PartialEq + Send + Sync;
+    type V: PartialEq + Send + Sync;
 
     fn adapt(id: &Self::K, entity: &Self::Entity) -> Option<Self::V>;
     fn index_var() -> CtxVar<OneIndex<Self>>;

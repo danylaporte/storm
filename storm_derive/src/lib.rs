@@ -16,7 +16,6 @@ mod indexing;
 mod locks_await;
 #[cfg(feature = "mssql")]
 mod mssql;
-mod node_set_index;
 mod noop;
 mod one_index;
 mod register;
@@ -90,12 +89,6 @@ pub fn mssql_load(input: TokenStream) -> TokenStream {
 pub fn mssql_save(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     mssql::save(&input).into()
-}
-
-#[proc_macro_attribute]
-pub fn node_set_index(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let item = parse_macro_input!(item as Item);
-    node_set_index::node_set_index(item).into()
 }
 
 #[proc_macro_derive(NoopDelete)]

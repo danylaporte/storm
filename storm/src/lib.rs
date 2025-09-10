@@ -97,8 +97,8 @@ pub const OBJ_TABLE: &str = "table";
 
 #[cfg(feature = "derive")]
 pub use storm_derive::{
-    flat_set_index, hash_flat_set_index, indexing, node_set_index, one_index, register, single_set,
-    tree_index, Ctx, LocksAwait, NoopDelete, NoopLoad, NoopSave,
+    flat_set_index, hash_flat_set_index, indexing, one_index, register, single_set, tree_index,
+    Ctx, LocksAwait, NoopDelete, NoopLoad, NoopSave,
 };
 #[cfg(feature = "mssql")]
 pub use storm_derive::{MssqlDelete, MssqlLoad, MssqlSave};
