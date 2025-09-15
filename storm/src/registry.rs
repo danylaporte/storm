@@ -1,7 +1,6 @@
 use chrono::NaiveDateTime;
 use std::{
-    cell::UnsafeCell,
-    sync::atomic::{AtomicBool, Ordering},
+    cell::{Cell, UnsafeCell},
 };
 
 pub(crate) struct InitCell<T>(UnsafeCell<T>);
@@ -33,12 +32,10 @@ unsafe impl<T: Sync> Sync for InitCell<T> {}
 #[linkme::distributed_slice]
 pub static __REGISTRATION: [fn()];
 
-static REGISTRATION_DONE: AtomicBool = AtomicBool::new(false);
-
 pub(crate) fn check_can_register() {
     assert!(
-        !REGISTRATION_DONE.load(Ordering::Relaxed),
-        "storm register phase is closed."
+        IN_REGISTRATION.get(),
+        "must be call inside the registration phase."
     );
 }
 
@@ -46,11 +43,18 @@ pub(crate) fn perform_registration() {
     static O: std::sync::Once = std::sync::Once::new();
 
     O.call_once(|| {
+        IN_REGISTRATION.set(true);
+
         for f in __REGISTRATION {
             f();
         }
-        REGISTRATION_DONE.store(true, Ordering::Relaxed);
+
+        IN_REGISTRATION.set(false);
     });
+}
+
+thread_local! {
+    static IN_REGISTRATION: Cell<bool> = const { Cell::new(false) };
 }
 
 fn default_date_provider() -> NaiveDateTime {
