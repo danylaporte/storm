@@ -466,6 +466,13 @@ macro_rules! flat_set_adapt {
             }
         }
 
+        impl storm::Clearable for $adapt {
+            fn cleared() -> &'static storm::ClearEvent {
+                static E: storm::ClearEvent = storm::ClearEvent::new();
+                &E
+            }
+        }
+
         impl storm::Touchable for $adapt {
             fn touched() -> &'static storm::TouchedEvent {
                 static E: storm::TouchedEvent = storm::TouchedEvent::new();
