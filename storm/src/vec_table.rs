@@ -1,7 +1,7 @@
 use crate::{
-    provider::LoadAll, AsRefAsync, BoxFuture, Ctx, CtxTypeInfo, Entity, EntityAccessor, EntityOf,
-    Gc, Get, GetMut, Logs, NotifyTag, ProviderContainer, RefIntoIterator, Result, Tag, Touchable,
-    TouchedEvent,
+    provider::LoadAll, AsRefAsync, BoxFuture, ClearEvent, Clearable, Ctx, CtxTypeInfo, Entity,
+    EntityAccessor, EntityOf, Gc, Get, GetMut, Logs, NotifyTag, ProviderContainer, RefIntoIterator,
+    Result, Tag, Touchable, TouchedEvent,
 };
 use rayon::iter::IntoParallelIterator;
 use std::ops::Deref;
@@ -62,6 +62,8 @@ impl<E: Entity> VecTable<E> {
 
         tbl.update_metrics();
         tbl.tag.notify();
+        E::touched().call(ctx);
+
         true
     }
 
@@ -105,6 +107,13 @@ where
     #[inline]
     fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ VecTable<E>>> {
         E::tbl_from(self)
+    }
+}
+
+impl<E: EntityAccessor> Clearable for VecTable<E> {
+    #[inline]
+    fn cleared() -> &'static ClearEvent {
+        E::cleared()
     }
 }
 

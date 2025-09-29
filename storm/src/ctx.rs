@@ -32,6 +32,7 @@ impl Ctx {
     #[inline]
     pub fn clear_tbl_of<E: EntityAccessor>(&mut self) {
         E::clear(self);
+        E::touched().call(self);
     }
 
     /// Private. Used in macros.

@@ -1,7 +1,8 @@
 use crate::{
     provider::LoadAll, AsRefAsync, BoxFuture, Ctx, CtxLocks, CtxTransaction, CtxTypeInfo, CtxVar,
     Entity, EntityAccessor, Get, LogOf, Logs, NotifyTag, ProviderContainer, RefIntoIterator,
-    Result, Tag, Touchable, TouchedEvent, __register_apply, indexing::AsyncAsIdxTrx,
+    Result, Tag, Touchable, TouchedEvent, __register_apply, indexing::AsyncAsIdxTrx, ClearEvent,
+    Clearable,
 };
 use fast_set::flat_set_index;
 use fxhash::FxHashSet;
@@ -93,7 +94,7 @@ pub type BaseAndLog<'a, 'b, A> = Option<(
     &'b mut flat_set_index::FlatSetIndexLog<<A as FlatSetAdapt>::K, <A as FlatSetAdapt>::V>,
 )>;
 
-pub trait FlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
+pub trait FlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
     type Entity: EntityAccessor + CtxTypeInfo + Send;
     type K: Copy + Eq + From<u32> + Hash + Into<u32> + Send + Sync;
     type V: Copy + Eq + From<u32> + Hash + Into<u32> + Send + Sync;
@@ -220,7 +221,9 @@ pub trait FlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
     }
 
     fn handle_clear(ctx: &mut Ctx) {
-        ctx.ctx_ext_obj.get_mut(Self::index_var()).take();
+        if ctx.ctx_ext_obj.get_mut(Self::index_var()).take().is_some() {
+            Self::cleared().call(ctx);
+        }
     }
 
     fn handle_removed<'a>(
@@ -332,6 +335,13 @@ pub trait FlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
     }
 }
 
+impl<A: FlatSetAdapt> Clearable for FlatSetIndex<A> {
+    #[inline]
+    fn cleared() -> &'static ClearEvent {
+        A::cleared()
+    }
+}
+
 impl<A: FlatSetAdapt> LogOf for FlatSetIndex<A> {
     type Log = flat_set_index::FlatSetIndexLog<A::K, A::V>;
 }
@@ -404,7 +414,16 @@ macro_rules! flat_set_adapt {
             }
         }
 
+        impl storm::Clearable for $adapt {
+            #[inline]
+            fn cleared() -> &'static storm::ClearEvent {
+                static E: storm::ClearEvent = storm::ClearEvent::new();
+                &E
+            }
+        }
+
         impl storm::Touchable for $adapt {
+            #[inline]
             fn touched() -> &'static storm::TouchedEvent {
                 static E: storm::TouchedEvent = storm::TouchedEvent::new();
                 &E

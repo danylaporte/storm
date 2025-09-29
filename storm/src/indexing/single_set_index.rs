@@ -1,7 +1,8 @@
 use crate::{
     provider::LoadAll, AsRefAsync, BoxFuture, Ctx, CtxLocks, CtxTransaction, CtxTypeInfo, CtxVar,
     Entity, EntityAccessor, Get, LogOf, Logs, NotifyTag, ProviderContainer, RefIntoIterator,
-    Result, Tag, Touchable, TouchedEvent, __register_apply, indexing::AsyncAsIdxTrx,
+    Result, Tag, Touchable, TouchedEvent, __register_apply, indexing::AsyncAsIdxTrx, ClearEvent,
+    Clearable,
 };
 use fast_set::IntSet;
 use std::{any::type_name, future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
@@ -94,7 +95,7 @@ pub type BaseAndLog<'a, 'b, A> = Option<(
     &'b mut IntSet<<A as SingleSetAdapt>::K>,
 )>;
 
-pub trait SingleSetAdapt: Send + Sized + Sync + Touchable + 'static {
+pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
     type Entity: EntityAccessor<Key = Self::K> + CtxTypeInfo + Send;
     type K: Copy + Eq + From<u32> + Hash + Into<u32> + Into<usize> + Send + Sync;
 
@@ -198,7 +199,9 @@ pub trait SingleSetAdapt: Send + Sized + Sync + Touchable + 'static {
     }
 
     fn handle_clear(ctx: &mut Ctx) {
-        ctx.ctx_ext_obj.get_mut(Self::index_var()).take();
+        if ctx.ctx_ext_obj.get_mut(Self::index_var()).take().is_some() {
+            Self::cleared().call(ctx);
+        }
     }
 
     fn handle_removed<'a>(
@@ -254,6 +257,13 @@ pub trait SingleSetAdapt: Send + Sized + Sync + Touchable + 'static {
         <Self::Entity as EntityAccessor>::cleared().on(Self::handle_clear);
         <Self::Entity as EntityAccessor>::removed().on(Self::handle_removed);
         <Self::Entity as EntityAccessor>::upserted().on(Self::handle_upserted);
+    }
+}
+
+impl<A: SingleSetAdapt> Clearable for SingleSetIndex<A> {
+    #[inline]
+    fn cleared() -> &'static ClearEvent {
+        A::cleared()
     }
 }
 
@@ -322,7 +332,16 @@ macro_rules! single_set_adapt {
             }
         }
 
+        impl storm::Clearable for $adapt {
+            #[inline]
+            fn cleared() -> &'static storm::ClearEvent {
+                static E: storm::ClearEvent = storm::ClearEvent::new();
+                &E
+            }
+        }
+
         impl storm::Touchable for $adapt {
+            #[inline]
             fn touched() -> &'static storm::TouchedEvent {
                 static E: storm::TouchedEvent = storm::TouchedEvent::new();
                 &E

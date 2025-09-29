@@ -84,7 +84,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
             );
 
             as_ref_tag.push(quote!(storm::Tag::tag(#ident)));
-            registering.push(quote!(<#index_name as storm::indexing::RebuildIndex>::register_touchable::<#ty>();));
+            registering.push(quote!(<#index_name as storm::indexing::RebuildIndex>::register_clear_or_touchable::<#ty>();));
             as_ref_args.push(ident);
 
             let ref_async = quote!(storm::AsRefAsync<#ty>);
@@ -128,6 +128,14 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         fn #index_init_ident() {
             #(#registering)*
             #gc_collect
+        }
+
+        impl storm::Clearable for #index_name {
+            #[inline]
+            fn cleared() -> &'static storm::ClearEvent {
+                static E: storm::ClearEvent = storm::ClearEvent::new();
+                &E
+            }
         }
 
         impl std::ops::Deref for #index_name {

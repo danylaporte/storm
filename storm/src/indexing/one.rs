@@ -1,7 +1,8 @@
 use crate::{
     provider::LoadAll, ApplyOrder, AsRefAsync, BoxFuture, Ctx, CtxLocks, CtxTransaction,
     CtxTypeInfo, CtxVar, EntityAccessor, LogOf, Logs, NotifyTag, ProviderContainer, Result, Tag,
-    Touchable, TouchedEvent, VecTable, __register_apply, indexing::AsyncAsIdxTrx,
+    Touchable, TouchedEvent, VecTable, __register_apply, indexing::AsyncAsIdxTrx, ClearEvent,
+    Clearable,
 };
 use fast_set::one_index;
 use std::{any::type_name, future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
@@ -84,7 +85,7 @@ pub type BaseAndLog<'a, 'b, A> = Option<(
     &'b mut one_index::OneIndexLog<<A as OneAdapt>::K, <A as OneAdapt>::V>,
 )>;
 
-pub trait OneAdapt: Touchable + Send + Sized + Sync + 'static {
+pub trait OneAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
     type Entity: EntityAccessor<Key = Self::K, Tbl = VecTable<Self::Entity>> + CtxTypeInfo;
     type K: Copy + Eq + From<u32> + Hash + Into<u32> + Send + Sync;
     type V: PartialEq + Send + Sync;
@@ -198,7 +199,9 @@ pub trait OneAdapt: Touchable + Send + Sized + Sync + 'static {
     }
 
     fn handle_clear(ctx: &mut Ctx) {
-        ctx.ctx_ext_obj.get_mut(Self::index_var()).take();
+        if ctx.ctx_ext_obj.get_mut(Self::index_var()).take().is_some() {
+            Self::cleared().call(ctx);
+        }
     }
 
     fn handle_entity_remove<'a>(
@@ -261,6 +264,13 @@ pub trait OneAdapt: Touchable + Send + Sized + Sync + 'static {
     }
 }
 
+impl<A: OneAdapt> Clearable for OneIndex<A> {
+    #[inline]
+    fn cleared() -> &'static ClearEvent {
+        A::cleared()
+    }
+}
+
 impl<A: OneAdapt> LogOf for OneIndex<A> {
     type Log = one_index::OneIndexLog<A::K, A::V>;
 }
@@ -317,6 +327,14 @@ macro_rules! one_adapt {
                 );
 
                 *V
+            }
+        }
+
+        impl storm::Clearable for $adapt {
+            #[inline]
+            fn cleared() -> &'static storm::ClearEvent {
+                static E: storm::ClearEvent = storm::ClearEvent::new();
+                &E
             }
         }
 

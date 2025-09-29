@@ -6,6 +6,7 @@ mod apply_log;
 mod as_ref_async;
 mod as_ref_opt;
 mod async_try_from;
+mod clearable;
 mod ctx;
 mod ctx_type_info;
 mod entity;
@@ -49,6 +50,7 @@ pub use async_cell_lock::{self, AsyncOnceCell, QueueRwLock};
 pub use async_try_from::AsyncTryFrom;
 #[cfg(feature = "cache")]
 pub use cache;
+pub use clearable::Clearable;
 pub use ctx::*;
 pub use ctx_type_info::CtxTypeInfo;
 pub use entity::Entity;

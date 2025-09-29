@@ -1,7 +1,5 @@
 use chrono::NaiveDateTime;
-use std::{
-    cell::{Cell, UnsafeCell},
-};
+use std::cell::{Cell, UnsafeCell};
 
 pub(crate) struct InitCell<T>(UnsafeCell<T>);
 

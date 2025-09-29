@@ -1,7 +1,8 @@
 use crate::{
     provider::LoadAll, AsRefAsync, BoxFuture, Ctx, CtxLocks, CtxTransaction, CtxTypeInfo, CtxVar,
     Entity, EntityAccessor, Get, LogOf, Logs, NotifyTag, ProviderContainer, RefIntoIterator,
-    Result, Tag, Touchable, TouchedEvent, __register_apply, indexing::AsyncAsIdxTrx,
+    Result, Tag, Touchable, TouchedEvent, __register_apply, indexing::AsyncAsIdxTrx, ClearEvent,
+    Clearable,
 };
 use fast_set::hash_flat_set_index;
 use fxhash::FxHashSet;
@@ -98,7 +99,7 @@ pub type BaseAndLog<'a, 'b, A> = Option<(
     >,
 )>;
 
-pub trait HashFlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
+pub trait HashFlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
     type Entity: EntityAccessor + CtxTypeInfo + Send;
     type K: Clone + Eq + Hash + Send + Sync;
     type V: Clone + Eq + From<u32> + Hash + Into<u32> + Send + Sync;
@@ -225,7 +226,9 @@ pub trait HashFlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
     }
 
     fn handle_clear(ctx: &mut Ctx) {
-        ctx.ctx_ext_obj.get_mut(Self::index_var()).take();
+        if ctx.ctx_ext_obj.get_mut(Self::index_var()).take().is_some() {
+            Self::cleared().call(ctx);
+        }
     }
 
     fn handle_removed<'a>(
@@ -337,6 +340,13 @@ pub trait HashFlatSetAdapt: Send + Sized + Sync + Touchable + 'static {
     }
 }
 
+impl<A: HashFlatSetAdapt> Clearable for HashFlatSetIndex<A> {
+    #[inline]
+    fn cleared() -> &'static ClearEvent {
+        A::cleared()
+    }
+}
+
 impl<A: HashFlatSetAdapt> LogOf for HashFlatSetIndex<A> {
     type Log = hash_flat_set_index::HashFlatSetIndexLog<A::K, A::V>;
 }
@@ -411,7 +421,16 @@ macro_rules! hash_flat_set_adapt {
             }
         }
 
+        impl storm::Clearable for $adapt {
+            #[inline]
+            fn cleared() -> &'static storm::ClearEvent {
+                static E: storm::ClearEvent = storm::ClearEvent::new();
+                &E
+            }
+        }
+
         impl storm::Touchable for $adapt {
+            #[inline]
             fn touched() -> &'static storm::TouchedEvent {
                 static E: storm::TouchedEvent = storm::TouchedEvent::new();
                 &E

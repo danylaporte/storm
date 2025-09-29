@@ -1,7 +1,8 @@
 use crate::{
     provider::LoadAll, ApplyOrder, AsRefAsync, BoxFuture, Ctx, CtxLocks, CtxTransaction,
     CtxTypeInfo, CtxVar, EntityAccessor, LogOf, Logs, NotifyTag, ProviderContainer, Result, Tag,
-    Touchable, TouchedEvent, VecTable, __register_apply, indexing::AsyncAsIdxTrx,
+    Touchable, TouchedEvent, VecTable, __register_apply, indexing::AsyncAsIdxTrx, ClearEvent,
+    Clearable,
 };
 use fast_set::tree::{TreeIndexLog, TreeTrx};
 use std::{any::type_name, future::ready, marker::PhantomData, mem::take, ops::Deref};
@@ -31,6 +32,13 @@ where
 }
 
 pub struct TreeIndex<E: TreeEntity>(fast_set::Tree<E::Key>, PhantomData<E>, VersionTag);
+
+impl<E: TreeEntity> Clearable for TreeIndex<E> {
+    #[inline]
+    fn cleared() -> &'static ClearEvent {
+        E::tree_cleared()
+    }
+}
 
 impl<E: TreeEntity> Default for TreeIndex<E> {
     #[inline]
@@ -112,6 +120,7 @@ where
 
 pub trait TreeEntity: EntityAccessor<Tbl = VecTable<Self>> + CtxTypeInfo + Send {
     fn parent(&self) -> Option<Self::Key>;
+    fn tree_cleared() -> &'static ClearEvent;
     fn tree_touched() -> &'static TouchedEvent;
     fn tree_var() -> CtxVar<TreeIndex<Self>>;
 
@@ -172,7 +181,9 @@ pub trait TreeEntity: EntityAccessor<Tbl = VecTable<Self>> + CtxTypeInfo + Send 
     }
 
     fn handle_clear(ctx: &mut Ctx) {
-        ctx.ctx_ext_obj.get_mut(Self::tree_var()).take();
+        if ctx.ctx_ext_obj.get_mut(Self::tree_var()).take().is_some() {
+            Self::tree_cleared().call(ctx);
+        }
     }
 
     fn handle_removed<'a>(
@@ -297,6 +308,13 @@ macro_rules! tree_index_adapt {
                 $($t)*
             }
 
+            #[inline]
+            fn tree_cleared() -> &'static storm::ClearEvent {
+                static EVENT: storm::ClearEvent = storm::ClearEvent::new();
+                &EVENT
+            }
+
+            #[inline]
             fn tree_touched() -> &'static storm::TouchedEvent {
                 static EVENT: storm::TouchedEvent = storm::TouchedEvent::new();
                 &EVENT

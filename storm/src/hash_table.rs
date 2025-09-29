@@ -1,7 +1,7 @@
 use crate::{
-    provider::LoadAll, AsRefAsync, BoxFuture, Ctx, CtxTypeInfo, Entity, EntityAccessor, EntityOf,
-    Gc, Get, GetMut, Logs, NotifyTag, ProviderContainer, RefIntoIterator, Result, Tag, Touchable,
-    TouchedEvent,
+    provider::LoadAll, AsRefAsync, BoxFuture, ClearEvent, Clearable, Ctx, CtxTypeInfo, Entity,
+    EntityAccessor, EntityOf, Gc, Get, GetMut, Logs, NotifyTag, ProviderContainer, RefIntoIterator,
+    Result, Tag, Touchable, TouchedEvent,
 };
 use fxhash::FxHashMap;
 use rayon::{
@@ -70,6 +70,8 @@ impl<E: Entity> HashTable<E> {
 
         tbl.update_metrics();
         tbl.tag.notify();
+        E::touched().call(ctx);
+
         true
     }
 
@@ -112,6 +114,13 @@ impl<E: Entity> AsRef<Self> for HashTable<E> {
     #[inline]
     fn as_ref(&self) -> &Self {
         self
+    }
+}
+
+impl<E: EntityAccessor> Clearable for HashTable<E> {
+    #[inline]
+    fn cleared() -> &'static ClearEvent {
+        E::cleared()
     }
 }
 
