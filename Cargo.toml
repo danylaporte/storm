@@ -22,7 +22,7 @@ tokio = { version = "1", default-features = false }
 tokio-util = { version = "0.7", features = ["compat"] }
 tracing = "0.1"
 uuid = { version = "1", features = ["v4", "serde"] }
-vec-map = { git = "https://github.com/danylaporte/vec-map.git", features = ["rayon"] }
+vec-map = { git = "https://github.com/danylaporte/vec-map.git", features = ["rayon"], branch = "idx" }
 
 #[patch.'https://github.com/danylaporte/dec19x5']
 #dec19x5 = { path = "../dec19x5" }
@@ -33,6 +33,6 @@ vec-map = { git = "https://github.com/danylaporte/vec-map.git", features = ["ray
 #[patch.'https://github.com/danylaporte/extobj']
 #extobj = { path = "../extobj/extobj" }
 
-[patch.'https://github.com/danylaporte/vec-map']
-vec-map = { path = "../vec-map" }
+#[patch.'https://github.com/danylaporte/vec-map']
+#vec-map = { path = "../vec-map" }
 
