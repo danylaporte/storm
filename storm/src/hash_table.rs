@@ -76,12 +76,12 @@ impl<E: Entity> HashTable<E> {
     }
 
     #[inline]
-    pub fn iter(&self) -> Iter<E::Key, E> {
+    pub fn iter(&self) -> Iter<'_, E::Key, E> {
         self.map.iter()
     }
 
     #[inline]
-    pub fn keys(&self) -> Keys<E::Key, E> {
+    pub fn keys(&self) -> Keys<'_, E::Key, E> {
         self.map.keys()
     }
 
@@ -94,7 +94,7 @@ impl<E: Entity> HashTable<E> {
     }
 
     #[inline]
-    pub fn values(&self) -> Values<E::Key, E> {
+    pub fn values(&self) -> Values<'_, E::Key, E> {
         self.map.values()
     }
 }

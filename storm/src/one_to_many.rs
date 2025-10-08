@@ -17,7 +17,7 @@ impl<ONE, MANY> OneToMany<ONE, MANY> {
         self.0.get(index).map_or(&[], |v| &**v)
     }
 
-    pub fn iter(&self) -> vec_map::Iter<ONE, Box<[MANY]>> {
+    pub fn iter(&self) -> vec_map::Iter<'_, ONE, Box<[MANY]>> {
         self.0.iter()
     }
 }

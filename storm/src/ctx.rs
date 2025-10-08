@@ -675,7 +675,7 @@ where
     }
 
     #[inline]
-    pub fn trx(&self) -> &CtxTransaction {
+    pub fn trx(&self) -> &CtxTransaction<'_> {
         self.ctx
     }
 

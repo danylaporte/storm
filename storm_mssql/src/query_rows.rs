@@ -14,7 +14,7 @@ pub trait QueryRows {
     fn query_rows<'a, S, M, R, C>(
         &'a self,
         statement: S,
-        params: &'a [&'a (dyn ToSql)],
+        params: &'a [&'a dyn ToSql],
         mapper: M,
         use_transaction: bool,
     ) -> BoxFuture<'a, Result<C>>
@@ -32,7 +32,7 @@ where
     fn query_rows<'a, S, M, R, C>(
         &'a self,
         statement: S,
-        params: &'a [&'a (dyn ToSql)],
+        params: &'a [&'a dyn ToSql],
         mapper: M,
         use_transaction: bool,
     ) -> BoxFuture<'a, Result<C>>
