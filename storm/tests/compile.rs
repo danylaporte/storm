@@ -78,6 +78,7 @@ async fn transaction() -> Result<()> {
     .await
 }
 
+#[allow(dead_code)]
 #[derive(storm::LocksAwait)]
 struct Locks<'a> {
     e1: &'a Entity1s,

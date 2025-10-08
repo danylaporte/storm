@@ -130,9 +130,11 @@ fn gc(input: &DeriveInput) -> Result<(TokenStream, TokenStream), TokenStream> {
     ))
 }
 
-#[derive(Clone, Copy, Debug, Eq, FromMeta, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, FromMeta, PartialEq)]
 enum Collection {
     HashTable,
+
+    #[default]
     VecTable,
 }
 
@@ -142,12 +144,6 @@ impl Collection {
             Self::HashTable => quote!(storm::HashTable<#entity>),
             Self::VecTable => quote!(storm::VecTable<#entity>),
         }
-    }
-}
-
-impl Default for Collection {
-    fn default() -> Self {
-        Self::VecTable
     }
 }
 
