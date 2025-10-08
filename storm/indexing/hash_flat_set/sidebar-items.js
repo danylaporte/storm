@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["HashFlatSetIndex","HashFlatSetIndexTrx"],"trait":["HashFlatSetAdapt"],"type":["BaseAndLog"]};

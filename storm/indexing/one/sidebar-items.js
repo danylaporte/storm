@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["OneIndex","OneIndexTrx"],"trait":["OneAdapt"],"type":["BaseAndLog"]};

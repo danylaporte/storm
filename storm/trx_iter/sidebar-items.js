@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["TrxIter"]};
+window.SIDEBAR_ITEMS = {"enum":["TrxIter"],"struct":["TblChangedIter"]};

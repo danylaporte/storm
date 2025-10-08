@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"attr":["indexing"],"derive":["Ctx"],"struct":["AsyncOnceCell","OnceCell","QueueRwLock"]};
+window.SIDEBAR_ITEMS = {"attr":["indexing"],"derive":["Ctx"],"struct":["AsyncOnceCell","QueueRwLock"]};
