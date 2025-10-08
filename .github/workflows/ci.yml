@@ -16,9 +16,11 @@ jobs:
         rust: [nightly, beta, stable]
 
     steps:
+      # --- Updated Checkout Step ---
       - name: Checkout Repository
-        uses: actions/checkout@master
+        uses: actions/checkout@v4 # Pin to latest major version v4
 
+      # --- Install Rust (using the older action, still works for now) ---
       - name: Install Rust toolchain ${{ matrix.rust }}
         uses: actions-rs/toolchain@v1
         with:
@@ -27,24 +29,26 @@ jobs:
           components: rustfmt, clippy
           override: true
     
+      # --- Updated Cache Steps (v1 -> v4) ---
       - name: Cache cargo registry
-        uses: actions/cache@v1
+        uses: actions/cache@v4 # Updated version
         with:
           path: ~/.cargo/registry
           key: ${{ matrix.os }}-${{ matrix.rust }}-cargo-registry-${{ hashFiles('**/Cargo.toml') }}-${{ secrets.CACHE_VERSION }}
 
       - name: Cache cargo index
-        uses: actions/cache@v1
+        uses: actions/cache@v4 # Updated version
         with:
           path: ~/.cargo/git
           key: ${{ matrix.os }}-${{ matrix.rust }}-cargo-index-${{ hashFiles('**/Cargo.toml') }}-${{ secrets.CACHE_VERSION }}
 
       - name: Cache cargo build
-        uses: actions/cache@v1
+        uses: actions/cache@v4 # Updated version
         with:
           path: target
           key: ${{ matrix.os }}-${{ matrix.rust }}-cargo-build-target-${{ hashFiles('**/Cargo.toml') }}-${{ secrets.CACHE_VERSION }}
 
+      # --- Remaining Steps (Unchanged) ---
       - name: Release build tokio
         uses: actions-rs/cargo@v1
         with:
