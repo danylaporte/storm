@@ -1,20 +1,19 @@
 #![allow(clippy::unwrap_used)]
 
-use storm::{Entity, MssqlSave};
+use storm::{Ctx, Entity, MssqlSave};
 
-#[derive(MssqlSave)]
+#[derive(Ctx, MssqlSave, PartialEq)]
 #[storm(table = "t", keys = "id")]
 pub struct EntityWithDuplicateKey {
     pub name: String,
-    pub id: i32,
+    pub id: u32,
 }
 
 impl Entity for EntityWithDuplicateKey {
-    type Key = i32;
-    type TrackCtx = ();
+    type Key = u32;
 }
 
-#[derive(MssqlSave)]
+#[derive(Ctx, MssqlSave, PartialEq)]
 #[storm(table = "t", keys = "id")]
 pub struct EntitySaveWith {
     #[storm(save_with = "buffer_save_with")]
@@ -22,33 +21,32 @@ pub struct EntitySaveWith {
 }
 
 impl Entity for EntitySaveWith {
-    type Key = i32;
-    type TrackCtx = ();
+    type Key = u32;
 }
 
-fn buffer_save_with(_key: &i32, value: &EntitySaveWith) -> Vec<u8> {
+fn buffer_save_with(_key: &u32, value: &EntitySaveWith) -> Vec<u8> {
     value.buffer.as_bytes().to_vec()
 }
 
-#[derive(MssqlSave)]
-#[storm(table = "t", keys = "id")]
-pub struct EntityWithPart {
-    #[storm(part = true)]
-    part: Option<EntityPart>,
-}
+// #[derive(Ctx, MssqlSave, PartialEq)]
+// #[storm(table = "t", keys = "id")]
+// pub struct EntityWithPart {
+//     #[storm(part = true)]
+//     part: Option<EntityPart>,
+// }
 
-impl Entity for EntityWithPart {
-    type Key = i32;
-    type TrackCtx = ();
-}
+// impl Entity for EntityWithPart {
+//     type Key = u32;
+// }
 
-#[derive(MssqlSave)]
-#[storm(table = "t", keys = "id", no_test = true)]
-pub struct EntityPart {
-    pub i: i32,
-}
+// #[derive(MssqlSave, PartialEq)]
+// #[storm(table = "t", keys = "id", no_test = true)]
+// pub struct EntityPart {
+//     pub i: u32,
+// }
 
-impl Entity for EntityPart {
-    type Key = i32;
-    type TrackCtx = ();
-}
+// impl Entity for EntityPart {
+//     type Key = u32;
+// }
+
+// impl Gc for EntityPart {}

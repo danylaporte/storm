@@ -1,4 +1,4 @@
-use crate::Ctx;
+use crate::{Ctx, GcEvent};
 use std::{
     borrow::Cow,
     collections::{HashMap, HashSet},
@@ -9,8 +9,7 @@ use std::{
 };
 use vec_map::VecMap;
 
-#[derive(Default)]
-pub struct GcCtx;
+static GC_EVENT: GcEvent = GcEvent::new();
 
 impl Ctx {
     pub fn gc(&mut self) {
@@ -18,13 +17,20 @@ impl Ctx {
         crate::telemetry::inc_storm_gc();
 
         self.provider.gc();
-        collectables::collect(self);
+        GC_EVENT.call(self);
+    }
+
+    /// Private. for macro use only.
+    #[doc(hidden)]
+    #[inline]
+    pub fn on_gc_collect(f: fn(ctx: &mut Ctx)) {
+        GC_EVENT.on(f);
     }
 }
 
 pub trait Gc {
     const SUPPORT_GC: bool = false;
-    fn gc(&mut self, _ctx: &GcCtx) {}
+    fn gc(&mut self) {}
 }
 
 impl<T> Gc for Arc<T>
@@ -33,9 +39,9 @@ where
 {
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
+    fn gc(&mut self) {
         if let Some(v) = Arc::get_mut(self) {
-            v.gc(ctx);
+            v.gc();
         }
     }
 }
@@ -46,8 +52,8 @@ where
 {
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
-        self.deref_mut().gc(ctx);
+    fn gc(&mut self) {
+        self.deref_mut().gc();
     }
 }
 
@@ -55,7 +61,7 @@ where
 impl<E> Gc for cache::CacheIsland<E> {
     const SUPPORT_GC: bool = true;
 
-    fn gc(&mut self, _: &GcCtx) {
+    fn gc(&mut self) {
         let was_touched = self.untouch();
 
         if !was_touched && self.take().is_some() {
@@ -71,8 +77,8 @@ where
 {
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
-        self.to_mut().gc(ctx);
+    fn gc(&mut self) {
+        self.to_mut().gc();
     }
 }
 
@@ -85,8 +91,8 @@ where
 {
     const SUPPORT_GC: bool = V::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
-        self.iter_mut().for_each(|(_, v)| v.gc(ctx));
+    fn gc(&mut self) {
+        self.iter_mut().for_each(|(_, v)| v.gc());
     }
 }
 
@@ -98,12 +104,15 @@ where
 {
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
+    fn gc(&mut self) {
         if let Some(v) = self.as_mut() {
-            v.gc(ctx);
+            v.gc();
         }
     }
 }
+
+impl<K, V> Gc for fast_set::flat_set_index::FlatSetIndex<K, V> {}
+impl<T> Gc for fast_set::IntSet<T> {}
 
 impl<T> Gc for once_cell::sync::OnceCell<T>
 where
@@ -111,9 +120,22 @@ where
 {
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
+    fn gc(&mut self) {
         if let Some(v) = self.get_mut() {
-            v.gc(ctx);
+            v.gc();
+        }
+    }
+}
+
+impl<T> Gc for std::sync::OnceLock<T>
+where
+    T: Gc,
+{
+    const SUPPORT_GC: bool = T::SUPPORT_GC;
+
+    fn gc(&mut self) {
+        if let Some(v) = self.get_mut() {
+            v.gc();
         }
     }
 }
@@ -124,9 +146,9 @@ where
 {
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
+    fn gc(&mut self) {
         if let Some(v) = Rc::get_mut(self) {
-            v.gc(ctx);
+            v.gc();
         }
     }
 }
@@ -137,20 +159,19 @@ where
 {
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
-        self.iter_mut().for_each(|v| v.gc(ctx));
+    fn gc(&mut self) {
+        self.iter_mut().for_each(|v| v.gc());
     }
 }
 
 impl<K, V> Gc for VecMap<K, V>
 where
-    K: Copy + Send,
-    V: Gc + Send,
+    V: Gc,
 {
     const SUPPORT_GC: bool = V::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
-        self.iter_mut().for_each(|(_, v)| v.gc(ctx));
+    fn gc(&mut self) {
+        self.iter_mut().for_each(|(_, v)| v.gc());
     }
 }
 
@@ -160,8 +181,8 @@ where
 {
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
-    fn gc(&mut self, ctx: &GcCtx) {
-        self.iter_mut().for_each(|v| v.gc(ctx));
+    fn gc(&mut self) {
+        self.iter_mut().for_each(|v| v.gc());
     }
 }
 
@@ -169,14 +190,14 @@ where
 impl Gc for str_utils::str_ci::StringCi {
     const SUPPORT_GC: bool = false;
 
-    fn gc(&mut self, _: &GcCtx) {}
+    fn gc(&mut self) {}
 }
 
 #[cfg(feature = "str_utils")]
 impl<F> Gc for str_utils::form_str::FormStr<F> {
     const SUPPORT_GC: bool = false;
 
-    fn gc(&mut self, _: &GcCtx) {}
+    fn gc(&mut self) {}
 }
 
 macro_rules! gc {
@@ -185,8 +206,8 @@ macro_rules! gc {
             const SUPPORT_GC: bool = false $(|| $t::SUPPORT_GC)*;
 
             #[allow(unused_variables)]
-            fn gc(&mut self, ctx: &GcCtx) {
-                $(self.$n.gc(ctx);)*
+            fn gc(&mut self) {
+                $(self.$n.gc();)*
             }
         }
     };
@@ -250,26 +271,3 @@ gc!(tuple A:0,B:1,C:2,D:3,E:4,F:5,G:6);
 gc!(tuple A:0,B:1,C:2,D:3,E:4,F:5,G:6,H:7);
 gc!(tuple A:0,B:1,C:2,D:3,E:4,F:5,G:6,H:7,I:8);
 gc!(tuple A:0,B:1,C:2,D:3,E:4,F:5,G:6,H:7,I:8,J:9);
-
-#[allow(clippy::type_complexity)]
-pub mod collectables {
-    use crate::Ctx;
-    use parking_lot::RwLock;
-
-    static FUNCS: RwLock<Vec<Box<dyn Fn(&mut Ctx) + Send + Sync>>> = RwLock::new(Vec::new());
-
-    pub fn collect(ctx: &mut Ctx) {
-        FUNCS.read().iter().for_each(|f| f(ctx));
-    }
-
-    pub fn register<F>(f: F)
-    where
-        F: Fn(&mut Ctx) + Send + Sync + 'static,
-    {
-        register_impl(Box::new(f));
-    }
-
-    fn register_impl(f: Box<dyn Fn(&mut Ctx) + Send + Sync>) {
-        FUNCS.write().push(f);
-    }
-}

@@ -4,6 +4,7 @@ use std::borrow::Cow;
 use storm::{prelude::*, Error, MssqlLoad, MssqlSave, Result};
 use storm_mssql::{Execute, ExecuteArgs, FromSql, MssqlFactory, MssqlProvider, ToSql, ToSqlNull};
 use tiberius::Config;
+use uuid::Uuid;
 
 fn create_ctx() -> QueueRwLock<Ctx> {
     QueueRwLock::new(provider().into(), "ctx")
@@ -49,7 +50,7 @@ async fn translated_flow() -> storm::Result<()> {
         .await?;
 
         let ctx = ctx.queue().await?;
-        let mut trx = ctx.transaction();
+        let mut trx = ctx.transaction(Uuid::nil());
 
         let mut labels = trx.tbl_of::<Label>().await?;
         let id = LabelId(2);
@@ -63,7 +64,6 @@ async fn translated_flow() -> storm::Result<()> {
                         fr: "french".to_owned(),
                     },
                 },
-                &()
             )
             .await?;
 
@@ -82,7 +82,7 @@ async fn translated_flow() -> storm::Result<()> {
     .await
 }
 
-#[derive(Clone, Ctx, Debug, MssqlLoad, MssqlSave)]
+#[derive(Clone, Ctx, Debug, MssqlLoad, MssqlSave, PartialEq)]
 #[storm(
     table = "##Labels",
     keys = "Id",
@@ -96,7 +96,6 @@ struct Label {
 
 impl Entity for Label {
     type Key = LabelId;
-    type TrackCtx = ();
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -113,7 +112,7 @@ impl<'a> FromSql<'a> for LabelId {
     }
 }
 
-impl From<LabelId> for usize {
+impl From<LabelId> for u32 {
     fn from(id: LabelId) -> Self {
         id.0 as _
     }
@@ -131,7 +130,7 @@ impl ToSqlNull for LabelId {
     }
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default, Debug, PartialEq)]
 struct Translated {
     en: String,
     fr: String,

@@ -1,5 +1,6 @@
 use cache::CacheIsland;
 use storm::{prelude::*, NoopDelete, NoopLoad, NoopSave, Result};
+use uuid::Uuid;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -12,7 +13,7 @@ async fn main() -> Result<()> {
             let _users = ctx.tbl_of::<User>().await?;
 
             let ctx = ctx.queue().await?;
-            let mut trx = ctx.transaction();
+            let mut trx = ctx.transaction(Uuid::nil());
             let mut users = trx.tbl_of::<User>().await?;
 
             users
@@ -21,11 +22,10 @@ async fn main() -> Result<()> {
                     User {
                         name: "Test2".to_string(),
                     },
-                    &(),
                 )
                 .await?;
 
-            users.remove(1, &()).await?;
+            users.remove(1).await?;
 
             let _topic = trx.tbl_of::<Topic>().await?;
             trx.commit().await?.apply_log(ctx).await?;
@@ -37,7 +37,7 @@ async fn main() -> Result<()> {
     .await
 }
 
-#[derive(NoopDelete, NoopLoad, NoopSave, Ctx)]
+#[derive(Ctx, NoopDelete, NoopLoad, NoopSave, PartialEq)]
 struct Topic {
     #[allow(dead_code)]
     pub title: String,
@@ -45,17 +45,15 @@ struct Topic {
 }
 
 impl Entity for Topic {
-    type Key = usize;
-    type TrackCtx = ();
+    type Key = u32;
 }
 
-#[derive(NoopDelete, NoopLoad, NoopSave, Ctx)]
+#[derive(Ctx, NoopDelete, NoopLoad, NoopSave, PartialEq)]
 struct User {
     #[allow(dead_code)]
     pub name: String,
 }
 
 impl Entity for User {
-    type Key = usize;
-    type TrackCtx = ();
+    type Key = u32;
 }

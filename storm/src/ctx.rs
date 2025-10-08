@@ -1,48 +1,45 @@
 use crate::{
-    on_commit::call_on_commit,
+    indexing::AsyncAsIdxTrx,
+    perform_apply_log,
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
-    Accessor, ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CtxTypeInfo, Entity, EntityAccessor,
-    EntityValidate, Gc, GcCtx, Get, HashTable, Insert, InsertIfChanged, InsertMut,
-    InsertMutIfChanged, Log, LogAccessor, LogState, Logs, LogsVar, NotifyTag, ProviderContainer,
-    Remove, Result, Tag, Transaction, TrxErrGate, Vars, VecTable,
+    registry::{perform_registration, provide_date},
+    trx_iter::TblChangedIter,
+    ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CommitEvent, CtxExtObj, Entity, EntityAccessor,
+    EntityRemove, EntityUpsert, EntityUpsertMut, EventDepth, Get, HashTable, Logs,
+    ProviderContainer, RefIntoIterator, Result, Tag, Transaction, TrxErrGate, VecTable,
 };
+use chrono::NaiveDateTime;
 use fxhash::FxHashMap;
-use parking_lot::RwLock;
-use std::{any::type_name, borrow::Cow, hash::Hash, marker::PhantomData, time::Instant};
+use std::{borrow::Cow, collections::hash_map, hash::Hash};
+use uuid::Uuid;
 use version_tag::VersionTag;
 
 pub struct Ctx {
-    pub(crate) gc: GcCtx,
     pub(crate) provider: ProviderContainer,
-    vars: Vars,
+    pub(crate) ctx_ext_obj: CtxExtObj,
 }
 
 impl Ctx {
     pub fn new(provider: ProviderContainer) -> Self {
+        perform_registration();
+
         Ctx {
-            gc: Default::default(),
             provider,
-            vars: Vars::new(),
+            ctx_ext_obj: CtxExtObj::new(),
         }
     }
 
-    pub fn clear_tbl_of<E>(&mut self)
-    where
-        E: Entity + EntityAccessor,
-        E::Tbl: Accessor,
-    {
-        <E::Tbl as Accessor>::clear_deps(&mut self.vars);
-        self.vars.clear(E::entity_var());
+    #[inline]
+    pub fn clear_tbl_of<E: EntityAccessor>(&mut self) {
+        E::clear(self);
+        E::touched().call(self);
     }
 
+    /// Private. Used in macros.
     #[doc(hidden)]
-    pub fn index_gc<I>(&mut self)
-    where
-        I: Accessor + CtxTypeInfo + Gc,
-    {
-        if let Some(idx) = self.vars.get_mut(I::var()) {
-            idx.gc(&self.gc);
-        }
+    #[inline]
+    pub fn ctx_ext_obj(&self) -> &CtxExtObj {
+        &self.ctx_ext_obj
     }
 
     #[inline]
@@ -61,82 +58,30 @@ impl Ctx {
     #[inline]
     pub fn tbl_of<E>(&self) -> BoxFuture<'_, Result<&'_ E::Tbl>>
     where
-        E: Entity + EntityAccessor,
+        E: EntityAccessor,
         Self: AsRefAsync<E::Tbl>,
     {
         self.as_ref_async()
     }
 
+    #[inline]
     pub fn tbl_of_opt<E>(&self) -> Option<&E::Tbl>
     where
-        E: Entity + EntityAccessor,
-        E::Tbl: Accessor,
+        E: EntityAccessor,
     {
-        self.vars.get(<E::Tbl as Accessor>::var())
-    }
-
-    pub fn tbl_of_mut<E>(&mut self) -> Option<&mut E::Tbl>
-    where
-        E: Entity + EntityAccessor,
-        E::Tbl: Accessor + NotifyTag,
-    {
-        <E::Tbl as Accessor>::clear_deps(&mut self.vars);
-
-        match self.vars.get_mut(E::entity_var()) {
-            Some(ret) => {
-                ret.notify_tag();
-                Some(ret)
-            }
-            None => None,
-        }
-    }
-
-    #[doc(hidden)]
-    pub fn tbl_gc<E>(&mut self)
-    where
-        E: CtxTypeInfo + Entity + EntityAccessor,
-        E::Tbl: Accessor + NotifyTag + Gc,
-    {
-        if let Some(tbl) = self.vars.get_mut(E::entity_var()) {
-            tbl.gc(&self.gc);
-        }
-    }
-
-    #[inline]
-    pub fn vars(&self) -> &Vars {
-        &self.vars
+        self.ctx_ext_obj.get(E::tbl_var()).get()
     }
 }
 
 impl Default for Ctx {
+    #[inline]
     fn default() -> Self {
         Self::new(Default::default())
     }
 }
 
-impl<E> AsRefAsync<HashTable<E>> for Ctx
-where
-    E: CtxTypeInfo + Entity + EntityAccessor<Tbl = HashTable<E>>,
-    E::Key: Eq + Hash,
-    ProviderContainer: LoadAll<E, (), E::Tbl>,
-{
-    fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ E::Tbl>> {
-        table_as_ref_async::<E, _>(&self.vars, &self.provider)
-    }
-}
-
-impl<E> AsRefAsync<VecTable<E>> for Ctx
-where
-    E: CtxTypeInfo + Entity + EntityAccessor<Tbl = VecTable<E>>,
-    E::Key: Copy + Into<usize>,
-    ProviderContainer: LoadAll<E, (), E::Tbl>,
-{
-    fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ E::Tbl>> {
-        table_as_ref_async::<E, _>(&self.vars, &self.provider)
-    }
-}
-
 impl From<ProviderContainer> for Ctx {
+    #[inline]
     fn from(provider: ProviderContainer) -> Self {
         Self::new(provider)
     }
@@ -268,8 +213,11 @@ where
 }
 
 pub struct CtxTransaction<'a> {
-    err_gate: TrxErrGate,
-    log_ctx: LogsVar,
+    pub(crate) date: NaiveDateTime,
+    pub(crate) err_gate: TrxErrGate,
+    pub(crate) logs: Logs,
+    pub(crate) user_id: Uuid,
+    depth: EventDepth,
     provider: TransactionProvider<'a>,
     pub ctx: &'a Ctx,
 }
@@ -278,10 +226,35 @@ impl<'a> CtxTransaction<'a> {
     pub fn commit(mut self) -> BoxFuture<'a, Result<Logs>> {
         Box::pin(async move {
             self.err_gate.check()?;
-            call_on_commit(&mut self).await?;
+            Self::commiting().call(&mut self).await?;
             self.provider.commit().await?;
-            Ok(Logs(self.log_ctx))
+            Ok(self.logs)
         })
+    }
+
+    #[inline]
+    pub fn commiting() -> &'static CommitEvent {
+        static EVENT: CommitEvent = CommitEvent::new();
+        &EVENT
+    }
+
+    #[inline]
+    pub fn date(&self) -> NaiveDateTime {
+        self.date
+    }
+
+    #[inline]
+    pub fn depth(&self) -> usize {
+        self.depth.val()
+    }
+
+    #[inline]
+    pub fn set_date(&mut self, date: NaiveDateTime) {
+        self.date = date;
+    }
+
+    pub(crate) fn track_depth(&self) -> EventDepth {
+        self.depth.clone()
     }
 
     #[inline]
@@ -289,68 +262,69 @@ impl<'a> CtxTransaction<'a> {
         &self.provider
     }
 
+    #[inline]
+    pub fn index<A>(&mut self) -> BoxFuture<'_, Result<A::Trx<'_>>>
+    where
+        A: AsyncAsIdxTrx,
+    {
+        A::async_as_idx_trx(self)
+    }
+
     pub async fn get_entity<'b, E>(&'b mut self, k: &E::Key) -> Result<Option<&'b E>>
     where
-        E: EntityAccessor + LogAccessor,
+        E: EntityAccessor,
         E::Key: Eq + Hash,
-        E::Tbl: Get<E>,
         Ctx: AsRefAsync<E::Tbl>,
     {
         self.tbl_of::<E>().await.map(|t| t.get_owned(k))
     }
 
-    pub fn insert<'b, E>(
-        &'b mut self,
-        k: E::Key,
-        v: E,
-        track: &'b E::TrackCtx,
-    ) -> BoxFuture<'b, Result<()>>
+    #[inline]
+    pub fn insert<'b, E>(&'b mut self, key: E::Key, entity: E) -> BoxFuture<'b, Result<bool>>
     where
-        E: Entity,
-        Self: Insert<E>,
+        E: EntityUpsert,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'c> TransactionProvider<'c>: Upsert<E>,
     {
-        Insert::insert(self, k, v, track)
+        E::upsert(self, key, entity)
     }
 
-    pub fn insert_all<'b, E, I>(
-        &'b mut self,
-        iter: I,
-        track: &'b E::TrackCtx,
-    ) -> BoxFuture<'b, Result<usize>>
+    #[inline]
+    pub fn insert_all<'b, E, I>(&'b mut self, entities: I) -> BoxFuture<'b, Result<usize>>
     where
-        E: Entity,
-        I: IntoIterator<Item = (E::Key, E)> + Send + 'b,
-        I::IntoIter: Send,
-        Self: Insert<E>,
+        E: EntityUpsert,
+        I: IntoIterator<Item = (E::Key, E)>,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'c> TransactionProvider<'c>: Upsert<E>,
     {
-        Insert::insert_all(self, iter, track)
+        let vec = entities.into_iter().collect();
+        E::upsert_all(self, vec)
     }
 
+    #[inline]
+    pub fn insert_mut_all<'b, E, I>(&'b mut self, entities: I) -> BoxFuture<'b, Result<usize>>
+    where
+        E: EntityUpsertMut,
+        I: IntoIterator<Item = (E::Key, E)>,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'c> TransactionProvider<'c>: UpsertMut<E>,
+    {
+        let vec = entities.into_iter().collect();
+        E::upsert_mut_all(self, vec)
+    }
+
+    #[inline]
     pub fn insert_mut<'b, E>(
         &'b mut self,
-        k: E::Key,
-        v: E,
-        track: &'b E::TrackCtx,
-    ) -> BoxFuture<'b, Result<E::Key>>
+        key: E::Key,
+        entity: E,
+    ) -> BoxFuture<'b, Result<(E::Key, bool)>>
     where
-        E: Entity,
-        Self: InsertMut<E>,
+        E: EntityUpsertMut,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'c> TransactionProvider<'c>: UpsertMut<E>,
     {
-        InsertMut::insert_mut(self, k, v, track)
-    }
-
-    pub fn insert_mut_all<'b, E, I>(
-        &'b mut self,
-        iter: I,
-        track: &'b E::TrackCtx,
-    ) -> BoxFuture<'b, Result<usize>>
-    where
-        E: Entity,
-        I: IntoIterator<Item = (E::Key, E)> + Send + 'b,
-        I::IntoIter: Send,
-        Self: InsertMut<E>,
-    {
-        InsertMut::insert_mut_all(self, iter, track)
+        E::upsert_mut(self, key, entity)
     }
 
     #[inline]
@@ -361,58 +335,52 @@ impl<'a> CtxTransaction<'a> {
         self.as_ref_async()
     }
 
-    pub fn remove<'b, E>(
-        &'b mut self,
-        k: E::Key,
-        track: &'b E::TrackCtx,
-    ) -> BoxFuture<'b, Result<()>>
+    #[inline]
+    pub fn remove<'b, E>(&'b mut self, k: E::Key) -> BoxFuture<'b, Result<bool>>
     where
-        E: Entity,
-        Self: Remove<E>,
+        E: EntityRemove,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'c> TransactionProvider<'c>: Delete<E>,
     {
-        Remove::remove(self, k, track)
+        E::remove(self, k)
     }
 
-    pub fn remove_all<'b, E, K>(
-        &'b mut self,
-        keys: K,
-        track: &'b E::TrackCtx,
-    ) -> BoxFuture<'b, Result<usize>>
+    #[inline]
+    pub fn remove_all<'b, E, I>(&'b mut self, keys: I) -> BoxFuture<'b, Result<usize>>
     where
-        E: Entity,
-        K: IntoIterator<Item = E::Key> + Send + 'b,
-        K::IntoIter: Send,
-        Self: Remove<E>,
+        E: EntityRemove,
+        I: IntoIterator<Item = E::Key>,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'c> TransactionProvider<'c>: Delete<E>,
     {
-        Remove::remove_all(self, keys, track)
+        let keys = keys.into_iter().collect::<Vec<_>>();
+        E::remove_all(self, Cow::Owned(keys))
     }
 
-    pub async fn remove_filter<'b, E, F>(
-        &'b mut self,
-        filter: F,
-        track: &'b E::TrackCtx,
-    ) -> Result<()>
+    pub async fn remove_filter<'b, E, F>(&'b mut self, mut filter: F) -> Result<usize>
     where
         Ctx: AsRefAsync<E::Tbl>,
-        E: EntityAccessor + LogAccessor,
-        E::Key: Clone + Eq + Hash,
+        E: EntityRemove,
         F: FnMut(&E::Key, &E) -> bool,
-        for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
-        TblTransaction<'a, 'b, E>: Remove<E>,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)>,
+        for<'c> TransactionProvider<'c>: Delete<E>,
     {
-        self.tbl_of::<E>().await?.remove_filter(filter, track).await
+        let tbl = self.ctx.tbl_of::<E>().await?;
+
+        let ids = tbl
+            .into_iter()
+            .filter(|t| filter(t.0, t.1))
+            .map(|t| t.0.clone())
+            .collect::<Vec<E::Key>>();
+
+        E::remove_all(self, Cow::Owned(ids)).await
     }
 
-    pub fn tbl_log<E>(&self) -> Option<&Log<E>>
-    where
-        E: LogAccessor,
-    {
-        self.log_ctx.get(E::log_var())
-    }
-
+    #[inline]
     pub fn tbl_of<'b, E>(&'b mut self) -> BoxFuture<'b, Result<TblTransaction<'a, 'b, E>>>
     where
-        E: Entity + EntityAccessor + LogAccessor,
+        E: EntityAccessor,
         Ctx: AsRefAsync<E::Tbl>,
     {
         Box::pin(async move {
@@ -421,198 +389,131 @@ impl<'a> CtxTransaction<'a> {
         })
     }
 
+    pub fn tbl_changes<E: EntityAccessor>(&self) -> TblChangedIter<'_, E> {
+        TblChangedIter {
+            log_iter: self.logs.get(E::tbl_var()).map(|h| h.iter()),
+            tbl: self.ctx.ctx_ext_obj.get(E::tbl_var()).get(),
+        }
+    }
+
     /// Indicate if the table specified ty the entity E has been touched, inserted or removed.
+    #[inline]
     pub fn tbl_touched<E>(&self) -> bool
     where
-        E: LogAccessor,
+        E: EntityAccessor,
     {
-        self.tbl_log::<E>().is_some()
+        self.logs.contains(E::tbl_var())
     }
 
-    pub async fn update_with<'b, E, F>(&'b mut self, updater: F, track: &E::TrackCtx) -> Result<()>
+    pub async fn update_with<E, F>(&mut self, mut updater: F) -> Result<()>
     where
-        Ctx: AsRefAsync<E::Tbl>,
-        E: EntityAccessor + LogAccessor + ToOwned<Owned = E>,
-        E::Key: Clone + Eq + Hash,
+        E: EntityUpsert + ToOwned<Owned = E>,
         F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>) -> Result<()>,
-        for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
-        TblTransaction<'a, 'b, E>: Insert<E>,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'c> TransactionProvider<'c>: Upsert<E>,
     {
-        self.tbl_of::<E>().await?.update_with(updater, track).await
+        let vec = self
+            .logs
+            .get(E::tbl_var())
+            .map(|l| l.iter())
+            .into_iter()
+            .flatten()
+            .filter_map(|(id, state)| {
+                if let Some(e) = state {
+                    let mut e = Cow::Borrowed(e);
+
+                    if let Err(err) = updater(id, &mut e) {
+                        return Some(Err(err));
+                    }
+
+                    if let Cow::Owned(e) = e {
+                        return Some(Ok((id.clone(), e)));
+                    }
+                }
+
+                None
+            })
+            .collect::<Result<Vec<(E::Key, E)>>>()?;
+
+        E::upsert_all(self, vec).await?;
+
+        let tbl = E::tbl_from(self.ctx).await?;
+
+        for (id, e) in tbl.ref_iter() {
+            if self
+                .logs
+                .get(E::tbl_var())
+                .is_none_or(|l| !l.contains_key(id))
+            {
+                let mut e = Cow::Borrowed(e);
+
+                updater(id, &mut e)?;
+
+                if let Cow::Owned(e) = e {
+                    E::upsert(self, id.clone(), e).await?;
+                }
+            }
+        }
+
+        Ok(())
     }
 
-    pub async fn update_mut_with<'b, E, F>(
-        &'b mut self,
-        updater: F,
-        track: &E::TrackCtx,
-    ) -> Result<()>
+    pub async fn update_mut_with<E, F>(&mut self, mut updater: F) -> Result<()>
     where
-        Ctx: AsRefAsync<E::Tbl>,
-        E: EntityAccessor + LogAccessor + ToOwned<Owned = E>,
-        E::Key: Clone + Eq + Hash,
+        E: EntityUpsertMut + ToOwned<Owned = E>,
         F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>) -> Result<()>,
-        for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
-        TblTransaction<'a, 'b, E>: InsertMut<E>,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'c> TransactionProvider<'c>: UpsertMut<E>,
     {
-        self.tbl_of::<E>()
-            .await?
-            .update_mut_with(updater, track)
-            .await
-    }
-}
+        let vec = self
+            .logs
+            .get(E::tbl_var())
+            .map(|l| l.iter())
+            .into_iter()
+            .flatten()
+            .filter_map(|(id, state)| {
+                if let Some(e) = state {
+                    let mut e = Cow::Borrowed(e);
 
-impl<'a, E> Insert<E> for CtxTransaction<'a>
-where
-    Ctx: AsRefAsync<E::Tbl>,
-    E: Entity + EntityAccessor + LogAccessor,
-    for<'b> TblTransaction<'a, 'b, E>: Insert<E>,
-{
-    fn insert<'c>(
-        &'c mut self,
-        k: E::Key,
-        v: E,
-        track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<()>> {
-        Box::pin(async move { self.tbl_of::<E>().await?.insert(k, v, track).await })
-    }
+                    if let Err(err) = updater(id, &mut e) {
+                        return Some(Err(err));
+                    }
 
-    fn insert_all<'b, I>(
-        &'b mut self,
-        iter: I,
-        track: &'b <E as Entity>::TrackCtx,
-    ) -> BoxFuture<'b, Result<usize>>
-    where
-        I: IntoIterator<Item = (<E as Entity>::Key, E)> + Send + 'b,
-        I::IntoIter: Send,
-    {
-        Box::pin(async move { self.tbl_of::<E>().await?.insert_all(iter, track).await })
-    }
-}
+                    if let Cow::Owned(e) = e {
+                        return Some(Ok((id.clone(), e)));
+                    }
+                }
 
-impl<'a, E> InsertIfChanged<E> for CtxTransaction<'a>
-where
-    Ctx: AsRefAsync<E::Tbl>,
-    E: Entity + EntityAccessor + LogAccessor,
-    for<'b> TblTransaction<'a, 'b, E>: InsertIfChanged<E>,
-{
-    fn insert_if_changed<'b>(
-        &'b mut self,
-        k: E::Key,
-        v: E,
-        track: &'b <E as Entity>::TrackCtx,
-    ) -> BoxFuture<'b, Result<()>> {
-        Box::pin(async move {
-            self.tbl_of::<E>()
-                .await?
-                .insert_if_changed(k, v, track)
-                .await
-        })
+                None
+            })
+            .collect::<Result<Vec<(E::Key, E)>>>()?;
+
+        E::upsert_mut_all(self, vec).await?;
+
+        let tbl = E::tbl_from(self.ctx).await?;
+
+        for (id, e) in tbl.ref_iter() {
+            if self
+                .logs
+                .get(E::tbl_var())
+                .is_none_or(|l| !l.contains_key(id))
+            {
+                let mut e = Cow::Borrowed(e);
+
+                updater(id, &mut e)?;
+
+                if let Cow::Owned(e) = e {
+                    E::upsert_mut(self, id.clone(), e).await?;
+                }
+            }
+        }
+
+        Ok(())
     }
 
-    fn insert_all_if_changed<'b, I>(
-        &'b mut self,
-        iter: I,
-        track: &'b <E as Entity>::TrackCtx,
-    ) -> BoxFuture<'b, Result<usize>>
-    where
-        I: IntoIterator<Item = (E::Key, E)> + Send + 'b,
-        I::IntoIter: Send,
-    {
-        Box::pin(async move {
-            self.tbl_of::<E>()
-                .await?
-                .insert_all_if_changed(iter, track)
-                .await
-        })
-    }
-}
-
-impl<'a, E> InsertMut<E> for CtxTransaction<'a>
-where
-    Ctx: AsRefAsync<E::Tbl>,
-    E: Entity + EntityAccessor + LogAccessor,
-    for<'b> TblTransaction<'a, 'b, E>: InsertMut<E>,
-{
-    fn insert_mut<'b>(
-        &'b mut self,
-        k: E::Key,
-        v: E,
-        track: &'b E::TrackCtx,
-    ) -> BoxFuture<'b, Result<E::Key>> {
-        Box::pin(async move { self.tbl_of::<E>().await?.insert_mut(k, v, track).await })
-    }
-
-    fn insert_mut_all<'b, I>(
-        &'b mut self,
-        iter: I,
-        track: &'b <E as Entity>::TrackCtx,
-    ) -> BoxFuture<'b, Result<usize>>
-    where
-        I: IntoIterator<Item = (<E as Entity>::Key, E)> + Send + 'b,
-        I::IntoIter: Send,
-    {
-        Box::pin(async move { self.tbl_of::<E>().await?.insert_mut_all(iter, track).await })
-    }
-}
-
-impl<'a, E> InsertMutIfChanged<E> for CtxTransaction<'a>
-where
-    Ctx: AsRefAsync<E::Tbl>,
-    E: Entity + EntityAccessor + LogAccessor,
-    for<'b> TblTransaction<'a, 'b, E>: InsertMutIfChanged<E>,
-{
-    fn insert_mut_if_changed<'b>(
-        &'b mut self,
-        k: E::Key,
-        v: E,
-        track: &'b <E as Entity>::TrackCtx,
-    ) -> BoxFuture<'b, Result<E::Key>> {
-        Box::pin(async move {
-            self.tbl_of::<E>()
-                .await?
-                .insert_mut_if_changed(k, v, track)
-                .await
-        })
-    }
-
-    fn insert_mut_all_if_changed<'b, I>(
-        &'b mut self,
-        iter: I,
-        track: &'b <E as Entity>::TrackCtx,
-    ) -> BoxFuture<'b, Result<usize>>
-    where
-        I: IntoIterator<Item = (E::Key, E)> + Send + 'b,
-        I::IntoIter: Send,
-    {
-        Box::pin(async move {
-            self.tbl_of::<E>()
-                .await?
-                .insert_mut_all_if_changed(iter, track)
-                .await
-        })
-    }
-}
-
-impl<'a, E> Remove<E> for CtxTransaction<'a>
-where
-    Ctx: AsRefAsync<E::Tbl>,
-    E: Entity + EntityAccessor + LogAccessor,
-    for<'b> TblTransaction<'a, 'b, E>: Remove<E>,
-{
-    fn remove<'b>(&'b mut self, k: E::Key, track: &'b E::TrackCtx) -> BoxFuture<'b, Result<()>> {
-        Box::pin(async move { self.tbl_of::<E>().await?.remove(k, track).await })
-    }
-
-    fn remove_all<'b, K>(
-        &'b mut self,
-        keys: K,
-        track: &'b <E as Entity>::TrackCtx,
-    ) -> BoxFuture<'b, Result<usize>>
-    where
-        K: IntoIterator<Item = <E as Entity>::Key> + Send + 'b,
-        K::IntoIter: Send,
-    {
-        Box::pin(async move { self.tbl_of::<E>().await?.remove_all(keys, track).await })
+    #[inline]
+    pub fn user_id<U: From<Uuid>>(&self) -> U {
+        self.user_id.into()
     }
 }
 
@@ -620,557 +521,266 @@ impl<T> AsRefAsync<T> for CtxTransaction<'_>
 where
     Ctx: AsRefAsync<T>,
 {
+    #[inline]
     fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ T>> {
         self.ctx.as_ref_async()
     }
 }
 
-pub struct TblTransaction<'a, 'b, E: Entity + EntityAccessor> {
-    ctx: &'b mut CtxTransaction<'a>,
+pub struct TblTransaction<'a, 'b, E: EntityAccessor> {
+    pub(crate) ctx: &'b mut CtxTransaction<'a>,
     tbl: &'a E::Tbl,
 }
 
 impl<'a, 'b, E> TblTransaction<'a, 'b, E>
 where
-    E: Entity + EntityAccessor,
+    E: EntityAccessor,
     E::Key: Eq + Hash,
 {
-    pub fn contains(&self, k: &E::Key) -> bool
-    where
-        Self: Get<E>,
-    {
+    #[inline]
+    pub fn contains(&self, k: &E::Key) -> bool {
         self.get(k).is_some()
+    }
+
+    #[inline]
+    pub fn date(&self) -> NaiveDateTime {
+        self.ctx.date
     }
 
     /// gets a reference from the log or the underlying ctx.
     ///
     /// You can take the TblTransaction by ownership and have a longer
     /// lifetime for the & by using the [Self::into_ref] method.
-    pub fn get<'c>(&'c self, k: &E::Key) -> Option<&'c E>
-    where
-        Self: Get<E>,
-    {
+    #[inline]
+    pub fn get<'c>(&'c self, k: &E::Key) -> Option<&'c E> {
         Get::get(self, k)
     }
 
     /// Gets a reference by consuming the tbl transaction. This provide a longer reference.
     pub fn get_owned(self, k: &E::Key) -> Option<&'b E>
     where
-        E: LogAccessor,
+        E: EntityAccessor,
         E::Tbl: Get<E>,
     {
-        match self.ctx.log_ctx.get(E::log_var()).and_then(|l| l.get(k)) {
-            Some(LogState::Inserted(v)) => Some(v),
-            Some(LogState::Removed) => None,
+        match self.ctx.logs.get(E::tbl_var()).and_then(|l| l.get(k)) {
+            Some(Some(v)) => Some(v),
+            Some(None) => None,
             None => self.tbl.get(k),
         }
     }
 
-    pub fn insert<'c>(
-        &'c mut self,
-        k: E::Key,
-        v: E,
-        track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<()>>
+    #[inline]
+    pub fn insert<'c>(&'c mut self, key: E::Key, entity: E) -> BoxFuture<'c, Result<bool>>
     where
-        Self: Insert<E>,
+        E: EntityUpsert,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'d> TransactionProvider<'d>: Upsert<E>,
     {
-        Insert::insert(self, k, v, track)
+        E::upsert(self.ctx, key, entity)
     }
 
-    pub fn insert_all<'c, I>(
-        &'c mut self,
-        iter: I,
-        track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<usize>>
+    #[inline]
+    pub fn insert_all<I>(&mut self, entities: I) -> BoxFuture<'_, Result<usize>>
     where
-        I: IntoIterator<Item = (E::Key, E)> + Send + 'a,
-        I::IntoIter: Send,
-        Self: Insert<E>,
+        E: EntityUpsert,
+        I: IntoIterator<Item = (E::Key, E)>,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'c> TransactionProvider<'c>: Upsert<E>,
     {
-        Insert::<E>::insert_all(self, iter, track)
+        self.ctx.insert_all::<E, _>(entities)
     }
 
+    #[inline]
+    pub fn insert_mut_all<I>(&mut self, entities: I) -> BoxFuture<'_, Result<usize>>
+    where
+        E: EntityUpsertMut,
+        I: IntoIterator<Item = (E::Key, E)>,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'c> TransactionProvider<'c>: UpsertMut<E>,
+    {
+        self.ctx.insert_mut_all::<E, _>(entities)
+    }
+
+    #[inline]
     pub fn insert_mut<'c>(
         &'c mut self,
-        k: E::Key,
-        v: E,
-        track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<E::Key>>
+        key: E::Key,
+        entity: E,
+    ) -> BoxFuture<'c, Result<(E::Key, bool)>>
     where
-        Self: InsertMut<E>,
+        E: EntityUpsertMut,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'d> TransactionProvider<'d>: UpsertMut<E>,
     {
-        InsertMut::insert_mut(self, k, v, track)
+        E::upsert_mut(self.ctx, key, entity)
     }
 
-    pub fn insert_mut_all<'c, I>(
-        &'c mut self,
-        iter: I,
-        track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<usize>>
-    where
-        I: IntoIterator<Item = (E::Key, E)> + Send + 'a,
-        I::IntoIter: Send,
-        Self: InsertMut<E>,
-    {
-        InsertMut::<E>::insert_mut_all(self, iter, track)
+    pub fn keys(&self) -> impl Iterator<Item = &E::Key> {
+        let tbl = self.ctx.ctx.ctx_ext_obj.get(E::tbl_var()).get();
+        let log = self.ctx.logs.get(E::tbl_var());
+
+        tbl.zip(log).into_iter().flat_map(|(tbl, log)| {
+            tbl.ref_iter()
+                .map(|(k, _)| k)
+                .filter(|k| !log.contains_key(k))
+                .chain(log.keys())
+        })
     }
 
     pub fn into_ref(self, k: &E::Key) -> Option<&'b E>
     where
-        E: Entity + EntityAccessor + LogAccessor,
+        E: EntityAccessor,
         E::Key: Eq + Hash,
-        E::Tbl: Get<E>,
     {
-        match self.ctx.log_ctx.get(E::log_var()).and_then(|l| l.get(k)) {
-            Some(LogState::Inserted(v)) => Some(v),
-            Some(LogState::Removed) => None,
+        match self.ctx.logs.get(E::tbl_var()).and_then(|l| l.get(k)) {
+            Some(Some(v)) => Some(v),
+            Some(None) => None,
             None => self.tbl.get(k),
         }
     }
 
-    pub fn log(&self) -> Option<&FxHashMap<E::Key, LogState<E>>>
+    #[inline]
+    pub fn remove<'c>(&'c mut self, k: E::Key) -> BoxFuture<'c, Result<bool>>
     where
-        E: Entity + EntityAccessor + LogAccessor,
+        E: EntityRemove,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'d> TransactionProvider<'d>: Delete<E>,
     {
-        self.ctx.log_ctx.get(E::log_var())
+        E::remove(self.ctx, k)
     }
 
-    pub fn remove<'c>(&'c mut self, k: E::Key, track: &'c E::TrackCtx) -> BoxFuture<'c, Result<()>>
+    #[inline]
+    pub fn remove_all<I>(&mut self, keys: I) -> BoxFuture<'_, Result<usize>>
     where
-        Self: Remove<E>,
+        E: EntityRemove,
+        I: IntoIterator<Item = E::Key>,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'c> TransactionProvider<'c>: Delete<E>,
     {
-        Remove::<E>::remove(self, k, track)
+        let keys = keys.into_iter().collect::<Vec<_>>();
+        E::remove_all(self.ctx, Cow::Owned(keys))
     }
 
-    pub fn remove_all<'c, K>(
-        &'c mut self,
-        keys: K,
-        track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<usize>>
+    #[inline]
+    pub async fn remove_filter<F>(&mut self, filter: F) -> Result<usize>
     where
-        Self: Remove<E>,
-        K: IntoIterator<Item = E::Key> + Send + 'c,
-        K::IntoIter: Send,
-    {
-        Remove::<E>::remove_all(self, keys, track)
-    }
-
-    pub async fn remove_filter<F>(&mut self, mut filter: F, track: &E::TrackCtx) -> Result<()>
-    where
-        E: EntityAccessor + LogAccessor,
-        E::Key: Clone + Eq + Hash,
+        Ctx: AsRefAsync<E::Tbl>,
+        E: EntityRemove,
         F: FnMut(&E::Key, &E) -> bool,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
         for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
-        Self: Remove<E>,
+        for<'c> TransactionProvider<'c>: Delete<E>,
     {
-        let ids = (&*self)
-            .into_iter()
-            .filter(|t| filter(t.0, t.1))
-            .map(|t| t.0.clone())
-            .collect::<Vec<E::Key>>();
-
-        for id in ids {
-            self.remove(id, track).await?;
-        }
-
-        Ok(())
+        self.ctx.remove_filter::<E, F>(filter).await
     }
 
+    #[inline]
+    pub fn trx(&self) -> &CtxTransaction<'_> {
+        self.ctx
+    }
+
+    #[inline]
     pub fn tbl(&self) -> &'a E::Tbl {
         self.tbl
     }
 
-    pub async fn update_with<F>(&mut self, mut updater: F, track: &E::TrackCtx) -> Result<()>
+    #[inline]
+    pub async fn update_with<F>(&mut self, updater: F) -> Result<()>
     where
-        E: EntityAccessor + LogAccessor + ToOwned<Owned = E>,
-        E::Key: Clone + Eq + Hash,
+        E: EntityUpsert + ToOwned<Owned = E>,
         F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>) -> Result<()>,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
         for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
-        Self: Insert<E>,
+        for<'c> TransactionProvider<'c>: Upsert<E>,
     {
-        let vec = self
-            .log()
-            .into_iter()
-            .flatten()
-            .filter_map(|(id, state)| {
-                if let LogState::Inserted(e) = state {
-                    let mut e = Cow::Borrowed(e);
-
-                    if let Err(err) = updater(id, &mut e) {
-                        return Some(Err(err));
-                    }
-
-                    if let Cow::Owned(e) = e {
-                        return Some(Ok((id.clone(), e)));
-                    }
-                }
-
-                None
-            })
-            .collect::<Result<Vec<(E::Key, E)>>>()?;
-
-        self.insert_all(vec, track).await?;
-
-        for (id, e) in self.tbl {
-            if self.log().is_none_or(|l| !l.contains_key(id)) {
-                let mut e = Cow::Borrowed(e);
-
-                updater(id, &mut e)?;
-
-                if let Cow::Owned(e) = e {
-                    self.insert(id.clone(), e, track).await?;
-                }
-            }
-        }
-
-        Ok(())
+        self.ctx.update_with::<E, F>(updater).await
     }
 
-    pub async fn update_mut_with<F>(&mut self, mut updater: F, track: &E::TrackCtx) -> Result<()>
+    #[inline]
+    pub async fn update_mut_with<F>(&mut self, updater: F) -> Result<()>
     where
-        E: EntityAccessor + LogAccessor + ToOwned<Owned = E>,
-        E::Key: Clone + Eq + Hash,
+        E: EntityUpsertMut + ToOwned<Owned = E>,
         F: for<'c> FnMut(&'c E::Key, &'c mut Cow<E>) -> Result<()>,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
         for<'c> &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
-        Self: InsertMut<E>,
+        for<'c> TransactionProvider<'c>: UpsertMut<E>,
     {
-        let vec = self
-            .log()
-            .into_iter()
-            .flatten()
-            .filter_map(|(id, state)| {
-                if let LogState::Inserted(e) = state {
-                    let mut e = Cow::Borrowed(e);
+        self.ctx.update_mut_with::<E, F>(updater).await
+    }
 
-                    if let Err(err) = updater(id, &mut e) {
-                        return Some(Err(err));
-                    };
-
-                    if let Cow::Owned(e) = e {
-                        return Some(Ok((id.clone(), e)));
-                    }
-                }
-
-                None
-            })
-            .collect::<Result<Vec<(E::Key, E)>>>()?;
-
-        self.insert_mut_all(vec, track).await?;
-
-        for (id, e) in self.tbl {
-            if self.log().is_none_or(|l| !l.contains_key(id)) {
-                let mut e = Cow::Borrowed(e);
-
-                updater(id, &mut e)?;
-
-                if let Cow::Owned(e) = e {
-                    self.insert_mut(id.clone(), e, track).await?;
-                }
-            }
-        }
-
-        Ok(())
+    #[inline]
+    pub fn user_id<U: From<Uuid>>(&self) -> U {
+        self.ctx.user_id()
     }
 }
 
-impl<E> Get<E> for TblTransaction<'_, '_, E>
-where
-    E: Entity + EntityAccessor + LogAccessor,
-    E::Key: Eq + Hash,
-    E::Tbl: Get<E>,
-{
-    fn get(&self, k: &E::Key) -> Option<&E> {
-        match self.ctx.log_ctx.get(E::log_var()).and_then(|l| l.get(k)) {
-            Some(LogState::Inserted(v)) => Some(v),
-            Some(LogState::Removed) => None,
-            None => self.tbl.get(k),
+impl<'a, 'b, E: EntityAccessor> Get<E> for TblTransaction<'a, 'b, E> {
+    fn get(&self, key: &E::Key) -> Option<&E> {
+        match self.ctx.logs.get(E::tbl_var()).and_then(|l| l.get(key)) {
+            Some(Some(v)) => Some(v),
+            Some(None) => None,
+            None => self.tbl.get(key),
         }
     }
 }
 
-impl<E> Insert<E> for TblTransaction<'_, '_, E>
-where
-    for<'c> TransactionProvider<'c>: Upsert<E>,
-    E: Entity + EntityAccessor + EntityValidate + LogAccessor,
-    E::Key: Eq + Hash,
-    E::Tbl: Get<E>,
-{
-    fn insert<'c>(
-        &'c mut self,
-        k: E::Key,
-        mut v: E,
-        track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<()>> {
-        Box::pin(async move {
-            let gate = self.ctx.err_gate.open()?;
-
-            validate_on_change(self.ctx, &k, &mut v, track).await?;
-            self.ctx.provider.upsert(&k, &v).await?;
-
-            // remove first because if the track change the entity, we want to keep only the latest version.
-            log_mut::<E>(&mut self.ctx.log_ctx).remove(&k);
-
-            // change tracking...
-            let old = self.tbl.get(&k);
-            let result = v.track_insert(&k, old, self.ctx, track).await;
-
-            // if the value is present, this is because the track has changed the value.
-            log_mut(&mut self.ctx.log_ctx)
-                .entry(k)
-                .or_insert(LogState::Inserted(v));
-
-            if result.is_ok() {
-                gate.close();
-            }
-
-            result
-        })
-    }
-
-    fn insert_all<'c, I>(
-        &'c mut self,
-        iter: I,
-        track: &'c <E as Entity>::TrackCtx,
-    ) -> BoxFuture<'c, Result<usize>>
-    where
-        I: IntoIterator<Item = (<E as Entity>::Key, E)> + Send + 'c,
-        I::IntoIter: Send,
-    {
-        Box::pin(async move {
-            let mut count = 0;
-
-            for (k, v) in iter {
-                self.insert(k, v, track).await?;
-                count += 1;
-            }
-
-            Ok(count)
-        })
-    }
+pub struct TblTransactionIter<'a, E: EntityAccessor> {
+    tbl_iter: <E::Tbl as RefIntoIterator>::Iter<'a>,
+    log: Option<&'a FxHashMap<E::Key, Option<E>>>,
+    log_iter: Option<hash_map::Iter<'a, E::Key, Option<E>>>,
 }
 
-impl<E> InsertIfChanged<E> for TblTransaction<'_, '_, E>
+impl<'a, E> Iterator for TblTransactionIter<'a, E>
 where
-    E: Entity + EntityAccessor + PartialEq,
-    Self: Get<E> + Insert<E>,
+    E: EntityAccessor,
 {
-    fn insert_if_changed<'c>(
-        &'c mut self,
-        k: E::Key,
-        v: E,
-        track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<()>> {
-        Box::pin(async move {
-            if self.get(&k) != Some(&v) {
-                self.insert(k, v, track).await
-            } else {
-                Ok(())
+    type Item = (&'a E::Key, &'a E);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        for (id, e) in self.tbl_iter.by_ref() {
+            if self.log.is_none_or(|log| !log.contains_key(id)) {
+                return Some((id, e));
             }
-        })
-    }
+        }
 
-    fn insert_all_if_changed<'c, I>(
-        &'c mut self,
-        iter: I,
-        track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<usize>>
-    where
-        I: IntoIterator<Item = (E::Key, E)> + Send + 'c,
-        I::IntoIter: Send,
-    {
-        Box::pin(async move {
-            let mut count = 0;
-
-            for (k, v) in iter {
-                if self.get(&k) != Some(&v) {
-                    self.insert(k, v, track).await?;
-                    count += 1;
+        if let Some(log_iter) = self.log_iter.as_mut() {
+            for (id, e) in log_iter.by_ref() {
+                if let Some(v) = e.as_ref() {
+                    return Some((id, v));
                 }
             }
+        }
 
-            Ok(count)
-        })
+        None
     }
 }
 
-impl<E> InsertMut<E> for TblTransaction<'_, '_, E>
-where
-    for<'c> TransactionProvider<'c>: UpsertMut<E>,
-    E: Entity + EntityAccessor + EntityValidate + LogAccessor,
-    E::Key: Clone + Eq + Hash,
-    E::Tbl: Get<E>,
-{
-    fn insert_mut<'c>(
-        &'c mut self,
-        mut k: E::Key,
-        mut v: E,
-        track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<E::Key>> {
-        Box::pin(async move {
-            let gate = self.ctx.err_gate.open()?;
-
-            validate_on_change(self.ctx, &k, &mut v, track).await?;
-            self.ctx.provider.upsert_mut(&mut k, &mut v).await?;
-
-            // remove first because if the track change the entity, we want to keep only the latest version.
-            log_mut::<E>(&mut self.ctx.log_ctx).remove(&k);
-
-            // change tracking...
-            let old = self.tbl.get(&k);
-            let result = v.track_insert(&k, old, self.ctx, track).await;
-
-            // if the value is present, this is because the track has changed the value.
-            log_mut(&mut self.ctx.log_ctx)
-                .entry(k.clone())
-                .or_insert(LogState::Inserted(v));
-
-            if result.is_ok() {
-                gate.close();
-            }
-
-            result.map(|_| k)
-        })
-    }
-
-    fn insert_mut_all<'c, I>(
-        &'c mut self,
-        iter: I,
-        track: &'c <E as Entity>::TrackCtx,
-    ) -> BoxFuture<'c, Result<usize>>
+impl<'a, 'b, E: EntityAccessor> RefIntoIterator for TblTransaction<'a, 'b, E> {
+    type Item<'c>
+        = (&'c E::Key, &'c E)
     where
-        I: IntoIterator<Item = (<E as Entity>::Key, E)> + Send + 'c,
-        I::IntoIter: Send,
-    {
-        Box::pin(async move {
-            let mut count = 0;
-
-            for (k, v) in iter {
-                self.insert_mut(k, v, track).await?;
-                count += 1;
-            }
-
-            Ok(count)
-        })
-    }
-}
-
-impl<E> InsertMutIfChanged<E> for TblTransaction<'_, '_, E>
-where
-    E: Entity + EntityAccessor + PartialEq,
-    Self: Get<E> + InsertMut<E>,
-{
-    fn insert_mut_if_changed<'c>(
-        &'c mut self,
-        k: E::Key,
-        v: E,
-        track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<E::Key>> {
-        Box::pin(async move {
-            if self.get(&k) != Some(&v) {
-                self.insert_mut(k, v, track).await
-            } else {
-                Ok(k)
-            }
-        })
-    }
-
-    fn insert_mut_all_if_changed<'c, I>(
-        &'c mut self,
-        iter: I,
-        track: &'c E::TrackCtx,
-    ) -> BoxFuture<'c, Result<usize>>
+        Self: 'c;
+    type Iter<'c>
+        = TblTransactionIter<'c, E>
     where
-        I: IntoIterator<Item = (E::Key, E)> + Send + 'c,
-        I::IntoIter: Send,
-    {
-        Box::pin(async move {
-            let mut count = 0;
+        Self: 'c;
 
-            for (k, v) in iter {
-                if self.get(&k) != Some(&v) {
-                    self.insert_mut(k, v, track).await?;
-                    count += 1;
-                }
-            }
-
-            Ok(count)
-        })
-    }
-}
-
-impl<E> Remove<E> for TblTransaction<'_, '_, E>
-where
-    for<'c> TransactionProvider<'c>: Delete<E>,
-    E: Entity + EntityAccessor + LogAccessor,
-    E::Key: Clone + Eq + Hash,
-    E::Tbl: Accessor + Get<E>,
-{
-    fn remove<'c>(&'c mut self, k: E::Key, track: &'c E::TrackCtx) -> BoxFuture<'c, Result<()>> {
-        Box::pin(async move {
-            let gate = self.ctx.err_gate.open()?;
-
-            if let Some(LogState::Removed) =
-                log_mut::<E>(&mut self.ctx.log_ctx).insert(k.clone(), LogState::Removed)
-            {
-                gate.close();
-                return Ok(());
-            }
-
-            E::on_remove().__call(self.ctx, &k, track).await?;
-
-            let mut result = Ok(());
-
-            if let Some(LogState::Removed) = log::<E>(&self.ctx.log_ctx).get(&k) {
-                self.ctx.provider.delete(&k).await?;
-
-                if let Some(old) = self.tbl.get(&k) {
-                    result = old.track_remove(&k, self.ctx, track).await;
-                }
-            }
-
-            if result.is_ok() {
-                gate.close();
-            }
-
-            result
-        })
-    }
-
-    fn remove_all<'c, K>(
-        &'c mut self,
-        keys: K,
-        track: &'c <E as Entity>::TrackCtx,
-    ) -> BoxFuture<'c, Result<usize>>
-    where
-        K: 'c,
-        K: IntoIterator<Item = <E as Entity>::Key> + Send,
-        K::IntoIter: Send,
-    {
-        Box::pin(async move {
-            let mut count = 0;
-
-            for key in keys {
-                Remove::remove(self, key, track).await?;
-                count += 1;
-            }
-
-            Ok(count)
-        })
+    fn ref_iter(&self) -> Self::Iter<'_> {
+        let log = self.ctx.logs.get(E::tbl_var());
+        TblTransactionIter {
+            tbl_iter: self.tbl.ref_iter(),
+            log_iter: log.map(|log| log.iter()),
+            log,
+        }
     }
 }
 
 impl ApplyLog<Logs> for async_cell_lock::QueueRwLockWriteGuard<'_, Ctx> {
-    fn apply_log(&mut self, mut log: Logs) -> bool {
+    fn apply_log(&mut self, logs: Logs) -> bool {
         #[cfg(feature = "telemetry")]
-        let instant = Instant::now();
+        let instant = std::time::Instant::now();
 
-        let appliers = LOG_APPLIERS.read();
-        let mut changed = false;
-
-        for applier in &*appliers {
-            changed = applier.apply(&mut self.vars, &mut log.0) || changed;
-        }
+        let changed = perform_apply_log(&mut *self, logs);
 
         #[cfg(feature = "telemetry")]
         {
@@ -1186,114 +796,18 @@ impl ApplyLog<Logs> for async_cell_lock::QueueRwLockWriteGuard<'_, Ctx> {
 }
 
 impl Transaction for async_cell_lock::QueueRwLockQueueGuard<'_, Ctx> {
-    fn transaction(&self) -> CtxTransaction<'_> {
+    fn transaction<U>(&self, user_id: U) -> CtxTransaction<'_>
+    where
+        U: Into<Uuid>,
+    {
         CtxTransaction {
             ctx: self,
+            date: provide_date(),
+            depth: Default::default(),
             err_gate: Default::default(),
-            log_ctx: Default::default(),
+            logs: Default::default(),
             provider: self.provider.transaction(),
+            user_id: user_id.into(),
         }
-    }
-}
-
-fn table_as_ref_async<'a, E, T>(
-    ctx: &'a Vars,
-    provider: &'a ProviderContainer,
-) -> BoxFuture<'a, Result<&'a T>>
-where
-    T: Accessor + Default + Extend<(E::Key, E)> + Send + Sync,
-    E: Entity + EntityAccessor<Tbl = T>,
-    ProviderContainer: LoadAll<E, (), T>,
-{
-    Box::pin(async move {
-        let var = T::var();
-
-        // get the table if already initialized.
-        if let Some(v) = ctx.get(var) {
-            return Ok(v);
-        }
-
-        // lock the provider to load the table.
-        let _gate = provider.gate(type_name::<T>()).await;
-
-        // if the table is already loaded when we gain access to the provider.
-        if let Some(v) = ctx.get(var) {
-            return Ok(v);
-        }
-
-        // load the table
-        let v = provider.load_all(&()).await?;
-        Ok(ctx.get_or_init(var, || v))
-    })
-}
-
-trait LogApplier: Send + Sync {
-    fn apply(&self, vars: &mut Vars, log_ctx: &mut LogsVar) -> bool;
-}
-
-impl<E> LogApplier for EntityLogApplier<E>
-where
-    E: Entity + EntityAccessor + LogAccessor,
-    E::Tbl: Accessor + ApplyLog<Log<E>>,
-{
-    fn apply(&self, vars: &mut Vars, log_ctx: &mut LogsVar) -> bool {
-        if let Some(log) = log_ctx.replace(E::log_var(), None) {
-            if let Some(tbl) = vars.get_mut(E::entity_var()) {
-                if tbl.apply_log(log) {
-                    <E::Tbl as Accessor>::clear_deps(vars);
-                    return true;
-                }
-            }
-        }
-
-        false
-    }
-}
-
-struct EntityLogApplier<E: Entity + EntityAccessor + LogAccessor>(PhantomData<E>);
-
-fn log<E: Entity + LogAccessor>(logs: &LogsVar) -> &Log<E> {
-    logs.get_or_init(E::log_var(), Default::default)
-}
-
-fn log_mut<E: Entity + LogAccessor>(logs: &mut LogsVar) -> &mut Log<E> {
-    logs.get_or_init_mut(E::log_var(), Default::default)
-}
-
-#[doc(hidden)]
-pub fn register_apply_log<E>()
-where
-    E: Entity + EntityAccessor + LogAccessor,
-    E::Tbl: Accessor + ApplyLog<Log<E>>,
-{
-    register_apply_log_dyn(Box::new(EntityLogApplier::<E>(PhantomData)));
-}
-
-fn register_apply_log_dyn(app: Box<dyn LogApplier>) {
-    LOG_APPLIERS.write().push(app);
-}
-
-static LOG_APPLIERS: RwLock<Vec<Box<dyn LogApplier>>> = RwLock::new(Vec::new());
-
-async fn validate_on_change<E>(
-    trx: &mut CtxTransaction<'_>,
-    key: &E::Key,
-    entity: &mut E,
-    track: &E::TrackCtx,
-) -> Result<()>
-where
-    E: EntityAccessor + EntityValidate,
-{
-    let mut error = None;
-
-    if let Err(e) = E::on_change().call(trx, key, entity, track).await {
-        error = Some(e);
-    }
-
-    EntityValidate::entity_validate(&*entity, &mut error);
-
-    match error {
-        Some(e) => Err(e),
-        None => Ok(()),
     }
 }

@@ -1,10 +1,10 @@
-use crate::{Entity, EntityAccessor, Get, LogAccessor, LogState, TblTransaction};
+use crate::{Entity, EntityAccessor, Get, TblTransaction};
 use fxhash::FxHashMap;
 use std::hash::Hash;
 
 impl<'c, E> IntoIterator for &'c TblTransaction<'_, '_, E>
 where
-    E: EntityAccessor + LogAccessor,
+    E: EntityAccessor,
     E::Key: Eq + Hash,
     &'c E::Tbl: IntoIterator<Item = (&'c E::Key, &'c E)> + Get<E>,
 {
@@ -12,7 +12,7 @@ where
     type IntoIter = TrxIter<'c, E, <&'c E::Tbl as IntoIterator>::IntoIter>;
 
     fn into_iter(self) -> Self::IntoIter {
-        match self.log() {
+        match self.ctx.logs.get(E::tbl_var()) {
             Some(log) => TrxIter::Log {
                 log,
                 log_iter: log.iter(),
@@ -25,8 +25,8 @@ where
 
 pub enum TrxIter<'a, E: Entity, I> {
     Log {
-        log: &'a FxHashMap<E::Key, LogState<E>>,
-        log_iter: std::collections::hash_map::Iter<'a, E::Key, LogState<E>>,
+        log: &'a FxHashMap<E::Key, Option<E>>,
+        log_iter: std::collections::hash_map::Iter<'a, E::Key, Option<E>>,
         tbl_iter: I,
     },
     Tbl(I),
@@ -48,7 +48,7 @@ where
                 tbl_iter,
             } => {
                 for item in log_iter.by_ref() {
-                    if let LogState::Inserted(val) = item.1 {
+                    if let Some(val) = item.1 {
                         return Some((item.0, val));
                     }
                 }
@@ -64,5 +64,22 @@ where
 
             Self::Tbl(iter) => iter.next(),
         }
+    }
+}
+
+pub struct TblChangedIter<'a, E: EntityAccessor> {
+    pub(crate) log_iter: Option<std::collections::hash_map::Iter<'a, E::Key, Option<E>>>,
+    pub(crate) tbl: Option<&'a E::Tbl>,
+}
+
+impl<'a, E: EntityAccessor> Iterator for TblChangedIter<'a, E> {
+    type Item = (&'a E::Key, Option<&'a E>, Option<&'a E>);
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        let (k, new) = self.log_iter.as_mut()?.next()?;
+        let old = self.tbl.and_then(|t| t.get(k));
+
+        Some((k, old, new.as_ref()))
     }
 }

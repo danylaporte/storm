@@ -58,7 +58,7 @@ impl MssqlProvider {
     async fn query_rows_imp<'a, 'b, M, R, C>(
         &'a self,
         sql: &'b str,
-        params: &'b [&'b (dyn ToSql)],
+        params: &'b [&'b dyn ToSql],
         mut mapper: M,
         use_transaction: bool,
     ) -> Result<C>
@@ -101,7 +101,7 @@ impl Execute for MssqlProvider {
     fn execute_with_args<'a, S>(
         &'a self,
         statement: S,
-        params: &'a [&'a (dyn ToSql)],
+        params: &'a [&'a dyn ToSql],
         args: ExecuteArgs,
     ) -> BoxFuture<'a, Result<u64>>
     where
@@ -173,7 +173,7 @@ impl QueryRows for MssqlProvider {
     fn query_rows<'a, S, M, R, C>(
         &'a self,
         statement: S,
-        params: &'a [&'a (dyn ToSql)],
+        params: &'a [&'a dyn ToSql],
         mut mapper: M,
         use_transaction: bool,
     ) -> BoxFuture<'a, Result<C>>
@@ -235,7 +235,7 @@ impl<'a> QueryConn<'a> {
     async fn query<'b, 'c>(
         &'b mut self,
         sql: &'c str,
-        params: &'c [&'c (dyn ToSql)],
+        params: &'c [&'c dyn ToSql],
     ) -> Result<QueryStream<'b>>
     where
         'b: 'c,

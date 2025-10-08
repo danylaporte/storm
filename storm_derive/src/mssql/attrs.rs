@@ -115,6 +115,9 @@ pub(super) struct TypeAttrs {
     /// impl ApplyEntityDiff and impl EntityDiff
     #[darling(default)]
     pub diff: bool,
+
+    #[darling(default)]
+    pub no_ctx: bool,
 }
 
 impl TypeAttrs {

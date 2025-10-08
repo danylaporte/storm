@@ -11,6 +11,8 @@ pub(crate) fn delete(input: &DeriveInput) -> TokenStream {
                 Box::pin(async { Ok(()) })
             }
         }
+
+        impl storm::EntityRemove for #ident {}
     }
 }
 
@@ -49,5 +51,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
         impl storm::EntityValidate for #ident {
             fn entity_validate(&self, _error: &mut Option<storm::Error>) {}
         }
+
+        impl storm::EntityUpsert for #ident {}
     }
 }

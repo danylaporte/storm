@@ -1,7 +1,7 @@
 use crate::{
-    on_changed::Changed, provider::LoadAll, Accessor, ApplyLog, BoxFuture, CtxTypeInfo, Deps,
-    Entity, EntityAccessor, EntityOf, Gc, GcCtx, Get, GetMut, Init, Log, LogState, NotifyTag,
-    Result, Tag, TblVar,
+    provider::LoadAll, AsRefAsync, BoxFuture, ClearEvent, Clearable, Ctx, CtxTypeInfo, Entity,
+    EntityAccessor, EntityOf, Gc, Get, GetMut, Logs, NotifyTag, ProviderContainer, RefIntoIterator,
+    Result, Tag, Touchable, TouchedEvent,
 };
 use fxhash::FxHashMap;
 use rayon::{
@@ -28,13 +28,60 @@ impl<E: Entity> HashTable<E> {
         }
     }
 
+    /// Used by the macro.
+    #[doc(hidden)]
+    pub fn __apply_log(ctx: &mut Ctx, logs: &mut Logs) -> bool
+    where
+        E: CtxTypeInfo + EntityAccessor<Tbl = HashTable<E>>,
+    {
+        let Some(log) = logs.remove(E::tbl_var()) else {
+            return false;
+        };
+
+        if log.is_empty() {
+            return false;
+        }
+
+        let Some(tbl) = ctx.ctx_ext_obj.get_mut(E::tbl_var()).get_mut() else {
+            return false;
+        };
+
+        for (k, state) in log {
+            match state {
+                Some(new) => {
+                    match tbl.map.entry(k) {
+                        Entry::Occupied(mut o) => {
+                            E::applied().call(o.key(), Some(o.get()), Some(&new));
+                            o.insert(new);
+                        }
+                        Entry::Vacant(v) => {
+                            E::applied().call(v.key(), None, Some(&new));
+                            v.insert(new);
+                        }
+                    };
+                }
+                None => {
+                    if let Some(old) = tbl.map.remove(&k) {
+                        E::applied().call(&k, Some(&old), None);
+                    }
+                }
+            }
+        }
+
+        tbl.update_metrics();
+        tbl.tag.notify();
+        E::touched().call(ctx);
+
+        true
+    }
+
     #[inline]
-    pub fn iter(&self) -> Iter<E::Key, E> {
+    pub fn iter(&self) -> Iter<'_, E::Key, E> {
         self.map.iter()
     }
 
     #[inline]
-    pub fn keys(&self) -> Keys<E::Key, E> {
+    pub fn keys(&self) -> Keys<'_, E::Key, E> {
         self.map.keys()
     }
 
@@ -47,69 +94,19 @@ impl<E: Entity> HashTable<E> {
     }
 
     #[inline]
-    pub fn values(&self) -> Values<E::Key, E> {
+    pub fn values(&self) -> Values<'_, E::Key, E> {
         self.map.values()
     }
 }
 
-impl<E> Accessor for HashTable<E>
+impl<E> AsRefAsync<HashTable<E>> for Ctx
 where
-    E: Entity + EntityAccessor<Tbl = HashTable<E>>,
+    E: EntityAccessor<Tbl = HashTable<E>> + CtxTypeInfo + Send,
+    ProviderContainer: LoadAll<E, (), HashTable<E>>,
 {
     #[inline]
-    fn var() -> TblVar<Self> {
-        E::entity_var()
-    }
-
-    #[inline]
-    fn deps() -> &'static Deps {
-        E::entity_deps()
-    }
-}
-
-impl<E> ApplyLog<Log<E>> for HashTable<E>
-where
-    E: CtxTypeInfo + Entity + EntityAccessor<Tbl = Self>,
-    E::Key: Eq + Hash,
-{
-    fn apply_log(&mut self, log: Log<E>) -> bool {
-        if log.is_empty() {
-            return false;
-        }
-
-        for (k, state) in log {
-            match state {
-                LogState::Inserted(new) => {
-                    match self.map.entry(k) {
-                        Entry::Occupied(mut o) => {
-                            let entity = Changed::Inserted {
-                                old: Some(o.get()),
-                                new: &new,
-                            };
-                            E::on_changed().__call(o.key(), entity);
-                            o.insert(new);
-                        }
-                        Entry::Vacant(v) => {
-                            let entity = Changed::Inserted {
-                                old: None,
-                                new: &new,
-                            };
-                            E::on_changed().__call(v.key(), entity);
-                            v.insert(new);
-                        }
-                    };
-                }
-                LogState::Removed => {
-                    if let Some(old) = self.map.remove(&k) {
-                        E::on_changed().__call(&k, Changed::Removed { old: &old });
-                    }
-                }
-            }
-        }
-
-        self.update_metrics();
-        self.tag.notify();
-        true
+    fn as_ref_async(&self) -> BoxFuture<'_, Result<&'_ HashTable<E>>> {
+        E::tbl_from(self)
     }
 }
 
@@ -117,6 +114,13 @@ impl<E: Entity> AsRef<Self> for HashTable<E> {
     #[inline]
     fn as_ref(&self) -> &Self {
         self
+    }
+}
+
+impl<E: EntityAccessor> Clearable for HashTable<E> {
+    #[inline]
+    fn cleared() -> &'static ClearEvent {
+        E::cleared()
     }
 }
 
@@ -165,8 +169,8 @@ where
     const SUPPORT_GC: bool = E::SUPPORT_GC;
 
     #[inline]
-    fn gc(&mut self, ctx: &GcCtx) {
-        self.map.gc(ctx);
+    fn gc(&mut self) {
+        self.map.gc();
     }
 }
 
@@ -190,18 +194,6 @@ where
     }
 }
 
-impl<'a, P, E> Init<'a, P> for HashTable<E>
-where
-    E: CtxTypeInfo + Entity + Send,
-    E::Key: Eq + Hash + Send,
-    P: Sync + LoadAll<E, (), Self>,
-{
-    #[inline]
-    fn init(provider: &'a P) -> BoxFuture<'a, Result<Self>> {
-        provider.load_all(&())
-    }
-}
-
 impl<'a, E: Entity> IntoIterator for &'a HashTable<E> {
     type Item = (&'a E::Key, &'a E);
     type IntoIter = Iter<'a, E::Key, E>;
@@ -220,19 +212,39 @@ where
     type Item = (&'a E::Key, &'a E);
     type Iter = ParIter<'a, E::Key, E>;
 
+    #[inline]
     fn into_par_iter(self) -> Self::Iter {
         self.par_iter()
     }
 }
 
 impl<E: Entity> NotifyTag for HashTable<E> {
+    #[inline]
     fn notify_tag(&mut self) {
         self.tag.notify()
     }
 }
 
 impl<E: Entity> Tag for HashTable<E> {
+    #[inline]
     fn tag(&self) -> VersionTag {
         self.tag
+    }
+}
+
+impl<E: EntityAccessor> Touchable for HashTable<E> {
+    #[inline]
+    fn touched() -> &'static TouchedEvent {
+        E::touched()
+    }
+}
+
+impl<E: Entity> RefIntoIterator for HashTable<E> {
+    type Item<'a> = (&'a E::Key, &'a E);
+    type Iter<'a> = Iter<'a, E::Key, E>;
+
+    #[inline]
+    fn ref_iter(&self) -> Self::Iter<'_> {
+        self.iter()
     }
 }

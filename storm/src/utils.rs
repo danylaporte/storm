@@ -27,10 +27,7 @@ pub fn debug_locks_await_elapsed(instant: Instant) {
         let elapsed = instant.elapsed().as_millis();
 
         if elapsed > 250 {
-            tracing::warn!(
-                elapsed_ms = elapsed,
-                "Locks Await took too long"
-            );
+            tracing::warn!(elapsed_ms = elapsed, "Locks Await took too long");
         }
     }
 }

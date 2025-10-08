@@ -10,15 +10,21 @@ mod derive_input_ext;
 #[cfg(feature = "mssql")]
 mod errors;
 mod field_ext;
+mod flat_set_index;
+mod hash_flat_set_index;
 mod indexing;
 mod locks_await;
 #[cfg(feature = "mssql")]
 mod mssql;
 mod noop;
+mod one_index;
+mod register;
 mod rename_all;
+mod single_set;
 #[cfg(feature = "mssql")]
 mod string_ext;
 mod token_stream_ext;
+mod tree_index;
 mod type_ext;
 
 use derive_input_ext::DeriveInputExt;
@@ -38,6 +44,18 @@ use type_ext::TypeExt;
 pub fn ctx(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     ctx::generate(&input).into()
+}
+
+#[proc_macro_attribute]
+pub fn flat_set_index(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(item as Item);
+    flat_set_index::flat_set_index(item).into()
+}
+
+#[proc_macro_attribute]
+pub fn hash_flat_set_index(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(item as Item);
+    hash_flat_set_index::hash_flat_set_index(item).into()
 }
 
 #[proc_macro_attribute]
@@ -89,4 +107,27 @@ pub fn noop_load(input: TokenStream) -> TokenStream {
 pub fn noop_save(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     noop::save(&input).into()
+}
+
+#[proc_macro_attribute]
+pub fn one_index(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(item as Item);
+    one_index::one_index(item).into()
+}
+
+#[proc_macro_attribute]
+pub fn register(attr: TokenStream, item: TokenStream) -> TokenStream {
+    register::register(attr, item)
+}
+
+#[proc_macro_attribute]
+pub fn single_set(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(item as Item);
+    single_set::single_set(item).into()
+}
+
+#[proc_macro_attribute]
+pub fn tree_index(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(item as Item);
+    tree_index::tree_index(item).into()
 }

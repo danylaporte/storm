@@ -3,6 +3,7 @@
 use storm::{prelude::*, MssqlDelete, MssqlLoad, MssqlSave, Result};
 use storm_mssql::{Execute, ExecuteArgs, MssqlFactory, MssqlProvider, TransactionScoped};
 use tiberius::Config;
+use uuid::Uuid;
 
 fn create_ctx() -> QueueRwLock<Ctx> {
     QueueRwLock::new(provider().into(), "ctx")
@@ -39,7 +40,7 @@ async fn transaction_scoped() -> Result<()> {
             .await?;
 
         let ctx = ctx.queue().await?;
-        let mut trx = ctx.transaction();
+        let mut trx = ctx.transaction(Uuid::nil());
         let mut entities1 = trx.tbl_of::<Entity1>().await?;
 
         let e1 = Entity1 {
@@ -48,23 +49,23 @@ async fn transaction_scoped() -> Result<()> {
         };
 
         // insert
-        entities1.insert(1, e1, &()).await?;
+        entities1.insert(1, e1).await?;
 
         let mut e1 = entities1.get(&1).unwrap().clone();
 
         e1.o = Some(5);
 
         // update
-        entities1.insert(1, e1, &()).await?;
+        entities1.insert(1, e1).await?;
 
         let e2 = Entity1 {
             name: "E2".to_string(),
             o: None,
         };
-        entities1.insert(2, e2, &()).await?;
+        entities1.insert(2, e2).await?;
 
         // delete
-        entities1.remove(2, &()).await?;
+        entities1.remove(2).await?;
 
         let log = trx.commit().await?;
 
@@ -106,5 +107,4 @@ struct Entity1 {
 
 impl Entity for Entity1 {
     type Key = i32;
-    type TrackCtx = ();
 }

@@ -6,7 +6,7 @@ pub trait Execute {
     fn execute_with_args<'a, S>(
         &'a self,
         statement: S,
-        params: &'a [&'a (dyn ToSql)],
+        params: &'a [&'a dyn ToSql],
         args: ExecuteArgs,
     ) -> BoxFuture<'a, Result<u64>>
     where
@@ -16,7 +16,7 @@ pub trait Execute {
     fn execute<'a, S>(
         &'a self,
         statement: S,
-        params: &'a [&'a (dyn ToSql)],
+        params: &'a [&'a dyn ToSql],
     ) -> BoxFuture<'a, Result<u64>>
     where
         S: Debug + Into<Cow<'a, str>> + Send + 'a,
