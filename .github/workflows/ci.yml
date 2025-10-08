@@ -12,7 +12,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        os: [ubuntu-latest, windows-latest]
         rust: [nightly, beta, stable]
 
     steps:
@@ -27,14 +27,6 @@ jobs:
           components: rustfmt, clippy
           override: true
     
-      # Work around https://github.com/actions/cache/issues/403 by using GNU tar
-      # instead of BSD tar.
-      - name: Install GNU tar
-        if: matrix.os == 'macOS-latest'
-        run: |
-          brew install gnu-tar
-          echo PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH" >> $GITHUB_ENV
-
       - name: Cache cargo registry
         uses: actions/cache@v1
         with:
@@ -53,23 +45,11 @@ jobs:
           path: target
           key: ${{ matrix.os }}-${{ matrix.rust }}-cargo-build-target-${{ hashFiles('**/Cargo.toml') }}-${{ secrets.CACHE_VERSION }}
 
-      # - name: Release build async-std
-      #   uses: actions-rs/cargo@v1
-      #   with:
-      #     command: build
-      #     args: --release --no-default-features --features cache,derive,mssql,telemetry
-
       - name: Release build tokio
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release --no-default-features --features cache,derive,mssql,telemetry
-
-      # - name: Cargo Test For All Features Using async-std
-      #   uses: actions-rs/cargo@v1
-      #   with:
-      #     command: test
-      #     args: --no-default-features --features cache,derive,mssql,telemetry
 
       - name: Cargo Test For All Features Using tokio
         uses: actions-rs/cargo@v1
