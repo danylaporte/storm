@@ -82,8 +82,18 @@ where
             A::get_or_init(trx.ctx).await?;
 
             // extract the index log and init if required.
-            let (_base, log) =
+            let (base, log_opt) =
                 A::base_and_log(trx.ctx, &mut trx.logs).expect("extract base and log");
+
+            if log_opt.is_none() {
+                let log = base.index.clone();
+                trx.logs.insert(A::index_var(), log);
+            }
+
+            let log = trx
+                .logs
+                .get_mut(A::index_var())
+                .expect("extract base and log");
 
             Ok(SingleSetIndexTrx(log))
         })
@@ -92,7 +102,7 @@ where
 
 pub type BaseAndLog<'a, 'b, A> = Option<(
     &'a SingleSetIndex<A>,
-    &'b mut IntSet<<A as SingleSetAdapt>::K>,
+    Option<&'b mut IntSet<<A as SingleSetAdapt>::K>>,
 )>;
 
 pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
@@ -104,7 +114,7 @@ pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static 
     fn index_var() -> CtxVar<SingleSetIndex<Self>>;
 
     fn apply_log(ctx: &mut Ctx, logs: &mut Logs) -> bool {
-        let Some((_, log)) = Self::base_and_log(ctx, logs) else {
+        let Some((_base, Some(log))) = Self::base_and_log(ctx, logs) else {
             return false;
         };
 
@@ -130,13 +140,21 @@ pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static 
             let tbl_log = logs.get(tbl_var)?;
             let tbl = ctx.ctx_ext_obj.get(tbl_var).get()?;
 
-            let mut log = base.index.clone();
+            let mut log = None;
 
             for (k, new) in tbl_log {
                 let new = new.as_ref().is_some_and(|new| Self::adapt(k, new));
                 let old = tbl.get(k).is_some_and(|old| Self::adapt(k, old));
 
                 if old != new {
+                    let log = match log.as_mut() {
+                        Some(l) => l,
+                        None => {
+                            log = Some(base.index.clone());
+                            log.as_mut().unwrap()
+                        }
+                    };
+
                     if old {
                         log.remove(*k);
                     } else {
@@ -145,10 +163,12 @@ pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static 
                 }
             }
 
-            logs.insert(index_var, log);
+            if let Some(log) = log {
+                logs.insert(index_var, log);
+            }
         }
 
-        logs.get_mut(index_var).map(|log| (base, log))
+        Some((base, logs.get_mut(index_var)))
     }
 
     fn get_or_init(ctx: &Ctx) -> BoxFuture<'_, Result<&SingleSetIndex<Self>>>
@@ -210,9 +230,18 @@ pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static 
         entity: &'a Self::Entity,
     ) -> BoxFuture<'a, Result<()>> {
         Box::pin(async move {
-            if let Some((_base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs) {
+            if let Some((base, log_opt)) = Self::base_and_log(trx.ctx, &mut trx.logs) {
                 if Self::adapt(id, entity) {
-                    log.remove(*id);
+                    match log_opt {
+                        Some(log) => {
+                            log.remove(*id);
+                        }
+                        None => {
+                            let mut log = base.index.clone();
+                            log.remove(*id);
+                            trx.logs.insert(Self::index_var(), log);
+                        }
+                    }
                 }
             }
 
@@ -232,15 +261,30 @@ pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static 
         // We then reinsert it back to the log at the end.
         if let Some(new) = trx.logs.get_mut(tbl_var).and_then(|map| map.remove(id)) {
             if let Some(new) = new.as_ref() {
-                if let Some((_base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs) {
+                if let Some((base, log_opt)) = Self::base_and_log(trx.ctx, &mut trx.logs) {
                     let old = old.is_some_and(|old| Self::adapt(id, old));
                     let new = Self::adapt(id, new);
 
                     if old != new {
-                        if old {
-                            log.remove(*id);
-                        } else {
-                            log.insert(*id);
+                        match log_opt {
+                            Some(log) => {
+                                if old {
+                                    log.remove(*id);
+                                } else {
+                                    log.insert(*id);
+                                }
+                            }
+                            None => {
+                                let mut log = base.index.clone();
+
+                                if old {
+                                    log.remove(*id);
+                                } else {
+                                    log.insert(*id);
+                                }
+
+                                trx.logs.insert(Self::index_var(), log);
+                            }
                         }
                     }
                 }
