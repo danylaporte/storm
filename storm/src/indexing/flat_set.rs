@@ -78,7 +78,7 @@ where
 
             // extract the index log and init if required.
             let (base, log) =
-                A::base_and_log(trx.ctx, &mut trx.logs).expect("extract base and log");
+                A::base_and_log(trx.ctx, &mut trx.logs, true).expect("extract base and log");
 
             Ok(FlatSetIndexTrx(flat_set_index::FlatSetIndexTrx::new(
                 base, log,
@@ -104,7 +104,7 @@ pub trait FlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
     fn index_var() -> CtxVar<FlatSetIndex<Self>>;
 
     fn apply_log(ctx: &mut Ctx, logs: &mut Logs) -> bool {
-        let Some((_, log)) = Self::base_and_log(ctx, logs) else {
+        let Some((_, log)) = Self::base_and_log(ctx, logs, false) else {
             return false;
         };
 
@@ -121,38 +121,45 @@ pub trait FlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
         changed
     }
 
-    fn base_and_log<'a, 'b>(ctx: &'a Ctx, logs: &'b mut Logs) -> BaseAndLog<'a, 'b, Self> {
+    fn base_and_log<'a, 'b>(
+        ctx: &'a Ctx,
+        logs: &'b mut Logs,
+        force_log: bool,
+    ) -> BaseAndLog<'a, 'b, Self> {
         let index_var = Self::index_var();
         let base = ctx.ctx_ext_obj.get(index_var).get()?;
 
         if !logs.contains(index_var) {
             let tbl_var = Self::Entity::tbl_var();
-            let tbl_log = logs.get(tbl_var)?;
-            let tbl = ctx.ctx_ext_obj.get(tbl_var).get()?;
 
-            let mut log = flat_set_index::FlatSetIndexLog::default();
+            if let Some(tbl_log) = logs.get(tbl_var) {
+                let tbl = ctx.ctx_ext_obj.get(tbl_var).get().expect("tbl");
+                let mut log = flat_set_index::FlatSetIndexLog::default();
 
-            let mut old_set = FxHashSet::default();
-            let mut new_set = FxHashSet::default();
+                let mut old_set = FxHashSet::default();
+                let mut new_set = FxHashSet::default();
 
-            for (k, new) in tbl_log {
-                old_set.clear();
-                new_set.clear();
+                for (k, new) in tbl_log {
+                    old_set.clear();
+                    new_set.clear();
 
-                let old = tbl.get(k);
+                    let old = tbl.get(k);
 
-                Self::upsert_or_remove(
-                    base,
-                    &mut log,
-                    k,
-                    new.as_ref(),
-                    old,
-                    &mut old_set,
-                    &mut new_set,
-                );
+                    Self::upsert_or_remove(
+                        base,
+                        &mut log,
+                        k,
+                        new.as_ref(),
+                        old,
+                        &mut old_set,
+                        &mut new_set,
+                    );
+                }
+
+                logs.insert(index_var, log);
+            } else if force_log {
+                logs.insert(index_var, Default::default());
             }
-
-            logs.insert(index_var, log);
         }
 
         logs.get_mut(index_var).map(|log| (base, log))
@@ -232,7 +239,7 @@ pub trait FlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
         entity: &'a Self::Entity,
     ) -> BoxFuture<'a, Result<()>> {
         Box::pin(async move {
-            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs) {
+            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
                 let mut old_set = FxHashSet::default();
                 let mut new_set = FxHashSet::default();
 
@@ -263,7 +270,7 @@ pub trait FlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
         // We then reinsert it back to the log at the end.
         if let Some(new) = trx.logs.get_mut(tbl_var).and_then(|map| map.remove(id)) {
             if let Some(new) = new.as_ref() {
-                if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs) {
+                if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
                     let mut old_set = FxHashSet::default();
                     let mut new_set = FxHashSet::default();
 

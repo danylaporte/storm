@@ -109,7 +109,7 @@ where
             E::tree_get_or_init(trx.ctx).await?;
 
             let (base, log) =
-                E::base_and_log(trx.ctx, &mut trx.logs).expect("extract base and log");
+                E::base_and_log(trx.ctx, &mut trx.logs, true).expect("extract base and log");
 
             let trx = TreeTrx::new(base, log);
 
@@ -128,7 +128,7 @@ pub trait TreeEntity: EntityAccessor<Tbl = VecTable<Self>> + CtxTypeInfo + Send 
     where
         Self::Key: Into<u32>,
     {
-        let Some((_, log)) = Self::base_and_log(ctx, logs) else {
+        let Some((_, log)) = Self::base_and_log(ctx, logs, false) else {
             return false;
         };
 
@@ -156,6 +156,7 @@ pub trait TreeEntity: EntityAccessor<Tbl = VecTable<Self>> + CtxTypeInfo + Send 
     fn base_and_log<'a, 'b>(
         ctx: &'a Ctx,
         logs: &'b mut Logs,
+        force_log: bool,
     ) -> Option<(&'a TreeIndex<Self>, &'b mut TreeIndexLog<Self::Key>)>
     where
         Self::Key: Into<u32>,
@@ -165,15 +166,20 @@ pub trait TreeEntity: EntityAccessor<Tbl = VecTable<Self>> + CtxTypeInfo + Send 
 
         if !logs.contains(index_var) {
             let tbl_var = Self::tbl_var();
-            let tbl_log = logs.get(tbl_var)?;
-            let tbl = ctx.ctx_ext_obj.get(tbl_var).get()?;
 
-            let mut log = TreeIndexLog::default();
+            if let Some(tbl_log) = logs.get(tbl_var) {
+                let tbl = ctx.ctx_ext_obj.get(tbl_var).get().expect("tbl");
+                let mut log = TreeIndexLog::default();
 
-            for (k, new) in tbl_log {
-                let old = tbl.get(k);
+                for (k, new) in tbl_log {
+                    let old = tbl.get(k);
 
-                Self::upsert_or_remove(base, &mut log, k, new.as_ref(), old);
+                    Self::upsert_or_remove(base, &mut log, k, new.as_ref(), old);
+                }
+
+                logs.insert(index_var, log);
+            } else if force_log {
+                logs.insert(index_var, Default::default());
             }
         }
 
@@ -195,7 +201,7 @@ pub trait TreeEntity: EntityAccessor<Tbl = VecTable<Self>> + CtxTypeInfo + Send 
         Self::Key: Into<u32>,
     {
         Box::pin(async move {
-            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs) {
+            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
                 Self::upsert_or_remove(base, log, id, None, Some(entity));
             }
 
@@ -218,7 +224,7 @@ pub trait TreeEntity: EntityAccessor<Tbl = VecTable<Self>> + CtxTypeInfo + Send 
         // We then reinsert it back to the log at the end.
         if let Some(new) = trx.logs.get_mut(tbl_var).and_then(|map| map.remove(id)) {
             if let Some(new) = new.as_ref() {
-                if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs) {
+                if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
                     Self::upsert_or_remove(base, log, id, Some(new), old);
                 }
             }

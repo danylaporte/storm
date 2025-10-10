@@ -73,7 +73,7 @@ where
             A::get_or_init(trx.ctx).await?;
 
             let (base, log) =
-                A::base_and_log(trx.ctx, &mut trx.logs).expect("extract base and log");
+                A::base_and_log(trx.ctx, &mut trx.logs, true).expect("extract base and log");
 
             Ok(OneIndexTrx(one_index::OneIndexTrx::new(&base.base, log)))
         })
@@ -94,7 +94,7 @@ pub trait OneAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
     fn index_var() -> CtxVar<OneIndex<Self>>;
 
     fn apply_log(ctx: &mut Ctx, logs: &mut Logs) -> bool {
-        let Some((_, log)) = Self::base_and_log(ctx, logs) else {
+        let Some((_, log)) = Self::base_and_log(ctx, logs, false) else {
             return false;
         };
 
@@ -119,31 +119,38 @@ pub trait OneAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
         changed
     }
 
-    fn base_and_log<'a, 'b>(ctx: &'a Ctx, logs: &'b mut Logs) -> BaseAndLog<'a, 'b, Self> {
+    fn base_and_log<'a, 'b>(
+        ctx: &'a Ctx,
+        logs: &'b mut Logs,
+        force_log: bool,
+    ) -> BaseAndLog<'a, 'b, Self> {
         let index_var = Self::index_var();
         let base = ctx.ctx_ext_obj.get(index_var).get()?;
 
         if !logs.contains(index_var) {
             let tbl_var = Self::Entity::tbl_var();
-            let tbl_log = logs.get(tbl_var)?;
-            let tbl = ctx.ctx_ext_obj.get(tbl_var).get()?;
 
-            let mut log = one_index::OneIndexLog::<Self::K, Self::V>::default();
+            if let Some(tbl_log) = logs.get(tbl_var) {
+                let tbl = ctx.ctx_ext_obj.get(tbl_var).get().expect("tbl");
+                let mut log = one_index::OneIndexLog::<Self::K, Self::V>::default();
 
-            for (k, new) in tbl_log {
-                let old = tbl.get(k).and_then(|old| Self::adapt(k, old));
-                let new = new.as_ref().and_then(|new| Self::adapt(k, new));
+                for (k, new) in tbl_log {
+                    let old = tbl.get(k).and_then(|old| Self::adapt(k, old));
+                    let new = new.as_ref().and_then(|new| Self::adapt(k, new));
 
-                if old != new {
-                    if let Some(new) = new {
-                        log.insert(base, *k, new);
-                    } else {
-                        log.remove(base, *k);
+                    if old != new {
+                        if let Some(new) = new {
+                            log.insert(base, *k, new);
+                        } else {
+                            log.remove(base, *k);
+                        }
                     }
                 }
-            }
 
-            logs.insert(index_var, log);
+                logs.insert(index_var, log);
+            } else if force_log {
+                logs.insert(index_var, Default::default());
+            }
         }
 
         logs.get_mut(index_var).map(|log| (base, log))
@@ -210,14 +217,10 @@ pub trait OneAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
         entity: &'a Self::Entity,
     ) -> BoxFuture<'a, Result<()>> {
         Box::pin(async move {
-            let Some(base) = trx.ctx.ctx_ext_obj.get(Self::index_var()).get() else {
-                return Ok(());
-            };
-
-            if Self::adapt(id, entity).is_some() {
-                trx.logs
-                    .get_mut_or_default(Self::index_var())
-                    .remove(base, *id);
+            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
+                if Self::adapt(id, entity).is_some() {
+                    log.remove(base, *id);
+                }
             }
 
             Ok(())
@@ -236,7 +239,7 @@ pub trait OneAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
         // We then reinsert it back to the log at the end.
         if let Some(new) = trx.logs.get_mut(tbl_var).and_then(|o| o.remove(id)) {
             if let Some(new) = new.as_ref() {
-                if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs) {
+                if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
                     let new = Self::adapt(id, new);
                     let old = old.as_ref().and_then(|old| Self::adapt(id, old));
 

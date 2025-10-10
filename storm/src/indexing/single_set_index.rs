@@ -8,6 +8,52 @@ use fast_set::IntSet;
 use std::{any::type_name, future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
 use version_tag::VersionTag;
 
+pub struct SingleSetLog<A: SingleSetAdapt> {
+    set: Option<IntSet<A::K>>,
+    _a: PhantomData<A>,
+}
+
+impl<A: SingleSetAdapt> SingleSetLog<A> {
+    pub fn insert(&mut self, base: &SingleSetIndex<A>, key: A::K) {
+        match self.set.as_mut() {
+            Some(v) => {
+                v.insert(key);
+            }
+            None => {
+                if !base.index.contains(key) {
+                    let mut set = base.index.clone();
+                    set.insert(key);
+                    self.set = Some(set);
+                }
+            }
+        }
+    }
+
+    pub fn remove(&mut self, base: &SingleSetIndex<A>, key: A::K) {
+        match self.set.as_mut() {
+            Some(v) => {
+                v.remove(key);
+            }
+            None => {
+                if base.index.contains(key) {
+                    let mut set = base.index.clone();
+                    set.remove(key);
+                    self.set = Some(set);
+                }
+            }
+        }
+    }
+}
+
+impl<A: SingleSetAdapt> Default for SingleSetLog<A> {
+    fn default() -> Self {
+        Self {
+            set: Default::default(),
+            _a: Default::default(),
+        }
+    }
+}
+
 impl<A: SingleSetAdapt> AsRefAsync<SingleSetIndex<A>> for Ctx
 where
     Ctx: AsRefAsync<<A::Entity as EntityAccessor>::Tbl>,
@@ -82,28 +128,15 @@ where
             A::get_or_init(trx.ctx).await?;
 
             // extract the index log and init if required.
-            let (base, log_opt) =
-                A::base_and_log(trx.ctx, &mut trx.logs).expect("extract base and log");
-
-            if log_opt.is_none() {
-                let log = base.index.clone();
-                trx.logs.insert(A::index_var(), log);
-            }
-
-            let log = trx
-                .logs
-                .get_mut(A::index_var())
-                .expect("extract base and log");
+            let (_, log) =
+                A::base_and_log(trx.ctx, &mut trx.logs, true).expect("extract base and log");
 
             Ok(SingleSetIndexTrx(log))
         })
     }
 }
 
-pub type BaseAndLog<'a, 'b, A> = Option<(
-    &'a SingleSetIndex<A>,
-    Option<&'b mut IntSet<<A as SingleSetAdapt>::K>>,
-)>;
+pub type BaseAndLog<'a, 'b, A> = Option<(&'a SingleSetIndex<A>, &'b mut SingleSetLog<A>)>;
 
 pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
     type Entity: EntityAccessor<Key = Self::K> + CtxTypeInfo + Send;
@@ -114,7 +147,7 @@ pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static 
     fn index_var() -> CtxVar<SingleSetIndex<Self>>;
 
     fn apply_log(ctx: &mut Ctx, logs: &mut Logs) -> bool {
-        let Some((_base, Some(log))) = Self::base_and_log(ctx, logs) else {
+        let Some(log) = Self::base_and_log(ctx, logs, false).and_then(|l| l.1.set.as_mut()) else {
             return false;
         };
 
@@ -131,44 +164,41 @@ pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static 
         changed
     }
 
-    fn base_and_log<'a, 'b>(ctx: &'a Ctx, logs: &'b mut Logs) -> BaseAndLog<'a, 'b, Self> {
+    fn base_and_log<'a, 'b>(
+        ctx: &'a Ctx,
+        logs: &'b mut Logs,
+        force_log: bool,
+    ) -> BaseAndLog<'a, 'b, Self> {
         let index_var = Self::index_var();
         let base = ctx.ctx_ext_obj.get(index_var).get()?;
 
         if !logs.contains(index_var) {
             let tbl_var = Self::Entity::tbl_var();
-            let tbl_log = logs.get(tbl_var)?;
-            let tbl = ctx.ctx_ext_obj.get(tbl_var).get()?;
 
-            let mut log = None;
+            if let Some(tbl_log) = logs.get(tbl_var) {
+                let tbl = ctx.ctx_ext_obj.get(tbl_var).get().expect("tbl");
+                let mut log = SingleSetLog::default();
 
-            for (k, new) in tbl_log {
-                let new = new.as_ref().is_some_and(|new| Self::adapt(k, new));
-                let old = tbl.get(k).is_some_and(|old| Self::adapt(k, old));
+                for (k, new) in tbl_log {
+                    let new = new.as_ref().is_some_and(|new| Self::adapt(k, new));
+                    let old = tbl.get(k).is_some_and(|old| Self::adapt(k, old));
 
-                if old != new {
-                    let log = match log.as_mut() {
-                        Some(l) => l,
-                        None => {
-                            log = Some(base.index.clone());
-                            log.as_mut().unwrap()
+                    if old != new {
+                        if old {
+                            log.remove(base, *k);
+                        } else {
+                            log.insert(base, *k);
                         }
-                    };
-
-                    if old {
-                        log.remove(*k);
-                    } else {
-                        log.insert(*k);
                     }
                 }
-            }
 
-            if let Some(log) = log {
                 logs.insert(index_var, log);
+            } else if force_log {
+                logs.insert(index_var, Default::default());
             }
         }
 
-        Some((base, logs.get_mut(index_var)))
+        logs.get_mut(index_var).map(|log| (base, log))
     }
 
     fn get_or_init(ctx: &Ctx) -> BoxFuture<'_, Result<&SingleSetIndex<Self>>>
@@ -230,18 +260,9 @@ pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static 
         entity: &'a Self::Entity,
     ) -> BoxFuture<'a, Result<()>> {
         Box::pin(async move {
-            if let Some((base, log_opt)) = Self::base_and_log(trx.ctx, &mut trx.logs) {
+            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
                 if Self::adapt(id, entity) {
-                    match log_opt {
-                        Some(log) => {
-                            log.remove(*id);
-                        }
-                        None => {
-                            let mut log = base.index.clone();
-                            log.remove(*id);
-                            trx.logs.insert(Self::index_var(), log);
-                        }
-                    }
+                    log.remove(base, *id);
                 }
             }
 
@@ -261,30 +282,15 @@ pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static 
         // We then reinsert it back to the log at the end.
         if let Some(new) = trx.logs.get_mut(tbl_var).and_then(|map| map.remove(id)) {
             if let Some(new) = new.as_ref() {
-                if let Some((base, log_opt)) = Self::base_and_log(trx.ctx, &mut trx.logs) {
+                if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
                     let old = old.is_some_and(|old| Self::adapt(id, old));
                     let new = Self::adapt(id, new);
 
                     if old != new {
-                        match log_opt {
-                            Some(log) => {
-                                if old {
-                                    log.remove(*id);
-                                } else {
-                                    log.insert(*id);
-                                }
-                            }
-                            None => {
-                                let mut log = base.index.clone();
-
-                                if old {
-                                    log.remove(*id);
-                                } else {
-                                    log.insert(*id);
-                                }
-
-                                trx.logs.insert(Self::index_var(), log);
-                            }
+                        if old {
+                            log.remove(base, *id);
+                        } else {
+                            log.insert(base, *id);
                         }
                     }
                 }
@@ -312,7 +318,7 @@ impl<A: SingleSetAdapt> Clearable for SingleSetIndex<A> {
 }
 
 impl<A: SingleSetAdapt> LogOf for SingleSetIndex<A> {
-    type Log = IntSet<A::K>;
+    type Log = SingleSetLog<A>;
 }
 
 impl<A: SingleSetAdapt> NotifyTag for SingleSetIndex<A> {
@@ -336,16 +342,17 @@ impl<A: SingleSetAdapt> Touchable for SingleSetIndex<A> {
     }
 }
 
-pub struct SingleSetIndexTrx<'a, A: SingleSetAdapt>(&'a IntSet<A::K>);
+#[allow(dead_code)]
+pub struct SingleSetIndexTrx<'a, A: SingleSetAdapt>(&'a SingleSetLog<A>);
 
-impl<'a, A: SingleSetAdapt> Deref for SingleSetIndexTrx<'a, A> {
-    type Target = IntSet<A::K>;
+// impl<'a, A: SingleSetAdapt> Deref for SingleSetIndexTrx<'a, A> {
+//     type Target = IntSet<A::K>;
 
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        self.0
-    }
-}
+//     #[inline]
+//     fn deref(&self) -> &Self::Target {
+//         self.0
+//     }
+// }
 
 #[macro_export]
 macro_rules! single_set_adapt {
