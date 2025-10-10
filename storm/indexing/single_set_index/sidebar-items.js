@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["SingleSetIndex","SingleSetIndexTrx"],"trait":["SingleSetAdapt"],"type":["BaseAndLog"]};
+window.SIDEBAR_ITEMS = {"struct":["SingleSetIndex","SingleSetIndexTrx","SingleSetLog"],"trait":["SingleSetAdapt"],"type":["BaseAndLog"]};
