@@ -14,7 +14,6 @@ pub fn __register_apply(f: ApplierFn, order: ApplyOrder) {
     match vec.binary_search_by_key(&order, |t| t.1) {
         Ok(index) | Err(index) => vec.insert(index, (f, order)),
     }
-    APPLIERS.get_mut().push((f, order));
 }
 
 #[inline]

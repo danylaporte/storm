@@ -11,7 +11,7 @@ use version_tag::VersionTag;
 impl<E: TreeEntity> AsRefAsync<TreeIndex<E>> for Ctx
 where
     E: TreeEntity,
-    E::Key: Copy + Into<u32> + Into<usize>,
+    E::Key: Copy + Into<u32>,
     ProviderContainer: LoadAll<E, (), VecTable<E>>,
 {
     #[inline]

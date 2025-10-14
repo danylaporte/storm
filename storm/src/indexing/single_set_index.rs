@@ -140,7 +140,7 @@ pub type BaseAndLog<'a, 'b, A> = Option<(&'a SingleSetIndex<A>, &'b mut SingleSe
 
 pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
     type Entity: EntityAccessor<Key = Self::K> + CtxTypeInfo + Send;
-    type K: Copy + Eq + From<u32> + Hash + Into<u32> + Into<usize> + Send + Sync;
+    type K: Copy + Eq + From<u32> + Hash + Into<u32> + Send + Sync;
 
     fn adapt(id: &<Self::Entity as Entity>::Key, entity: &Self::Entity) -> bool;
 
