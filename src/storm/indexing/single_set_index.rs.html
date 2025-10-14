@@ -140,7 +140,7 @@
 <a href=#140 id=140 data-nosnippet>140</a>
 <a href=#141 id=141 data-nosnippet>141</a><span class="kw">pub trait </span>SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + <span class="lifetime">'static </span>{
 <a href=#142 id=142 data-nosnippet>142</a>    <span class="kw">type </span>Entity: EntityAccessor&lt;Key = <span class="self">Self</span>::K&gt; + CtxTypeInfo + Send;
-<a href=#143 id=143 data-nosnippet>143</a>    <span class="kw">type </span>K: Copy + Eq + From&lt;u32&gt; + Hash + Into&lt;u32&gt; + Into&lt;usize&gt; + Send + Sync;
+<a href=#143 id=143 data-nosnippet>143</a>    <span class="kw">type </span>K: Copy + Eq + From&lt;u32&gt; + Hash + Into&lt;u32&gt; + Send + Sync;
 <a href=#144 id=144 data-nosnippet>144</a>
 <a href=#145 id=145 data-nosnippet>145</a>    <span class="kw">fn </span>adapt(id: <span class="kw-2">&amp;</span>&lt;<span class="self">Self</span>::Entity <span class="kw">as </span>Entity&gt;::Key, entity: <span class="kw-2">&amp;</span><span class="self">Self</span>::Entity) -&gt; bool;
 <a href=#146 id=146 data-nosnippet>146</a>
