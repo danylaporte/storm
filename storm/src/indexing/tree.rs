@@ -265,7 +265,20 @@ pub trait TreeEntity: EntityAccessor<Tbl = VecTable<Self>> + CtxTypeInfo + Send 
     {
         let slot = ctx.ctx_ext_obj.get(Self::tree_var());
 
-        slot.get_or_init(|| TreeIndex::from_iter(tbl.iter().map(|(k, e)| (k.clone(), e.parent()))))
+        slot.get_or_init(|| {
+            #[cfg(feature = "telemetry")]
+            let instant = std::time::Instant::now();
+
+            let idx = TreeIndex::from_iter(tbl.iter().map(|(k, e)| (k.clone(), e.parent())));
+
+            #[cfg(feature = "telemetry")]
+            {
+                let dur = instant.elapsed().as_secs_f64();
+                metrics::histogram!("index_build_dur_sec", "name" => type_name::<TreeIndex<Self>>()).record(dur);
+            }
+
+            idx
+        })
     }
 
     fn tree_register()

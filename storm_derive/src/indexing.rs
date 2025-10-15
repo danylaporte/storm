@@ -100,9 +100,28 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         }
     }
 
+    #[cfg(not(feature = "telemetry"))]
+    let telemetry_start = quote!();
+    #[cfg(feature = "telemetry")]
+    let telemetry_start = quote!(let instant = std::time::Instant::now(););
+
+    #[cfg(not(feature = "telemetry"))]
+    let telemetry_end = quote!();
+    #[cfg(feature = "telemetry")]
+    let telemetry_end = quote!(
+        let dur = instant.elapsed().as_secs_f64();
+        storm::metrics::histogram!("index_build_dur_sec", "name" => std::any::type_name::<#index_name>()).record(dur);
+    );
+
     let get_or_init = quote!({
         let _ = tracing::span!(tracing::Level::DEBUG, <#index_name as storm::CtxTypeInfo>::NAME, obj = storm::OBJ_INDEX, ev = storm::EV_CREATED).entered();
-        #index_name(#name(#(#as_ref_args,)*), storm::version_tag::combine(&[#(#as_ref_tag,)*]))
+
+        #telemetry_start
+        let idx = #name(#(#as_ref_args,)*);
+
+        #telemetry_end
+
+        #index_name(idx, storm::version_tag::combine(&[#(#as_ref_tag,)*]))
     });
 
     let (gc, gc_collect) = gc(&index_name, ty);

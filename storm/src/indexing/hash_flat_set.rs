@@ -201,6 +201,9 @@ pub trait HashFlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'stati
         let slot = ctx.ctx_ext_obj.get(Self::index_var());
 
         slot.get_or_init(|| {
+            #[cfg(feature = "telemetry")]
+            let instant = std::time::Instant::now();
+
             let mut base = hash_flat_set_index::HashFlatSetIndex::<Self::K, Self::V>::default();
             let mut log = hash_flat_set_index::HashFlatSetIndexLog::<Self::K, Self::V>::default();
             let mut set = FxHashSet::default();
@@ -223,6 +226,13 @@ pub trait HashFlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'stati
             }
 
             base.apply(log);
+
+            #[cfg(feature = "telemetry")]
+            {
+                let dur = instant.elapsed().as_secs_f64();
+                metrics::histogram!("index_build_dur_sec", "name" => type_name::<Self>())
+                    .record(dur);
+            }
 
             HashFlatSetIndex {
                 _a: PhantomData,

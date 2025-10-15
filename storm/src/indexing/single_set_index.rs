@@ -232,12 +232,22 @@ pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static 
         let slot = ctx.ctx_ext_obj.get(Self::index_var());
 
         slot.get_or_init(|| {
+            #[cfg(feature = "telemetry")]
+            let instant = std::time::Instant::now();
+
             let mut index = fast_set::IntSet::<Self::K>::default();
 
             for (id, entity) in tbl.ref_iter() {
                 if Self::adapt(id, entity) {
                     index.insert(*id);
                 }
+            }
+
+            #[cfg(feature = "telemetry")]
+            {
+                let dur = instant.elapsed().as_secs_f64();
+                metrics::histogram!("index_build_dur_sec", "name" => type_name::<Self>())
+                    .record(dur);
             }
 
             SingleSetIndex {
