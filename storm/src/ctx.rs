@@ -9,7 +9,7 @@ use crate::{
     ProviderContainer, RefIntoIterator, Result, Tag, Transaction, TrxErrGate, VecTable,
 };
 use chrono::NaiveDateTime;
-use fxhash::FxHashMap;
+use rustc_hash::FxHashMap;
 use std::{borrow::Cow, collections::hash_map, hash::Hash};
 use uuid::Uuid;
 use version_tag::VersionTag;

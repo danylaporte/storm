@@ -3,11 +3,11 @@ use crate::{
     EntityAccessor, EntityOf, Gc, Get, GetMut, Logs, NotifyTag, ProviderContainer, RefIntoIterator,
     Result, Tag, Touchable, TouchedEvent,
 };
-use fxhash::FxHashMap;
 use rayon::{
     collections::hash_map::Iter as ParIter,
     iter::{IntoParallelIterator, IntoParallelRefIterator},
 };
+use rustc_hash::FxHashMap;
 use std::{
     collections::hash_map::{Entry, Iter, Keys, Values},
     hash::Hash,

@@ -265,12 +265,16 @@ fn re_one_idx(one_idx: &OneIdx) -> Vec<(PkId, FkId)> {
 
 #[indexing]
 fn re_single_idx(single_idx: &SingleIdx) -> Vec<PkId> {
-    single_idx.iter().collect()
+    let mut v = single_idx.iter().collect::<Vec<_>>();
+    v.sort_unstable();
+    v
 }
 
 #[indexing]
 fn re_tree_idx(tree_idx: &TreeIdx) -> Vec<PkId> {
-    tree_idx.all_nodes().iter().collect()
+    let mut v = tree_idx.all_nodes().iter().collect::<Vec<_>>();
+    v.sort_unstable();
+    v
 }
 
 #[single_set]

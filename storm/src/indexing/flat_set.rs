@@ -5,7 +5,7 @@ use crate::{
     Clearable,
 };
 use fast_set::flat_set_index;
-use fxhash::FxHashSet;
+use rustc_hash::FxHashSet;
 use std::{any::type_name, future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
 use version_tag::VersionTag;
 
@@ -409,7 +409,7 @@ macro_rules! flat_set_adapt {
             type V = $v;
 
             #[allow(unused_variables)]
-            fn adapt(id: &<Self::Entity as storm::Entity>::Key, entity: &Self::Entity, set: &mut storm::fxhash::FxHashSet<(Option<Self::K>, Self::V)>) {
+            fn adapt(id: &<Self::Entity as storm::Entity>::Key, entity: &Self::Entity, set: &mut storm::rustc_hash::FxHashSet<(Option<Self::K>, Self::V)>) {
                 fn f($id: &$entity_key, $entity: &$entity_ty) -> Option<(Option<$k>, $v)> {
                     $($t)*
                 }
@@ -467,7 +467,7 @@ macro_rules! flat_set_adapt {
             type V = $v;
 
             #[allow(unused_variables)]
-            fn adapt($id: &<Self::Entity as storm::Entity>::Key, $entity: &Self::Entity, $out: &mut storm::fxhash::FxHashSet<(Option<Self::K>, Self::V)>) {
+            fn adapt($id: &<Self::Entity as storm::Entity>::Key, $entity: &Self::Entity, $out: &mut storm::rustc_hash::FxHashSet<(Option<Self::K>, Self::V)>) {
                 $($t)*
             }
 

@@ -1,7 +1,7 @@
 use crate::{ApplyLog, Ctx, CtxExt, Entity, HashTable, Result, VecTable};
 use async_cell_lock::QueueRwLockQueueGuard;
 use extobj::{DynObj, Var, VarId};
-use fxhash::FxHashMap;
+use rustc_hash::FxHashMap;
 use std::sync::OnceLock;
 
 pub trait LogOf {

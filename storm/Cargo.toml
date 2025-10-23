@@ -14,13 +14,12 @@ chrono = { workspace = true, optional = true, features = ["serde"] }
 dec19x5 = { workspace = true, optional = true }
 extobj = { workspace = true }
 fast-set = { workspace = true }
-fxhash = "0.2"
 metrics = { workspace = true, optional = true }
-nohash = { workspace = true }
 linkme = "0.3"
 once_cell = "1"
 parking_lot = "0.12"
 rayon = "1"
+rustc-hash = "2.1"
 serde = { workspace = true, features = ["derive"] }
 storm_derive = { path = "../storm_derive", optional = true }
 str_utils = { workspace = true, optional = true }

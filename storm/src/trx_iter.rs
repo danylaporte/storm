@@ -1,5 +1,5 @@
 use crate::{Entity, EntityAccessor, Get, TblTransaction};
-use fxhash::FxHashMap;
+use rustc_hash::FxHashMap;
 use std::hash::Hash;
 
 impl<'c, E> IntoIterator for &'c TblTransaction<'_, '_, E>
