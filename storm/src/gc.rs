@@ -1,4 +1,4 @@
-use crate::{Ctx, GcEvent};
+use crate::{Ctx, GcEvent, OnceCell};
 use std::{
     borrow::Cow,
     collections::{HashMap, HashSet},
@@ -114,20 +114,7 @@ where
 impl<K, V> Gc for fast_set::flat_set_index::FlatSetIndex<K, V> {}
 impl<T> Gc for fast_set::IntSet<T> {}
 
-impl<T> Gc for once_cell::sync::OnceCell<T>
-where
-    T: Gc,
-{
-    const SUPPORT_GC: bool = T::SUPPORT_GC;
-
-    fn gc(&mut self) {
-        if let Some(v) = self.get_mut() {
-            v.gc();
-        }
-    }
-}
-
-impl<T> Gc for std::sync::OnceLock<T>
+impl<T> Gc for OnceCell<T>
 where
     T: Gc,
 {

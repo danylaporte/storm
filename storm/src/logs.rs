@@ -1,8 +1,7 @@
-use crate::{ApplyLog, Ctx, CtxExt, Entity, HashTable, Result, VecTable};
+use crate::{ApplyLog, Ctx, CtxExt, Entity, HashTable, OnceCell, Result, VecTable};
 use async_cell_lock::QueueRwLockQueueGuard;
 use extobj::{DynObj, Var, VarId};
 use rustc_hash::FxHashMap;
-use std::sync::OnceLock;
 
 pub trait LogOf {
     type Log: Default + Send + Sync + 'static;
@@ -12,7 +11,7 @@ impl<E: Entity> LogOf for HashTable<E> {
     type Log = TableLog<E>;
 }
 
-impl<T: LogOf> LogOf for OnceLock<T> {
+impl<T: LogOf> LogOf for OnceCell<T> {
     type Log = T::Log;
 }
 

@@ -2,20 +2,19 @@ use crate::{
     logs::TableLog,
     provider::{Delete, LoadAll, TransactionProvider, Upsert, UpsertMut},
     AppliedEvent, BoxFuture, ClearEvent, Ctx, CtxTransaction, Entity, EntityValidate, Gc, Get,
-    LogOf, ProviderContainer, RefIntoIterator, RemovedEvent, RemovingEvent, Result, TouchedEvent,
-    UpsertedEvent, UpsertingEvent,
+    LogOf, OnceCell, ProviderContainer, RefIntoIterator, RemovedEvent, RemovingEvent, Result,
+    TouchedEvent, UpsertedEvent, UpsertingEvent,
 };
 use extobj::{extobj, ExtObj, Var};
 use parking_lot::RwLock;
 use std::{
     any::{type_name, TypeId},
     borrow::Cow,
-    sync::OnceLock,
 };
 use tracing::error;
 
 pub type Deps = RwLock<Vec<Box<dyn Fn(&mut CtxExtObj) + Send + Sync>>>;
-pub type CtxVar<T> = Var<CtxExt, OnceLock<T>>;
+pub type CtxVar<T> = Var<CtxExt, OnceCell<T>>;
 
 extobj!(pub struct CtxExt);
 

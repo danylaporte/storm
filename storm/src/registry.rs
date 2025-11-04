@@ -38,7 +38,7 @@ pub(crate) fn check_can_register() {
 }
 
 pub(crate) fn perform_registration() {
-    static O: std::sync::Once = std::sync::Once::new();
+    static O: parking_lot::Once = parking_lot::Once::new();
 
     O.call_once(|| {
         IN_REGISTRATION.set(true);

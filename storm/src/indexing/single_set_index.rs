@@ -384,7 +384,7 @@ macro_rules! single_set_adapt {
             fn index_var() -> storm::CtxVar<storm::indexing::SingleSetIndex<Self>> {
                 storm::extobj::extobj!(
                     impl storm::CtxExt {
-                        V: std::sync::OnceLock<storm::indexing::SingleSetIndex<$adapt>>,
+                        V: storm::OnceCell<storm::indexing::SingleSetIndex<$adapt>>,
                     },
                     crate_path = storm::extobj
                 );

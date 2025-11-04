@@ -342,7 +342,7 @@ macro_rules! tree_index_adapt {
             fn tree_var() -> storm::CtxVar<storm::indexing::TreeIndex<Self>> {
                 storm::extobj::extobj!(
                     impl storm::CtxExt {
-                        V: std::sync::OnceLock<storm::indexing::TreeIndex<$entity_ty>>,
+                        V: storm::OnceCell<storm::indexing::TreeIndex<$entity_ty>>,
                     },
                     crate_path = storm::extobj
                 );

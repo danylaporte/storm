@@ -1,6 +1,6 @@
 [package]
 name = "storm_derive"
-edition = "2021"
+edition = "2024"
 version = "0.43.0"
 authors = ["Dany Laporte <dany_laporte@hotmail.com>"]
 license = "MIT OR Apache-2.0"

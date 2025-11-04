@@ -134,7 +134,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
             fn var() -> storm::CtxVar<Self> {
                 storm::extobj::extobj!(
                     impl storm::CtxExt {
-                        V: std::sync::OnceLock<#index_name>,
+                        V: storm::OnceCell<#index_name>,
                     },
                     crate_path = storm::extobj
                 );

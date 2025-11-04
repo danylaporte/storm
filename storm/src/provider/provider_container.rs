@@ -1,13 +1,12 @@
 use super::{CastProvider, Provider, ProviderFactory, TransactionProvider};
 use crate::{BoxFuture, Error, Result};
-use async_cell_lock::AsyncOnceCell;
 use std::{
     any::TypeId,
     marker::PhantomData,
     sync::atomic::{AtomicU64, Ordering::Relaxed},
     time::Instant,
 };
-use tokio::sync::{Mutex, MutexGuard};
+use tokio::sync::{Mutex, MutexGuard, OnceCell as AsyncOnceCell};
 use tracing::{error, warn};
 
 /// Last recent use counter
@@ -195,7 +194,7 @@ impl Rec {
     async fn get_or_init<'a>(&'a self, lru: &'a Lru) -> Result<&'a CastProvider> {
         let provider_rec = self
             .provider
-            .get_or_try_init::<_, Error>(async {
+            .get_or_try_init::<Error, _, _>(|| async {
                 Ok(ProviderRec::new(self.factory.create().await?))
             })
             .await?;

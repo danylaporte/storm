@@ -65,7 +65,7 @@ fn implement(input: &DeriveInput) -> Result<TokenStream, TokenStream> {
             fn tbl_var() -> storm::CtxVar<Self::Tbl> {
                 storm::extobj::extobj!(
                     impl storm::CtxExt {
-                        V: std::sync::OnceLock<#table_alias>,
+                        V: storm::OnceCell<#table_alias>,
                     },
                     crate_path = storm::extobj
                 );

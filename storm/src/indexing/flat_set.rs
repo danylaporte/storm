@@ -422,7 +422,7 @@ macro_rules! flat_set_adapt {
             fn index_var() -> storm::CtxVar<storm::indexing::FlatSetIndex<Self>> {
                 storm::extobj::extobj!(
                     impl storm::CtxExt {
-                        V: std::sync::OnceLock<storm::indexing::FlatSetIndex<$adapt>>,
+                        V: storm::OnceCell<storm::indexing::FlatSetIndex<$adapt>>,
                     },
                     crate_path = storm::extobj
                 );
@@ -474,7 +474,7 @@ macro_rules! flat_set_adapt {
             fn index_var() -> storm::CtxVar<storm::indexing::FlatSetIndex<Self>> {
                 storm::extobj::extobj!(
                     impl storm::CtxExt {
-                        V: std::sync::OnceLock<storm::indexing::FlatSetIndex<$adapt>>,
+                        V: storm::OnceCell<storm::indexing::FlatSetIndex<$adapt>>,
                     },
                     crate_path = storm::extobj
                 );

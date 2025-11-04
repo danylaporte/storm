@@ -334,7 +334,7 @@ macro_rules! one_adapt {
             fn index_var() -> storm::CtxVar<storm::indexing::OneIndex<Self>> {
                 storm::extobj::extobj!(
                     impl storm::CtxExt {
-                        V: std::sync::OnceLock<storm::indexing::OneIndex<$adapt>>,
+                        V: storm::OnceCell<storm::indexing::OneIndex<$adapt>>,
                     },
                     crate_path = storm::extobj
                 );
