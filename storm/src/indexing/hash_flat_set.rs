@@ -102,7 +102,7 @@ pub type BaseAndLog<'a, 'b, A> = Option<(
 pub trait HashFlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
     type Entity: EntityAccessor + CtxTypeInfo + Send;
     type K: Clone + Eq + Hash + Send + Sync;
-    type V: Clone + Eq + From<u32> + Hash + Into<u32> + Send + Sync;
+    type V: Clone + Eq + Hash + Into<u32> + Send + Sync + TryFrom<u32>;
 
     fn adapt(id: &<Self::Entity as Entity>::Key, entity: &Self::Entity, out: &mut HashSet<Self>);
 
@@ -284,21 +284,19 @@ pub trait HashFlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'stati
         // before updating the index.
         // We then reinsert it back to the log at the end.
         if let Some(new) = trx.logs.get_mut(tbl_var).and_then(|map| map.remove(id)) {
-            if let Some(new) = new.as_ref() {
-                if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
-                    let mut old_set = FxHashSet::default();
-                    let mut new_set = FxHashSet::default();
+            if let Some(new) = new.as_ref() && let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
+                let mut old_set = FxHashSet::default();
+                let mut new_set = FxHashSet::default();
 
-                    Self::upsert_or_remove(
-                        base,
-                        log,
-                        id,
-                        Some(new),
-                        old,
-                        &mut old_set,
-                        &mut new_set,
-                    );
-                }
+                Self::upsert_or_remove(
+                    base,
+                    log,
+                    id,
+                    Some(new),
+                    old,
+                    &mut old_set,
+                    &mut new_set,
+                );
             }
 
             trx.logs.get_mut_or_default(tbl_var).insert(id.clone(), new);

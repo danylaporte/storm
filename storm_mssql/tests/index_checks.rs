@@ -319,13 +319,15 @@ impl From<PkId> for u32 {
     }
 }
 
-impl From<u32> for PkId {
-    fn from(value: u32) -> Self {
-        Self(value as i32)
+impl Gc for PkId {}
+
+impl TryFrom<u32> for PkId {
+    type Error = ();
+
+    fn try_from(value: u32) -> std::result::Result<Self, Self::Error> {
+        Ok(Self(value as i32))
     }
 }
-
-impl Gc for PkId {}
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct FkId(i32);
@@ -347,12 +349,6 @@ impl From<FkId> for u32 {
     }
 }
 
-impl From<u32> for FkId {
-    fn from(value: u32) -> Self {
-        Self(value as i32)
-    }
-}
-
 impl Gc for FkId {}
 
 impl ToSql for FkId {
@@ -364,5 +360,13 @@ impl ToSql for FkId {
 impl ToSqlNull for FkId {
     fn to_sql_null() -> tiberius::ColumnData<'static> {
         tiberius::ColumnData::I32(None)
+    }
+}
+
+impl TryFrom<u32> for FkId {
+    type Error = ();
+    
+    fn try_from(value: u32) -> std::result::Result<Self, Self::Error> {
+        Ok(Self(value as i32))
     }
 }

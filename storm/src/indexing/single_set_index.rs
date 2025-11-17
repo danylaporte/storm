@@ -140,7 +140,7 @@ pub type BaseAndLog<'a, 'b, A> = Option<(&'a SingleSetIndex<A>, &'b mut SingleSe
 
 pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
     type Entity: EntityAccessor<Key = Self::K> + CtxTypeInfo + Send;
-    type K: Copy + Eq + From<u32> + Hash + Into<u32> + Send + Sync;
+    type K: Copy + Eq + Hash + Into<u32> + Send + Sync + TryFrom<u32>;
 
     fn adapt(id: &<Self::Entity as Entity>::Key, entity: &Self::Entity) -> bool;
 
@@ -270,10 +270,8 @@ pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static 
         entity: &'a Self::Entity,
     ) -> BoxFuture<'a, Result<()>> {
         Box::pin(async move {
-            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
-                if Self::adapt(id, entity) {
-                    log.remove(base, *id);
-                }
+            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) && Self::adapt(id, entity) {
+                log.remove(base, *id);
             }
 
             Ok(())
@@ -291,17 +289,15 @@ pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static 
         // before updating the index.
         // We then reinsert it back to the log at the end.
         if let Some(new) = trx.logs.get_mut(tbl_var).and_then(|map| map.remove(id)) {
-            if let Some(new) = new.as_ref() {
-                if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
-                    let old = old.is_some_and(|old| Self::adapt(id, old));
-                    let new = Self::adapt(id, new);
+            if let Some(new) = new.as_ref() && let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
+                let old = old.is_some_and(|old| Self::adapt(id, old));
+                let new = Self::adapt(id, new);
 
-                    if old != new {
-                        if old {
-                            log.remove(base, *id);
-                        } else {
-                            log.insert(base, *id);
-                        }
+                if old != new {
+                    if old {
+                        log.remove(base, *id);
+                    } else {
+                        log.insert(base, *id);
                     }
                 }
             }

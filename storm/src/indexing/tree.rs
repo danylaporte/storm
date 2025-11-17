@@ -223,10 +223,8 @@ pub trait TreeEntity: EntityAccessor<Tbl = VecTable<Self>> + CtxTypeInfo + Send 
         // before updating the index.
         // We then reinsert it back to the log at the end.
         if let Some(new) = trx.logs.get_mut(tbl_var).and_then(|map| map.remove(id)) {
-            if let Some(new) = new.as_ref() {
-                if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
-                    Self::upsert_or_remove(base, log, id, Some(new), old);
-                }
+            if let Some(new) = new.as_ref() && let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
+                Self::upsert_or_remove(base, log, id, Some(new), old);
             }
 
             trx.logs.get_mut_or_default(tbl_var).insert(id.clone(), new);

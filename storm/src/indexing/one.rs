@@ -87,7 +87,7 @@ pub type BaseAndLog<'a, 'b, A> = Option<(
 
 pub trait OneAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
     type Entity: EntityAccessor<Key = Self::K, Tbl = VecTable<Self::Entity>> + CtxTypeInfo;
-    type K: Copy + Eq + From<u32> + Hash + Into<u32> + Send + Sync;
+    type K: Copy + Eq + Hash + Into<u32> + Send + Sync + TryFrom<u32>;
     type V: PartialEq + Send + Sync;
 
     fn adapt(id: &Self::K, entity: &Self::Entity) -> Option<Self::V>;
@@ -227,10 +227,8 @@ pub trait OneAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
         entity: &'a Self::Entity,
     ) -> BoxFuture<'a, Result<()>> {
         Box::pin(async move {
-            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
-                if Self::adapt(id, entity).is_some() {
-                    log.remove(base, *id);
-                }
+            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) && Self::adapt(id, entity).is_some() {
+                log.remove(base, *id);
             }
 
             Ok(())
@@ -248,17 +246,15 @@ pub trait OneAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
         // before updating the index.
         // We then reinsert it back to the log at the end.
         if let Some(new) = trx.logs.get_mut(tbl_var).and_then(|o| o.remove(id)) {
-            if let Some(new) = new.as_ref() {
-                if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
-                    let new = Self::adapt(id, new);
-                    let old = old.as_ref().and_then(|old| Self::adapt(id, old));
+            if let Some(new) = new.as_ref() && let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
+                let new = Self::adapt(id, new);
+                let old = old.as_ref().and_then(|old| Self::adapt(id, old));
 
-                    if new != old {
-                        if let Some(new) = new {
-                            log.insert(base, *id, new);
-                        } else {
-                            log.remove(base, *id);
-                        }
+                if new != old {
+                    if let Some(new) = new {
+                        log.insert(base, *id, new);
+                    } else {
+                        log.remove(base, *id);
                     }
                 }
             }

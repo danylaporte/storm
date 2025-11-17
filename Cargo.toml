@@ -27,6 +27,9 @@ vec-map = { git = "https://github.com/danylaporte/vec-map.git", features = ["ray
 #[patch.'https://github.com/danylaporte/dec19x5']
 #dec19x5 = { path = "../dec19x5" }
 
+#[patch.'https://github.com/danylaporte/fast-set']
+#fast-set = { path = "../fast-set" }
+
 #[patch.'https://github.com/danylaporte/str_utils']
 #str_utils = { path = "../str_utils" }
 
