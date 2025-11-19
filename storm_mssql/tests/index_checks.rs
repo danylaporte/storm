@@ -178,7 +178,7 @@ async fn flat_sets() -> Result<()> {
 
                 assert!(ctx.ref_as::<TreeIdx>().await?.descendants(PkId(1)).is_empty());
                 assert!(ctx.ref_as::<TreeIdx>().await?.descendants(PkId(2)).is_empty());
-                assert!(ctx.ref_as::<ReTreeIdx>().await?.0.is_empty());
+                assert_eq!(ctx.ref_as::<ReTreeIdx>().await?.0, vec![PkId(1)]);
             }
 
             Ok(())
@@ -272,7 +272,7 @@ fn re_single_idx(single_idx: &SingleIdx) -> Vec<PkId> {
 
 #[indexing]
 fn re_tree_idx(tree_idx: &TreeIdx) -> Vec<PkId> {
-    let mut v = tree_idx.all_nodes().iter().collect::<Vec<_>>();
+    let mut v = tree_idx.all_nodes().collect::<Vec<_>>();
     v.sort_unstable();
     v
 }
