@@ -225,6 +225,7 @@ gc!(u32);
 gc!(u64);
 gc!(u8);
 gc!(usize);
+gc!(extobj::DynObj);
 
 #[cfg(feature = "chrono")]
 gc!(chrono::DateTime<chrono::FixedOffset>);
