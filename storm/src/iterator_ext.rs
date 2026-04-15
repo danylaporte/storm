@@ -1,6 +1,6 @@
 use crate::{
-    provider::{Delete, LoadAll, TransactionProvider, Upsert},
     BoxFuture, CtxTransaction, EntityRemove, EntityUpsert, ProviderContainer, Result,
+    provider::{Delete, LoadAll, TransactionProvider, Upsert},
 };
 
 pub trait IteratorExt: Iterator {

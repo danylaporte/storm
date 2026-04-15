@@ -1,8 +1,8 @@
 use crate::{
-    provider::LoadAll, AsRefAsync, BoxFuture, Ctx, CtxLocks, CtxTransaction, CtxTypeInfo, CtxVar,
-    Entity, EntityAccessor, Get, LogOf, Logs, NotifyTag, ProviderContainer, RefIntoIterator,
-    Result, Tag, Touchable, TouchedEvent, __register_apply, indexing::AsyncAsIdxTrx, ClearEvent,
-    Clearable,
+    __register_apply, AsRefAsync, BoxFuture, ClearEvent, Clearable, Ctx, CtxLocks, CtxTransaction,
+    CtxTypeInfo, CtxVar, Entity, EntityAccessor, Get, LogOf, Logs, NotifyTag, ProviderContainer,
+    RefIntoIterator, Result, Tag, Touchable, TouchedEvent, indexing::AsyncAsIdxTrx,
+    provider::LoadAll,
 };
 use fast_set::flat_set_index;
 use rustc_hash::FxHashSet;
@@ -279,19 +279,13 @@ pub trait FlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
         // before updating the index.
         // We then reinsert it back to the log at the end.
         if let Some(new) = trx.logs.get_mut(tbl_var).and_then(|map| map.remove(id)) {
-            if let Some(new) = new.as_ref() && let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
+            if let Some(new) = new.as_ref()
+                && let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true)
+            {
                 let mut old_set = FxHashSet::default();
                 let mut new_set = FxHashSet::default();
 
-                Self::upsert_or_remove(
-                    base,
-                    log,
-                    id,
-                    Some(new),
-                    old,
-                    &mut old_set,
-                    &mut new_set,
-                );
+                Self::upsert_or_remove(base, log, id, Some(new), old, &mut old_set, &mut new_set);
             }
 
             trx.logs.get_mut_or_default(tbl_var).insert(id.clone(), new);

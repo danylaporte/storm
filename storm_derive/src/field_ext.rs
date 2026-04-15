@@ -1,6 +1,6 @@
 //use crate::AttrsExt;
 use proc_macro2::TokenStream;
-use syn::{spanned::Spanned, Error, Field, Ident};
+use syn::{Error, Field, Ident, spanned::Spanned};
 
 pub trait FieldExt {
     fn field(&self) -> &Field;

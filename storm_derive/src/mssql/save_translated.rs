@@ -1,10 +1,10 @@
 use super::{
+    TypeAttrs,
     attrs::{check_empty, check_required},
     builders::{ParamsBuilder, UpsertBuilder},
-    TypeAttrs,
 };
 use proc_macro2::{Span, TokenStream};
-use quote::{quote, ToTokens, TokenStreamExt as _};
+use quote::{ToTokens, TokenStreamExt as _, quote};
 use syn::{Field, LitInt};
 
 pub(super) struct SaveTranslated<'a> {

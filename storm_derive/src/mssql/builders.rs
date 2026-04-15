@@ -1,6 +1,6 @@
 use crate::StringExt;
 use proc_macro2::{Span, TokenStream};
-use quote::{quote, ToTokens, TokenStreamExt};
+use quote::{ToTokens, TokenStreamExt, quote};
 use syn::LitStr;
 
 #[derive(Clone, Default)]

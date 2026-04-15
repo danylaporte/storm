@@ -1,8 +1,7 @@
 use crate::{
-    provider::LoadAll, ApplyOrder, AsRefAsync, BoxFuture, Ctx, CtxLocks, CtxTransaction,
-    CtxTypeInfo, CtxVar, EntityAccessor, LogOf, Logs, NotifyTag, ProviderContainer, Result, Tag,
-    Touchable, TouchedEvent, VecTable, __register_apply, indexing::AsyncAsIdxTrx, ClearEvent,
-    Clearable,
+    __register_apply, ApplyOrder, AsRefAsync, BoxFuture, ClearEvent, Clearable, Ctx, CtxLocks,
+    CtxTransaction, CtxTypeInfo, CtxVar, EntityAccessor, LogOf, Logs, NotifyTag, ProviderContainer,
+    Result, Tag, Touchable, TouchedEvent, VecTable, indexing::AsyncAsIdxTrx, provider::LoadAll,
 };
 use fast_set::tree::{TreeIndexLog, TreeTrx};
 use std::{any::type_name, future::ready, marker::PhantomData, mem::take, ops::Deref};
@@ -223,7 +222,9 @@ pub trait TreeEntity: EntityAccessor<Tbl = VecTable<Self>> + CtxTypeInfo + Send 
         // before updating the index.
         // We then reinsert it back to the log at the end.
         if let Some(new) = trx.logs.get_mut(tbl_var).and_then(|map| map.remove(id)) {
-            if let Some(new) = new.as_ref() && let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
+            if let Some(new) = new.as_ref()
+                && let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true)
+            {
                 Self::upsert_or_remove(base, log, id, Some(new), old);
             }
 

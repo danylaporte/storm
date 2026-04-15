@@ -1,7 +1,7 @@
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{spanned::Spanned, Error, Ident, Item, ItemFn};
+use syn::{Error, Ident, Item, ItemFn, spanned::Spanned};
 
 pub(crate) fn one_index(item: Item) -> TokenStream {
     match &item {

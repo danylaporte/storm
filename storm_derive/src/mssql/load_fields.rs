@@ -1,10 +1,10 @@
 use super::{
-    attrs::{check_empty, check_required, FieldAttrs, TypeAttrs},
+    attrs::{FieldAttrs, TypeAttrs, check_empty, check_required},
     builders::SelectBuilder,
     read_row,
 };
 use proc_macro2::{Span, TokenStream};
-use quote::{quote, ToTokens, TokenStreamExt as _};
+use quote::{ToTokens, TokenStreamExt as _, quote};
 use syn::{Field, Ident, LitStr};
 
 pub(super) struct LoadFields<'a> {

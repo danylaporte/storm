@@ -1,7 +1,7 @@
 use crate::{
-    provider::LoadAll, AsRefAsync, BoxFuture, ClearEvent, Clearable, Ctx, CtxTypeInfo, Entity,
-    EntityAccessor, EntityOf, Gc, Get, GetMut, Logs, NotifyTag, ProviderContainer, RefIntoIterator,
-    Result, Tag, Touchable, TouchedEvent,
+    AsRefAsync, BoxFuture, ClearEvent, Clearable, Ctx, CtxTypeInfo, Entity, EntityAccessor,
+    EntityOf, Gc, Get, GetMut, Logs, NotifyTag, ProviderContainer, RefIntoIterator, Result, Tag,
+    Touchable, TouchedEvent, provider::LoadAll,
 };
 use rayon::iter::IntoParallelIterator;
 use std::ops::Deref;

@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used)]
 
-use storm::{prelude::*, EntityAccessor, MssqlLoad, MssqlSave, Result};
+use storm::{EntityAccessor, MssqlLoad, MssqlSave, Result, prelude::*};
 use storm_mssql::{Execute, ExecuteArgs, MssqlFactory, MssqlProvider};
 use tiberius::Config;
 use uuid::Uuid;

@@ -1,5 +1,5 @@
 use crate::{Client, ClientFactory, MssqlFactory, MssqlProvider};
-use storm::{provider::ProviderFactory, BoxFuture, Error, Result};
+use storm::{BoxFuture, Error, Result, provider::ProviderFactory};
 
 /// This can wrap a ClientFactory and creates a transaction for each Client that are returned.
 /// It is useful for integration tests making sure that all items are rollback once the test
@@ -16,7 +16,7 @@ impl ProviderFactory for TransactionScoped<MssqlFactory> {
     type Provider = MssqlProvider;
 
     fn create_provider(&self) -> BoxFuture<'_, Result<Self::Provider>> {
-        Box::pin(async move { Ok(MssqlProvider::new(TransactionScoped(self.0 .0.clone()))) })
+        Box::pin(async move { Ok(MssqlProvider::new(TransactionScoped(self.0.0.clone()))) })
     }
 }
 

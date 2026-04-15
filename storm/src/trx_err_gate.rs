@@ -1,7 +1,7 @@
 use crate::{Error, Result};
 use std::sync::{
-    atomic::{AtomicBool, Ordering::Relaxed},
     Arc,
+    atomic::{AtomicBool, Ordering::Relaxed},
 };
 
 pub(crate) struct TrxErrGate(Option<Arc<AtomicBool>>);

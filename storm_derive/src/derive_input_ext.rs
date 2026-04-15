@@ -1,6 +1,6 @@
 //use crate::AttrsExt;
 use proc_macro2::TokenStream;
-use syn::{spanned::Spanned, Data, DeriveInput, Error, Fields};
+use syn::{Data, DeriveInput, Error, Fields, spanned::Spanned};
 
 pub trait DeriveInputExt {
     fn input(&self) -> &DeriveInput;

@@ -43,7 +43,7 @@ mod vec_table;
 
 pub use accessor::*;
 use apply_log::perform_apply_log;
-pub use apply_log::{ApplyLog, ApplyOrder, __register_apply};
+pub use apply_log::{__register_apply, ApplyLog, ApplyOrder};
 pub use as_ref_async::AsRefAsync;
 pub use as_ref_opt::{AsRefOpt, FromRefOpt};
 pub use async_cell_lock::{self, AsyncOnceCell, QueueRwLock};
@@ -68,7 +68,7 @@ pub use get_mut::GetMut;
 pub use hash_table::HashTable;
 pub use is_defined::IsDefined;
 pub use iterator_ext::*;
-pub use len::{macro_check_max_len, Len};
+pub use len::{Len, macro_check_max_len};
 pub use linkme;
 pub use logs::{LogOf, Logs};
 #[cfg(feature = "telemetry")]
@@ -99,8 +99,8 @@ pub const OBJ_TABLE: &str = "table";
 
 #[cfg(feature = "derive")]
 pub use storm_derive::{
-    flat_set_index, hash_flat_set_index, indexing, one_index, register, single_set, tree_index,
-    Ctx, LocksAwait, NoopDelete, NoopLoad, NoopSave,
+    Ctx, LocksAwait, NoopDelete, NoopLoad, NoopSave, flat_set_index, hash_flat_set_index, indexing,
+    one_index, register, single_set, tree_index,
 };
 #[cfg(feature = "mssql")]
 pub use storm_derive::{MssqlDelete, MssqlLoad, MssqlSave};

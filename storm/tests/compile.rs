@@ -1,4 +1,4 @@
-use storm::{prelude::*, NoopDelete, NoopLoad, NoopSave, Result};
+use storm::{NoopDelete, NoopLoad, NoopSave, Result, prelude::*};
 use uuid::Uuid;
 
 fn create_ctx() -> QueueRwLock<Ctx> {

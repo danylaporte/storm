@@ -2,7 +2,7 @@ use crate::TypeExt;
 use inflector::Inflector;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{spanned::Spanned, Error, FnArg, Ident, Item, ItemFn, LitStr, ReturnType, Type};
+use syn::{Error, FnArg, Ident, Item, ItemFn, LitStr, ReturnType, Type, spanned::Spanned};
 
 pub(crate) fn indexing(item: Item) -> TokenStream {
     match &item {
@@ -46,7 +46,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         ReturnType::Type(_, t) => t,
         ReturnType::Default => {
             return Error::new(f.sig.output.span(), "Index must have a return value.")
-                .to_compile_error()
+                .to_compile_error();
         }
     };
 
@@ -56,7 +56,7 @@ fn indexing_fn(f: &ItemFn) -> TokenStream {
         match arg {
             FnArg::Typed(t) => args.push(t),
             FnArg::Receiver(r) => {
-                return Error::new(r.span(), "Self is not expected here.").to_compile_error()
+                return Error::new(r.span(), "Self is not expected here.").to_compile_error();
             }
         };
     }

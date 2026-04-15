@@ -7,7 +7,7 @@ use inflector::Inflector;
 use proc_macro2::TokenStream;
 
 #[cfg(feature = "mssql")]
-use syn::{spanned::Spanned, Field};
+use syn::{Field, spanned::Spanned};
 
 #[allow(clippy::enum_variant_names)]
 #[derive(Clone, Copy, Debug, Eq, FromMeta, PartialEq)]
@@ -38,7 +38,7 @@ impl RenameAll {
             None => {
                 return Err(
                     syn::Error::new(field.span(), "Only struct are supported").to_compile_error()
-                )
+                );
             }
         };
 

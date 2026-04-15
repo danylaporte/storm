@@ -1,5 +1,5 @@
 use cache::CacheIsland;
-use storm::{prelude::*, NoopDelete, NoopLoad, NoopSave, Result};
+use storm::{NoopDelete, NoopLoad, NoopSave, Result, prelude::*};
 use uuid::Uuid;
 
 #[tokio::main]

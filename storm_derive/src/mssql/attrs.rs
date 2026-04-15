@@ -1,5 +1,5 @@
 use crate::rename_all::RenameAll;
-use darling::{util::SpannedValue, FromDeriveInput, FromField};
+use darling::{FromDeriveInput, FromField, util::SpannedValue};
 use proc_macro2::{Span, TokenStream};
 use syn::{Error, Ident, LitStr};
 

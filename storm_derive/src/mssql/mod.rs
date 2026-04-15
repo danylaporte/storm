@@ -6,7 +6,7 @@ mod load_translated;
 mod save_translated;
 
 use crate::{
-    token_stream_ext::TokenStreamExt, DeriveInputExt, Errors, FieldExt, RenameAll, StringExt,
+    DeriveInputExt, Errors, FieldExt, RenameAll, StringExt, token_stream_ext::TokenStreamExt,
 };
 use attrs::{FieldAttrs, TypeAttrs};
 use darling::{FromDeriveInput, FromField};
@@ -15,7 +15,7 @@ use inflector::Inflector;
 use load_fields::LoadFields;
 use load_translated::LoadTranslated;
 use proc_macro2::{Span, TokenStream};
-use quote::{quote, ToTokens, TokenStreamExt as _};
+use quote::{ToTokens, TokenStreamExt as _, quote};
 use save_translated::SaveTranslated;
 use syn::{DeriveInput, Error, Ident, LitInt, LitStr, Type, Visibility};
 

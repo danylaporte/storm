@@ -37,7 +37,7 @@ use proc_macro::TokenStream;
 use rename_all::RenameAll;
 #[cfg(feature = "mssql")]
 use string_ext::StringExt;
-use syn::{parse_macro_input, DeriveInput, Item};
+use syn::{DeriveInput, Item, parse_macro_input};
 use type_ext::TypeExt;
 
 #[proc_macro_derive(Ctx, attributes(storm))]

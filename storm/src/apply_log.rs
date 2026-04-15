@@ -1,4 +1,4 @@
-use crate::{registry::InitCell, Ctx, Logs};
+use crate::{Ctx, Logs, registry::InitCell};
 use std::cmp::Ordering;
 
 pub trait ApplyLog<L> {

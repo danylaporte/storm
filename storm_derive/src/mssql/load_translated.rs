@@ -1,10 +1,10 @@
 use super::{
-    attrs::{check_empty, check_required, TypeAttrs},
+    attrs::{TypeAttrs, check_empty, check_required},
     builders::{JoinBuilder, JoinConditions, SelectBuilder},
     read_row,
 };
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{quote, ToTokens, TokenStreamExt as _};
+use quote::{ToTokens, TokenStreamExt as _, quote};
 use syn::{Field, LitStr};
 
 /// creates a select sql query for each field and keys and generate the

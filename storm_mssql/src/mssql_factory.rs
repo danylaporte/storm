@@ -1,6 +1,6 @@
 use crate::MssqlProvider;
 use std::{env::var, ffi::OsStr};
-use storm::{provider::ProviderFactory, BoxFuture, Error, Result};
+use storm::{BoxFuture, Error, Result, provider::ProviderFactory};
 use tiberius::Config;
 
 pub struct MssqlFactory(pub Config);

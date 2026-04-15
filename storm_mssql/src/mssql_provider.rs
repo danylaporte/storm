@@ -1,4 +1,4 @@
-use crate::{execute::ExecuteArgs, Client, ClientFactory, Execute, Parameter, QueryRows, ToSql};
+use crate::{Client, ClientFactory, Execute, Parameter, QueryRows, ToSql, execute::ExecuteArgs};
 use chrono::NaiveDateTime;
 use futures::{Stream, StreamExt, TryStreamExt};
 use std::{
@@ -7,13 +7,13 @@ use std::{
     ops::{Deref, DerefMut},
     pin::Pin,
     sync::{
-        atomic::{AtomicBool, Ordering::Relaxed},
         Arc,
+        atomic::{AtomicBool, Ordering::Relaxed},
     },
     task::{Context, Poll},
     time::Duration,
 };
-use storm::{provider, BoxFuture, Error, Result};
+use storm::{BoxFuture, Error, Result, provider};
 use tiberius::Row;
 use tokio::sync::{Mutex, MutexGuard};
 use tracing::info;

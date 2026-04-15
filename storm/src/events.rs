@@ -1,9 +1,9 @@
 use std::sync::{
-    atomic::{AtomicUsize, Ordering::Relaxed},
     Arc,
+    atomic::{AtomicUsize, Ordering::Relaxed},
 };
 
-use crate::{registry::InitCell, BoxFuture, Ctx, CtxTransaction, Entity, Result};
+use crate::{BoxFuture, Ctx, CtxTransaction, Entity, Result, registry::InitCell};
 
 type EventInner<T> = InitCell<Vec<T>>;
 

@@ -1,8 +1,7 @@
 use crate::{
-    provider::LoadAll, ApplyOrder, AsRefAsync, BoxFuture, Ctx, CtxLocks, CtxTransaction,
-    CtxTypeInfo, CtxVar, EntityAccessor, LogOf, Logs, NotifyTag, ProviderContainer, Result, Tag,
-    Touchable, TouchedEvent, VecTable, __register_apply, indexing::AsyncAsIdxTrx, ClearEvent,
-    Clearable,
+    __register_apply, ApplyOrder, AsRefAsync, BoxFuture, ClearEvent, Clearable, Ctx, CtxLocks,
+    CtxTransaction, CtxTypeInfo, CtxVar, EntityAccessor, LogOf, Logs, NotifyTag, ProviderContainer,
+    Result, Tag, Touchable, TouchedEvent, VecTable, indexing::AsyncAsIdxTrx, provider::LoadAll,
 };
 use fast_set::one_index;
 use std::{any::type_name, future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
@@ -227,7 +226,9 @@ pub trait OneAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
         entity: &'a Self::Entity,
     ) -> BoxFuture<'a, Result<()>> {
         Box::pin(async move {
-            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) && Self::adapt(id, entity).is_some() {
+            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true)
+                && Self::adapt(id, entity).is_some()
+            {
                 log.remove(base, *id);
             }
 
@@ -246,7 +247,9 @@ pub trait OneAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
         // before updating the index.
         // We then reinsert it back to the log at the end.
         if let Some(new) = trx.logs.get_mut(tbl_var).and_then(|o| o.remove(id)) {
-            if let Some(new) = new.as_ref() && let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
+            if let Some(new) = new.as_ref()
+                && let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true)
+            {
                 let new = Self::adapt(id, new);
                 let old = old.as_ref().and_then(|old| Self::adapt(id, old));
 

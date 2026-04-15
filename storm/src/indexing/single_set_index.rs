@@ -1,8 +1,8 @@
 use crate::{
-    provider::LoadAll, AsRefAsync, BoxFuture, Ctx, CtxLocks, CtxTransaction, CtxTypeInfo, CtxVar,
-    Entity, EntityAccessor, Get, LogOf, Logs, NotifyTag, ProviderContainer, RefIntoIterator,
-    Result, Tag, Touchable, TouchedEvent, __register_apply, indexing::AsyncAsIdxTrx, ClearEvent,
-    Clearable,
+    __register_apply, AsRefAsync, BoxFuture, ClearEvent, Clearable, Ctx, CtxLocks, CtxTransaction,
+    CtxTypeInfo, CtxVar, Entity, EntityAccessor, Get, LogOf, Logs, NotifyTag, ProviderContainer,
+    RefIntoIterator, Result, Tag, Touchable, TouchedEvent, indexing::AsyncAsIdxTrx,
+    provider::LoadAll,
 };
 use fast_set::IntSet;
 use std::{any::type_name, future::ready, hash::Hash, marker::PhantomData, mem::take, ops::Deref};
@@ -270,7 +270,9 @@ pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static 
         entity: &'a Self::Entity,
     ) -> BoxFuture<'a, Result<()>> {
         Box::pin(async move {
-            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) && Self::adapt(id, entity) {
+            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true)
+                && Self::adapt(id, entity)
+            {
                 log.remove(base, *id);
             }
 
@@ -289,7 +291,9 @@ pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static 
         // before updating the index.
         // We then reinsert it back to the log at the end.
         if let Some(new) = trx.logs.get_mut(tbl_var).and_then(|map| map.remove(id)) {
-            if let Some(new) = new.as_ref() && let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
+            if let Some(new) = new.as_ref()
+                && let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true)
+            {
                 let old = old.is_some_and(|old| Self::adapt(id, old));
                 let new = Self::adapt(id, new);
 

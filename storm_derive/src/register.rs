@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse_macro_input, spanned::Spanned, ItemFn, Path};
+use syn::{ItemFn, Path, parse_macro_input, spanned::Spanned};
 
 pub fn register(attr: TokenStream, item: TokenStream) -> TokenStream {
     let crate_path: Path = match syn::parse::<syn::Meta>(attr) {
@@ -9,7 +9,7 @@ pub fn register(attr: TokenStream, item: TokenStream) -> TokenStream {
             _ => {
                 return syn::Error::new(nv.value.span(), "expected path")
                     .to_compile_error()
-                    .into()
+                    .into();
             }
         },
         Ok(_) | Err(_) => syn::parse_quote!(storm), // default / no attr

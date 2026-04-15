@@ -1,10 +1,10 @@
 use super::{
-    builders::{DeleteBuilder, ParamsBuilder},
     TypeAttrs,
+    builders::{DeleteBuilder, ParamsBuilder},
 };
 use darling::util::SpannedValue;
 use proc_macro2::{Span, TokenStream};
-use quote::{quote, ToTokens, TokenStreamExt as _};
+use quote::{ToTokens, TokenStreamExt as _, quote};
 use std::marker::PhantomData;
 use syn::LitInt;
 

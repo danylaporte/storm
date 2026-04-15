@@ -1,4 +1,4 @@
-use storm::{prelude::*, NoopLoad, Result};
+use storm::{NoopLoad, Result, prelude::*};
 
 fn create_ctx() -> QueueRwLock<Ctx> {
     QueueRwLock::new(Default::default(), "ctx")
