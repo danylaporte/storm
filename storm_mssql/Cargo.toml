@@ -9,19 +9,19 @@ publish = false
 
 [dependencies]
 cache = { workspace = true, optional = true }
-chrono = { workspace = true, features = ["serde"] }
+chrono.workspace = true
 dec19x5 = { workspace = true, features = ["serde", "tiberius"], optional = true }
-futures = { workspace = true }
+futures.workspace = true
 metrics = { workspace = true, optional = true }
-serde = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true }
+serde.workspace = true
+serde_json.workspace = true
 storm = { path = "../storm", features = ["mssql"] }
 str_utils = { workspace = true, optional = true }
 tiberius = { version = "0.12", default-features = false, features = ["chrono", "sql-browser-tokio", "tds73", "winauth"] }
-tokio = { workspace = true, default-features = false }
-tokio-util = { workspace = true, features = ["compat"] }
-tracing = { workspace = true }
-uuid = { workspace = true, features = ["v4", "serde"] }
+tokio.workspace = true
+tokio-util.workspace = true
+tracing.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
 async-cell-lock = { git = "https://github.com/danylaporte/async-cell-lock.git" }

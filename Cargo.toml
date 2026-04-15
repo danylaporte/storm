@@ -8,20 +8,24 @@ members = [
 
 [workspace.dependencies]
 cache = { git = "https://github.com/danylaporte/cache.git" }
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4.44", features = ["serde"] }
 dec19x5 = { git = "https://github.com/danylaporte/dec19x5.git", features = ["serde"] }
 extobj = { git = "https://github.com/danylaporte/extobj.git" }
-futures = "0.3"
 fast-set = { git = "https://github.com/danylaporte/fast-set.git" }
-metrics = { version = "0.22" }
-once_cell = { version = "1", features = ["parking_lot"] }
+futures = "0.3.32"
+linkme = "0.3"
+metrics = { version = "0.24.3" }
+once_cell = { version = "1.21.4", features = ["parking_lot"] }
+parking_lot = "0.12"
+rayon = "1.12.0"
+rustc-hash = "2.1.2"
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+serde_json = "1.0.149"
 str_utils = { git = "https://github.com/danylaporte/str_utils.git" }
-tokio = { version = "1", default-features = false }
-tokio-util = { version = "0.7", features = ["compat"] }
-tracing = "0.1"
-uuid = { version = "1", features = ["v4", "serde"] }
+tokio = { version = "1.52.0", default-features = false, features = ["parking_lot", "sync"] }
+tokio-util = { version = "0.7.18", features = ["compat"] }
+tracing = "0.1.44"
+uuid = { version = "1.23.0", features = ["v4", "serde"] }
 vec-map = { git = "https://github.com/danylaporte/vec-map.git", features = ["rayon"] }
 
 #[patch.'https://github.com/danylaporte/dec19x5']

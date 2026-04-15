@@ -12,22 +12,22 @@ async-cell-lock = { git = "https://github.com/danylaporte/async-cell-lock.git" }
 cache = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true, features = ["serde"] }
 dec19x5 = { workspace = true, optional = true }
-extobj = { workspace = true }
-fast-set = { workspace = true }
+extobj.workspace = true
+fast-set.workspace = true
 metrics = { workspace = true, optional = true }
-linkme = "0.3"
-once_cell = { workspace = true }
-parking_lot = "0.12"
-rayon = "1"
-rustc-hash = "2.1"
-serde = { workspace = true, features = ["derive"] }
+linkme.workspace = true
+once_cell.workspace = true
+parking_lot.workspace = true
+rayon.workspace = true
+rustc-hash.workspace = true
+serde.workspace = true
 storm_derive = { path = "../storm_derive", optional = true }
 str_utils = { workspace = true, optional = true }
 tiberius = { version = "0.12", default-features = false, optional = true }
-tokio = { workspace = true, features = ["parking_lot", "sync"], default-features = false }
-tracing = { workspace = true }
+tokio.workspace = true
+tracing.workspace = true
 uuid = { workspace = true, optional = true, features = ["v4", "serde"] }
-vec-map = { workspace = true }
+vec-map.workspace = true
 version_tag = { git = "https://github.com/danylaporte/version_tag.git" }
 
 [dev-dependencies]
