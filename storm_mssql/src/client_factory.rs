@@ -1,6 +1,6 @@
 use crate::Client;
 use storm::{BoxFuture, Error, Result};
-use tiberius::{Config, SqlBrowser};
+use tiberius::Config;
 use tokio::net::TcpStream;
 use tokio_util::compat::TokioAsyncWriteCompatExt;
 use tracing::instrument;
@@ -24,7 +24,8 @@ impl ClientFactory for Config {
 #[instrument(name = "ClientFactory::create_client", skip(config), err)]
 async fn config_create_client(config: &Config) -> Result<Client> {
     // named instance only available in windows.
-    let tcp = TcpStream::connect_named(config).await.map_err(Error::std)?;
+    //let tcp = TcpStream::connect_named(config).await.map_err(Error::std)?;
+    let tcp = TcpStream::connect(config.get_addr()).await.map_err(Error::std)?;
     tcp.set_nodelay(true).map_err(Error::std)?;
 
     Client::connect(config.clone(), tcp.compat_write())
