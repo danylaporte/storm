@@ -17,18 +17,32 @@ pub trait ClientFactory: Send + Sync + 'static {
 
 impl ClientFactory for Config {
     fn create_client(&self) -> BoxFuture<'_, Result<Client>> {
-        Box::pin(config_create_client(self))
+        Box::pin(config_create_client(self.clone()))
     }
 }
 
 #[instrument(name = "ClientFactory::create_client", skip(config), err)]
-async fn config_create_client(config: &Config) -> Result<Client> {
+async fn config_create_client(mut config: Config) -> Result<Client> {
     // named instance only available in windows.
     //let tcp = TcpStream::connect_named(config).await.map_err(Error::std)?;
-    let tcp = TcpStream::connect(config.get_addr()).await.map_err(Error::std)?;
+    let tcp = TcpStream::connect(config.get_addr())
+        .await
+        .map_err(Error::std)?;
     tcp.set_nodelay(true).map_err(Error::std)?;
 
-    Client::connect(config.clone(), tcp.compat_write())
-        .await
-        .map_err(Into::into)
+    match Client::connect(config.clone(), tcp.compat_write()).await {
+        Ok(client) => Ok(client),
+        Err(tiberius::error::Error::Routing { host, port }) => {
+            config.host(&host);
+            config.port(port);
+
+            let tcp = TcpStream::connect(config.get_addr())
+                .await
+                .map_err(Error::std)?;
+            let client = Client::connect(config, tcp.compat_write()).await?;
+
+            Ok(client)
+        }
+        Err(error) => Err(error.into()),
+    }
 }
