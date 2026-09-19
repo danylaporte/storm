@@ -23,7 +23,7 @@ rustc-hash.workspace = true
 serde.workspace = true
 storm_derive = { path = "../storm_derive", optional = true }
 str_utils = { workspace = true, optional = true }
-tiberius = { version = "0.12", default-features = false, optional = true }
+tiberius = { workspace = true, optional = true }
 tokio.workspace = true
 tracing.workspace = true
 uuid = { workspace = true, optional = true, features = ["v4", "serde"] }
@@ -31,7 +31,16 @@ vec-map.workspace = true
 version_tag = { git = "https://github.com/danylaporte/version_tag.git" }
 
 [dev-dependencies]
-tokio = { version = "1", features = ["macros", "rt-multi-thread"], default-features = false }
+criterion.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
+[[bench]]
+name = "tables"
+harness = false
+
+[[bench]]
+name = "indexes"
+harness = false
 
 [features]
 default = ["cache", "chrono", "dec19x5", "derive", "uuid"]

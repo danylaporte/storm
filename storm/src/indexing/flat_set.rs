@@ -319,7 +319,7 @@ pub trait FlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
         }
 
         if old_set != new_set {
-            for (k, v) in &*old_set - &*new_set {
+            for &(k, v) in old_set.difference(new_set) {
                 match k {
                     Some(k) => {
                         log.remove(&base.index, k, v);
@@ -330,7 +330,7 @@ pub trait FlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
                 }
             }
 
-            for (k, v) in &*new_set - &*old_set {
+            for &(k, v) in new_set.difference(old_set) {
                 match k {
                     Some(k) => {
                         log.insert(&base.index, k, v);

@@ -43,7 +43,7 @@ impl InsertBuilder {
     pub fn to_sql(&self, table: &str) -> String {
         format!(
             "INSERT {} ({}) VALUES ({})",
-            table, &self.fields, &self.values
+            table, self.fields, self.values
         )
     }
 }
@@ -198,10 +198,7 @@ impl UpdateBuilder {
     }
 
     pub fn to_sql(&self, table: &str) -> String {
-        format!(
-            "UPDATE {} SET {} WHERE {}",
-            table, &self.fields, &self.wheres
-        )
+        format!("UPDATE {} SET {} WHERE {}", table, self.fields, self.wheres)
     }
 }
 

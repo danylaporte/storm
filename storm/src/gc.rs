@@ -78,7 +78,9 @@ where
     const SUPPORT_GC: bool = T::SUPPORT_GC;
 
     fn gc(&mut self) {
-        self.to_mut().gc();
+        if let Cow::Owned(value) = self {
+            value.gc();
+        }
     }
 }
 

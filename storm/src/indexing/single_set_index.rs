@@ -9,46 +9,38 @@ use std::{any::type_name, future::ready, hash::Hash, marker::PhantomData, mem::t
 use version_tag::VersionTag;
 
 pub struct SingleSetLog<A: SingleSetAdapt> {
-    set: Option<IntSet<A::K>>,
+    added: IntSet<A::K>,
+    removed: IntSet<A::K>,
     _a: PhantomData<A>,
 }
 
 impl<A: SingleSetAdapt> SingleSetLog<A> {
     pub fn insert(&mut self, base: &SingleSetIndex<A>, key: A::K) {
-        match self.set.as_mut() {
-            Some(v) => {
-                v.insert(key);
-            }
-            None => {
-                if !base.index.contains(key) {
-                    let mut set = base.index.clone();
-                    set.insert(key);
-                    self.set = Some(set);
-                }
-            }
+        self.removed.remove(key);
+
+        if !base.index.contains(key) {
+            self.added.insert(key);
         }
     }
 
     pub fn remove(&mut self, base: &SingleSetIndex<A>, key: A::K) {
-        match self.set.as_mut() {
-            Some(v) => {
-                v.remove(key);
-            }
-            None => {
-                if base.index.contains(key) {
-                    let mut set = base.index.clone();
-                    set.remove(key);
-                    self.set = Some(set);
-                }
-            }
+        self.added.remove(key);
+
+        if base.index.contains(key) {
+            self.removed.insert(key);
         }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.added.is_empty() && self.removed.is_empty()
     }
 }
 
 impl<A: SingleSetAdapt> Default for SingleSetLog<A> {
     fn default() -> Self {
         Self {
-            set: Default::default(),
+            added: Default::default(),
+            removed: Default::default(),
             _a: Default::default(),
         }
     }
@@ -83,11 +75,18 @@ pub struct SingleSetIndex<A: SingleSetAdapt> {
 
 impl<A: SingleSetAdapt> SingleSetIndex<A> {
     #[inline]
-    fn apply(&mut self, log: IntSet<A::K>) -> bool {
-        let changed = self.index != log;
+    fn apply(&mut self, log: SingleSetLog<A>) -> bool {
+        let changed = !log.is_empty();
 
         if changed {
-            self.index = log;
+            for key in log.removed {
+                self.index.remove(key);
+            }
+
+            for key in log.added {
+                self.index.insert(key);
+            }
+
             self.tag.notify();
         }
 
@@ -147,7 +146,7 @@ pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static 
     fn index_var() -> CtxVar<SingleSetIndex<Self>>;
 
     fn apply_log(ctx: &mut Ctx, logs: &mut Logs) -> bool {
-        let Some(log) = Self::base_and_log(ctx, logs, false).and_then(|l| l.1.set.as_mut()) else {
+        let Some(log) = Self::base_and_log(ctx, logs, false).map(|l| take(l.1)) else {
             return false;
         };
 
@@ -155,7 +154,7 @@ pub trait SingleSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static 
             .ctx_ext_obj
             .get_mut(Self::index_var())
             .get_mut()
-            .is_some_and(|idx| idx.apply(take(log)));
+            .is_some_and(|idx| idx.apply(log));
 
         if changed {
             Self::touched().call(ctx);

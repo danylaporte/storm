@@ -324,24 +324,24 @@ pub trait HashFlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'stati
         }
 
         if old_set != new_set {
-            for (k, v) in &*old_set - &*new_set {
+            for (k, v) in old_set.difference(new_set) {
                 match k {
                     Some(k) => {
-                        log.remove(&base.index, k, v);
+                        log.remove(&base.index, k.clone(), v.clone());
                     }
                     None => {
-                        log.remove_none(&base.index, v);
+                        log.remove_none(&base.index, v.clone());
                     }
                 }
             }
 
-            for (k, v) in &*new_set - &*old_set {
+            for (k, v) in new_set.difference(old_set) {
                 match k {
                     Some(k) => {
-                        log.insert(&base.index, k, v);
+                        log.insert(&base.index, k.clone(), v.clone());
                     }
                     None => {
-                        log.insert_none(&base.index, v);
+                        log.insert_none(&base.index, v.clone());
                     }
                 }
             }

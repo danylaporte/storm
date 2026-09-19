@@ -1,6 +1,7 @@
 use crate::{Client, ClientFactory, Execute, Parameter, QueryRows, ToSql, execute::ExecuteArgs};
 use chrono::NaiveDateTime;
 use futures::{Stream, StreamExt, TryStreamExt};
+use smallvec::SmallVec;
 use std::{
     borrow::Cow,
     fmt::Debug,
@@ -19,6 +20,10 @@ use tokio::sync::{Mutex, MutexGuard};
 use tracing::info;
 
 pub const DEFAULT_LOCK_TIMEOUT: Duration = Duration::from_secs(90);
+
+/// Rows are handed to the collection in batches of this size.
+/// Live benchmarks showed no measurable difference between 10, 64 and 256.
+const ROW_BATCH: usize = 10;
 
 pub struct MssqlProvider(Arc<Inner>);
 
@@ -59,7 +64,7 @@ impl MssqlProvider {
         &'a self,
         sql: &'b str,
         params: &'b [&'b dyn ToSql],
-        mut mapper: M,
+        mapper: M,
         use_transaction: bool,
     ) -> Result<C>
     where
@@ -68,28 +73,52 @@ impl MssqlProvider {
         R: Send,
         'a: 'b,
     {
+        let mut coll = C::default();
+
+        #[allow(clippy::iter_with_drain)]
+        let mut sink = |vec: &mut Vec<R>| coll.extend(vec.drain(..));
+
+        self.query_rows_into(sql, params, mapper, use_transaction, &mut sink)
+            .await?;
+
+        Ok(coll)
+    }
+
+    // Kept independent of the collection type so an entity loaded into several
+    // collections shares one copy of the row loop.
+    async fn query_rows_into<'a, 'b, M, R>(
+        &'a self,
+        sql: &'b str,
+        params: &'b [&'b dyn ToSql],
+        mut mapper: M,
+        use_transaction: bool,
+        sink: &'b mut (dyn FnMut(&mut Vec<R>) + Send),
+    ) -> Result<()>
+    where
+        M: FnMut(Row) -> Result<R> + Send + 'a,
+        R: Send,
+        'a: 'b,
+    {
         let mut conn = QueryConn::new(self, use_transaction).await?;
         let mut query = conn.query(sql, params).await?;
-        let mut vec = Vec::with_capacity(10);
-        let mut coll = C::default();
+        let mut vec = Vec::with_capacity(ROW_BATCH);
 
         while let Some(row) = query.try_next().await? {
             vec.push(mapper(row)?);
 
-            if vec.len() == 10 {
-                #[allow(clippy::iter_with_drain)]
-                coll.extend(vec.drain(..));
+            if vec.len() == ROW_BATCH {
+                sink(&mut vec);
             }
         }
 
         if !vec.is_empty() {
-            coll.extend(vec);
+            sink(&mut vec);
         }
 
         query.complete().await?;
         conn.complete();
 
-        Ok(coll)
+        Ok(())
     }
 
     pub async fn set_client_lock_timeout(&self, timeout: Option<Duration>) -> Result<()> {
@@ -107,35 +136,49 @@ impl Execute for MssqlProvider {
     where
         S: Debug + Into<Cow<'a, str>> + Send + 'a,
     {
-        Box::pin(async move {
-            let mut intermediate = Vec::new();
-            let mut output = Vec::new();
+        Box::pin(self.execute_imp(statement.into(), params, args))
+    }
+}
 
-            adapt_params(params, &mut intermediate, &mut output);
+impl MssqlProvider {
+    // Non-generic so the body is compiled once instead of once per statement type.
+    async fn execute_imp<'a>(
+        &'a self,
+        statement: Cow<'a, str>,
+        params: &'a [&'a dyn ToSql],
+        args: ExecuteArgs,
+    ) -> Result<u64> {
+        let mut intermediate = SmallVec::new();
+        let mut output = SmallVec::new();
 
-            let mut client;
-            let client_ref;
-            let mut guard = self.state().await;
+        adapt_params(params, &mut intermediate, &mut output);
 
-            if args.use_transaction {
-                client = guard.transaction().await?;
-                client_ref = &mut guard.transaction;
-            } else {
-                client = guard.client().await?;
-                client_ref = &mut guard.client;
-            };
+        let mut client;
+        let client_ref;
+        let mut guard = self.state().await;
 
-            let count = match client.execute(statement, &output).await.map(|v| v.total()) {
-                Ok(count) => count,
-                Err(e) => {
-                    let _ = trace_deadlock(&mut client).await;
-                    return Err(e.into());
-                }
-            };
+        if args.use_transaction {
+            client = guard.transaction().await?;
+            client_ref = &mut guard.transaction;
+        } else {
+            client = guard.client().await?;
+            client_ref = &mut guard.client;
+        };
 
-            *client_ref = Some(client);
-            Ok(count)
-        })
+        let count = match client
+            .execute(&*statement, &output)
+            .await
+            .map(|v| v.total())
+        {
+            Ok(count) => count,
+            Err(e) => {
+                let _ = trace_deadlock(&mut client).await;
+                return Err(e.into());
+            }
+        };
+
+        *client_ref = Some(client);
+        Ok(count)
     }
 }
 
@@ -240,8 +283,8 @@ impl<'a> QueryConn<'a> {
     where
         'b: 'c,
     {
-        let mut intermediate = Vec::new();
-        let mut output = Vec::new();
+        let mut intermediate = SmallVec::new();
+        let mut output = SmallVec::new();
 
         adapt_params(params, &mut intermediate, &mut output);
 
@@ -452,10 +495,10 @@ async fn set_client_lock_timeout(client: &mut Client, timeout: Option<Duration>)
     Ok(())
 }
 
-fn adapt_params<'a>(
+fn adapt_params<'a, 'b>(
     input: &'a [&dyn ToSql],
-    intermediate: &'a mut Vec<Parameter<'a>>,
-    output: &mut Vec<&'a dyn tiberius::ToSql>,
+    intermediate: &'b mut SmallVec<[Parameter<'a>; 8]>,
+    output: &mut SmallVec<[&'b dyn tiberius::ToSql; 8]>,
 ) {
     intermediate.extend(input.iter().map(|p| Parameter(p.to_sql())));
     output.extend(intermediate.iter().map(|p| p as &dyn tiberius::ToSql));

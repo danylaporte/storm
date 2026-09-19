@@ -44,15 +44,23 @@ where
     K: ToSql,
 {
     fn filter_sql(&self, param_index: usize) -> (Cow<'_, str>, Cow<'_, [&'_ dyn ToSql]>) {
-        let s = self
-            .1
-            .iter()
-            .enumerate()
-            .map(|t| format!("@p{}", t.0 + 1 + param_index))
-            .collect::<Vec<_>>()
-            .join(",");
+        use std::fmt::Write;
 
-        let s = format!("{} IN ({})", &self.0, s);
+        let mut s = String::with_capacity(self.0.len() + self.1.len() * 5 + 5);
+        s.push_str(self.0);
+        s.push_str(" IN (");
+
+        for index in 0..self.1.len() {
+            if index != 0 {
+                s.push(',');
+            }
+
+            // fmt::Write for String is infallible.
+            let _ = write!(&mut s, "@p{}", index + 1 + param_index);
+        }
+
+        s.push(')');
+
         (
             Cow::Owned(s),
             Cow::Owned(self.1.iter().map(|v| v as &dyn ToSql).collect()),

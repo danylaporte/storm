@@ -15,18 +15,28 @@ futures.workspace = true
 metrics = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
+smallvec.workspace = true
 storm = { path = "../storm", features = ["mssql"] }
 str_utils = { workspace = true, optional = true }
-tiberius = { version = "0.12", default-features = false, features = ["chrono", "rustls", "tds73", "winauth"] }
-tokio = { workspace = true, default-features = false, features = ["net"] }
+tiberius = { workspace = true, features = ["chrono", "rustls", "tds73", "winauth"] }
+tokio = { workspace = true, features = ["net"] }
 tokio-util.workspace = true
 tracing.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+criterion.workspace = true
 async-cell-lock = { git = "https://github.com/danylaporte/async-cell-lock.git" }
 storm = { path = "../storm", features = ["derive"] }
-tokio = { version = "1", features = ["macros", "rt-multi-thread"], default-features = false }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
+[[bench]]
+name = "sql_building"
+harness = false
+
+[[bench]]
+name = "live_mssql"
+harness = false
 
 [features]
 telemetry = ["metrics"]

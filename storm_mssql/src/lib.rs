@@ -140,7 +140,7 @@ pub fn test_entity<'a>(
             if expected.1 > 0 && expected.1 as i32 != actual.1 {
                 panic!(
                     "field maxlength {} differ, actual: {}, expected: {}",
-                    &expected.0, actual.1, expected.1
+                    expected.0, actual.1, expected.1
                 );
             }
         }
