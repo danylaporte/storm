@@ -615,16 +615,9 @@ where
         E::upsert_mut(self.ctx, key, entity)
     }
 
+    #[inline]
     pub fn keys(&self) -> impl Iterator<Item = &E::Key> {
-        let tbl = self.ctx.ctx.ctx_ext_obj.get(E::tbl_var()).get();
-        let log = self.ctx.logs.get(E::tbl_var());
-
-        tbl.zip(log).into_iter().flat_map(|(tbl, log)| {
-            tbl.ref_iter()
-                .map(|(k, _)| k)
-                .filter(|k| !log.contains_key(k))
-                .chain(log.keys())
-        })
+        self.ref_iter().map(|(k, _)| k)
     }
 
     pub fn into_ref(self, k: &E::Key) -> Option<&'b E>
@@ -753,6 +746,17 @@ where
 
         None
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let (tbl_min, tbl_max) = self.tbl_iter.size_hint();
+        let log_len = self.log_iter.as_ref().map_or(0, |l| l.len());
+
+        // Every log entry may either shadow a table row or be a removal.
+        (
+            tbl_min.saturating_sub(log_len),
+            tbl_max.and_then(|max| max.checked_add(log_len)),
+        )
+    }
 }
 
 impl<'a, 'b, E: EntityAccessor> RefIntoIterator for TblTransaction<'a, 'b, E> {
@@ -766,7 +770,7 @@ impl<'a, 'b, E: EntityAccessor> RefIntoIterator for TblTransaction<'a, 'b, E> {
         Self: 'c;
 
     fn ref_iter(&self) -> Self::Iter<'_> {
-        let log = self.ctx.logs.get(E::tbl_var());
+        let log = self.ctx.logs.get(E::tbl_var()).filter(|l| !l.is_empty());
         TblTransactionIter {
             tbl_iter: self.tbl.ref_iter(),
             log_iter: log.map(|log| log.iter()),
