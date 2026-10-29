@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["LoadAllKeyOnly","LoadArgs","ProviderContainer","TransactionProvider"],"trait":["Delete","LoadAll","LoadOne","Provider","ProviderFactory","Upsert","UpsertMut"]};
+window.SIDEBAR_ITEMS = {"struct":["LoadAllKeyOnly","LoadArgs","NoopFactory","NoopProvider","ProviderContainer","TransactionProvider"],"trait":["Delete","LoadAll","LoadOne","Provider","ProviderFactory","Upsert","UpsertMut"]};

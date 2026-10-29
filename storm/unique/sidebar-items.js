@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Collation"],"fn":["check_validating","find","hash_index_first_other","hash_index_keys","scan_first_other","scan_keys"],"struct":["UniqueStr"],"trait":["Unique","UniqueAdapt","UniqueIndex","UniqueValue"],"type":["EntityKey"]};

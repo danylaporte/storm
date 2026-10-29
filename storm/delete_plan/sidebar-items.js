@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["DeleteAction","DeleteRestriction"],"fn":["on_planning","plan_cascade","plan_restrict","plan_set_null"],"struct":["DeletePlan","DeletePlanNode","DeletePlanner"]};
