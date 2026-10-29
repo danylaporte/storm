@@ -23,7 +23,7 @@ pub const DEFAULT_LOCK_TIMEOUT: Duration = Duration::from_secs(90);
 
 /// Rows are handed to the collection in batches of this size.
 /// Live benchmarks showed no measurable difference between 10, 64 and 256.
-const ROW_BATCH: usize = 10;
+pub(crate) const ROW_BATCH: usize = 10;
 
 pub struct MssqlProvider(Arc<Inner>);
 
@@ -60,61 +60,48 @@ impl MssqlProvider {
             .then_some(MssqlTransactionGuard(guard))
     }
 
-    async fn query_rows_imp<'a, 'b, M, R, C>(
-        &'a self,
-        sql: &'b str,
-        params: &'b [&'b dyn ToSql],
-        mapper: M,
+    /// Runs the query, retrying on failure, and hands each row to `sink`.
+    ///
+    /// Not generic so the row loop and the retries are compiled once instead of once per
+    /// entity and collection.
+    pub(crate) async fn query_rows_dyn(
+        &self,
+        sql: &str,
+        params: &[&dyn ToSql],
         use_transaction: bool,
-    ) -> Result<C>
-    where
-        C: Default + Extend<R> + Send,
-        M: FnMut(Row) -> Result<R> + Send + 'a,
-        R: Send,
-        'a: 'b,
-    {
-        let mut coll = C::default();
+        sink: &mut dyn RowSink,
+    ) -> Result<()> {
+        let mut count = 0;
 
-        #[allow(clippy::iter_with_drain)]
-        let mut sink = |vec: &mut Vec<R>| coll.extend(vec.drain(..));
+        loop {
+            let r = self
+                .query_rows_once(sql, params, use_transaction, sink)
+                .await;
 
-        self.query_rows_into(sql, params, mapper, use_transaction, &mut sink)
-            .await?;
+            if r.is_ok() || count > 5 {
+                return r;
+            }
 
-        Ok(coll)
+            count += 1;
+            sink.reset();
+        }
     }
 
-    // Kept independent of the collection type so an entity loaded into several
-    // collections shares one copy of the row loop.
-    async fn query_rows_into<'a, 'b, M, R>(
-        &'a self,
-        sql: &'b str,
-        params: &'b [&'b dyn ToSql],
-        mut mapper: M,
+    async fn query_rows_once(
+        &self,
+        sql: &str,
+        params: &[&dyn ToSql],
         use_transaction: bool,
-        sink: &'b mut (dyn FnMut(&mut Vec<R>) + Send),
-    ) -> Result<()>
-    where
-        M: FnMut(Row) -> Result<R> + Send + 'a,
-        R: Send,
-        'a: 'b,
-    {
+        sink: &mut dyn RowSink,
+    ) -> Result<()> {
         let mut conn = QueryConn::new(self, use_transaction).await?;
         let mut query = conn.query(sql, params).await?;
-        let mut vec = Vec::with_capacity(ROW_BATCH);
 
         while let Some(row) = query.try_next().await? {
-            vec.push(mapper(row)?);
-
-            if vec.len() == ROW_BATCH {
-                sink(&mut vec);
-            }
+            sink.row(row)?;
         }
 
-        if !vec.is_empty() {
-            sink(&mut vec);
-        }
-
+        sink.end();
         query.complete().await?;
         conn.complete();
 
@@ -153,11 +140,30 @@ impl MssqlProvider {
 
         adapt_params(params, &mut intermediate, &mut output);
 
+        self.execute_tds_with(&statement, &output, args.use_transaction)
+            .await
+    }
+
+    /// Executes in the transaction with parameters already adapted for tiberius.
+    pub(crate) async fn execute_tds(
+        &self,
+        sql: &str,
+        params: &[&dyn tiberius::ToSql],
+    ) -> Result<u64> {
+        self.execute_tds_with(sql, params, true).await
+    }
+
+    async fn execute_tds_with(
+        &self,
+        sql: &str,
+        params: &[&dyn tiberius::ToSql],
+        use_transaction: bool,
+    ) -> Result<u64> {
         let mut client;
         let client_ref;
         let mut guard = self.state().await;
 
-        if args.use_transaction {
+        if use_transaction {
             client = guard.transaction().await?;
             client_ref = &mut guard.transaction;
         } else {
@@ -165,11 +171,7 @@ impl MssqlProvider {
             client_ref = &mut guard.client;
         };
 
-        let count = match client
-            .execute(&*statement, &output)
-            .await
-            .map(|v| v.total())
-        {
+        let count = match client.execute(sql, params).await.map(|v| v.total()) {
             Ok(count) => count,
             Err(e) => {
                 let _ = trace_deadlock(&mut client).await;
@@ -180,6 +182,44 @@ impl MssqlProvider {
         *client_ref = Some(client);
         Ok(count)
     }
+
+    /// Runs `sql` once in the transaction and returns its last row.
+    ///
+    /// Unlike [QueryRows], it is not retried, so it is safe for statements that modify data.
+    pub(crate) async fn query_last_tds(
+        &self,
+        sql: &str,
+        params: &[&dyn tiberius::ToSql],
+    ) -> Result<Option<Row>> {
+        let mut guard = self.state().await;
+        let mut client = guard.transaction().await?;
+
+        match query_last(&mut client, sql, params).await {
+            Ok(row) => {
+                guard.transaction = Some(client);
+                Ok(row)
+            }
+            Err(e) => {
+                let _ = trace_deadlock(&mut client).await;
+                Err(e)
+            }
+        }
+    }
+}
+
+async fn query_last(
+    client: &mut Client,
+    sql: &str,
+    params: &[&dyn tiberius::ToSql],
+) -> Result<Option<Row>> {
+    let mut stream = QueryStream(client.query(sql, params).await?);
+    let mut last = None;
+
+    while let Some(row) = stream.try_next().await? {
+        last = Some(row);
+    }
+
+    Ok(last)
 }
 
 struct Inner {
@@ -217,7 +257,7 @@ impl QueryRows for MssqlProvider {
         &'a self,
         statement: S,
         params: &'a [&'a dyn ToSql],
-        mut mapper: M,
+        mapper: M,
         use_transaction: bool,
     ) -> BoxFuture<'a, Result<C>>
     where
@@ -229,20 +269,63 @@ impl QueryRows for MssqlProvider {
         let sql = statement.into();
 
         Box::pin(async move {
-            let mut count = 0;
+            let mut sink = Collect {
+                coll: C::default(),
+                mapper,
+                rows: Vec::with_capacity(ROW_BATCH),
+            };
 
-            loop {
-                let r = self
-                    .query_rows_imp(&sql, params, &mut mapper, use_transaction)
-                    .await;
+            self.query_rows_dyn(&sql, params, use_transaction, &mut sink)
+                .await?;
 
-                if r.is_ok() || count > 5 {
-                    return r;
-                }
-
-                count += 1;
-            }
+            Ok(sink.coll)
         })
+    }
+}
+
+/// Receives the rows of a query.
+pub(crate) trait RowSink: Send {
+    fn row(&mut self, row: Row) -> Result<()>;
+
+    /// Called after the last row, before the query completes.
+    fn end(&mut self);
+
+    /// Called before the query is retried; drops what the failed attempt received.
+    fn reset(&mut self);
+}
+
+/// Maps the rows and hands them to a collection in batches.
+struct Collect<M, R, C> {
+    coll: C,
+    mapper: M,
+    rows: Vec<R>,
+}
+
+impl<M, R, C> RowSink for Collect<M, R, C>
+where
+    C: Default + Extend<R> + Send,
+    M: FnMut(Row) -> Result<R> + Send,
+    R: Send,
+{
+    fn row(&mut self, row: Row) -> Result<()> {
+        self.rows.push((self.mapper)(row)?);
+
+        if self.rows.len() == ROW_BATCH {
+            self.coll.extend(self.rows.drain(..));
+        }
+
+        Ok(())
+    }
+
+    fn end(&mut self) {
+        if !self.rows.is_empty() {
+            self.coll.extend(self.rows.drain(..));
+        }
+    }
+
+    fn reset(&mut self) {
+        self.rows.clear();
+        self.coll = C::default();
     }
 }
 

@@ -24,7 +24,6 @@ where
     op_wrap(f, table, "load")
 }
 
-#[allow(clippy::redundant_async_block)]
 #[doc(hidden)]
 fn op_wrap<'a, F, T, E>(
     f: F,
@@ -35,9 +34,9 @@ where
     F: Future<Output = Result<T, E>> + Send + 'a,
     E: Display,
 {
-    Box::pin(async move {
-        #[cfg(feature = "telemetry")]
-        {
+    #[cfg(feature = "telemetry")]
+    {
+        Box::pin(async move {
             let d = std::time::Instant::now();
             let r = f.await;
             let e = r.as_ref().err().map(|e| e.to_string());
@@ -45,13 +44,14 @@ where
             counter_impl(table, op, d, e);
 
             r
-        }
+        })
+    }
 
-        #[cfg(not(feature = "telemetry"))]
-        {
-            f.await
-        }
-    })
+    // Boxed as is: an async wrapper would add a state machine per call site.
+    #[cfg(not(feature = "telemetry"))]
+    {
+        Box::pin(f)
+    }
 }
 
 #[cfg(feature = "telemetry")]

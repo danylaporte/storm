@@ -1,105 +1,51 @@
-use super::{
-    TypeAttrs,
-    builders::{DeleteBuilder, ParamsBuilder},
-};
-use darling::util::SpannedValue;
+use super::{TypeAttrs, builders::DeleteBuilder};
 use proc_macro2::{Span, TokenStream};
-use quote::{ToTokens, TokenStreamExt as _, quote};
-use std::marker::PhantomData;
-use syn::LitInt;
+use quote::quote;
+use syn::{LitInt, LitStr};
 
-pub(super) struct Delete<'a, S> {
-    attrs: &'a TypeAttrs,
-    _s: PhantomData<S>,
+pub(super) struct DeleteSql {
+    /// Delete statements, the translated table first.
+    pub statements: Vec<LitStr>,
+    /// Key parameters, shared by all the statements.
+    pub params: Vec<TokenStream>,
 }
 
-impl<'a, S> Delete<'a, S> {
-    pub fn new(attrs: &'a TypeAttrs) -> Self {
-        Self {
-            attrs,
-            _s: PhantomData,
-        }
+pub(super) fn delete_sql(attrs: &TypeAttrs, errors: &mut Vec<TokenStream>) -> DeleteSql {
+    let mut statements = Vec::with_capacity(2);
+    let mut key_count = 0;
+
+    if !attrs.translate_table.is_empty() {
+        let keys = attrs.translate_keys(errors);
+        key_count = keys.len();
+        statements.push(sql(&attrs.translate_table, &keys));
     }
-}
 
-impl<S> ToTokens for Delete<'_, S>
-where
-    S: AttrsSelector,
-{
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let table = S::table(self.attrs);
-
-        if table.is_empty() {
-            return;
-        }
-
-        let mut errors = Vec::new();
-        let mut params = ParamsBuilder::default();
-        let mut delete = DeleteBuilder::default();
-
-        let keys = S::keys(self.attrs, &mut errors);
-
-        add_keys(&keys, &mut params, &mut delete);
-
-        let sql = delete.to_sql_lit(table);
-
-        tokens.append_all(quote! {
-            storm::tri!(storm_mssql::Execute::execute(provider, #sql, #params).await);
-            #(#errors)*
-        });
+    if !attrs.table.is_empty() {
+        let keys = attrs.keys(errors);
+        key_count = keys.len();
+        statements.push(sql(&attrs.table, &keys));
     }
-}
 
-#[cold]
-fn add_key_many(keys: &[&str], params: &mut ParamsBuilder, builder: &mut DeleteBuilder) {
-    for (index, column) in keys.iter().enumerate() {
-        let i = LitInt::new(&index.to_string(), Span::call_site());
-        add_key_single(column, quote!(&k.#i as _), params, builder);
-    }
-}
-
-fn add_key_single(
-    column: &str,
-    ts: TokenStream,
-    params: &mut ParamsBuilder,
-    builder: &mut DeleteBuilder,
-) {
-    let i = params.add_ts(ts);
-    builder.add_key(column, &i.to_string());
-}
-
-fn add_keys(keys: &[&str], params: &mut ParamsBuilder, builder: &mut DeleteBuilder) {
-    match keys {
-        [k] => add_key_single(k, quote!(k as _), params, builder),
-        _ => add_key_many(keys, params, builder),
-    }
-}
-
-pub(super) trait AttrsSelector {
-    fn keys<'a>(attrs: &'a TypeAttrs, errors: &mut Vec<TokenStream>) -> Vec<&'a str>;
-    fn table(attrs: &TypeAttrs) -> &SpannedValue<String>;
-}
-
-macro_rules! selector {
-    ($t:ty, $keys:ident, $table:ident) => {
-        impl AttrsSelector for $t {
-            fn keys<'a>(attrs: &'a TypeAttrs, errors: &mut Vec<TokenStream>) -> Vec<&'a str> {
-                attrs.$keys(errors)
-            }
-
-            fn table(attrs: &TypeAttrs) -> &SpannedValue<String> {
-                &attrs.$table
-            }
-        }
+    let params = if key_count == 1 {
+        vec![quote!(k as _)]
+    } else {
+        (0..key_count)
+            .map(|i| {
+                let i = LitInt::new(&i.to_string(), Span::call_site());
+                quote!(&k.#i as _)
+            })
+            .collect()
     };
+
+    DeleteSql { statements, params }
 }
 
-pub(super) mod selectors {
-    use super::*;
+fn sql(table: &str, keys: &[&str]) -> LitStr {
+    let mut builder = DeleteBuilder::default();
 
-    pub struct Normal;
-    pub struct Translate;
+    for (index, column) in keys.iter().enumerate() {
+        builder.add_key(column, &(index + 1).to_string());
+    }
 
-    selector!(Normal, keys, table);
-    selector!(Translate, translate_keys, translate_table);
+    builder.to_sql_lit(table)
 }

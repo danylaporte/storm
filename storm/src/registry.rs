@@ -47,6 +47,8 @@ pub(crate) fn perform_registration() {
             f();
         }
 
+        crate::apply_log::finalize_appliers();
+
         IN_REGISTRATION.set(false);
     });
 }

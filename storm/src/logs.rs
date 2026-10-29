@@ -60,6 +60,16 @@ impl Logs {
     }
 
     #[inline]
+    pub(crate) fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    #[inline]
+    pub(crate) fn var_ids(&self) -> impl Iterator<Item = VarId<CtxExt>> + '_ {
+        self.0.keys().copied()
+    }
+
+    #[inline]
     pub(crate) fn remove<T: LogOf>(&mut self, var: Var<CtxExt, T>) -> Option<T::Log> {
         self.0
             .remove(&var.var_id())

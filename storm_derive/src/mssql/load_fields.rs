@@ -87,7 +87,7 @@ impl ToTokens for LoadFields<'_> {
                 ))
             }
 
-            let mut map: C = storm::tri!(storm_mssql::QueryRows::query_rows(provider, load_sql, &*params, load_row, args.use_transaction).await);
+            storm::tri!(storm_mssql::_load_rows(provider, &load_sql, &params, load_row, args.use_transaction, &mut *map).await);
         });
 
         tokens.append_all(quote!(#(#errors)*));

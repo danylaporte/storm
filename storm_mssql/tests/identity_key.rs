@@ -22,14 +22,13 @@ fn provider() -> ProviderContainer {
     provider
 }
 
-#[tokio::test]
+#[async_cell_lock::tokio_test]
 async fn identity_key_crud() -> Result<()> {
-    async_cell_lock::with_deadlock_check(async move {
-        let ctx = create_ctx();
-        let ctx = ctx.read().await?;
-        let provider = ctx.provider().provide::<MssqlProvider>("").await?;
+    let ctx = create_ctx();
+    let ctx = ctx.read().await?;
+    let provider = ctx.provider().provide::<MssqlProvider>("").await?;
 
-        provider
+    provider
             .execute_with_args(
                 "CREATE TABLE ##Tbl (Id INT NOT NULL IDENTITY, Name NVARCHAR(100) NOT NULL, Other INT NULL);",
                 &[],
@@ -39,63 +38,62 @@ async fn identity_key_crud() -> Result<()> {
             )
             .await?;
 
-        let ctx = ctx.queue().await?;
-        let mut trx = ctx.transaction(Uuid::nil());
-        let mut entities1 = trx.tbl_of::<Entity1>().await?;
+    let ctx = ctx.queue().await?;
+    let mut trx = ctx.transaction(Uuid::nil());
+    let mut entities1 = trx.tbl_of::<Entity1>().await?;
 
-        let e1 = Entity1 {
+    let e1 = Entity1 {
+        name: "E1".to_string(),
+        o: None,
+    };
+
+    // insert
+    let i1 = 0;
+    let (i1, _) = entities1.insert_mut(i1, e1).await?;
+
+    assert_eq!(i1, 1);
+
+    let mut e1 = entities1.get(&i1).unwrap().clone();
+
+    e1.o = Some(5);
+
+    // update
+    entities1.insert_mut(i1, e1).await?;
+
+    let e2 = Entity1 {
+        name: "E2".to_string(),
+        o: None,
+    };
+
+    let i2 = 0;
+
+    let (i2, _) = entities1.insert_mut(i2, e2).await?;
+
+    assert_eq!(i2, 2);
+
+    // delete
+    entities1.remove(i2).await?;
+
+    let log = trx.commit().await?;
+
+    let mut ctx = ctx.write().await?;
+
+    ctx.apply_log(log);
+
+    let ctx = ctx.read().await?;
+    let entities1 = ctx.tbl_of::<Entity1>().await?;
+
+    assert_eq!(
+        entities1.get(&1).unwrap().clone(),
+        Entity1 {
             name: "E1".to_string(),
-            o: None,
-        };
+            o: Some(5),
+        }
+    );
 
-        // insert
-        let i1 = 0;
-        let (i1, _) = entities1.insert_mut(i1, e1).await?;
+    assert!(entities1.get(&2).is_none());
 
-        assert_eq!(i1, 1);
-
-        let mut e1 = entities1.get(&i1).unwrap().clone();
-
-        e1.o = Some(5);
-
-        // update
-        entities1.insert_mut(i1, e1).await?;
-
-        let e2 = Entity1 {
-            name: "E2".to_string(),
-            o: None,
-        };
-
-        let i2 = 0;
-
-        let (i2, _) = entities1.insert_mut(i2, e2).await?;
-
-        assert_eq!(i2, 2);
-
-        // delete
-        entities1.remove(i2).await?;
-
-        let log = trx.commit().await?;
-
-        let mut ctx = ctx.write().await?;
-
-        ctx.apply_log(log);
-
-        let ctx = ctx.read().await?;
-        let entities1 = ctx.tbl_of::<Entity1>().await?;
-
-        assert_eq!(
-            entities1.get(&1).unwrap().clone(),
-            Entity1 {
-                name: "E1".to_string(),
-                o: Some(5),
-            }
-        );
-
-        assert!(entities1.get(&2).is_none());
-
-        Ok(())
-    }, "identity_key_crud").await
+    Ok(())
 }
 
 #[derive(Clone, Ctx, Debug, MssqlDelete, MssqlLoad, MssqlSave, PartialEq)]

@@ -248,24 +248,22 @@ pub trait FlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
         id: &'a <Self::Entity as Entity>::Key,
         entity: &'a Self::Entity,
     ) -> BoxFuture<'a, Result<()>> {
-        Box::pin(async move {
-            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
-                let mut old_set = FxHashSet::default();
-                let mut new_set = FxHashSet::default();
+        if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
+            let mut old_set = FxHashSet::default();
+            let mut new_set = FxHashSet::default();
 
-                Self::upsert_or_remove(
-                    base,
-                    log,
-                    id,
-                    None,
-                    Some(entity),
-                    &mut old_set,
-                    &mut new_set,
-                );
-            }
+            Self::upsert_or_remove(
+                base,
+                log,
+                id,
+                None,
+                Some(entity),
+                &mut old_set,
+                &mut new_set,
+            );
+        }
 
-            Ok(())
-        })
+        Box::pin(ready(Ok(())))
     }
 
     fn handle_upserted<'a>(
@@ -295,7 +293,11 @@ pub trait FlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
     }
 
     fn register() {
-        __register_apply(Self::apply_log, crate::ApplyOrder::FlatSet);
+        __register_apply(
+            Self::apply_log,
+            crate::ApplyOrder::FlatSet,
+            &[Self::Entity::tbl_var().var_id(), Self::index_var().var_id()],
+        );
         <Self::Entity as EntityAccessor>::cleared().on(Self::handle_clear);
         <Self::Entity as EntityAccessor>::removed().on(Self::handle_removed);
         <Self::Entity as EntityAccessor>::upserted().on(Self::handle_upserted);
@@ -412,14 +414,8 @@ macro_rules! flat_set_adapt {
             }
 
             fn index_var() -> storm::CtxVar<storm::indexing::FlatSetIndex<Self>> {
-                storm::extobj::extobj!(
-                    impl storm::CtxExt {
-                        V: storm::OnceCell<storm::indexing::FlatSetIndex<$adapt>>,
-                    },
-                    crate_path = storm::extobj
-                );
-
-                *V
+                static V: storm::LazyCtxVar<storm::indexing::FlatSetIndex<$adapt>> = storm::LazyCtxVar::new();
+                V.get()
             }
         }
 
@@ -441,10 +437,12 @@ macro_rules! flat_set_adapt {
 
         $vis type $alias = storm::indexing::FlatSetIndex<$adapt>;
 
-        #[storm::register]
-        fn $init() {
+        #[allow(non_upper_case_globals)]
+        #[storm::linkme::distributed_slice(storm::registry::__REGISTRATION)]
+        #[linkme(crate = storm::linkme)]
+        static $init: fn() = || {
             <$adapt as storm::indexing::FlatSetAdapt>::register();
-        }
+        };
     };
 
     ($adapt:ident, $alias:ident, $init:ident,
@@ -464,14 +462,8 @@ macro_rules! flat_set_adapt {
             }
 
             fn index_var() -> storm::CtxVar<storm::indexing::FlatSetIndex<Self>> {
-                storm::extobj::extobj!(
-                    impl storm::CtxExt {
-                        V: storm::OnceCell<storm::indexing::FlatSetIndex<$adapt>>,
-                    },
-                    crate_path = storm::extobj
-                );
-
-                *V
+                static V: storm::LazyCtxVar<storm::indexing::FlatSetIndex<$adapt>> = storm::LazyCtxVar::new();
+                V.get()
             }
         }
 
@@ -491,9 +483,11 @@ macro_rules! flat_set_adapt {
 
         $vis type $alias = storm::indexing::FlatSetIndex<$adapt>;
 
-        #[storm::register]
-        fn $init() {
+        #[allow(non_upper_case_globals)]
+        #[storm::linkme::distributed_slice(storm::registry::__REGISTRATION)]
+        #[linkme(crate = storm::linkme)]
+        static $init: fn() = || {
             <$adapt as storm::indexing::FlatSetAdapt>::register();
-        }
+        };
     };
 }

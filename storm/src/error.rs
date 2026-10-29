@@ -4,6 +4,15 @@ use std::{
     mem::{replace, swap},
 };
 
+/// Formats a key for an error message.
+///
+/// Not generic, so the formatting is compiled once instead of once per entity or constraint.
+#[cold]
+#[inline(never)]
+pub(crate) fn debug_string(v: &dyn Debug) -> String {
+    format!("{v:?}")
+}
+
 pub enum Error {
     AlreadyInTransaction,
     AsyncCellLock(async_cell_lock::Error),
@@ -16,13 +25,46 @@ pub enum Error {
         max: usize,
         field: Box<dyn Fields>,
     },
+    /// The parent referenced by a foreign key does not exist.
+    ForeignKeyNotFound {
+        entity: &'static str,
+        field: &'static str,
+        parent: &'static str,
+        key: String,
+        /// The field in the entity fields enum, `None` when the entity has no fields enum.
+        entity_field: Option<Box<dyn Fields>>,
+    },
+    /// The parent cannot be removed because it is still referenced (`on_delete = "restrict"`).
+    ForeignKeyRestricted {
+        entity: &'static str,
+        field: &'static str,
+        parent: &'static str,
+        key: String,
+        count: usize,
+    },
     Internal,
     Multiple(Vec<Error>),
     NotInTransaction,
     ProviderNotFound,
+    /// A business rule blocks the removal (see [on_remove_rule](crate::on_remove_rule)).
+    RemoveRestricted {
+        entity: &'static str,
+        key: String,
+        reason: String,
+    },
     TransactionError,
     Std(StdError),
     Str(&'static str),
+    /// Another row already has the same value(s) in a unique index.
+    UniqueViolation {
+        entity: &'static str,
+        index: &'static str,
+        fields: &'static [&'static str],
+        value: String,
+        key: String,
+        /// The fields in the entity fields enum, empty when the entity has no fields enum.
+        entity_fields: Vec<Box<dyn Fields>>,
+    },
     String(String),
 
     #[cfg(feature = "mssql")]
@@ -121,6 +163,26 @@ impl Display for Error {
             Self::FieldTooLong { len, max, field } => {
                 write!(f, "{field} field too long, len: {len}, max {max}")
             }
+            Self::ForeignKeyNotFound {
+                entity,
+                field,
+                parent,
+                key,
+                ..
+            } => write!(
+                f,
+                "Foreign key violation: {entity}.{field} references {parent} `{key}` which does not exist."
+            ),
+            Self::ForeignKeyRestricted {
+                entity,
+                field,
+                parent,
+                key,
+                count,
+            } => write!(
+                f,
+                "Foreign key violation: {parent} `{key}` is referenced by {count} {entity} through `{field}`."
+            ),
             Self::Multiple(vec) => match &vec[..] {
                 [e] => Display::fmt(&e, f),
                 _ => f.write_str("Multiple errors"),
@@ -129,11 +191,28 @@ impl Display for Error {
             Self::Internal => f.write_str("Internal."),
             Self::NotInTransaction => f.write_str("Not in transaction."),
             Self::ProviderNotFound => f.write_str("Provider not found."),
+            Self::RemoveRestricted {
+                entity,
+                key,
+                reason,
+            } => write!(f, "{entity} `{key}` cannot be removed: {reason}"),
 
             #[cfg(feature = "mssql")]
             Self::Mssql(e) => Display::fmt(e, f),
 
             Self::Str(e) => Display::fmt(e, f),
+            Self::UniqueViolation {
+                entity,
+                index,
+                fields,
+                value,
+                key,
+                ..
+            } => write!(
+                f,
+                "Unique index violation: {entity} `{index}` ({}) value {value} is already used by `{key}`.",
+                fields.join(", ")
+            ),
             Self::String(e) => Display::fmt(e, f),
             Self::Std(e) => Display::fmt(e, f),
         }

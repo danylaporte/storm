@@ -47,6 +47,16 @@ impl<'a> LoadTranslated<'a> {
             true => quote!(),
         }
     }
+
+    /// The trait of the collection the entities are loaded in.
+    pub fn sink_trait(&self) -> Ident {
+        let name = match self.fields.is_empty() {
+            false => "TranslatedLoadSink",
+            true => "LoadSink",
+        };
+
+        Ident::new(name, Span::call_site())
+    }
 }
 
 impl ToTokens for LoadTranslated<'_> {
@@ -81,7 +91,7 @@ impl ToTokens for LoadTranslated<'_> {
                     true => TRANSLATED_SQL.to_string(),
                 };
 
-                let _: storm::provider::LoadDoNothing = storm::tri!(storm_mssql::QueryRows::query_rows(provider, translated_sql, &*params, |row| {
+                storm::tri!(storm_mssql::_query_rows_each(provider, &translated_sql, &params, /*use_transaction*/ true, &mut |row: storm_mssql::tiberius::Row| {
                     let key: <#entity as storm::Entity>::Key = #keys;
                     let culture = #culture;
 
@@ -90,7 +100,7 @@ impl ToTokens for LoadTranslated<'_> {
                     }
 
                     Ok(())
-                }, /*use_transaction*/ true).await);
+                }).await);
             });
         }
 

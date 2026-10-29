@@ -1,3 +1,5 @@
+// darling generates `field: field` for `#[darling(multiple)]` fields.
+#[allow(clippy::redundant_field_names)]
 mod attrs;
 mod builders;
 mod delete;
@@ -10,7 +12,7 @@ use crate::{
 };
 use attrs::{FieldAttrs, TypeAttrs};
 use darling::{FromDeriveInput, FromField};
-use delete::Delete;
+use delete::{DeleteSql, delete_sql};
 use inflector::Inflector;
 use load_fields::LoadFields;
 use load_translated::LoadTranslated;
@@ -22,10 +24,9 @@ use syn::{DeriveInput, Error, Ident, LitInt, LitStr, Type, Visibility};
 pub(crate) fn delete(input: &DeriveInput) -> TokenStream {
     let ident = &input.ident;
     let attrs = try_ts!(TypeAttrs::from_derive_input(input).map_err(|e| e.write_errors()));
-    let normal = Delete::<delete::selectors::Normal>::new(&attrs);
-    let translate = Delete::<delete::selectors::Translate>::new(&attrs);
+    let mut errors = Vec::new();
+    let DeleteSql { statements, params } = delete_sql(&attrs, &mut errors);
     let table_name = LitStr::new(&attrs.table, attrs.table.span());
-
     let provider = attrs.provider();
 
     let no_ctx = if attrs.no_ctx {
@@ -34,21 +35,17 @@ pub(crate) fn delete(input: &DeriveInput) -> TokenStream {
         quote! { impl storm::EntityRemove for #ident {} }
     };
 
+    // No async block is generated: the future of `_delete` is compiled once for all entities.
     quote! {
         #no_ctx
 
         impl storm::provider::Delete<#ident> for storm::provider::TransactionProvider<'_> {
             fn delete<'a>(&'a self, k: &'a <#ident as storm::Entity>::Key) -> storm::BoxFuture<'a, storm::Result<()>> {
-                storm_mssql::metrics_helper::delete_wrap(async move {
-                    let provider: &storm_mssql::MssqlProvider = storm::tri!(self.container().provide(#provider).await);
-
-                    #translate
-                    #normal
-
-                    Ok(())
-                }, #table_name)
+                storm_mssql::_delete(self.container(), #provider, #table_name, &[#(#statements),*], &[#(#params),*])
             }
         }
+
+        #(#errors)*
     }
 }
 
@@ -57,12 +54,8 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let attrs = try_ts!(TypeAttrs::from_derive_input(input).map_err(|e| e.write_errors()));
     let rename_all = attrs.rename_all;
 
-    let load_fn = Ident::new(
-        &format!("__load_{}", ident.to_string().to_snake_case()),
-        Span::call_site(),
-    );
-
     let no_test = attrs.no_test;
+    let partial = attrs.partial;
     let mut diff = attrs.diff.then(Vec::new);
     let mut errors = Vec::new();
     let mut filter_sql = FilterSqlImpl::default();
@@ -72,7 +65,8 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
     let translated_table_name = LitStr::new(&attrs.translate_table, attrs.translate_table.span());
     let enum_fields_ident = Ident::new(&format!("{ident}Fields"), ident.span());
     let mut max_lengths = Vec::new();
-    let mut check_entity_fields = Vec::new();
+    let mut columns_schema = Vec::new();
+    let mut field_columns: Vec<(Ident, String)> = Vec::new();
 
     for key in attrs.keys(&mut errors) {
         filter_sql.add_filter(key);
@@ -89,8 +83,35 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
         attrs.validate_load(&mut errors);
 
         let column = continue_ts!(RenameAll::column(rename_all, &attrs.column, field), errors);
+        let translated_field = is_translated(&field.ty);
 
-        if is_translated(&field.ty) {
+        field_columns.push((field_ident.clone(), column.clone()));
+
+        // part fields are spread over the columns of the part.
+        if !attrs.part && (translated_field || !attrs.skip_load() || !attrs.skip_save()) {
+            let field_name = field_ident.to_string();
+            let field_name = field_name.strip_prefix("r#").unwrap_or(&field_name);
+            let max_length = attrs.max_length;
+
+            let nullable = if translated_field || attrs.load_with.is_some() {
+                quote!(None)
+            } else {
+                let optional = attrs.nullable || is_option(&field.ty);
+                quote!(Some(#optional))
+            };
+
+            columns_schema.push(quote! {
+                storm_mssql::ColumnSchema {
+                    name: #column,
+                    field: #field_name,
+                    max_length: #max_length,
+                    nullable: #nullable,
+                    translated: #translated_field,
+                }
+            });
+        }
+
+        if translated_field {
             load.skip_field(field, &attrs, &mut errors);
             translated.add_field(field, &column);
 
@@ -106,7 +127,6 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
         }
 
         if attrs.max_length > 0 {
-            let column_lit = LitStr::new(&column, ident.span());
             let const_field_name = Ident::new(
                 &format!("{field_ident}_MAX_LENGTH").to_screaming_snake_case(),
                 field_ident.span(),
@@ -114,16 +134,22 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             let max_length = LitInt::new(&attrs.max_length.to_string(), field_ident.span());
 
             max_lengths.push(quote! { pub const #const_field_name: usize = #max_length; });
-
-            if !no_test {
-                check_entity_fields.push(quote! { (#column_lit, #max_length) });
-            }
         }
     }
 
     try_ts!(errors.result());
 
+    let (uniques_schema, foreign_keys_schema) = crate::ctx::mssql_schema(input, &|i| {
+        field_columns
+            .iter()
+            .find(|(f, _)| f == i)
+            .map(|(_, c)| c.clone())
+    });
+
+    let keys_schema = attrs.keys_internal();
+
     let translated_where = translated.to_where_clause();
+    let sink = translated.sink_trait();
     let provider = attrs.provider();
     let diff = apply_entity_diff(diff, ident);
     let max_lengths = if max_lengths.is_empty() {
@@ -132,28 +158,16 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
         quote! { impl #ident { #(#max_lengths)* } }
     };
 
-    let check_entity_fields = if check_entity_fields.is_empty() {
-        quote! {}
-    } else {
-        let check_entity_test = Ident::new(
-            &format!("test_{}_entity", ident.to_string().to_snake_case()),
-            ident.span(),
-        );
-
-        quote! {
-            #[cfg(test)]
-            #[tokio::test]
-            async fn #check_entity_test() {
-                storm_mssql::test_entity(#provider, #table_name, #translated_table_name, &[#(#check_entity_fields),*]).await;
-            }
-        }
-    };
-
     let test = if no_test {
         quote!()
     } else {
         let load_test = Ident::new(
             &format!("test_{}_load", ident.to_string().to_snake_case()),
+            ident.span(),
+        );
+
+        let check_entity_test = Ident::new(
+            &format!("test_{}_entity", ident.to_string().to_snake_case()),
             ident.span(),
         );
 
@@ -166,21 +180,29 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
                 Ok(())
             }
 
-            #check_entity_fields
+            #[cfg(test)]
+            #[tokio::test]
+            async fn #check_entity_test() {
+                storm_mssql::test_entity::<#ident>(#provider).await;
+            }
         }
     };
 
     quote! {
-        fn #load_fn<'a, C>(provider: &'a storm::provider::ProviderContainer, sql: std::borrow::Cow<'a, str>, params: std::borrow::Cow<'a, [&'a dyn storm_mssql::ToSql]>, args: storm::provider::LoadArgs) -> storm::BoxFuture<'a, storm::Result<C>>
-        where
-            C: Default + Extend<(<#ident as storm::Entity>::Key, #ident)> #translated_where + Send + 'static,
-        {
-            storm_mssql::metrics_helper::load_wrap(async move {
-                let provider: &storm_mssql::MssqlProvider = storm::tri!(provider.provide(#provider).await);
-                #load
-                #translated
-                Ok(map)
-            }, #table_name)
+        impl storm_mssql::MssqlLoadEntity for #ident {
+            type Sink = dyn storm_mssql::load_sink::#sink<#ident>;
+
+            fn load_into<'a, 'm>(provider: &'a storm::provider::ProviderContainer, sql: std::borrow::Cow<'a, str>, params: std::borrow::Cow<'a, [&'a dyn storm_mssql::ToSql]>, args: storm::provider::LoadArgs, map: &'m mut Self::Sink) -> storm::BoxFuture<'m, storm::Result<()>>
+            where
+                'a: 'm,
+            {
+                Box::pin(async move {
+                    let provider: &storm_mssql::MssqlProvider = storm::tri!(provider.provide(#provider).await);
+                    #load
+                    #translated
+                    Ok(())
+                })
+            }
         }
 
         impl<C, FILTER> storm::provider::LoadAll<#ident, FILTER, C> for storm::provider::ProviderContainer
@@ -188,25 +210,33 @@ pub(crate) fn load(input: &DeriveInput) -> TokenStream {
             C: Default + Extend<(<#ident as storm::Entity>::Key, #ident)> #translated_where + Send + 'static,
             FILTER: storm_mssql::FilterSql,
         {
+            #[inline]
             fn load_all_with_args<'a>(&'a self, filter: &'a FILTER, args: storm::provider::LoadArgs) -> storm::BoxFuture<'a, storm::Result<C>> {
-                let (sql, params) = storm_mssql::FilterSql::filter_sql(filter, 0);
-                #load_fn(self, sql, params, args)
+                storm_mssql::_load_all::<#ident, C, FILTER>(self, #provider, filter, args)
             }
         }
 
         impl storm::provider::LoadOne<#ident> for storm::provider::ProviderContainer {
             fn load_one_with_args<'a>(&'a self, k: &'a <#ident as Entity>::Key, args: storm::provider::LoadArgs) -> storm::BoxFuture<'a, storm::Result<Option<#ident>>> {
-                Box::pin(async move {
-                    let filter = #filter_sql;
-                    let v: storm::provider::LoadOneInternal<#ident> = storm::tri!(storm::provider::LoadAll::load_all_with_args(self, &filter, args).await);
-                    Ok(v.into_inner())
-                })
+                storm_mssql::_load_one(self, #provider, #filter_sql, args)
             }
         }
 
         impl storm_mssql::MssqlMeta for #ident {
             const TABLE: &'static str = #table_name;
             const TRANSLATED_TABLE: &'static str = #translated_table_name;
+        }
+
+        impl storm_mssql::MssqlSchema for #ident {
+            const SCHEMA: storm_mssql::EntitySchema = storm_mssql::EntitySchema {
+                table: #table_name,
+                translated_table: #translated_table_name,
+                keys: &[#(#keys_schema),*],
+                columns: &[#(#columns_schema),*],
+                uniques: &[#(#uniques_schema),*],
+                foreign_keys: &[#(#foreign_keys_schema),*],
+                partial: #partial,
+            };
         }
 
         #max_lengths
@@ -237,6 +267,9 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
 
     let keys = attrs.keys(&mut errors);
     let mut identity_found = is_identity_key;
+    let mut identity_ident = None;
+    // Fields and keys added to the builder, parts excluded.
+    let mut column_count = keys.len();
 
     for field in try_ts!(input.fields()) {
         let attrs: FieldAttrs = continue_ts!(
@@ -256,6 +289,7 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
 
         if is_identity {
             identity_found = true;
+            identity_ident = field.ident.clone();
             continue;
         }
 
@@ -276,8 +310,15 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
         if attrs.max_length > 0 {
             let expected = LitInt::new(&attrs.max_length.to_string(), Span::call_site());
 
+            // translated values are saved one row per culture; check each one.
+            let len = if is_translated(&field.ty) {
+                quote!(Culture::DB_CULTURES.iter().map(|&culture| storm::Len::len(&self.#ident.get(culture))).max().unwrap_or_default())
+            } else {
+                quote!(storm::Len::len(&self.#ident))
+            };
+
             entity_validations.push(quote!(
-                storm::macro_check_max_len(storm::Len::len(&self.#ident), #expected, #enum_fields_ident::#field_pascal_ident, error);
+                storm::macro_check_max_len(#len, #expected, #enum_fields_ident::#field_pascal_ident, error);
             ));
         }
 
@@ -321,6 +362,8 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
                 );
             }
         } else {
+            column_count += 1;
+
             match attrs.save_with.as_ref() {
                 Some(f) => {
                     save_part.push(quote!(builder.add_field_owned(#name, #f(k, self));));
@@ -379,43 +422,11 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
 
     try_ts!(errors.result());
 
-    let upsert_trait;
-    let upsert_sig;
-    let entity_part_key;
-
-    if attrs.reload_on_upsert_or_identity() {
-        upsert_trait = quote!(storm::provider::UpsertMut<#ident>);
-        upsert_sig = quote!(fn upsert_mut<'a>(&'a self, k: &'a mut <#ident as storm::Entity>::Key, v: &'a mut #ident) -> storm::BoxFuture<'a, storm::Result<()>>);
-        entity_part_key = quote!(&k.clone());
-    } else {
-        upsert_trait = quote!(storm::provider::Upsert<#ident>);
-        upsert_sig = quote!(fn upsert<'a>(&'a self, k: &'a <#ident as storm::Entity>::Key, v: &'a #ident) -> storm::BoxFuture<'a, storm::Result<()>>);
-        entity_part_key = quote!(k);
-    }
-
-    let reload_entity = if attrs.reload_on_upsert() {
-        let backup = quote!(#(#translated_backup)*);
-        let restore = quote!(#(#translated_restore)*);
-
-        quote! {
-            #backup
-            *v = storm::tri!(storm::provider::LoadOne::<#ident>::load_one_with_args(self.container(), &k, storm::provider::LoadArgs { use_transaction: true }).await.and_then(|v| v.ok_or(storm::Error::EntityNotFound)));
-            #restore
-        }
-    } else {
-        quote!()
-    };
-
-    let builder_invoke = if is_identity_key {
-        quote!(storm::tri!(builder.execute_identity(provider, k).await);)
-    } else {
-        quote!(storm::tri!(builder.execute(provider).await);)
-    };
-
     let save_part = save_part.ts();
     let wheres = wheres.ts();
     let table = LitStr::new(&attrs.table, ident.span());
     let provider = attrs.provider();
+    let column_count = LitInt::new(&column_count.to_string(), Span::call_site());
     let diff = entity_diff(ident, diff);
     let enum_fields = enum_fields_impl(vis, ident, enum_fields, &enum_fields_ident);
     let entity_validate = entity_validate(entity_validations, ident);
@@ -428,25 +439,99 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
         quote! { impl storm::EntityUpsert for #ident {} }
     };
 
-    quote! {
-        impl #upsert_trait for storm::provider::TransactionProvider<'_> {
-            #upsert_sig {
-                storm_mssql::metrics_helper::upsert_wrap(async move {
-                    let provider: &storm_mssql::MssqlProvider = storm::tri!(self.container().provide(#provider).await);
-                    let mut builder = storm_mssql::UpsertBuilder::new(#table);
-                    let entity_part_key = #entity_part_key;
+    // Without identity, reload or translated fields, the upsert only executes the builder: no
+    // async block is generated, the future of `_upsert` is compiled once for all entities.
+    let upsert_impl = if !attrs.reload_on_upsert_or_identity() && translated.is_empty() {
+        quote! {
+            impl storm::provider::Upsert<#ident> for storm::provider::TransactionProvider<'_> {
+                fn upsert<'a>(&'a self, k: &'a <#ident as storm::Entity>::Key, v: &'a #ident) -> storm::BoxFuture<'a, storm::Result<()>> {
+                    let container = self.container();
 
-                    storm_mssql::SaveEntityPart::save_entity_part(v, entity_part_key, &mut builder);
+                    if container.is_noop(#provider) {
+                        return Box::pin(std::future::ready(Ok(())));
+                    }
 
+                    let mut builder = storm_mssql::UpsertBuilder::with_capacity(#table, #column_count);
+                    storm_mssql::SaveEntityPart::save_entity_part(v, k, &mut builder);
                     #wheres
-                    #builder_invoke
-                    #reload_entity
-                    #translated
+                    storm_mssql::_upsert(container, #provider, #table_name, builder)
+                }
+            }
 
-                    Ok(())
-                }, #table_name)
+            // Only reports the misuse of the translate attributes.
+            #translated
+        }
+    } else {
+        let upsert_trait;
+        let upsert_sig;
+        let entity_part_key;
+
+        if attrs.reload_on_upsert_or_identity() {
+            upsert_trait = quote!(storm::provider::UpsertMut<#ident>);
+            upsert_sig = quote!(fn upsert_mut<'a>(&'a self, k: &'a mut <#ident as storm::Entity>::Key, v: &'a mut #ident) -> storm::BoxFuture<'a, storm::Result<()>>);
+            entity_part_key = quote!(&k.clone());
+        } else {
+            upsert_trait = quote!(storm::provider::Upsert<#ident>);
+            upsert_sig = quote!(fn upsert<'a>(&'a self, k: &'a <#ident as storm::Entity>::Key, v: &'a #ident) -> storm::BoxFuture<'a, storm::Result<()>>);
+            entity_part_key = quote!(k);
+        }
+
+        let reload_entity = if attrs.reload_on_upsert() {
+            let backup = quote!(#(#translated_backup)*);
+            let restore = quote!(#(#translated_restore)*);
+
+            quote! {
+                #backup
+                *v = storm::tri!(storm::provider::LoadOne::<#ident>::load_one_with_args(self.container(), &k, storm::provider::LoadArgs { use_transaction: true }).await.and_then(|v| v.ok_or(storm::Error::EntityNotFound)));
+                #restore
+            }
+        } else {
+            quote!()
+        };
+
+        let builder_invoke = if is_identity_key {
+            quote!(storm::tri!(builder._execute_identity(provider, k).await);)
+        } else {
+            quote!(storm::tri!(builder._execute(provider).await);)
+        };
+
+        let noop_identity = match &identity_ident {
+            _ if is_identity_key => quote!(storm::tri!(storm_mssql::noop_identity(k));),
+            Some(field) => quote!(storm::tri!(storm_mssql::noop_identity(&mut v.#field));),
+            None => quote!(),
+        };
+
+        quote! {
+            impl #upsert_trait for storm::provider::TransactionProvider<'_> {
+                #upsert_sig {
+                    if self.container().is_noop(#provider) {
+                        return Box::pin(async move {
+                            #noop_identity
+                            Ok(())
+                        });
+                    }
+
+                    storm_mssql::metrics_helper::upsert_wrap(async move {
+                        let provider: &storm_mssql::MssqlProvider = storm::tri!(self.container().provide(#provider).await);
+                        let mut builder = storm_mssql::UpsertBuilder::with_capacity(#table, #column_count);
+                        let entity_part_key = #entity_part_key;
+
+                        storm_mssql::SaveEntityPart::save_entity_part(v, entity_part_key, &mut builder);
+
+                        #wheres
+                        #builder_invoke
+                        #reload_entity
+                        #translated
+
+                        Ok(())
+                    }, #table_name)
+                }
             }
         }
+    };
+
+    quote! {
+        #upsert_impl
 
         #diff
         #enum_fields
@@ -463,13 +548,21 @@ pub(crate) fn save(input: &DeriveInput) -> TokenStream {
 }
 
 fn is_translated(t: &Type) -> bool {
+    last_segment_is(t, "Translated")
+}
+
+fn is_option(t: &Type) -> bool {
+    last_segment_is(t, "Option")
+}
+
+fn last_segment_is(t: &Type, name: &str) -> bool {
     match t {
         Type::Path(p) => p
             .path
             .segments
             .iter()
             .next_back()
-            .is_some_and(|s| &s.ident == "Translated"),
+            .is_some_and(|s| s.ident == name),
         _ => false,
     }
 }
@@ -507,7 +600,7 @@ impl ToTokens for FilterSqlImpl {
         };
 
         let sql = LitStr::new(&self.sql, Span::call_site());
-        tokens.append_all(quote!((#sql, &[#params][..])));
+        tokens.append_all(quote!(#sql, [#params]));
     }
 }
 
@@ -575,13 +668,39 @@ fn enum_fields_impl(
 
     let names = fields
         .iter()
-        .map(|i| LitStr::new(&i.to_string().to_camel_case(), i.span()));
+        .map(|i| LitStr::new(&i.to_string().to_camel_case(), i.span()))
+        .collect::<Vec<_>>();
+
+    let enum_name = LitStr::new(&enum_ident.to_string(), enum_ident.span());
+
+    // The rule of `#[serde(rename_all = "camelCase")]` for variants.
+    let de_names = fields.iter().map(|i| {
+        let s = i.to_string();
+        let mut chars = s.chars();
+        let s = match chars.next() {
+            Some(c) => c.to_ascii_lowercase().to_string() + chars.as_str(),
+            None => s,
+        };
+        LitStr::new(&s, i.span())
+    });
+
+    let pascal_names = fields.iter().map(|i| LitStr::new(&i.to_string(), i.span()));
 
     quote! {
-        #[derive(Clone, Copy, Eq, serde::Deserialize)]
-        #[serde(rename_all = "camelCase")]
+        #[derive(Clone, Copy, Eq)]
         #vis enum #enum_ident {
             #(#fields,)*
+        }
+
+        impl<'de> serde::Deserialize<'de> for #enum_ident {
+            fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
+                let index = storm::_deserialize_fields(deserializer, #enum_name, &[#(#de_names),*])?;
+
+                [#(Self::#fields),*]
+                    .get(index)
+                    .copied()
+                    .ok_or_else(|| <D::Error as serde::de::Error>::custom("invalid field index"))
+            }
         }
 
         impl AsRef<str> for #enum_ident {
@@ -632,6 +751,13 @@ fn enum_fields_impl(
 
         impl storm::EntityFields for #ident {
             type Fields = #enum_ident;
+
+            fn field_by_name(name: &str) -> Option<Self::Fields> {
+                match name {
+                    #(#pascal_names => Some(#enum_ident::#fields),)*
+                    _ => None,
+                }
+            }
         }
     }
 }

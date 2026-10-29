@@ -4,18 +4,12 @@ fn create_ctx() -> QueueRwLock<Ctx> {
     QueueRwLock::new(Default::default(), "ctx")
 }
 
-#[tokio::test]
+#[async_cell_lock::tokio_test]
 async fn create_async() -> Result<()> {
-    async_cell_lock::with_deadlock_check(
-        async move {
-            let ctx = create_ctx();
-            let ctx = ctx.read().await?;
-            let _id: &u32 = ctx.ref_as::<NextId>().await?;
-            Ok(())
-        },
-        "create_async",
-    )
-    .await
+    let ctx = create_ctx();
+    let ctx = ctx.read().await?;
+    let _id: &u32 = ctx.ref_as::<NextId>().await?;
+    Ok(())
 }
 
 #[derive(Ctx, Default, NoopLoad, PartialEq)]

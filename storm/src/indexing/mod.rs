@@ -12,5 +12,7 @@ pub use flat_set::{FlatSetAdapt, FlatSetIndex};
 pub use hash_flat_set::{HashFlatSetAdapt, HashFlatSetIndex};
 pub use one::{OneAdapt, OneIndex};
 pub use rebuild_index::RebuildIndex;
+#[doc(hidden)]
+pub use rebuild_index::{__get_or_init_async, __get_or_init_sync};
 pub use single_set_index::{SingleSetAdapt, SingleSetIndex};
 pub use tree::{TreeEntity, TreeIndex};

@@ -1,7 +1,9 @@
 use crate::{
-    ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CommitEvent, CtxExtObj, Entity, EntityAccessor,
-    EntityRemove, EntityUpsert, EntityUpsertMut, EventDepth, Get, HashTable, Logs,
-    ProviderContainer, RefIntoIterator, Result, Tag, Transaction, TrxErrGate, VecTable,
+    ApplyLog, AsRefAsync, AsyncTryFrom, BoxFuture, CommitEvent, CtxExtObj, CtxTypeInfo, DeletePlan,
+    Entity, EntityAccessor, EntityRemove, EntityUpsert, EntityUpsertMut, EventDepth, Get,
+    HashTable, Logs, ProviderContainer, RefIntoIterator, Result, Tag, Transaction, TrxErrGate,
+    VecTable,
+    accessor::log_entity,
     indexing::AsyncAsIdxTrx,
     perform_apply_log,
     provider::{Delete, LoadAll, LoadArgs, LoadOne, TransactionProvider, Upsert, UpsertMut},
@@ -276,7 +278,25 @@ impl<'a> CtxTransaction<'a> {
         E::Key: Eq + Hash,
         Ctx: AsRefAsync<E::Tbl>,
     {
-        self.tbl_of::<E>().await.map(|t| t.get_owned(k))
+        if let Some(v) = log_entity(self, k) {
+            return Ok(v);
+        }
+
+        Ok(self.ctx_tbl_of::<E>().await?.get(k))
+    }
+
+    /// Gets the committed table, without boxing a future when it is already loaded.
+    async fn ctx_tbl_of<E>(&self) -> Result<&'a E::Tbl>
+    where
+        E: EntityAccessor,
+        Ctx: AsRefAsync<E::Tbl>,
+    {
+        let ctx = self.ctx;
+
+        match ctx.tbl_of_opt::<E>() {
+            Some(tbl) => Ok(tbl),
+            None => ctx.tbl_of::<E>().await,
+        }
     }
 
     #[inline]
@@ -357,6 +377,17 @@ impl<'a> CtxTransaction<'a> {
         E::remove_all(self, Cow::Owned(keys))
     }
 
+    /// Builds the plan of the cascaded removal of `k` without modifying anything.
+    #[inline]
+    pub fn plan_remove<E>(&mut self, k: E::Key) -> BoxFuture<'_, Result<DeletePlan>>
+    where
+        E: EntityRemove + CtxTypeInfo,
+        ProviderContainer: LoadAll<E, (), E::Tbl>,
+        for<'c> TransactionProvider<'c>: Delete<E>,
+    {
+        Box::pin(DeletePlan::new::<E>(self, k))
+    }
+
     pub async fn remove_filter<'b, E, F>(&'b mut self, mut filter: F) -> Result<usize>
     where
         Ctx: AsRefAsync<E::Tbl>,
@@ -384,7 +415,7 @@ impl<'a> CtxTransaction<'a> {
         Ctx: AsRefAsync<E::Tbl>,
     {
         Box::pin(async move {
-            let tbl = self.ctx.tbl_of::<E>().await?;
+            let tbl = self.ctx_tbl_of::<E>().await?;
             Ok(TblTransaction { tbl, ctx: self })
         })
     }

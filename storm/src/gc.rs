@@ -13,6 +13,11 @@ static GC_EVENT: GcEvent = GcEvent::new();
 
 impl Ctx {
     pub fn gc(&mut self) {
+        // Tables are the only storage in noop mode; collecting them would lose data.
+        if self.provider.has_noop() {
+            return;
+        }
+
         #[cfg(feature = "telemetry")]
         crate::telemetry::inc_storm_gc();
 

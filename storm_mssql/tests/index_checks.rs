@@ -23,169 +23,195 @@ fn provider() -> ProviderContainer {
     provider
 }
 
-#[tokio::test]
+#[async_cell_lock::tokio_test]
 async fn flat_sets() -> Result<()> {
-    async_cell_lock::with_deadlock_check(
-        async move {
-            let global = create_ctx();
-            {
-                let ctx = global.read().await?;
+    let global = create_ctx();
+    {
+        let ctx = global.read().await?;
 
-                eval_sql(
+        eval_sql(
                     &ctx,
                     "CREATE TABLE ##MyEntities (Id INT PRIMARY KEY NOT NULL, Fk INT NULL, Parent INT NULL);",
                 )
                 .await?;
-            }
+    }
 
-            {
-                let ctx = global.queue().await?;
-                let mut trx = ctx.transaction(Uuid::nil());
+    {
+        let ctx = global.queue().await?;
+        let mut trx = ctx.transaction(Uuid::nil());
 
-                trx.ref_as::<FlatIdx>().await?;
-                trx.insert(PkId(1), MyEntity { fk: Some(FkId(2)), parent: None }).await?;
+        trx.ref_as::<FlatIdx>().await?;
+        trx.insert(
+            PkId(1),
+            MyEntity {
+                fk: Some(FkId(2)),
+                parent: None,
+            },
+        )
+        .await?;
 
-                assert!(trx.index::<FlatIdx>().await?.contains(FkId(2), PkId(1)));
+        assert!(trx.index::<FlatIdx>().await?.contains(FkId(2), PkId(1)));
 
-                assert!(trx
-                    .index::<HashIdx>()
-                    .await?
-                    .contains(&FkId(2), PkId(1)));
+        assert!(trx.index::<HashIdx>().await?.contains(&FkId(2), PkId(1)));
 
-                trx.insert(PkId(2), MyEntity { fk: None, parent: Some(PkId(1)) }).await?;
+        trx.insert(
+            PkId(2),
+            MyEntity {
+                fk: None,
+                parent: Some(PkId(1)),
+            },
+        )
+        .await?;
 
-                assert!(trx.index::<FlatIdx>().await?.contains_none(PkId(2)));
-                assert!(trx.index::<TreeIdx>().await?.descendants(PkId(1)).contains(PkId(2)));
+        assert!(trx.index::<FlatIdx>().await?.contains_none(PkId(2)));
+        assert!(
+            trx.index::<TreeIdx>()
+                .await?
+                .descendants(PkId(1))
+                .contains(PkId(2))
+        );
 
-                assert!(trx.commit().await?.apply_log(ctx).await?);
-            }
+        assert!(trx.commit().await?.apply_log(ctx).await?);
+    }
 
-            {
-                let ctx = global.read().await?;
-                let idx = ctx.ref_as::<FlatIdx>().await?;
+    {
+        let ctx = global.read().await?;
+        let idx = ctx.ref_as::<FlatIdx>().await?;
 
-                assert!(idx.contains(FkId(2), PkId(1)));
-                assert!(idx.contains_none(PkId(2)));
+        assert!(idx.contains(FkId(2), PkId(1)));
+        assert!(idx.contains_none(PkId(2)));
 
-                assert_eq!(
-                    ctx.ref_as::<ReFlatIdx>().await?.0,
-                    vec![(PkId(1), FkId(2))]
-                );
+        assert_eq!(ctx.ref_as::<ReFlatIdx>().await?.0, vec![(PkId(1), FkId(2))]);
 
-                assert!(ctx
-                    .ref_as::<HashIdx>()
-                    .await?
-                    .contains(&FkId(2), PkId(1)));
+        assert!(ctx.ref_as::<HashIdx>().await?.contains(&FkId(2), PkId(1)));
 
-                assert_eq!(ctx.ref_as::<OneIdx>().await?.get(PkId(1)), Some(&FkId(2)));
-                assert_eq!(ctx.ref_as::<ReOneIdx>().await?.0, vec![(PkId(1), FkId(2))]);
+        assert_eq!(ctx.ref_as::<OneIdx>().await?.get(PkId(1)), Some(&FkId(2)));
+        assert_eq!(ctx.ref_as::<ReOneIdx>().await?.0, vec![(PkId(1), FkId(2))]);
 
-                assert!(ctx.ref_as::<SingleIdx>().await?.contains(PkId(1)));
-                assert_eq!(ctx.ref_as::<ReSingleIdx>().await?.0, vec![PkId(1)]);
-                assert!(ctx.ref_as::<TreeIdx>().await?.descendants(PkId(1)).contains(PkId(2)));
-                assert_eq!(ctx.ref_as::<ReTreeIdx>().await?.0, vec![PkId(1), PkId(2)]);
+        assert!(ctx.ref_as::<SingleIdx>().await?.contains(PkId(1)));
+        assert_eq!(ctx.ref_as::<ReSingleIdx>().await?.0, vec![PkId(1)]);
+        assert!(
+            ctx.ref_as::<TreeIdx>()
+                .await?
+                .descendants(PkId(1))
+                .contains(PkId(2))
+        );
+        assert_eq!(ctx.ref_as::<ReTreeIdx>().await?.0, vec![PkId(1), PkId(2)]);
 
-                assert_eq!(ctx
-                    .ref_as::<ReHashIdx>()
-                    .await?
-                    .0, vec![(PkId(1), FkId(2))]);
+        assert_eq!(ctx.ref_as::<ReHashIdx>().await?.0, vec![(PkId(1), FkId(2))]);
 
-                eval_sql(&ctx, "INSERT ##MyEntities (Id, Fk, Parent) VALUES (3, 6, 2);").await?;
-            }
+        eval_sql(
+            &ctx,
+            "INSERT ##MyEntities (Id, Fk, Parent) VALUES (3, 6, 2);",
+        )
+        .await?;
+    }
 
-            {
-                // force a clear of the table.
-                let mut ctx = global.queue().await?.write().await?;
-                ctx.clear_tbl_of::<MyEntity>();
-            }
+    {
+        // force a clear of the table.
+        let mut ctx = global.queue().await?.write().await?;
+        ctx.clear_tbl_of::<MyEntity>();
+    }
 
-            {
-                let ctx = global.queue().await?;
+    {
+        let ctx = global.queue().await?;
 
-                assert_eq!(ctx.ref_as::<OneIdx>().await?.get(PkId(3)), Some(&FkId(6)));
-                assert_eq!(ctx.ref_as::<ReOneIdx>().await?.0, vec![(PkId(1), FkId(2)), (PkId(3), FkId(6))]);
+        assert_eq!(ctx.ref_as::<OneIdx>().await?.get(PkId(3)), Some(&FkId(6)));
+        assert_eq!(
+            ctx.ref_as::<ReOneIdx>().await?.0,
+            vec![(PkId(1), FkId(2)), (PkId(3), FkId(6))]
+        );
 
-                assert!(ctx.ref_as::<SingleIdx>().await?.contains(PkId(1)));
-                assert!(ctx.ref_as::<SingleIdx>().await?.contains(PkId(3)));
-                assert_eq!(ctx.ref_as::<ReSingleIdx>().await?.0, vec![PkId(1), PkId(3)]);
+        assert!(ctx.ref_as::<SingleIdx>().await?.contains(PkId(1)));
+        assert!(ctx.ref_as::<SingleIdx>().await?.contains(PkId(3)));
+        assert_eq!(ctx.ref_as::<ReSingleIdx>().await?.0, vec![PkId(1), PkId(3)]);
 
-                assert_eq!(ctx
-                    .ref_as::<ReHashIdx>()
-                    .await?
-                    .0, vec![(PkId(1), FkId(2)), (PkId(3), FkId(6))]);
+        assert_eq!(
+            ctx.ref_as::<ReHashIdx>().await?.0,
+            vec![(PkId(1), FkId(2)), (PkId(3), FkId(6))]
+        );
 
-                assert_eq!(ctx.ref_as::<ReTreeIdx>().await?.0, vec![PkId(1), PkId(2), PkId(3)]);
+        assert_eq!(
+            ctx.ref_as::<ReTreeIdx>().await?.0,
+            vec![PkId(1), PkId(2), PkId(3)]
+        );
 
-                let mut trx = ctx.transaction(Uuid::nil());
+        let mut trx = ctx.transaction(Uuid::nil());
 
-                assert_eq!(
-                    ctx.ref_as::<ReFlatIdx>().await?.0,
-                    vec![(PkId(1), FkId(2)), (PkId(3), FkId(6))]
-                );
+        assert_eq!(
+            ctx.ref_as::<ReFlatIdx>().await?.0,
+            vec![(PkId(1), FkId(2)), (PkId(3), FkId(6))]
+        );
 
-                assert!(trx.index::<FlatIdx>().await?.contains(FkId(6), PkId(3)));
+        assert!(trx.index::<FlatIdx>().await?.contains(FkId(6), PkId(3)));
 
-                assert!(trx
-                    .index::<HashIdx>()
-                    .await?
-                    .contains(&FkId(6), PkId(3)));
+        assert!(trx.index::<HashIdx>().await?.contains(&FkId(6), PkId(3)));
 
-                assert!(trx.index::<TreeIdx>().await?.descendants(PkId(2)).contains(PkId(3)));
+        assert!(
+            trx.index::<TreeIdx>()
+                .await?
+                .descendants(PkId(2))
+                .contains(PkId(3))
+        );
 
-                trx.remove::<MyEntity>(PkId(1)).await?;
-                trx.remove::<MyEntity>(PkId(2)).await?;
+        trx.remove::<MyEntity>(PkId(1)).await?;
+        trx.remove::<MyEntity>(PkId(2)).await?;
 
-                assert!(!trx.index::<FlatIdx>().await?.contains(FkId(2), PkId(1)));
+        assert!(!trx.index::<FlatIdx>().await?.contains(FkId(2), PkId(1)));
 
-                assert!(!trx
-                    .index::<HashIdx>()
-                    .await?
-                    .contains(&FkId(2), PkId(1)));
+        assert!(!trx.index::<HashIdx>().await?.contains(&FkId(2), PkId(1)));
 
-                assert!(trx.index::<TreeIdx>().await?.descendants(PkId(1)).is_empty());
-                assert!(trx.index::<TreeIdx>().await?.descendants(PkId(2)).is_empty());
+        assert!(
+            trx.index::<TreeIdx>()
+                .await?
+                .descendants(PkId(1))
+                .is_empty()
+        );
+        assert!(
+            trx.index::<TreeIdx>()
+                .await?
+                .descendants(PkId(2))
+                .is_empty()
+        );
 
-                trx.commit().await?.apply_log(ctx).await?;
-            }
+        trx.commit().await?.apply_log(ctx).await?;
+    }
 
-            {
-                let ctx = global.read().await?;
-                let idx = ctx.ref_as::<FlatIdx>().await?;
+    {
+        let ctx = global.read().await?;
+        let idx = ctx.ref_as::<FlatIdx>().await?;
 
-                assert!(!idx.contains(FkId(2), PkId(1)));
-                assert!(!idx.contains_none(PkId(2)));
+        assert!(!idx.contains(FkId(2), PkId(1)));
+        assert!(!idx.contains_none(PkId(2)));
 
-                assert_eq!(
-                    ctx.ref_as::<ReFlatIdx>().await?.0,
-                    vec![(PkId(3), FkId(6))]
-                );
+        assert_eq!(ctx.ref_as::<ReFlatIdx>().await?.0, vec![(PkId(3), FkId(6))]);
 
-                assert!(!ctx
-                    .ref_as::<HashIdx>()
-                    .await?
-                    .contains(&FkId(2), PkId(1)));
+        assert!(!ctx.ref_as::<HashIdx>().await?.contains(&FkId(2), PkId(1)));
 
-                assert_eq!(ctx
-                    .ref_as::<ReHashIdx>()
-                    .await?
-                    .0, vec![(PkId(3), FkId(6))]);
+        assert_eq!(ctx.ref_as::<ReHashIdx>().await?.0, vec![(PkId(3), FkId(6))]);
 
-                assert_eq!(ctx.ref_as::<OneIdx>().await?.get(PkId(3)), Some(&FkId(6)));
-                assert_eq!(ctx.ref_as::<ReOneIdx>().await?.0, vec![(PkId(3), FkId(6))]);
-                assert!(!ctx.ref_as::<SingleIdx>().await?.contains(PkId(1)));
-                assert!(ctx.ref_as::<SingleIdx>().await?.contains(PkId(3)));
-                assert_eq!(ctx.ref_as::<ReSingleIdx>().await?.0, vec![PkId(3)]);
+        assert_eq!(ctx.ref_as::<OneIdx>().await?.get(PkId(3)), Some(&FkId(6)));
+        assert_eq!(ctx.ref_as::<ReOneIdx>().await?.0, vec![(PkId(3), FkId(6))]);
+        assert!(!ctx.ref_as::<SingleIdx>().await?.contains(PkId(1)));
+        assert!(ctx.ref_as::<SingleIdx>().await?.contains(PkId(3)));
+        assert_eq!(ctx.ref_as::<ReSingleIdx>().await?.0, vec![PkId(3)]);
 
-                assert!(ctx.ref_as::<TreeIdx>().await?.descendants(PkId(1)).is_empty());
-                assert!(ctx.ref_as::<TreeIdx>().await?.descendants(PkId(2)).is_empty());
-                assert_eq!(ctx.ref_as::<ReTreeIdx>().await?.0, vec![PkId(1)]);
-            }
+        assert!(
+            ctx.ref_as::<TreeIdx>()
+                .await?
+                .descendants(PkId(1))
+                .is_empty()
+        );
+        assert!(
+            ctx.ref_as::<TreeIdx>()
+                .await?
+                .descendants(PkId(2))
+                .is_empty()
+        );
+        assert_eq!(ctx.ref_as::<ReTreeIdx>().await?.0, vec![PkId(1)]);
+    }
 
-            Ok(())
-        },
-        "flat_set",
-    )
-    .await
+    Ok(())
 }
 
 async fn eval_sql<S>(ctx: &Ctx, sql: S) -> Result<()>
@@ -205,7 +231,7 @@ where
 }
 
 #[derive(Ctx, MssqlDelete, MssqlLoad, MssqlSave, PartialEq)]
-#[storm(table = "##MyEntities", keys = "id")]
+#[storm(table = "##MyEntities", keys = "id", no_test)]
 struct MyEntity {
     fk: Option<FkId>,
     parent: Option<PkId>,

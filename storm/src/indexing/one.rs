@@ -225,15 +225,13 @@ pub trait OneAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
         id: &'a Self::K,
         entity: &'a Self::Entity,
     ) -> BoxFuture<'a, Result<()>> {
-        Box::pin(async move {
-            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true)
-                && Self::adapt(id, entity).is_some()
-            {
-                log.remove(base, *id);
-            }
+        if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true)
+            && Self::adapt(id, entity).is_some()
+        {
+            log.remove(base, *id);
+        }
 
-            Ok(())
-        })
+        Box::pin(ready(Ok(())))
     }
 
     fn handle_entity_upsert<'a>(
@@ -269,7 +267,11 @@ pub trait OneAdapt: Clearable + Send + Sized + Sync + Touchable + 'static {
     }
 
     fn register() {
-        __register_apply(Self::apply_log, ApplyOrder::NodeSet);
+        __register_apply(
+            Self::apply_log,
+            ApplyOrder::NodeSet,
+            &[Self::Entity::tbl_var().var_id(), Self::index_var().var_id()],
+        );
         Self::Entity::cleared().on(Self::handle_clear);
         Self::Entity::removed().on(Self::handle_entity_remove);
         Self::Entity::upserted().on(Self::handle_entity_upsert);
@@ -331,14 +333,8 @@ macro_rules! one_adapt {
             }
 
             fn index_var() -> storm::CtxVar<storm::indexing::OneIndex<Self>> {
-                storm::extobj::extobj!(
-                    impl storm::CtxExt {
-                        V: storm::OnceCell<storm::indexing::OneIndex<$adapt>>,
-                    },
-                    crate_path = storm::extobj
-                );
-
-                *V
+                static V: storm::LazyCtxVar<storm::indexing::OneIndex<$adapt>> = storm::LazyCtxVar::new();
+                V.get()
             }
         }
 
@@ -359,9 +355,11 @@ macro_rules! one_adapt {
 
         $vis type $alias = storm::indexing::OneIndex<$adapt>;
 
-        #[storm::register]
-        fn $init() {
+        #[allow(non_upper_case_globals)]
+        #[storm::linkme::distributed_slice(storm::registry::__REGISTRATION)]
+        #[linkme(crate = storm::linkme)]
+        static $init: fn() = || {
             <$adapt as storm::indexing::OneAdapt>::register();
-        }
+        };
     };
 }

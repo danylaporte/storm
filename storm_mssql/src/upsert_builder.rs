@@ -1,55 +1,53 @@
-use crate::{Error, Execute, FromSql, Parameter, QueryRows, Result, ToSql};
+use crate::{
+    Error, Execute, FromSql, MssqlProvider, Parameter, QueryRows, Result, ToSql,
+    metrics_helper::upsert_wrap,
+};
 use smallvec::SmallVec;
-use std::fmt::Write;
-use storm::IsDefined;
+use storm::{BoxFuture, IsDefined, provider::ProviderContainer};
 use tiberius::ColumnData;
 use tracing::error;
 
 pub struct UpsertBuilder<'a> {
-    insert_fields: String,
-    insert_values: String,
+    columns: SmallVec<[Column; 16]>,
+    /// Names of the columns, concatenated in the order they were added.
+    names: String,
     params: Vec<Parameter<'a>>,
-    update_setters: String,
-    update_wheres: String,
     upsert_mode: UpsertMode,
     table: &'a str,
 }
 
 impl<'a> UpsertBuilder<'a> {
     pub fn new(table: &'a str) -> Self {
+        Self::with_capacity(table, 0)
+    }
+
+    /// Creates a builder with room for `columns` fields and keys.
+    pub fn with_capacity(table: &'a str, columns: usize) -> Self {
         Self {
-            insert_fields: String::new(),
-            insert_values: String::new(),
-            params: Vec::new(),
-            update_setters: String::new(),
-            update_wheres: String::new(),
+            columns: SmallVec::with_capacity(columns),
+            names: String::with_capacity(columns * 16),
+            params: Vec::with_capacity(columns),
             upsert_mode: UpsertMode::InsertThanUpdate,
             table,
         }
     }
 
-    fn add_field(&mut self, name: &str) {
-        if !self.insert_fields.is_empty() {
-            self.insert_fields.push(',');
-            self.insert_values.push(',');
-            self.update_setters.push(',');
-        }
+    /// Adds a column bound to the last pushed parameter.
+    fn push_column(&mut self, name: &str, kind: ColumnKind) {
+        self.names.push_str(name);
 
-        let param = self.params.len();
-
-        self.insert_fields.push_str(name);
-        push_param(&mut self.insert_values, param);
-
-        self.update_setters.push_str(name);
-        self.update_setters.push('=');
-        push_param(&mut self.update_setters, param);
+        self.columns.push(Column {
+            kind,
+            len: name.len() as u32,
+            param: self.params.len() as u32,
+        });
     }
 
     pub fn add_field_identity<T: IsDefined + ToSql>(&mut self, name: &str, value: T) {
         if value.is_defined() {
             self.upsert_mode = UpsertMode::Update;
             self.params.push(Parameter::from_owned(value));
-            self.add_field(name);
+            self.push_column(name, ColumnKind::Field);
         } else {
             self.upsert_mode = UpsertMode::Insert;
         }
@@ -57,56 +55,28 @@ impl<'a> UpsertBuilder<'a> {
 
     pub fn add_field_owned<T: ToSql>(&mut self, name: &str, value: T) {
         self.params.push(Parameter::from_owned(value));
-        self.add_field(name);
+        self.push_column(name, ColumnKind::Field);
     }
 
     pub fn add_field_ref<T: ToSql>(&mut self, name: &str, value: &'a T) {
         self.params.push(Parameter::from_ref(value));
-        self.add_field(name);
+        self.push_column(name, ColumnKind::Field);
     }
 
     pub fn add_key_identity<T: IsDefined + ToSql>(&mut self, name: &str, value: T) {
-        if value.is_defined() {
-            self.upsert_mode = UpsertMode::Update;
+        self.upsert_mode = if value.is_defined() {
+            UpsertMode::Update
         } else {
-            self.upsert_mode = UpsertMode::Insert;
-        }
+            UpsertMode::Insert
+        };
 
         self.params.push(Parameter::from_owned(value));
-
-        if !self.update_wheres.is_empty() {
-            self.update_wheres.push_str("AND");
-        }
-
-        self.add_wheres(name, self.params.len());
+        self.push_column(name, ColumnKind::IdentityKey);
     }
 
     pub fn add_key_ref<T: ToSql>(&mut self, name: &str, value: &'a T) {
         self.params.push(Parameter::from_ref(value));
-
-        if !self.insert_fields.is_empty() {
-            self.insert_fields.push(',');
-            self.insert_values.push(',');
-        }
-
-        if !self.update_wheres.is_empty() {
-            self.update_wheres.push_str("AND");
-        }
-
-        let param = self.params.len();
-
-        self.insert_fields.push_str(name);
-        push_param(&mut self.insert_values, param);
-
-        self.add_wheres(name, param);
-    }
-
-    fn add_wheres(&mut self, name: &str, param: usize) {
-        self.update_wheres.push('(');
-        self.update_wheres.push_str(name);
-        self.update_wheres.push('=');
-        push_param(&mut self.update_wheres, param);
-        self.update_wheres.push(')');
+        self.push_column(name, ColumnKind::Key);
     }
 
     pub async fn execute<P: Execute>(self, provider: &P) -> Result<()> {
@@ -144,50 +114,184 @@ impl<'a> UpsertBuilder<'a> {
         Ok(())
     }
 
+    /// [Self::execute] for the code generated by `MssqlSave`.
+    ///
+    /// Not generic so it is compiled once, and hands the parameters to tiberius as is.
+    #[doc(hidden)]
+    pub async fn _execute(self, provider: &MssqlProvider) -> Result<()> {
+        let sql = self.sql();
+        let params = self.tds_params();
+        provider.execute_tds(&sql, &params).await?;
+        Ok(())
+    }
+
+    /// [Self::execute_identity] for the code generated by `MssqlSave`.
+    ///
+    /// An insert reads the new identity in the same round trip.
+    #[doc(hidden)]
+    pub async fn _execute_identity<K>(self, provider: &MssqlProvider, key: &mut K) -> Result<()>
+    where
+        K: for<'b> FromSql<'b> + ToSql + Send,
+    {
+        if self.upsert_mode != UpsertMode::Insert {
+            return self._execute(provider).await;
+        }
+
+        let cast_ty = match column_data_to_sql_type(key.to_sql()) {
+            Ok(t) => t,
+            Err(e) => {
+                // Like `execute_identity`, the row is inserted before the key type is rejected.
+                self._execute(provider).await?;
+                return Err(e);
+            }
+        };
+
+        let row = self.insert_identity(provider, cast_ty).await?;
+
+        *key = K::from_sql(row.get(0))?;
+        Ok(())
+    }
+
+    async fn insert_identity(
+        self,
+        provider: &MssqlProvider,
+        cast_ty: &str,
+    ) -> Result<tiberius::Row> {
+        let mut sql = self.sql();
+
+        // `@@IDENTITY` as `execute_identity` reads it; the select is the last statement so
+        // its row comes after any row returned by a trigger.
+        sql.push_str(";SELECT CAST(@@IDENTITY as ");
+        sql.push_str(cast_ty);
+        sql.push(')');
+
+        let params = self.tds_params();
+
+        provider
+            .query_last_tds(&sql, &params)
+            .await?
+            .ok_or(storm::Error::EntityNotFound)
+    }
+
     fn param_refs(&self) -> SmallVec<[&dyn ToSql; 16]> {
         self.params.iter().map(|v| v as _).collect()
     }
 
+    fn tds_params(&self) -> SmallVec<[&dyn tiberius::ToSql; 16]> {
+        self.params.iter().map(|v| v as _).collect()
+    }
+
+    /// Columns with their names, in the order they were added.
+    fn iter(&self) -> impl Iterator<Item = (&str, &Column)> {
+        let mut start = 0;
+
+        self.columns.iter().map(move |c| {
+            let end = start + c.len as usize;
+            let name = self.names.get(start..end).unwrap_or_default();
+            start = end;
+            (name, c)
+        })
+    }
+
+    fn has(&self, f: impl Fn(ColumnKind) -> bool) -> bool {
+        self.columns.iter().any(|c| f(c.kind))
+    }
+
     fn push_insert_sql(&self, sql: &mut String) {
-        if self.insert_fields.is_empty() {
+        sql.push_str("INSERT INTO ");
+        sql.push_str(self.table);
+
+        if !self.has(ColumnKind::is_inserted) {
             // when there is no fields in the table except an identity column.
-            let _ = write!(sql, "INSERT INTO {} DEFAULT VALUES", self.table);
-        } else {
-            let _ = write!(
-                sql,
-                "INSERT INTO {} ({}) VALUES ({})",
-                self.table, self.insert_fields, self.insert_values
-            );
+            sql.push_str(" DEFAULT VALUES");
+            return;
+        }
+
+        let inserted = || self.iter().filter(|(_, c)| c.kind.is_inserted());
+
+        sql.push_str(" (");
+
+        for (i, (name, _)) in inserted().enumerate() {
+            if i > 0 {
+                sql.push(',');
+            }
+
+            sql.push_str(name);
+        }
+
+        sql.push_str(") VALUES (");
+
+        for (i, (_, c)) in inserted().enumerate() {
+            if i > 0 {
+                sql.push(',');
+            }
+
+            push_param(sql, c.param);
+        }
+
+        sql.push(')');
+    }
+
+    fn push_update_sql(&self, sql: &mut String) {
+        if !self.has(ColumnKind::is_field) {
+            return;
+        }
+
+        sql.push_str("UPDATE ");
+        sql.push_str(self.table);
+        sql.push_str(" SET ");
+
+        for (i, (name, c)) in self.iter().filter(|(_, c)| c.kind.is_field()).enumerate() {
+            if i > 0 {
+                sql.push(',');
+            }
+
+            sql.push_str(name);
+            sql.push('=');
+            push_param(sql, c.param);
+        }
+
+        sql.push_str(" WHERE ");
+        self.push_wheres(sql);
+    }
+
+    fn push_wheres(&self, sql: &mut String) {
+        for (i, (name, c)) in self.iter().filter(|(_, c)| !c.kind.is_field()).enumerate() {
+            if i > 0 {
+                sql.push_str("AND");
+            }
+
+            sql.push('(');
+            sql.push_str(name);
+            sql.push('=');
+            push_param(sql, c.param);
+            sql.push(')');
         }
     }
 
     pub fn sql(&self) -> String {
+        // Each name appears at most twice, each parameter at most three times.
         let mut sql = String::with_capacity(
-            self.table.len() * 2
-                + self.insert_fields.len()
-                + self.insert_values.len()
-                + self.update_setters.len()
-                + self.update_wheres.len()
-                + 160,
+            self.table.len() * 2 + self.names.len() * 2 + self.columns.len() * 24 + 80,
         );
 
         match self.upsert_mode {
             UpsertMode::Insert => self.push_insert_sql(&mut sql),
             UpsertMode::InsertThanUpdate => {
-                if self.update_setters.is_empty() {
-                    let _ = write!(
-                        sql,
-                        "IF NOT EXISTS(SELECT 1 FROM {} WHERE {}) ",
-                        self.table, self.update_wheres
-                    );
-                    self.push_insert_sql(&mut sql);
-                    sql.push(';');
-                } else {
+                if self.has(ColumnKind::is_field) {
                     sql.push_str("\n                        ");
                     self.push_update_sql(&mut sql);
                     sql.push_str("\n                        IF @@ROWCOUNT = 0\n                        BEGIN\n                            ");
                     self.push_insert_sql(&mut sql);
                     sql.push_str("\n                        END\n                    ");
+                } else {
+                    sql.push_str("IF NOT EXISTS(SELECT 1 FROM ");
+                    sql.push_str(self.table);
+                    sql.push_str(" WHERE ");
+                    self.push_wheres(&mut sql);
+                    sql.push_str(") ");
+                    self.push_insert_sql(&mut sql);
+                    sql.push(';');
                 }
             }
             UpsertMode::Update => self.push_update_sql(&mut sql),
@@ -195,21 +299,80 @@ impl<'a> UpsertBuilder<'a> {
 
         sql
     }
+}
 
-    fn push_update_sql(&self, sql: &mut String) {
-        if !self.update_setters.is_empty() {
-            let _ = write!(
-                sql,
-                "UPDATE {} SET {} WHERE {}",
-                self.table, self.update_setters, self.update_wheres
-            );
-        }
+/// `Upsert::upsert` of `MssqlSave` when the entity has no identity, no translated fields and is
+/// not reloaded.
+///
+/// Defined here so the future is compiled once instead of once per entity.
+#[doc(hidden)]
+pub fn _upsert<'a>(
+    container: &'a ProviderContainer,
+    provider: &'a str,
+    table: &'static str,
+    builder: UpsertBuilder<'a>,
+) -> BoxFuture<'a, Result<()>> {
+    upsert_wrap(
+        async move {
+            let provider: &MssqlProvider = container.provide(provider).await?;
+            builder._execute(provider).await
+        },
+        table,
+    )
+}
+
+#[derive(Clone, Copy)]
+struct Column {
+    kind: ColumnKind,
+    len: u32,
+    /// 1-based index of the parameter holding the value.
+    param: u32,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum ColumnKind {
+    /// Inserted and updated.
+    Field,
+    /// Inserted and filters the update.
+    Key,
+    /// Filters the update only; the database generates it on insert.
+    IdentityKey,
+}
+
+impl ColumnKind {
+    fn is_field(self) -> bool {
+        self == Self::Field
+    }
+
+    fn is_inserted(self) -> bool {
+        self != Self::IdentityKey
     }
 }
 
-// fmt::Write for String is infallible.
-fn push_param(sql: &mut String, index: usize) {
-    let _ = write!(sql, "@p{index}");
+fn push_param(sql: &mut String, index: u32) {
+    let mut digits = [0u8; 10];
+    let mut start = digits.len();
+    let mut n = index;
+
+    loop {
+        start -= 1;
+
+        if let Some(d) = digits.get_mut(start) {
+            *d = b'0' + n.rem_euclid(10) as u8;
+        }
+
+        n = n.div_euclid(10);
+
+        if n == 0 {
+            break;
+        }
+    }
+
+    sql.push_str("@p");
+
+    for &d in digits.iter().skip(start) {
+        sql.push(d as char);
+    }
 }
 
 struct OneValue<T>(Option<T>);
@@ -249,6 +412,7 @@ fn column_data_to_sql_type(data: ColumnData<'_>) -> Result<&'static str> {
 }
 
 #[cfg(test)]
+#[allow(clippy::indexing_slicing, clippy::panic)]
 mod tests {
     use super::UpsertBuilder;
 
@@ -264,14 +428,303 @@ mod tests {
 
         assert_eq!(
             builder.sql(),
-            "
-                        UPDATE [T] SET [A]=@p1,[B]=@p2 WHERE ([Id]=@p3)
-                        IF @@ROWCOUNT = 0
-                        BEGIN
-                            INSERT INTO [T] ([A],[B],[Id]) VALUES (@p1,@p2,@p3)
-                        END
-                    "
+            "\n                        UPDATE [T] SET [A]=@p1,[B]=@p2 WHERE ([Id]=@p3)\n                        IF @@ROWCOUNT = 0\n                        BEGIN\n                            INSERT INTO [T] ([A],[B],[Id]) VALUES (@p1,@p2,@p3)\n                        END\n                    "
         );
+    }
+
+    #[test]
+    fn composite_key_and_many_params_sql() {
+        let v = 1_i32;
+        let mut builder = UpsertBuilder::with_capacity("[T]", 12);
+
+        for name in [
+            "[A]", "[B]", "[C]", "[D]", "[E]", "[F]", "[G]", "[H]", "[I]", "[J]",
+        ] {
+            builder.add_field_ref(name, &v);
+        }
+
+        builder.add_key_ref("[K1]", &v);
+        builder.add_key_ref("[K2]", &v);
+
+        assert_eq!(
+            builder.sql(),
+            "\n                        UPDATE [T] SET [A]=@p1,[B]=@p2,[C]=@p3,[D]=@p4,[E]=@p5,[F]=@p6,[G]=@p7,[H]=@p8,[I]=@p9,[J]=@p10 \
+             WHERE ([K1]=@p11)AND([K2]=@p12)\n                        IF @@ROWCOUNT = 0\n                        BEGIN\n                            \
+             INSERT INTO [T] ([A],[B],[C],[D],[E],[F],[G],[H],[I],[J],[K1],[K2]) \
+             VALUES (@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11,@p12)\n                        END\n                    "
+        );
+    }
+
+    #[test]
+    fn push_param_matches_format() {
+        for i in [0, 1, 9, 10, 11, 99, 100, 101, 999, 1000, 65535, u32::MAX] {
+            let mut s = String::new();
+            super::push_param(&mut s, i);
+            assert_eq!(s, format!("@p{i}"));
+        }
+    }
+
+    /// The SQL generation of the previous `UpsertBuilder`, verbatim.
+    mod previous {
+        use std::fmt::Write;
+
+        #[derive(Clone, Copy, Eq, PartialEq)]
+        enum UpsertMode {
+            InsertThanUpdate,
+            Insert,
+            Update,
+        }
+
+        pub struct UpsertBuilder<'a> {
+            insert_fields: String,
+            insert_values: String,
+            params: usize,
+            update_setters: String,
+            update_wheres: String,
+            upsert_mode: UpsertMode,
+            table: &'a str,
+        }
+
+        impl<'a> UpsertBuilder<'a> {
+            pub fn new(table: &'a str) -> Self {
+                Self {
+                    insert_fields: String::new(),
+                    insert_values: String::new(),
+                    params: 0,
+                    update_setters: String::new(),
+                    update_wheres: String::new(),
+                    upsert_mode: UpsertMode::InsertThanUpdate,
+                    table,
+                }
+            }
+
+            fn add_field(&mut self, name: &str) {
+                if !self.insert_fields.is_empty() {
+                    self.insert_fields.push(',');
+                    self.insert_values.push(',');
+                    self.update_setters.push(',');
+                }
+
+                let param = self.params;
+
+                self.insert_fields.push_str(name);
+                push_param(&mut self.insert_values, param);
+
+                self.update_setters.push_str(name);
+                self.update_setters.push('=');
+                push_param(&mut self.update_setters, param);
+            }
+
+            pub fn add_field_identity(&mut self, name: &str, defined: bool) {
+                if defined {
+                    self.upsert_mode = UpsertMode::Update;
+                    self.params += 1;
+                    self.add_field(name);
+                } else {
+                    self.upsert_mode = UpsertMode::Insert;
+                }
+            }
+
+            pub fn add_field_ref(&mut self, name: &str) {
+                self.params += 1;
+                self.add_field(name);
+            }
+
+            pub fn add_key_identity(&mut self, name: &str, defined: bool) {
+                if defined {
+                    self.upsert_mode = UpsertMode::Update;
+                } else {
+                    self.upsert_mode = UpsertMode::Insert;
+                }
+
+                self.params += 1;
+
+                if !self.update_wheres.is_empty() {
+                    self.update_wheres.push_str("AND");
+                }
+
+                self.add_wheres(name, self.params);
+            }
+
+            pub fn add_key_ref(&mut self, name: &str) {
+                self.params += 1;
+
+                if !self.insert_fields.is_empty() {
+                    self.insert_fields.push(',');
+                    self.insert_values.push(',');
+                }
+
+                if !self.update_wheres.is_empty() {
+                    self.update_wheres.push_str("AND");
+                }
+
+                let param = self.params;
+
+                self.insert_fields.push_str(name);
+                push_param(&mut self.insert_values, param);
+
+                self.add_wheres(name, param);
+            }
+
+            fn add_wheres(&mut self, name: &str, param: usize) {
+                self.update_wheres.push('(');
+                self.update_wheres.push_str(name);
+                self.update_wheres.push('=');
+                push_param(&mut self.update_wheres, param);
+                self.update_wheres.push(')');
+            }
+
+            fn push_insert_sql(&self, sql: &mut String) {
+                if self.insert_fields.is_empty() {
+                    let _ = write!(sql, "INSERT INTO {} DEFAULT VALUES", self.table);
+                } else {
+                    let _ = write!(
+                        sql,
+                        "INSERT INTO {} ({}) VALUES ({})",
+                        self.table, self.insert_fields, self.insert_values
+                    );
+                }
+            }
+
+            pub fn sql(&self) -> String {
+                let mut sql = String::new();
+
+                match self.upsert_mode {
+                    UpsertMode::Insert => self.push_insert_sql(&mut sql),
+                    UpsertMode::InsertThanUpdate => {
+                        if self.update_setters.is_empty() {
+                            let _ = write!(
+                                sql,
+                                "IF NOT EXISTS(SELECT 1 FROM {} WHERE {}) ",
+                                self.table, self.update_wheres
+                            );
+                            self.push_insert_sql(&mut sql);
+                            sql.push(';');
+                        } else {
+                            sql.push_str("\n                        ");
+                            self.push_update_sql(&mut sql);
+                            sql.push_str("\n                        IF @@ROWCOUNT = 0\n                        BEGIN\n                            ");
+                            self.push_insert_sql(&mut sql);
+                            sql.push_str("\n                        END\n                    ");
+                        }
+                    }
+                    UpsertMode::Update => self.push_update_sql(&mut sql),
+                }
+
+                sql
+            }
+
+            fn push_update_sql(&self, sql: &mut String) {
+                if !self.update_setters.is_empty() {
+                    let _ = write!(
+                        sql,
+                        "UPDATE {} SET {} WHERE {}",
+                        self.table, self.update_setters, self.update_wheres
+                    );
+                }
+            }
+        }
+
+        fn push_param(sql: &mut String, index: usize) {
+            let _ = write!(sql, "@p{index}");
+        }
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    enum Op {
+        Field,
+        FieldIdentity(i32),
+        Key,
+        KeyIdentity(i32),
+    }
+
+    const OPS: [Op; 6] = [
+        Op::Field,
+        Op::FieldIdentity(0),
+        Op::FieldIdentity(7),
+        Op::Key,
+        Op::KeyIdentity(0),
+        Op::KeyIdentity(7),
+    ];
+
+    /// Compares both builders for every sequence of up to `MAX` calls, with distinct column
+    /// names. Returns the sequences where they differ.
+    fn differential(keys_last: bool) -> Vec<(Vec<Op>, String, String)> {
+        const MAX: u32 = 6;
+        let v = 1_i32;
+        let mut diffs = Vec::new();
+
+        for len in 0..=MAX {
+            for mut n in 0..OPS.len().pow(len) {
+                let mut seq = Vec::new();
+
+                for _ in 0..len {
+                    seq.push(OPS[n % OPS.len()]);
+                    n /= OPS.len();
+                }
+
+                let is_key = |op: &Op| matches!(op, Op::Key | Op::KeyIdentity(_));
+
+                if keys_last && seq.windows(2).any(|w| is_key(&w[0]) && !is_key(&w[1])) {
+                    continue;
+                }
+
+                let names: Vec<String> = (0..seq.len()).map(|i| format!("[C{i}]")).collect();
+                let mut new = UpsertBuilder::new("[T]");
+                let mut old = previous::UpsertBuilder::new("[T]");
+
+                for (op, name) in seq.iter().zip(&names) {
+                    match *op {
+                        Op::Field => {
+                            new.add_field_ref(name, &v);
+                            old.add_field_ref(name);
+                        }
+                        Op::FieldIdentity(i) => {
+                            new.add_field_identity(name, i);
+                            old.add_field_identity(name, i != 0);
+                        }
+                        Op::Key => {
+                            new.add_key_ref(name, &v);
+                            old.add_key_ref(name);
+                        }
+                        Op::KeyIdentity(i) => {
+                            new.add_key_identity(name, i);
+                            old.add_key_identity(name, i != 0);
+                        }
+                    }
+                }
+
+                let (new, old) = (new.sql(), old.sql());
+
+                if new != old {
+                    diffs.push((seq, old, new));
+                }
+            }
+        }
+
+        diffs
+    }
+
+    #[test]
+    fn same_sql_as_previous_builder() {
+        // `MssqlSave` adds the fields first, then the keys.
+        let diffs = differential(true);
+        assert!(
+            diffs.is_empty(),
+            "{} diffs, first: {:?}",
+            diffs.len(),
+            diffs.first()
+        );
+    }
+
+    #[test]
+    fn keys_first_only_fixes_previous_invalid_sql() {
+        // Adding a key before a field made the previous builder emit `SET ,[A]=...`, a syntax
+        // error. This is the only difference in any order.
+        for (seq, old, new) in differential(false) {
+            assert!(old.contains("SET ,"), "{seq:?}\n{old:?}\n{new:?}");
+            assert_eq!(old.replace("SET ,", "SET "), new, "{seq:?}");
+        }
     }
 
     #[test]

@@ -9,11 +9,30 @@ pub(super) struct FieldAttrs {
     #[darling(default)]
     pub column: Option<String>,
 
+    /// used by the ctx macro.
+    #[darling(default)]
+    #[allow(dead_code)]
+    foreign_key: Option<darling::util::Ignored>,
+
+    /// used by the ctx macro.
+    #[darling(default)]
+    #[allow(dead_code)]
+    unique: Option<darling::util::Ignored>,
+
+    /// used by the ctx macro.
+    #[darling(default)]
+    #[allow(dead_code)]
+    trim: bool,
+
     #[darling(default)]
     pub load_with: SpannedValue<Option<Ident>>,
 
     #[darling(default)]
     pub max_length: usize,
+
+    /// The field type maps `NULL` itself (not an `Option`), for the schema validation.
+    #[darling(default)]
+    pub nullable: bool,
 
     #[darling(default)]
     pub part: bool,
@@ -79,6 +98,10 @@ pub(super) struct TypeAttrs {
     #[darling(default)]
     pub no_test: bool,
 
+    /// Only some columns are mapped: the schema test checks the mapped columns only.
+    #[darling(default)]
+    pub partial: bool,
+
     /// The name of the provider in the ProviderContainer.
     ///
     /// Provider can be named to accommodate multiple database
@@ -108,6 +131,21 @@ pub(super) struct TypeAttrs {
     #[darling(default)]
     #[allow(dead_code)]
     collection: String,
+
+    /// used by the ctx macro.
+    #[darling(multiple)]
+    #[allow(dead_code)]
+    unique: Vec<darling::util::Ignored>,
+
+    /// used by the ctx macro.
+    #[darling(multiple)]
+    #[allow(dead_code)]
+    foreign_key: Vec<darling::util::Ignored>,
+
+    /// used by the ctx macro.
+    #[darling(multiple)]
+    #[allow(dead_code)]
+    referenced_by: Vec<darling::util::Ignored>,
 
     #[darling(default)]
     pub identity: SpannedValue<String>,

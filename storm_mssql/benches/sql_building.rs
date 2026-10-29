@@ -6,18 +6,22 @@ fn bench_upsert_sql(c: &mut Criterion) {
     let mut group = c.benchmark_group("upsert_sql");
 
     for field_count in [2, 8, 32] {
+        let names = (0..field_count)
+            .map(|index| format!("[Value{index}]"))
+            .collect::<Vec<_>>();
+
         group.bench_with_input(
             BenchmarkId::from_parameter(field_count),
-            &field_count,
-            |b, &field_count| {
+            &names,
+            |b, names| {
                 b.iter(|| {
                     let id = 7_u32;
                     let value = 11_u32;
                     let mut builder = UpsertBuilder::new("[dbo].[Bench]");
-                    builder.add_key_ref("[Id]", &id);
-                    for index in 0..field_count {
-                        builder.add_field_ref(&format!("[Value{index}]"), &value);
+                    for name in names {
+                        builder.add_field_ref(name, &value);
                     }
+                    builder.add_key_ref("[Id]", &id);
                     black_box(builder.sql())
                 });
             },

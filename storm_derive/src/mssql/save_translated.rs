@@ -28,6 +28,10 @@ impl<'a> SaveTranslated<'a> {
 
         self.upsert.add_field(column, &param_index.to_string());
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.params.is_empty()
+    }
 }
 
 impl ToTokens for SaveTranslated<'_> {

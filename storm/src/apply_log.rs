@@ -1,4 +1,6 @@
-use crate::{Ctx, Logs, registry::InitCell};
+use crate::{Ctx, CtxExt, Logs, registry::InitCell};
+use extobj::VarId;
+use rustc_hash::{FxBuildHasher, FxHashMap};
 use std::cmp::Ordering;
 
 pub trait ApplyLog<L> {
@@ -7,27 +9,98 @@ pub trait ApplyLog<L> {
 
 type ApplierFn = fn(ctx: &mut Ctx, logs: &mut Logs) -> bool;
 
-/// Private: use by a macro.
-#[doc(hidden)]
-pub fn __register_apply(f: ApplierFn, order: ApplyOrder) {
-    let vec = APPLIERS.get_mut();
-    match vec.binary_search_by_key(&order, |t| t.1) {
-        Ok(index) | Err(index) => vec.insert(index, (f, order)),
-    }
+struct Applier {
+    f: ApplierFn,
+    order: ApplyOrder,
+    triggers: Box<[VarId<CtxExt>]>,
 }
 
-#[inline]
+struct Appliers {
+    /// Sorted by `ApplyOrder`.
+    list: Vec<Applier>,
+
+    /// For each log var, the ascending positions in `list` of the appliers it triggers.
+    by_var: FxHashMap<VarId<CtxExt>, Box<[u32]>>,
+}
+
+static APPLIERS: InitCell<Appliers> = InitCell::new(Appliers {
+    list: Vec::new(),
+    by_var: FxHashMap::with_hasher(FxBuildHasher),
+});
+
+/// Private: use by a macro.
+///
+/// `triggers` are the log vars consumed by the applier; it is only invoked when at
+/// least one of them is present in the logs being applied.
+#[doc(hidden)]
+pub fn __register_apply(f: ApplierFn, order: ApplyOrder, triggers: &[VarId<CtxExt>]) {
+    let list = &mut APPLIERS.get_mut().list;
+
+    let (Ok(index) | Err(index)) = list.binary_search_by_key(&order, |a| a.order);
+
+    list.insert(
+        index,
+        Applier {
+            f,
+            order,
+            triggers: triggers.into(),
+        },
+    );
+}
+
+/// Builds the var → appliers lookup. Must be called at the end of the registration phase.
+pub(crate) fn finalize_appliers() {
+    let appliers = APPLIERS.get_mut();
+    let mut by_var = FxHashMap::<VarId<CtxExt>, Vec<u32>>::default();
+
+    for (index, applier) in appliers.list.iter().enumerate() {
+        let index = u32::try_from(index).expect("too many appliers");
+
+        for var in &applier.triggers {
+            let positions = by_var.entry(*var).or_default();
+
+            if positions.last() != Some(&index) {
+                positions.push(index);
+            }
+        }
+    }
+
+    appliers.by_var = by_var.into_iter().map(|(k, v)| (k, v.into())).collect();
+}
+
 pub(crate) fn perform_apply_log(ctx: &mut Ctx, mut logs: Logs) -> bool {
+    let appliers = APPLIERS.get();
+    let triggered = |var| appliers.by_var.get(&var).map_or(&[][..], |p| &p[..]);
     let mut changed = false;
 
-    for (f, _) in APPLIERS.get() {
-        changed |= f(ctx, &mut logs);
+    match logs.len() {
+        0 => {}
+        1 => {
+            let var = logs.var_ids().next().expect("one log");
+
+            for &index in triggered(var) {
+                changed |= (appliers.list[index as usize].f)(ctx, &mut logs);
+            }
+        }
+        _ => {
+            // Merge the triggered appliers of every log, keeping the global apply order.
+            let mut positions = logs
+                .var_ids()
+                .flat_map(triggered)
+                .copied()
+                .collect::<Vec<_>>();
+
+            positions.sort_unstable();
+            positions.dedup();
+
+            for index in positions {
+                changed |= (appliers.list[index as usize].f)(ctx, &mut logs);
+            }
+        }
     }
 
     changed
 }
-
-static APPLIERS: InitCell<Vec<(ApplierFn, ApplyOrder)>> = InitCell::new(Vec::new());
 
 #[derive(Clone, Copy, Debug)]
 #[repr(u8)]

@@ -210,19 +210,8 @@ pub trait HashFlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'stati
 
             for (id, entity) in tbl.ref_iter() {
                 set.clear();
-
                 Self::adapt(id, entity, &mut set);
-
-                for (k, v) in set.drain() {
-                    match k {
-                        Some(k) => {
-                            log.insert(&base, k, v);
-                        }
-                        None => {
-                            log.insert_none(&base, v);
-                        }
-                    }
-                }
+                insert_set(&base, &mut log, &mut set);
             }
 
             base.apply(log);
@@ -253,24 +242,22 @@ pub trait HashFlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'stati
         id: &'a <Self::Entity as Entity>::Key,
         entity: &'a Self::Entity,
     ) -> BoxFuture<'a, Result<()>> {
-        Box::pin(async move {
-            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
-                let mut old_set = FxHashSet::default();
-                let mut new_set = FxHashSet::default();
+        if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
+            let mut old_set = FxHashSet::default();
+            let mut new_set = FxHashSet::default();
 
-                Self::upsert_or_remove(
-                    base,
-                    log,
-                    id,
-                    None,
-                    Some(entity),
-                    &mut old_set,
-                    &mut new_set,
-                );
-            }
+            Self::upsert_or_remove(
+                base,
+                log,
+                id,
+                None,
+                Some(entity),
+                &mut old_set,
+                &mut new_set,
+            );
+        }
 
-            Ok(())
-        })
+        Box::pin(ready(Ok(())))
     }
 
     fn handle_upserted<'a>(
@@ -300,7 +287,11 @@ pub trait HashFlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'stati
     }
 
     fn register() {
-        __register_apply(Self::apply_log, crate::ApplyOrder::FlatSet);
+        __register_apply(
+            Self::apply_log,
+            crate::ApplyOrder::FlatSet,
+            &[Self::Entity::tbl_var().var_id(), Self::index_var().var_id()],
+        );
         <Self::Entity as EntityAccessor>::cleared().on(Self::handle_clear);
         <Self::Entity as EntityAccessor>::removed().on(Self::handle_removed);
         <Self::Entity as EntityAccessor>::upserted().on(Self::handle_upserted);
@@ -323,27 +314,67 @@ pub trait HashFlatSetAdapt: Clearable + Send + Sized + Sync + Touchable + 'stati
             Self::adapt(key, old, old_set);
         }
 
-        if old_set != new_set {
-            for (k, v) in old_set.difference(new_set) {
-                match k {
-                    Some(k) => {
-                        log.remove(&base.index, k.clone(), v.clone());
-                    }
-                    None => {
-                        log.remove_none(&base.index, v.clone());
-                    }
-                }
-            }
+        apply_diff(&base.index, log, old_set, new_set);
+    }
+}
 
-            for (k, v) in new_set.difference(old_set) {
-                match k {
-                    Some(k) => {
-                        log.insert(&base.index, k.clone(), v.clone());
-                    }
-                    None => {
-                        log.insert_none(&base.index, v.clone());
-                    }
-                }
+/// Inserts the entries of `set` in the log.
+///
+/// Generic over the key and value only, so it is shared by the indexes with the same types.
+fn insert_set<K, V>(
+    base: &hash_flat_set_index::HashFlatSetIndex<K, V>,
+    log: &mut hash_flat_set_index::HashFlatSetIndexLog<K, V>,
+    set: &mut FxHashSet<(Option<K>, V)>,
+) where
+    K: Clone + Eq + Hash,
+    V: Clone + Eq + Hash + Into<u32> + TryFrom<u32>,
+{
+    for (k, v) in set.drain() {
+        match k {
+            Some(k) => {
+                log.insert(base, k, v);
+            }
+            None => {
+                log.insert_none(base, v);
+            }
+        }
+    }
+}
+
+/// Logs the changes from `old_set` to `new_set`.
+///
+/// Generic over the key and value only, so it is shared by the indexes with the same types.
+fn apply_diff<K, V>(
+    base: &hash_flat_set_index::HashFlatSetIndex<K, V>,
+    log: &mut hash_flat_set_index::HashFlatSetIndexLog<K, V>,
+    old_set: &FxHashSet<(Option<K>, V)>,
+    new_set: &FxHashSet<(Option<K>, V)>,
+) where
+    K: Clone + Eq + Hash,
+    V: Clone + Eq + Hash + Into<u32> + TryFrom<u32>,
+{
+    if old_set == new_set {
+        return;
+    }
+
+    for (k, v) in old_set.difference(new_set) {
+        match k {
+            Some(k) => {
+                log.remove(base, k.clone(), v.clone());
+            }
+            None => {
+                log.remove_none(base, v.clone());
+            }
+        }
+    }
+
+    for (k, v) in new_set.difference(old_set) {
+        match k {
+            Some(k) => {
+                log.insert(base, k.clone(), v.clone());
+            }
+            None => {
+                log.insert_none(base, v.clone());
             }
         }
     }
@@ -419,14 +450,8 @@ macro_rules! hash_flat_set_adapt {
             }
 
             fn index_var() -> storm::CtxVar<storm::indexing::HashFlatSetIndex<Self>> {
-                storm::extobj::extobj!(
-                    impl storm::CtxExt {
-                        V: storm::OnceCell<storm::indexing::HashFlatSetIndex<$adapt>>,
-                    },
-                    crate_path = storm::extobj
-                );
-
-                *V
+                static V: storm::LazyCtxVar<storm::indexing::HashFlatSetIndex<$adapt>> = storm::LazyCtxVar::new();
+                V.get()
             }
         }
 
@@ -448,10 +473,12 @@ macro_rules! hash_flat_set_adapt {
 
         $vis type $alias = storm::indexing::HashFlatSetIndex<$adapt>;
 
-        #[storm::register]
-        fn $init() {
+        #[allow(non_upper_case_globals)]
+        #[storm::linkme::distributed_slice(storm::registry::__REGISTRATION)]
+        #[linkme(crate = storm::linkme)]
+        static $init: fn() = || {
             <$adapt as storm::indexing::HashFlatSetAdapt>::register();
-        }
+        };
     };
 
     ($adapt:ident, $alias:ident, $init:ident,
@@ -471,18 +498,21 @@ macro_rules! hash_flat_set_adapt {
             }
 
             fn index_var() -> storm::CtxVar<storm::indexing::HashFlatSetIndex<Self>> {
-                storm::extobj::extobj!(
-                    impl storm::CtxExt {
-                        V: storm::OnceCell<storm::indexing::HashFlatSetIndex<$adapt>>,
-                    },
-                    crate_path = storm::extobj
-                );
+                static V: storm::LazyCtxVar<storm::indexing::HashFlatSetIndex<$adapt>> = storm::LazyCtxVar::new();
+                V.get()
+            }
+        }
 
-                *V
+        impl storm::Clearable for $adapt {
+            #[inline]
+            fn cleared() -> &'static storm::ClearEvent {
+                static E: storm::ClearEvent = storm::ClearEvent::new();
+                &E
             }
         }
 
         impl storm::Touchable for $adapt {
+            #[inline]
             fn touched() -> &'static storm::TouchedEvent {
                 static E: storm::TouchedEvent = storm::TouchedEvent::new();
                 &E
@@ -491,9 +521,11 @@ macro_rules! hash_flat_set_adapt {
 
         $vis type $alias = storm::indexing::HashFlatSetIndex<$adapt>;
 
-        #[storm::register]
-        fn $init() {
+        #[allow(non_upper_case_globals)]
+        #[storm::linkme::distributed_slice(storm::registry::__REGISTRATION)]
+        #[linkme(crate = storm::linkme)]
+        static $init: fn() = || {
             <$adapt as storm::indexing::HashFlatSetAdapt>::register();
-        }
+        };
     };
 }

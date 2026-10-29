@@ -3,7 +3,7 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering::Relaxed},
 };
 
-use crate::{BoxFuture, Ctx, CtxTransaction, Entity, Result, registry::InitCell};
+use crate::{BoxFuture, Ctx, CtxTransaction, Entity, Error, Result, registry::InitCell};
 
 type EventInner<T> = InitCell<Vec<T>>;
 
@@ -330,6 +330,51 @@ type UpsertingEventFn<E> = for<'a> fn(
     trx: &'a mut CtxTransaction<'_>,
     key: &'a <E as Entity>::Key,
     new: &'a mut E,
+) -> BoxFuture<'a, Result<()>>;
+
+/// Read only checks of the entity (unique indexes, foreign keys), called after `upserting`.
+///
+/// All the handlers are called, even when one fails, and their errors are combined.
+pub struct ValidatingEvent<E: Entity>(EventInner<ValidatingEventFn<E>>);
+
+impl<E: Entity> ValidatingEvent<E> {
+    pub const fn new() -> Self {
+        Self(EventInner::new(Vec::new()))
+    }
+
+    pub async fn call<'a>(
+        &'static self,
+        trx: &'a mut CtxTransaction<'_>,
+        id: &'a <E as Entity>::Key,
+        entity: &'a E,
+    ) -> Result<()> {
+        let mut error = None;
+
+        for f in self.0.get() {
+            if let Err(e) = f(trx, id, entity).await {
+                Error::extend_one_opt(&mut error, e);
+            }
+        }
+
+        error.map_or(Ok(()), Err)
+    }
+
+    pub fn on(&'static self, f: ValidatingEventFn<E>) {
+        self.0.get_mut().push(f);
+    }
+}
+
+impl<E: Entity> Default for ValidatingEvent<E> {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+type ValidatingEventFn<E> = for<'a> fn(
+    trx: &'a mut CtxTransaction<'_>,
+    key: &'a <E as Entity>::Key,
+    entity: &'a E,
 ) -> BoxFuture<'a, Result<()>>;
 
 #[derive(Default)]

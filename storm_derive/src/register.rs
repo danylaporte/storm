@@ -1,6 +1,32 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{ItemFn, Path, parse_macro_input, spanned::Spanned};
+use syn::{Ident, ItemFn, Path, parse_macro_input, spanned::Spanned};
+
+/// Registers `body` to run in the registration phase.
+///
+/// Emits the `linkme` slice element directly instead of `#[storm::register]` to avoid a nested
+/// proc-macro expansion.
+pub(crate) fn registration(
+    name: &Ident,
+    body: proc_macro2::TokenStream,
+) -> proc_macro2::TokenStream {
+    quote! {
+        #[allow(non_upper_case_globals)]
+        #[storm::linkme::distributed_slice(storm::registry::__REGISTRATION)]
+        #[linkme(crate = storm::linkme)]
+        static #name: fn() = || { #body };
+    }
+}
+
+/// Body of a function returning the `storm::CtxVar<#ty>` singleton.
+///
+/// The var must also be touched in a `registration` so it is allocated before any `Ctx` exists.
+pub(crate) fn ctx_var(ty: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
+    quote! {
+        static V: storm::LazyCtxVar<#ty> = storm::LazyCtxVar::new();
+        V.get()
+    }
+}
 
 pub fn register(attr: TokenStream, item: TokenStream) -> TokenStream {
     let crate_path: Path = match syn::parse::<syn::Meta>(attr) {

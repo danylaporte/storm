@@ -8,7 +8,7 @@ repository = "https://github.com/danylaporte/storm"
 publish = false
 
 [dependencies]
-async-cell-lock = { git = "https://github.com/danylaporte/async-cell-lock.git" }
+async-cell-lock.workspace = true
 cache = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true, features = ["serde"] }
 dec19x5 = { workspace = true, optional = true }
@@ -32,6 +32,7 @@ version_tag = { git = "https://github.com/danylaporte/version_tag.git" }
 
 [dev-dependencies]
 criterion.workspace = true
+serde_json.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [[bench]]
@@ -42,8 +43,12 @@ harness = false
 name = "indexes"
 harness = false
 
+[[bench]]
+name = "transaction"
+harness = false
+
 [features]
-default = ["cache", "chrono", "dec19x5", "derive", "uuid"]
+default = ["cache", "chrono", "dec19x5", "derive", "str_utils", "uuid"]
 derive = ["storm_derive"]
 mssql = ["storm_derive/mssql", "tiberius"]
 telemetry = ["metrics", "storm_derive/telemetry", "async-cell-lock/telemetry"]

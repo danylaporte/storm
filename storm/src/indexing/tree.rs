@@ -199,13 +199,11 @@ pub trait TreeEntity: EntityAccessor<Tbl = VecTable<Self>> + CtxTypeInfo + Send 
     where
         Self::Key: Into<u32>,
     {
-        Box::pin(async move {
-            if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
-                Self::upsert_or_remove(base, log, id, None, Some(entity));
-            }
+        if let Some((base, log)) = Self::base_and_log(trx.ctx, &mut trx.logs, true) {
+            Self::upsert_or_remove(base, log, id, None, Some(entity));
+        }
 
-            Ok(())
-        })
+        Box::pin(ready(Ok(())))
     }
 
     fn handle_upserted<'a>(
@@ -284,7 +282,11 @@ pub trait TreeEntity: EntityAccessor<Tbl = VecTable<Self>> + CtxTypeInfo + Send 
     where
         Self::Key: Into<u32>,
     {
-        __register_apply(Self::apply_log, ApplyOrder::Tree);
+        __register_apply(
+            Self::apply_log,
+            ApplyOrder::Tree,
+            &[Self::tbl_var().var_id(), Self::tree_var().var_id()],
+        );
         Self::cleared().on(Self::handle_clear);
         Self::removed().on(Self::handle_removed);
         Self::upserted().on(Self::handle_upserted);
@@ -339,22 +341,18 @@ macro_rules! tree_index_adapt {
             }
 
             fn tree_var() -> storm::CtxVar<storm::indexing::TreeIndex<Self>> {
-                storm::extobj::extobj!(
-                    impl storm::CtxExt {
-                        V: storm::OnceCell<storm::indexing::TreeIndex<$entity_ty>>,
-                    },
-                    crate_path = storm::extobj
-                );
-
-                *V
+                static V: storm::LazyCtxVar<storm::indexing::TreeIndex<$entity_ty>> = storm::LazyCtxVar::new();
+                V.get()
             }
         }
 
         $vis type $alias = storm::indexing::TreeIndex<$entity_ty>;
 
-        #[storm::register]
-        fn $init() {
+        #[allow(non_upper_case_globals)]
+        #[storm::linkme::distributed_slice(storm::registry::__REGISTRATION)]
+        #[linkme(crate = storm::linkme)]
+        static $init: fn() = || {
             <$entity_ty as storm::indexing::TreeEntity>::tree_register();
-        }
+        };
     };
 }

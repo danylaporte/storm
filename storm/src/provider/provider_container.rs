@@ -1,7 +1,7 @@
-use super::{CastProvider, Provider, ProviderFactory, TransactionProvider};
+use super::{CastProvider, NoopProvider, Provider, ProviderFactory, TransactionProvider};
 use crate::{BoxFuture, Error, Result};
 use std::{
-    any::TypeId,
+    any::{TypeId, type_name},
     marker::PhantomData,
     sync::atomic::{AtomicU64, Ordering::Relaxed},
     time::Instant,
@@ -112,12 +112,36 @@ impl ProviderContainer {
         }
     }
 
+    /// Returns `true` if a [NoopProvider] is registered under `name`.
+    pub fn is_noop(&self, name: &str) -> bool {
+        self.find_index(TypeId::of::<NoopProvider>(), name).is_ok()
+    }
+
+    /// Returns `true` if a [NoopProvider] is registered under any name.
+    pub fn has_noop(&self) -> bool {
+        let type_id = TypeId::of::<NoopProvider>();
+        self.records.iter().any(|r| r.type_id == type_id)
+    }
+
     /// Gets or creates a database provider that have been previously registered with
     /// the `register` method.
+    ///
+    /// # Panics
+    /// If `P` is not registered under `name` but a [NoopProvider] is, since raw database access
+    /// cannot be emulated.
     pub fn provide<'a, P: Provider>(&'a self, name: &'a str) -> BoxFuture<'a, Result<&'a P>> {
         Box::pin(async move {
             let type_id = TypeId::of::<P>();
-            let rec = self.find_record(type_id, name)?;
+
+            #[allow(clippy::panic)]
+            let rec = match self.find_record(type_id, name) {
+                Ok(rec) => rec,
+                Err(_) if self.is_noop(name) => panic!(
+                    "provider `{}` named `{name}` requested while a NoopProvider is registered; raw database access is not supported in noop mode",
+                    type_name::<P>()
+                ),
+                Err(e) => return Err(e),
+            };
             let castable = rec.get_or_init(&self.lru).await?;
 
             castable.downcast().ok_or_else(|| {
